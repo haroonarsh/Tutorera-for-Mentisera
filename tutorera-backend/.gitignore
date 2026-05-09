@@ -1,0 +1,62 @@
+
+// .gitignore file for tutorera-backend
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+# Build output
+dist/
+# Logs
+logs/
+*.log
+# OS files
+.DS_Store
+# IDE files
+.vscode/
+.idea/
+# TypeScript cache
+*.tsbuildinfo
+
+# NPM
+package-lock.json
+
+# Yarn
+yarn-error.log
+yarn-debug.log
+yarn.lock
+
+# NPM debug log
+npm-debug.log
+
+# pnpm
+pnpm-debug.log
+pnpm-error.log
+pnpm-*.log
+
+# Yarn Integrity file
+yarn.integrity
+
+# pnpm Integrity file
+pnpm.integrity
+
+# pnpm Lockfile
+pnpm-lock.yaml
+
+# pnpm Shrinkwrap file
+pnpm-shrinkwrap.yaml
+
+# pnpm Workspaces file
+pnpm-workspace.yaml
+
+# pnpm Global Directory
+pnpm-global/
+
+# pnpm Store
+pnpm-store/
+
+# pnpm Cache
+pnpm-cache/
+
+# pnpm Home
+pnpm-home/
