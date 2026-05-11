@@ -8,6 +8,7 @@ import errorHandler from "./middlewares/errorHandler";
 
 import authRoutes from "./routes/auth.routes";
 import tutorRoutes from "./routes/tutor.routes";
+import uploadRoutes from "./routes/upload.routes";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use(cookieParser());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/tutors", tutorRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Health check
 app.get("/", (req, res) => {
