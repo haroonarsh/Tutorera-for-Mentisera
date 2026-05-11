@@ -7,6 +7,7 @@ import connectDB from "./config/db";
 import errorHandler from "./middlewares/errorHandler";
 
 import authRoutes from "./routes/auth.routes";
+import tutorRoutes from "./routes/tutor.routes";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(cookieParser());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/tutors", tutorRoutes);
 
 // Health check
 app.get("/", (req, res) => {
