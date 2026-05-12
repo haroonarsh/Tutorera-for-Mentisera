@@ -9,6 +9,9 @@ import errorHandler from "./middlewares/errorHandler";
 import authRoutes from "./routes/auth.routes";
 import tutorRoutes from "./routes/tutor.routes";
 import uploadRoutes from "./routes/upload.routes";
+import adminRoutes from "./routes/admin.routes";
+import requestRoutes from "./routes/request.routes";
+import bookingRoutes from "./routes/booking.routes";
 
 dotenv.config();
 
@@ -26,6 +29,9 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/tutors", tutorRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/requests", requestRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // Health check
 app.get("/", (req, res) => {
