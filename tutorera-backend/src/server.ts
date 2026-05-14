@@ -12,6 +12,9 @@ import uploadRoutes from "./routes/upload.routes";
 import adminRoutes from "./routes/admin.routes";
 import requestRoutes from "./routes/request.routes";
 import bookingRoutes from "./routes/booking.routes";
+import reviewRoutes from "./routes/review.routes";
+import blogRoutes from "./routes/blog.routes";
+import contactRoutes from "./routes/contact.routes";
 
 dotenv.config();
 
@@ -32,6 +35,9 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/blogs", blogRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Health check
 app.get("/", (req, res) => {
