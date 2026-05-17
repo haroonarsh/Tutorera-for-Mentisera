@@ -38,7 +38,7 @@ export default function Home() {
             <Link href="/tutors" style={{ backgroundColor: C.accent, color: 'white', padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
               Find a Tutor
             </Link>
-            <Link href="/register?role=tutor" style={{ backgroundColor: 'white', color: C.primary, border: `1.5px solid #d1d5db`, padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
+            <Link href="/become-a-tutor" style={{ backgroundColor: 'white', color: C.primary, border: `1.5px solid #d1d5db`, padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
               Become a Tutor
             </Link>
           </div>

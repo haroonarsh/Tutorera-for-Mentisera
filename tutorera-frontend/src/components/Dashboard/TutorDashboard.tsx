@@ -1,0 +1,500 @@
+// components/dashboard/TutorDashboard.tsx
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import axiosInstance from "@/lib/axios";
+import { DashRequest, DashBooking, TutorProfileData } from "@/types/dashboard";
+import PlaceBidModal from "./PlaceBidModal";
+import s from "@/app/dashboard/dashboard.module.css";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function statusBadgeClass(status: string): string {
+  const map: Record<string, string> = {
+    upcoming: s.badgeUpcoming, ongoing: s.badgeOngoing,
+    completed: s.badgeCompleted, cancelled: s.badgeCancelled,
+    open: s.badgeOpen, closed: s.badgeClosed,
+  };
+  return `${s.badge} ${map[status] ?? s.badgeOpen}`;
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days} days ago`;
+  return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
+}
+
+// ─── Booking Card (tutor perspective) ────────────────────────────────────────
+
+function BookingCard({ booking }: { booking: DashBooking }) {
+  return (
+    <div className={s.card}>
+      <div className={s.cardHeader}>
+        <div className={s.personRow} style={{ margin: 0 }}>
+          <div className={s.personAvatar}>
+            {booking.student.avatar
+              ? <img src={booking.student.avatar} alt={booking.student.name} />
+              : booking.student.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className={s.personName}>{booking.student.name}</p>
+            <p className={s.personSub}>Student</p>
+          </div>
+        </div>
+        <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
+      </div>
+      <div className={s.infoRow} style={{ marginTop: 12 }}>
+        <span className={s.infoChip}>
+          <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+          </svg>
+          PKR {booking.amount.toLocaleString()}/hr
+        </span>
+        <span className={s.infoChip}>
+          <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          {booking.schedule}
+        </span>
+        <span className={s.infoChip}>{booking.teachingMode}</span>
+      </div>
+      <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
+    </div>
+  );
+}
+
+// ─── Open Request Card (for tutor to browse + bid) ────────────────────────────
+
+function OpenRequestCard({
+  request,
+  onBidPlaced,
+}: {
+  request: DashRequest;
+  onBidPlaced: () => void;
+}) {
+  const [showBidModal, setShowBidModal] = useState(false);
+
+  return (
+    <>
+      <div className={s.card}>
+        <div className={s.cardHeader}>
+          <div style={{ flex: 1 }}>
+            <h3 className={s.cardTitle}>{request.subject}</h3>
+            <div className={s.cardMeta}>
+              <span>{request.level}</span>
+              <span>·</span>
+              <span>{request.city}</span>
+              <span>·</span>
+              <span>{timeAgo(request.createdAt)}</span>
+            </div>
+          </div>
+          <span className={statusBadgeClass(request.status)}>{request.status}</span>
+        </div>
+
+        <p className={s.cardDesc}>{request.description}</p>
+
+        <div className={s.infoRow}>
+          <span className={s.infoChip}>
+            <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+            </svg>
+            Budget: PKR {request.budget.toLocaleString()}/hr
+          </span>
+          <span className={s.infoChip}>{request.teachingMode}</span>
+          <span className={s.infoChip}>{request.schedule}</span>
+        </div>
+
+        <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+          <button
+            onClick={() => setShowBidModal(true)}
+            className={s.btnPrimary}
+          >
+            Place Bid
+          </button>
+          <span className={s.infoChip} style={{ alignSelf: "center" }}>
+            Student: {request.student.name}
+          </span>
+        </div>
+      </div>
+
+      {showBidModal && (
+        <PlaceBidModal
+          request={request}
+          onClose={() => setShowBidModal(false)}
+          onSuccess={onBidPlaced}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Profile Summary ──────────────────────────────────────────────────────────
+
+function ProfileSection({ profile }: { profile: TutorProfileData }) {
+  return (
+    <div>
+      {/* Top card */}
+      <div className={s.card} style={{ marginBottom: 16 }}>
+        <div className={s.personRow}>
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
+            border: "2.5px solid #e5e7eb", background: "#e5e7eb", flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, fontWeight: 700, color: "#2563eb",
+          }}>
+            {profile.user.avatar
+              ? <img src={profile.user.avatar} alt={profile.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : profile.user.name.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: "0 0 3px", fontSize: 17, fontWeight: 700, color: "#1a1a2e" }}>
+              {profile.user.name}
+            </p>
+            <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>{profile.city} · {profile.teachingMode}</p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: "#1a1a2e" }}>
+              PKR {profile.hourlyRate.toLocaleString()}<span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 400 }}>/hr</span>
+            </p>
+            <span className={`${s.badge} ${profile.verificationStatus === "approved" ? s.badgeApproved : s.badgePending}`}>
+              {profile.verificationStatus === "approved" ? "✓ Verified" : profile.verificationStatus}
+            </span>
+          </div>
+        </div>
+
+        {profile.bio && (
+          <p style={{ margin: "12px 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+            {profile.bio}
+          </p>
+        )}
+
+        <div style={{ marginTop: 12 }}>
+          <Link href="/profile" style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "8px 16px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+            fontSize: 13, fontWeight: 500, color: "#374151", textDecoration: "none",
+            transition: "all 0.15s",
+          }}>
+            <svg width={13} height={13} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+            Edit Profile
+          </Link>
+        </div>
+      </div>
+
+      {/* Details grid */}
+      <div className={s.profileGrid}>
+        <div className={s.profileCard}>
+          <p className={s.profileCardTitle}>Subjects</p>
+          <div className={s.tagList}>
+            {profile.subjects.length > 0
+              ? profile.subjects.map((sub) => <span key={sub} className={`${s.tag}`}>{sub}</span>)
+              : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+          </div>
+        </div>
+
+        <div className={s.profileCard}>
+          <p className={s.profileCardTitle}>Levels</p>
+          <div className={s.tagList}>
+            {profile.levels.length > 0
+              ? profile.levels.map((lvl) => <span key={lvl} className={`${s.tag} ${s.tagGray}`}>{lvl}</span>)
+              : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+          </div>
+        </div>
+
+        <div className={s.profileCard}>
+          <p className={s.profileCardTitle}>Education</p>
+          {profile.education.length > 0 ? profile.education.map((edu) => (
+            <div key={edu._id} style={{ marginBottom: 8 }}>
+              <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "#1a1a2e" }}>{edu.degree}</p>
+              <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{edu.institution} · {edu.year}</p>
+            </div>
+          )) : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+        </div>
+
+        <div className={s.profileCard}>
+          <p className={s.profileCardTitle}>Availability</p>
+          {profile.availability.length > 0 ? profile.availability.map((a) => (
+            <div key={a._id} style={{ marginBottom: 8 }}>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "#1a1a2e" }}>{a.day}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {a.slots.map((slot) => (
+                  <span key={slot} className={s.infoChip} style={{ fontSize: 11 }}>{slot}</span>
+                ))}
+              </div>
+            </div>
+          )) : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tutor Dashboard ──────────────────────────────────────────────────────────
+
+type Tab = "bookings" | "browse" | "profile";
+
+interface Props {
+  userName: string;
+  userAvatar?: string;
+}
+
+export default function TutorDashboard({ userName, userAvatar }: Props) {
+  const [tab, setTab]               = useState<Tab>("bookings");
+  const [bookings, setBookings]     = useState<DashBooking[]>([]);
+  const [requests, setRequests]     = useState<DashRequest[]>([]);
+  const [profile, setProfile]       = useState<TutorProfileData | null>(null);
+  const [loadingB, setLoadingB]     = useState(true);
+  const [loadingR, setLoadingR]     = useState(false);
+  const [loadingP, setLoadingP]     = useState(false);
+  const [bidSuccess, setBidSuccess] = useState(false);
+
+  const fetchBookings = useCallback(async () => {
+    setLoadingB(true);
+    try {
+      const res = await axiosInstance.get("/bookings");
+      setBookings(res.data.bookings ?? []);
+    } catch { setBookings([]); }
+    finally { setLoadingB(false); }
+  }, []);
+
+  const fetchRequests = useCallback(async () => {
+  setLoadingR(true);
+  try {
+    const res = await axiosInstance.get("/requests");
+    setRequests(res.data.requests ?? []); // ← remove the .filter() that was here
+  } catch { setRequests([]); }
+  finally { setLoadingR(false); }
+  }, []);
+
+  const fetchProfile = useCallback(async () => {
+  setLoadingP(true);
+  try {
+    const res = await axiosInstance.get("/tutors/profile/me");
+    setProfile(res.data.profile ?? null);
+  } catch (err) {
+    console.error("Profile fetch failed:", err); // ← add this
+    setProfile(null);
+  } finally {
+    setLoadingP(false);
+  }
+  }, []);
+
+  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+
+  // Lazy load on tab switch
+  useEffect(() => {
+    if (tab === "browse" && requests.length === 0) fetchRequests();
+    if (tab === "profile" && !profile) fetchProfile();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const upcomingCount  = bookings.filter((b) => b.status === "upcoming").length;
+  const completedCount = bookings.filter((b) => b.status === "completed").length;
+
+  return (
+    <>
+      {/* Header */}
+      <div className={s.header}>
+        <div className={s.headerInner}>
+          <div className={s.headerLeft}>
+            <div className={s.avatar}>
+              {userAvatar ? <img src={userAvatar} alt={userName} /> : userName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1 className={s.greeting}>Welcome back, {userName}! 👋</h1>
+              <span className={s.roleBadge}>
+                <svg width={10} height={10} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                </svg>
+                Tutor Account
+              </span>
+            </div>
+          </div>
+          <Link href="/tutors/me" className={s.btnOutline}
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            View Public Profile
+          </Link>
+        </div>
+      </div>
+
+      <div className={s.content}>
+        {/* Stats */}
+        <div className={s.stats}>
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(37,99,235,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#2563eb" aria-hidden="true">
+                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{bookings.length}</div>
+              <div className={s.statLabel}>Total Bookings</div>
+            </div>
+          </div>
+
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(16,185,129,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#10b981" aria-hidden="true">
+                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{upcomingCount}</div>
+              <div className={s.statLabel}>Upcoming Sessions</div>
+            </div>
+          </div>
+
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(107,114,128,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#6b7280" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{completedCount}</div>
+              <div className={s.statLabel}>Completed</div>
+            </div>
+          </div>
+
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(245,158,11,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#d97706" aria-hidden="true">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{profile?.averageRating?.toFixed(1) ?? "—"}</div>
+              <div className={s.statLabel}>Avg. Rating</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        {/* Remove role="tablist" — just a nav landmark */}
+<nav aria-label="Dashboard sections" className={s.tabs}>
+  <button
+    onClick={() => setTab("bookings")}
+    aria-current={tab === "bookings" ? "true" : undefined}
+    className={`${s.tab} ${tab === "bookings" ? s.tabActive : ""}`}
+  >
+    <svg width={14} height={14} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+      <path d="M14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+    </svg>
+    My Bookings
+    {upcomingCount > 0 && (
+      <span className={`${s.tabBadge} ${tab === "bookings" ? s.tabActiveBadge : ""}`}>
+        {upcomingCount}
+      </span>
+    )}
+  </button>
+
+  <button
+    onClick={() => setTab("browse")}
+    aria-current={tab === "browse" ? "true" : undefined}
+    className={`${s.tab} ${tab === "browse" ? s.tabActive : ""}`}
+  >
+    <svg width={14} height={14} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+    </svg>
+    Browse Requests
+  </button>
+
+  <button
+    onClick={() => setTab("profile")}
+    aria-current={tab === "profile" ? "true" : undefined}
+    className={`${s.tab} ${tab === "profile" ? s.tabActive : ""}`}
+  >
+    <svg width={14} height={14} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+    </svg>
+    My Profile
+  </button>
+</nav>
+
+        {/* Tab: My Bookings */}
+        {tab === "bookings" && (
+          <section aria-label="My bookings">
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>My Bookings</h2>
+            </div>
+            {loadingB ? (
+              <div className={s.spinner} />
+            ) : bookings.length === 0 ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>📅</div>
+                <p className={s.emptyTitle}>No bookings yet</p>
+                <p className={s.emptyDesc}>Browse open requests and place bids to get your first booking.</p>
+                <button onClick={() => setTab("browse")} className={s.btnPrimary}>Browse Requests</button>
+              </div>
+            ) : (
+              bookings.map((b) => <BookingCard key={b._id} booking={b} />)
+            )}
+          </section>
+        )}
+
+        {/* Tab: Browse Requests */}
+        {tab === "browse" && (
+          <section aria-label="Browse student requests">
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>Open Student Requests</h2>
+              <button onClick={fetchRequests} className={s.btnOutline}>↻ Refresh</button>
+            </div>
+
+            {bidSuccess && (
+              <div style={{
+                background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
+                color: "#059669", borderRadius: 10, padding: "12px 16px", fontSize: 13,
+                fontWeight: 500, marginBottom: 16,
+              }}>
+                ✓ Bid placed successfully! The student will review it shortly.
+              </div>
+            )}
+
+            {loadingR ? (
+              <div className={s.spinner} />
+            ) : requests.length === 0 ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>🔍</div>
+                <p className={s.emptyTitle}>No open requests right now</p>
+                <p className={s.emptyDesc}>Check back later — new student requests appear here as they're posted.</p>
+              </div>
+            ) : (
+              requests.map((r) => (
+                <OpenRequestCard key={r._id} request={r} onBidPlaced={() => {
+                  setBidSuccess(true);
+                  setTimeout(() => setBidSuccess(false), 5000);
+                }} />
+              ))
+            )}
+          </section>
+        )}
+
+        {/* Tab: My Profile */}
+        {tab === "profile" && (
+          <section aria-label="My tutor profile">
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>My Profile</h2>
+            </div>
+            {loadingP ? (
+              <div className={s.spinner} />
+            ) : !profile ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>👤</div>
+                <p className={s.emptyTitle}>Profile not found</p>
+                <p className={s.emptyDesc}>Complete your tutor profile to start receiving students.</p>
+              </div>
+            ) : (
+              <ProfileSection profile={profile} />
+            )}
+          </section>
+        )}
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,76 @@
+/* components/tutors/Pagination.module.css */
+
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.navBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.navBtn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.navBtn:disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.pageBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.pageBtn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.pageBtnActive {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: default;
+}
+
+.dots {
+  color: #9ca3af;
+  padding: 0 4px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.meta {
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 12px;
+}
