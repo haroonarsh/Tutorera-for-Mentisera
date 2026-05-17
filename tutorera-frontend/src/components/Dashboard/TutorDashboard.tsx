@@ -240,11 +240,12 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
 type Tab = "bookings" | "browse" | "profile";
 
 interface Props {
+  userId: string;
   userName: string;
   userAvatar?: string;
 }
 
-export default function TutorDashboard({ userName, userAvatar }: Props) {
+export default function TutorDashboard({ userName, userAvatar, userId }: Props) {
   const [tab, setTab]               = useState<Tab>("bookings");
   const [bookings, setBookings]     = useState<DashBooking[]>([]);
   const [requests, setRequests]     = useState<DashRequest[]>([]);
@@ -315,7 +316,7 @@ export default function TutorDashboard({ userName, userAvatar }: Props) {
               </span>
             </div>
           </div>
-          <Link href="/tutors/me" className={s.btnOutline}
+          <Link href={`/tutors/${userId}`} className={s.btnOutline}
             style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
             View Public Profile
           </Link>

@@ -30,9 +30,9 @@ export default function BlogPage() {
 
   // Static fallback blogs if DB is empty
   const fallbackBlogs: Blog[] = [
-    { _id: "1", title: "How to Find a Trusted Tutor in Pakistan", slug: "how-to-find-a-trusted-tutor-in-pakistan", excerpt: "Feeling overwhelmed finding a tutor in Pakistan? This guide breaks down the process into simple, safe steps—from verification to the first session.", coverImage: "", author: { name: "TUTORERA Team", avatar: "" }, tags: ["parents", "guide"], createdAt: new Date().toISOString() },
-    { _id: "2", title: "Online Tutoring vs. Traditional Home Tuition in Pakistan", slug: "online-vs-home-tuition-in-pakistan", excerpt: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition? This guide gives parents a clear comparison.", coverImage: "", author: { name: "TUTORERA Team", avatar: "" }, tags: ["online", "comparison"], createdAt: new Date().toISOString() },
-    { _id: "3", title: "What Parents Should Look for Before Hiring a Tutor", slug: "what-to-look-for-before-hiring-a-tutor-pakistan", excerpt: "Don't hire a tutor blindly. This essential checklist covers the 5 critical areas every Pakistani parent must consider.", coverImage: "", author: { name: "TUTORERA Team", avatar: "" }, tags: ["parents", "checklist"], createdAt: new Date().toISOString() },
+    { _id: "1", title: "How to Find a Trusted Tutor in Pakistan", slug: "how-to-find-a-trusted-tutor-in-pakistan", excerpt: "Feeling overwhelmed finding a tutor in Pakistan? This guide breaks down the process into simple, safe steps—from verification to the first session.", coverImage: "/blog1.webp", author: { name: "TUTORERA Team", avatar: "" }, tags: ["parents", "guide"], createdAt: new Date().toISOString() },
+    { _id: "2", title: "Online Tutoring vs. Traditional Home Tuition in Pakistan", slug: "online-vs-home-tuition-in-pakistan", excerpt: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition? This guide gives parents a clear comparison.", coverImage: "/blog2.webp", author: { name: "TUTORERA Team", avatar: "" }, tags: ["online", "comparison"], createdAt: new Date().toISOString() },
+    { _id: "3", title: "What Parents Should Look for Before Hiring a Tutor", slug: "what-to-look-for-before-hiring-a-tutor-pakistan", excerpt: "Don't hire a tutor blindly. This essential checklist covers the 5 critical areas every Pakistani parent must consider.", coverImage: "/blog4.png", author: { name: "TUTORERA Team", avatar: "" }, tags: ["parents", "checklist"], createdAt: new Date().toISOString() },
   ];
 
   const displayBlogs = blogs.length > 0 ? blogs : fallbackBlogs;
@@ -61,9 +61,7 @@ export default function BlogPage() {
             {displayBlogs.map((blog, idx) => (
               <article key={blog._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
                 {/* Cover */}
-                <div style={{ height: '190px', background: idx % 2 === 0 ? `linear-gradient(135deg, ${C.primary}, ${C.accent})` : `linear-gradient(135deg, ${C.accent}, #7c3aed)`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-                  <h3 style={{ color: 'white', fontSize: '1rem', fontWeight: '700', textAlign: 'center', lineHeight: '1.5' }}>{blog.title}</h3>
-                </div>
+                <img src={blog.coverImage} alt={blog.title} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
                 {/* Content */}
                 <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {/* Tags */}

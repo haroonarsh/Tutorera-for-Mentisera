@@ -61,6 +61,7 @@ export default function DashboardPage() {
   if (user.role === "tutor") {
     return (
       <TutorDashboard
+        userId={user._id}
         userName={user.name}
         userAvatar={user.avatar}
       />

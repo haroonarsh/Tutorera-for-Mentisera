@@ -86,8 +86,6 @@ function RequestCard({
   const [bidsLoading, setBidsLoading] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
 
-  console.log("bids:", bids);
-
   async function loadBids() {
     if (bids.length > 0) { setExpanded(!expanded); return; }
     setExpanded(true);

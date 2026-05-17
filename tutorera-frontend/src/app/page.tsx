@@ -181,12 +181,12 @@ export default function Home() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {[
-              { title: "How to Find a Trusted Tutor in Pakistan", desc: "Feeling overwhelmed finding a tutor? This guide breaks down the process into simple, safe steps.", slug: "how-to-find-a-trusted-tutor-in-pakistan" },
-              { title: "Online Tutoring vs. Traditional Home Tuition", desc: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition?", slug: "online-vs-home-tuition-in-pakistan" },
-              { title: "What Parents Should Look for Before Hiring a Tutor", desc: "Don't hire a tutor blindly. This checklist covers 5 critical areas every parent must consider.", slug: "what-to-look-for-before-hiring-a-tutor-pakistan" },
+              { title: "How to Find a Trusted Tutor in Pakistan", desc: "Feeling overwhelmed finding a tutor? This guide breaks down the process into simple, safe steps.", slug: "how-to-find-a-trusted-tutor-in-pakistan", img: "/blog1.webp" },
+              { title: "Online Tutoring vs. Traditional Home Tuition", desc: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition?", slug: "online-vs-home-tuition-in-pakistan", img: "/blog2.webp" },
+              { title: "What Parents Should Look for Before Hiring a Tutor", desc: "Don't hire a tutor blindly. This checklist covers 5 critical areas every parent must consider.", slug: "what-to-look-for-before-hiring-a-tutor-pakistan", img: "/blog4.png" },
             ].map((post) => (
               <div key={post.slug} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                <div style={{ height: '160px', background: `linear-gradient(135deg, ${C.accent}, ${C.primary})` }} />
+                <img src={post.img} alt={post.title} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
                 <div style={{ padding: '1.5rem' }}>
                   <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', marginBottom: '0.5rem', lineHeight: '1.4' }}>{post.title}</h3>
                   <p style={{ color: C.gray500, fontSize: '0.85rem', marginBottom: '1rem', lineHeight: '1.6' }}>{post.desc}</p>
