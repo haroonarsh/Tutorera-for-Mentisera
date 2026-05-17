@@ -1,5 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import api from "@/lib/axios";
 import Link from "next/link";
 import { Search, Shield, MapPin, BookOpen, Users, Star, CheckCircle, XCircle } from "lucide-react";
+import TopTutorsSection from "@/components/TopTutorsSection";
 
 const C = {
   primary: '#1a1a2e',
@@ -165,59 +170,7 @@ export default function Home() {
       </section>
 
       {/* ── TOP TUTORS ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Meet Our Top Tutors</h2>
-            <p style={{ color: C.gray500 }}>A glimpse of the verified, expert educators on our platform.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {[
-              { name: "Dr. Evelyn Reed", desc: "PhD in Physics with 10+ years of teaching experience.", subjects: ["Physics", "Mathematics"], rating: 4.9, reviews: 120, price: "Rs. 7,500/hr", badge: "Gold" },
-              { name: "Marcus Bell", desc: "Software Engineer & Code Mentor.", subjects: ["Computer Science"], rating: 4.8, reviews: 85, price: "Rs. 8,000/hr", badge: "Silver" },
-              { name: "Dr. Anya Sharma", desc: "Passionate biologist and researcher.", subjects: ["Biology", "Chemistry"], rating: 4.9, reviews: 98, price: "Rs. 6,500/hr", badge: "Gold" },
-            ].map((tutor) => (
-              <div key={tutor.name} style={{ backgroundColor: 'white', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ height: '160px', background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '72px', height: '72px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.8rem', fontWeight: '800' }}>
-                    {tutor.name.charAt(0)}
-                  </div>
-                </div>
-                <div style={{ padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                    <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '1.05rem' }}>{tutor.name}</h3>
-                    <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: '600', backgroundColor: tutor.badge === 'Gold' ? '#fef3c7' : '#f3f4f6', color: tutor.badge === 'Gold' ? '#92400e' : '#4b5563' }}>
-                      {tutor.badge}
-                    </span>
-                  </div>
-                  <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '0.75rem' }}>{tutor.desc}</p>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                    {tutor.subjects.map((s) => (
-                      <span key={s} style={{ backgroundColor: C.accentLight, color: C.accent, fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: '500' }}>{s}</span>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Star size={13} color="#f59e0b" fill="#f59e0b" />
-                      <span style={{ fontWeight: '700', color: C.primary, fontSize: '0.8rem' }}>{tutor.rating}</span>
-                      <span style={{ color: C.gray400, fontSize: '0.8rem' }}>({tutor.reviews})</span>
-                    </div>
-                    <span style={{ fontWeight: '700', color: C.primary, fontSize: '0.85rem' }}>{tutor.price}</span>
-                  </div>
-                  <Link href="/tutors" style={{ display: 'block', textAlign: 'center', backgroundColor: C.accent, color: 'white', padding: '0.6rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', textDecoration: 'none' }}>
-                    View Profile
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link href="/tutors" style={{ border: `1.5px solid ${C.primary}`, color: C.primary, padding: '0.75rem 2rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block', fontSize: '0.95rem' }}>
-              Explore All Tutors
-            </Link>
-          </div>
-        </div>
-      </section>
+      <TopTutorsSection />
 
       {/* ── BLOG ── */}
       <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
