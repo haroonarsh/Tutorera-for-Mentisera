@@ -72,10 +72,15 @@ export const getTutorById = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const profile = await TutorProfile.findById(req.params.id).populate(
-    "user",
-    "name email avatar phone city"
-  );
+  const profile =
+    (await TutorProfile.findById(req.params.id).populate(
+      "user",
+      "name email avatar phone city"
+    )) ??
+    (await TutorProfile.findOne({ user: req.params.id }).populate(
+      "user",
+      "name email avatar phone city"
+    ));
 
   if (!profile) {
     res.status(404).json({ success: false, message: "Tutor not found" });
