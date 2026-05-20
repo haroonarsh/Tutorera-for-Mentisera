@@ -1,7 +1,8 @@
-
-// .gitignore file for tutorera-backend
 # Node modules
 node_modules/
+.env
+.env.local
+.next/
 
 # Environment variables
 .env
