@@ -58,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const res = await api.post("/auth/register", data);
     localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
+    return res.data.user;
   };
 
   const logout = () => {

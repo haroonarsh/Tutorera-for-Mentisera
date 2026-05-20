@@ -27,14 +27,19 @@ export default function RegisterPage() {
     if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true);
     try {
-      await register(form);
-      router.push("/dashboard");
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
+    await register(form);
+    // Redirect based on role
+    if (form.role === "tutor") {
+      router.push("/onboarding/tutor");
+    } else {
+      router.push("/onboarding/student");
     }
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string } } };
+    setError(error.response?.data?.message || "Registration failed. Please try again.");
+  } finally {
+    setLoading(false);
+  }
   };
 
   return (
