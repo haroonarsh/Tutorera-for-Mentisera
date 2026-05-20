@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
 // @desc    Create or update tutor profile
 // @route   POST /api/tutors/profile
@@ -159,5 +160,153 @@ export const getAllTutors = async (
     page: pageNum,
     pages: Math.ceil(total / limitNum),
     tutors,
+  });
+};
+
+// @desc    Get onboarding status
+// @route   GET /api/tutors/onboarding/status
+// @access  Private (tutor)
+export const getOnboardingStatus = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  let profile = await TutorProfile.findOne({ user: req.user?._id });
+
+  if (!profile) {
+    // Create empty profile
+    profile = await TutorProfile.create({ user: req.user?._id });
+  }
+
+  res.status(200).json({
+    success: true,
+    onboardingStep: profile.onboardingStep,
+    onboardingComplete: profile.onboardingComplete,
+    verificationStatus: profile.verificationStatus,
+  });
+};
+
+// @desc    Save onboarding step data
+// @route   POST /api/tutors/onboarding/step
+// @access  Private (tutor)
+export const saveOnboardingStep = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { step, data } = req.body;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+  let profile = await TutorProfile.findOne({ user: req.user?._id });
+  if (!profile) {
+    profile = await TutorProfile.create({ user: req.user?._id });
+  }
+
+  const stepNum = parseInt(step);
+  let updateData: Record<string, unknown> = {};
+
+  // Parse data
+  const parsedData = typeof data === "string" ? JSON.parse(data) : data;
+
+  if (stepNum === 1) {
+    // Personal Info
+    updateData = {
+      fullName: parsedData.fullName,
+      phone: parsedData.phone,
+      city: parsedData.city,
+      gender: parsedData.gender,
+      dateOfBirth: parsedData.dateOfBirth,
+      onboardingStep: 2,
+    };
+    // Update user name too
+    await User.findByIdAndUpdate(req.user?._id, {
+      name: parsedData.fullName,
+      phone: parsedData.phone,
+      city: parsedData.city,
+    });
+  }
+
+  else if (stepNum === 2) {
+    // Education
+    let degreeDocUrl = "";
+    if (files?.degreeDoc?.[0]) {
+      const result = await uploadToCloudinary(
+        files.degreeDoc[0].buffer,
+        "tutorera/degrees",
+        "auto"
+      );
+      degreeDocUrl = result.secure_url;
+    }
+
+    const education = [{
+      degree: parsedData.degree,
+      institution: parsedData.institution,
+      year: parseInt(parsedData.year),
+      degreeDoc: degreeDocUrl,
+    }];
+
+    updateData = { education, onboardingStep: 3 };
+  }
+
+  else if (stepNum === 3) {
+    // Experience
+    updateData = {
+      experience: parseInt(parsedData.experience),
+      previousInstitutions: parsedData.previousInstitutions || [],
+      subjects: parsedData.subjects || [],
+      levels: parsedData.levels || [],
+      onboardingStep: 4,
+    };
+  }
+
+  else if (stepNum === 4) {
+    // Profile Setup
+    updateData = {
+      bio: parsedData.bio,
+      hourlyRate: parseInt(parsedData.hourlyRate),
+      teachingMode: parsedData.teachingMode,
+      availability: parsedData.availability || [],
+      onboardingStep: 5,
+    };
+  }
+
+  else if (stepNum === 5) {
+    // Verification Docs
+    let cnicFrontUrl = "";
+    let cnicBackUrl = "";
+    let videoIntroUrl = "";
+
+    if (files?.cnicFront?.[0]) {
+      const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic");
+      cnicFrontUrl = result.secure_url;
+    }
+    if (files?.cnicBack?.[0]) {
+      const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic");
+      cnicBackUrl = result.secure_url;
+    }
+    if (files?.videoIntro?.[0]) {
+      const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/videos", "auto");
+      videoIntroUrl = result.secure_url;
+    }
+
+    updateData = {
+      cnicFront: cnicFrontUrl,
+      cnicBack: cnicBackUrl,
+      videoIntro: videoIntroUrl,
+      onboardingStep: 5,
+      onboardingComplete: true,
+      verificationStatus: "pending",
+    };
+  }
+
+  // Save to DB
+  const updated = await TutorProfile.findOneAndUpdate(
+    { user: req.user?._id },
+    updateData,
+    { new: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: `Step ${stepNum} saved successfully`,
+    profile: updated,
   });
 };
