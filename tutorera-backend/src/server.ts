@@ -15,6 +15,7 @@ import bookingRoutes from "./routes/booking.routes";
 import reviewRoutes from "./routes/review.routes";
 import blogRoutes from "./routes/blog.routes";
 import contactRoutes from "./routes/contact.routes";
+import studentRoutes from "./routes/student.routes";
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/students", studentRoutes);
 
 // Health check
 app.get("/", (req, res) => {

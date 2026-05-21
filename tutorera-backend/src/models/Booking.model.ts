@@ -6,10 +6,16 @@ export interface IBooking extends Document {
   request: Types.ObjectId;
   bid: Types.ObjectId;
   amount: number;
+  platformFee: number;
+  tutorPayout: number;
   schedule: string;
   teachingMode: "online" | "in-person" | "both";
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   cancelReason?: string;
+  paymentStatus: "pending" | "received" | "confirmed" | "refunded";
+  paymentNote?: string;
+  payoutStatus: "pending" | "paid";
+  payoutNote?: string;
   createdAt: Date;
 }
 
@@ -20,18 +26,16 @@ const bookingSchema = new Schema<IBooking>(
     request: { type: Schema.Types.ObjectId, ref: "Request" },
     bid: { type: Schema.Types.ObjectId, ref: "Bid" },
     amount: { type: Number, required: true },
+    platformFee: { type: Number, default: 0 },
+    tutorPayout: { type: Number, default: 0 },
     schedule: { type: String, required: true },
-    teachingMode: {
-      type: String,
-      enum: ["online", "in-person", "both"],
-      default: "both",
-    },
-    status: {
-      type: String,
-      enum: ["upcoming", "ongoing", "completed", "cancelled"],
-      default: "upcoming",
-    },
+    teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
+    status: { type: String, enum: ["upcoming", "ongoing", "completed", "cancelled"], default: "upcoming" },
     cancelReason: { type: String },
+    paymentStatus: { type: String, enum: ["pending", "received", "confirmed", "refunded"], default: "pending" },
+    paymentNote: { type: String },
+    payoutStatus: { type: String, enum: ["pending", "paid"], default: "pending" },
+    payoutNote: { type: String },
   },
   { timestamps: true }
 );
