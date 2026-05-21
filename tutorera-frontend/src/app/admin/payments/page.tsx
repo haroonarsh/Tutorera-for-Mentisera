@@ -1,0 +1,231 @@
+"use client";
+import { useEffect, useState } from "react";
+import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+import api from "@/lib/axios";
+
+const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+
+interface Booking {
+  _id: string;
+  student: { name: string; email: string; phone: string; };
+  tutor: { name: string; email: string; phone: string; };
+  amount: number;
+  schedule: string;
+  status: string;
+  paymentStatus: string;
+  payoutStatus: string;
+  paymentNote: string;
+  payoutNote: string;
+  createdAt: string;
+}
+
+const PLATFORM_FEE_PERCENT = 28.75;
+
+export default function PaymentsPage() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"payments" | "payouts">("payments");
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [note, setNote] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    api.get("/admin/bookings")
+      .then(res => setBookings(res.data.bookings))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const updatePayment = async (id: string, paymentStatus: string) => {
+    setUpdating(id);
+    try {
+      await api.patch(`/admin/bookings/${id}/payment`, {
+        paymentStatus,
+        paymentNote: note[id] || "",
+      });
+      setBookings(prev => prev.map(b => b._id === id ? { ...b, paymentStatus } : b));
+    } catch {
+      alert("Update failed.");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const calculateFees = (amount: number) => {
+    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT / 100);
+    const tutorPayout = amount - platformFee;
+    return { platformFee, tutorPayout };
+  };
+
+  // Summary stats
+  const totalReceived = bookings.filter(b => b.paymentStatus === "confirmed").reduce((sum, b) => sum + b.amount, 0);
+  const totalPending = bookings.filter(b => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
+  const totalPlatformFees = Math.round(totalReceived * PLATFORM_FEE_PERCENT / 100);
+
+  return (
+    <div style={{ padding: '2rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
+        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Track student payments and tutor payouts. All transfers are manual bank transfers.</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        {[
+          { label: "Total Confirmed", value: `Rs. ${totalReceived.toLocaleString()}`, icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
+          { label: "Pending Payments", value: `Rs. ${totalPending.toLocaleString()}`, icon: <Clock size={20} color="#d97706" />, bg: '#fffbeb' },
+          { label: "Platform Revenue", value: `Rs. ${totalPlatformFees.toLocaleString()}`, icon: <AlertCircle size={20} color={C.accent} />, bg: '#eff6ff' },
+        ].map(card => (
+          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {card.icon}
+            </div>
+            <div>
+              <p style={{ fontSize: '1.1rem', fontWeight: '800', color: C.primary }}>{card.value}</p>
+              <p style={{ fontSize: '0.75rem', color: C.gray500 }}>{card.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bank Account Info */}
+      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem', marginBottom: '2rem' }}>
+        <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', marginBottom: '0.5rem' }}>🏦 Company Bank Account</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+          <div>
+            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Bank</p>
+            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>HBL / Meezan Bank</p>
+          </div>
+          <div>
+            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Account Title</p>
+            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>MENTISERA (SMC-Private) Limited</p>
+          </div>
+          <div>
+            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Account Number</p>
+            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>XXXX-XXXX-XXXX</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', marginBottom: '1.5rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
+        {(["payments", "payouts"] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500 }}>
+            {tab === "payments" ? "💳 Student Payments" : "💸 Tutor Payouts"}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ width: '36px', height: '36px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {bookings.map(booking => {
+            const { platformFee, tutorPayout } = calculateFees(booking.amount);
+            return (
+              <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+
+                  {/* Info */}
+                  <div>
+                    {activeTab === "payments" ? (
+                      <>
+                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Student</p>
+                        <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>{booking.student?.name}</p>
+                        <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.student?.email}</p>
+                        <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.student?.phone}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Tutor</p>
+                        <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>{booking.tutor?.name}</p>
+                        <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.tutor?.email}</p>
+                        <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.tutor?.phone}</p>
+                      </>
+                    )}
+                    <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      Booked: {new Date(booking.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  {/* Amount */}
+                  <div style={{ backgroundColor: C.gray50, borderRadius: '0.625rem', padding: '1rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                      {activeTab === "payments" ? "Amount to Receive from Student" : "Amount to Pay Tutor"}
+                    </p>
+                    <p style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary }}>
+                      Rs. {activeTab === "payments" ? booking.amount?.toLocaleString() : tutorPayout.toLocaleString()}
+                    </p>
+                    {activeTab === "payments" && (
+                      <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
+                        Platform keeps: Rs. {platformFee.toLocaleString()} ({PLATFORM_FEE_PERCENT}%)
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Payment Status + Actions */}
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                      {activeTab === "payments" ? "Payment Status" : "Payout Status"}
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {activeTab === "payments" ? (
+                        <>
+                          <select value={booking.paymentStatus}
+                            onChange={e => {
+                              const newStatus = e.target.value;
+                              setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, paymentStatus: newStatus } : b));
+                            }}
+                            style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: 'white' }}>
+                            <option value="pending">Pending</option>
+                            <option value="received">Received (Unconfirmed)</option>
+                            <option value="confirmed">Confirmed ✅</option>
+                            <option value="refunded">Refunded</option>
+                          </select>
+                          <input value={note[booking._id] || ""}
+                            onChange={e => setNote(prev => ({ ...prev, [booking._id]: e.target.value }))}
+                            placeholder="Add note (optional)..."
+                            style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
+                          <button onClick={() => updatePayment(booking._id, booking.paymentStatus)}
+                            disabled={updating === booking._id}
+                            style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+                            {updating === booking._id ? "Saving..." : "Update Payment"}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? '#f0fdf4' : '#fffbeb', color: booking.payoutStatus === 'paid' ? '#16a34a' : '#d97706' }}>
+                            {booking.payoutStatus === 'paid' ? <CheckCircle size={13} /> : <Clock size={13} />}
+                            {booking.payoutStatus === 'paid' ? 'Paid Out' : 'Payout Pending'}
+                          </div>
+                          {booking.payoutStatus !== 'paid' && booking.paymentStatus === 'confirmed' && (
+                            <button onClick={async () => {
+                              setUpdating(booking._id);
+                              try {
+                                await api.patch(`/admin/bookings/${booking._id}/payment`, { paymentStatus: booking.paymentStatus, payoutStatus: 'paid', payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor` });
+                                setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, payoutStatus: 'paid' } : b));
+                              } catch { alert("Failed"); } finally { setUpdating(null); }
+                            }} disabled={updating === booking._id}
+                              style={{ padding: '0.5rem', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+                              Mark as Paid Out
+                            </button>
+                          )}
+                          {booking.paymentStatus !== 'confirmed' && (
+                            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>⚠️ Confirm student payment first</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
