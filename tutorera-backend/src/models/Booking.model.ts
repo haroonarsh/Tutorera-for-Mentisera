@@ -33,9 +33,9 @@ const bookingSchema = new Schema<IBooking>(
     status: { type: String, enum: ["upcoming", "ongoing", "completed", "cancelled"], default: "upcoming" },
     cancelReason: { type: String },
     paymentStatus: { type: String, enum: ["pending", "received", "confirmed", "refunded"], default: "pending" },
-    paymentNote: { type: String },
+    paymentNote: { type: String, default: "" },
     payoutStatus: { type: String, enum: ["pending", "paid"], default: "pending" },
-    payoutNote: { type: String },
+    payoutNote: { type: String, default: "" },
   },
   { timestamps: true }
 );

@@ -157,8 +157,11 @@ export const getAllBookings = async (req: AuthRequest, res: Response): Promise<v
 // @desc    Update booking payment status
 // @route   PATCH /api/admin/bookings/:id/payment
 // @access  Private (admin)
-export const updatePaymentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { paymentStatus, paymentNote } = req.body;
+export const updatePaymentStatus = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
 
   const booking = await Booking.findById(req.params.id);
   if (!booking) {
@@ -166,11 +169,19 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response): Prom
     return;
   }
 
-  (booking as any).paymentStatus = paymentStatus;
-  (booking as any).paymentNote = paymentNote;
+  // Update only fields that are provided
+  if (paymentStatus !== undefined) booking.paymentStatus = paymentStatus;
+  if (paymentNote !== undefined) booking.paymentNote = paymentNote;
+  if (payoutStatus !== undefined) booking.payoutStatus = payoutStatus;
+  if (payoutNote !== undefined) booking.payoutNote = payoutNote;
+
   await booking.save();
 
-  res.status(200).json({ success: true, message: "Payment status updated", booking });
+  res.status(200).json({
+    success: true,
+    message: "Updated successfully",
+    booking,
+  });
 };
 
 // @desc    Get all contacts
