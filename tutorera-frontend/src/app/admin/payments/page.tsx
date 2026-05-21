@@ -202,17 +202,43 @@ export default function PaymentsPage() {
                             {booking.payoutStatus === 'paid' ? 'Paid Out' : 'Payout Pending'}
                           </div>
                           {booking.payoutStatus !== 'paid' && booking.paymentStatus === 'confirmed' && (
-                            <button onClick={async () => {
-                              setUpdating(booking._id);
-                              try {
-                                await api.patch(`/admin/bookings/${booking._id}/payment`, { paymentStatus: booking.paymentStatus, payoutStatus: 'paid', payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor` });
-                                setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, payoutStatus: 'paid' } : b));
-                              } catch { alert("Failed"); } finally { setUpdating(null); }
-                            }} disabled={updating === booking._id}
-                              style={{ padding: '0.5rem', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
-                              Mark as Paid Out
-                            </button>
-                          )}
+                            <button
+                              onClick={async () => {
+                                  setUpdating(booking._id);
+                                  try {
+                                  const { tutorPayout } = calculateFees(booking.amount);
+                                  await api.patch(`/admin/bookings/${booking._id}/payment`, {
+                                  payoutStatus: 'paid',
+                                  payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
+                                });
+                            // Update local state
+                            setBookings(prev =>
+                              prev.map(b =>
+                                b._id === booking._id
+                                ? { ...b, payoutStatus: 'paid' }
+                                : b
+                                )
+                              );
+                            } catch {
+                              alert("Failed to update payout status.");
+                            } finally {
+                              setUpdating(null);
+                            }
+                          }}
+                        disabled={updating === booking._id}
+                      style={{
+                        padding: '0.5rem',
+                        backgroundColor: updating === booking._id ? '#86efac' : '#16a34a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.4rem',
+                        cursor: updating === booking._id ? 'not-allowed' : 'pointer',
+                        fontSize: '0.8rem',
+                        fontWeight: '600'
+                    }}>
+                      {updating === booking._id ? "Saving..." : "Mark as Paid Out"}
+                    </button>
+                      )}
                           {booking.paymentStatus !== 'confirmed' && (
                             <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>⚠️ Confirm student payment first</p>
                           )}
