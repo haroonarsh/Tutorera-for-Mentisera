@@ -22,11 +22,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const loggedInUser = await login(email, password);
-      if (loggedInUser.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+        if (loggedInUser.role === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || "Invalid email or password");
