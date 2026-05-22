@@ -40,7 +40,22 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!loading && !user) { router.push("/login"); return; }
     if (user) {
-      setPersonalForm({ name: user.name, phone: "", city: "" });
+      // Fetch full user data to get phone and city
+        api.get("/auth/me").then(res => {
+          const u = res.data.user;
+            setPersonalForm({
+              name: u.name || "",
+              phone: u.phone || "",
+              city: u.city || "",
+            });
+        }).catch(() => {
+      setPersonalForm({
+        name: user.name || "",
+        phone: "",
+        city: "",
+      });
+    });
+
       // Fetch tutor profile if tutor
       if (user.role === "tutor") {
         api.get("/tutors/profile/me")
@@ -72,7 +87,7 @@ export default function ProfilePage() {
   const handlePersonalSave = async () => {
     setSaving(true); setError(""); setSuccess("");
     try {
-      // Upload avatar if changed
+      // 1. Upload avatar if changed
       if (avatarFile) {
         const formData = new FormData();
         formData.append("avatar", avatarFile);
@@ -80,6 +95,13 @@ export default function ProfilePage() {
           headers: { "Content-Type": "multipart/form-data" }
         });
       }
+      // 2. Update personal info (name, phone, city)
+      await api.patch("/auth/update-profile", {
+        name: personalForm.name,
+        phone: personalForm.phone,
+        city: personalForm.city,
+      });
+
       setSuccess("Profile updated successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch {
