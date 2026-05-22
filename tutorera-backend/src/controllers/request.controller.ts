@@ -4,6 +4,7 @@ import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import { sendNotification } from "../utils/socket";
 
 // @desc    Create tuition request
 // @route   POST /api/requests
@@ -84,6 +85,15 @@ const bid = await Bid.create({
     message: req.body.message,
 });
 
+// After bid is created, add:
+const io = req.app.get("io");
+await sendNotification(io, request.student.toString(), {
+  title: "📬 New Bid Received",
+  message: `A tutor has placed a bid of Rs. ${req.body.amount} on your tuition request.`,
+  type: "bid",
+  link: `/requests/${req.params.id}/bids`,
+});
+
   res.status(201).json({ success: true, message: "Bid placed successfully", bid });
 };
 
@@ -146,6 +156,24 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     amount: bid.amount,
     schedule: request.schedule,
     teachingMode: request.teachingMode,
+  });
+
+  const io = req.app.get("io");
+
+  // Notify tutor
+  await sendNotification(io, bid.tutor.toString(), {
+    title: "✅ Bid Accepted!",
+    message: "Your bid has been accepted! A booking has been created.",
+    type: "booking",
+    link: "/dashboard",
+  });
+
+  // Notify student
+  await sendNotification(io, request.student.toString(), {
+    title: "📅 Booking Confirmed",
+    message: "Your booking has been created successfully. Check your dashboard.",
+    type: "booking",
+    link: "/dashboard",
   });
 
   res.status(200).json({

@@ -5,6 +5,7 @@ import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
+import { sendNotification } from "../utils/socket";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -91,6 +92,17 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     profile.rejectionReason = reason;
   }
   await profile.save();
+
+  // Send real-time notification to tutor
+  const io = req.app.get("io");
+  await sendNotification(io, profile.user.toString(), {
+    title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
+    message: status === "approved"
+      ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
+      : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
+    type: "verification",
+    link: "/dashboard",
+  });
 
   res.status(200).json({
     success: true,
