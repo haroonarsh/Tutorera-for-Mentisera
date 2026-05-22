@@ -91,7 +91,7 @@ await sendNotification(io, request.student.toString(), {
   title: "📬 New Bid Received",
   message: `A tutor has placed a bid of Rs. ${req.body.amount} on your tuition request.`,
   type: "bid",
-  link: `/requests/${req.params.id}/bids`,
+  link: "/dashboard",
 });
 
   res.status(201).json({ success: true, message: "Bid placed successfully", bid });
