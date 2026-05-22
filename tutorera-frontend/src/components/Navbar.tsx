@@ -33,6 +33,7 @@ export default function Navbar() {
     const handleClick = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
         setActiveDropdown(null);
+        setShowNotifications(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -109,96 +110,88 @@ export default function Navbar() {
           </div>
 
           {/* Auth Area */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }} className="hidden-mobile">
-            {user ? (
-              <div style={{ position: 'relative' }}>
-                {/* Notification Bell */}
-{user && (
-  <div style={{ position: 'relative' }}>
-    <button
-      onClick={() => setShowNotifications(!showNotifications)}
-      style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '0.5rem', color: C.primary }}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-      <Bell size={20} />
-      {unreadCount > 0 && (
-        <span style={{ position: 'absolute', top: '0', right: '0', width: '18px', height: '18px', backgroundColor: '#e94560', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '800', color: 'white' }}>
-          {unreadCount > 9 ? '9+' : unreadCount}
-        </span>
-      )}
-    </button>
-
-    {/* Notification Dropdown */}
-    {showNotifications && (
-      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.875rem', boxShadow: '0 10px 25px rgba(0,0,0,0.12)', width: '340px', zIndex: 100, overflow: 'hidden' }}>
-
-        {/* Header */}
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>
-            Notifications {unreadCount > 0 && <span style={{ color: '#e94560' }}>({unreadCount})</span>}
-          </p>
+<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="hidden-mobile">
+  {user ? (
+    <>
+      {/* Notification Bell */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => {
+            setShowNotifications(!showNotifications);
+            setActiveDropdown(null);
+          }}
+          style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.5rem', color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+          <Bell size={20} />
           {unreadCount > 0 && (
-            <button onClick={markAllAsRead}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: '0.8rem', fontWeight: '600' }}>
-              Mark all read
-            </button>
+            <span style={{ position: 'absolute', top: '4px', right: '4px', width: '16px', height: '16px', backgroundColor: '#e94560', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '800', color: 'white' }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
-        </div>
+        </button>
 
-        {/* Notifications List */}
-        <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
-          {notifications.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}>
-              <Bell size={28} color="#d1d5db" style={{ margin: '0 auto 0.5rem' }} />
-              <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No notifications yet</p>
+        {/* Notification Dropdown */}
+        {showNotifications && (
+          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.875rem', boxShadow: '0 10px 25px rgba(0,0,0,0.12)', width: '320px', zIndex: 100, overflow: 'hidden' }}>
+            <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem' }}>
+                Notifications {unreadCount > 0 && <span style={{ color: '#e94560' }}>({unreadCount})</span>}
+              </p>
+              {unreadCount > 0 && (
+                <button onClick={markAllAsRead}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: '0.75rem', fontWeight: '600' }}>
+                  Mark all read
+                </button>
+              )}
             </div>
-          ) : (
-            notifications.map(notif => (
-              <div key={notif._id}
-                onClick={() => {
-                  markAsRead(notif._id);
-                  setShowNotifications(false);
-                  if (notif.link) window.location.href = notif.link;
-                }}
-                style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff', transition: 'background 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = notif.isRead ? 'white' : '#f0f7ff')}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  {/* Type Icon */}
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: notif.type === 'verification' ? '#f0fdf4' : notif.type === 'bid' ? '#eff6ff' : notif.type === 'booking' ? '#fdf4ff' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>
-                    {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.85rem', marginBottom: '0.2rem' }}>{notif.title}</p>
-                    <p style={{ color: '#6b7280', fontSize: '0.8rem', lineHeight: '1.4' }}>{notif.message}</p>
-                    <p style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '0.3rem' }}>
-                      {new Date(notif.createdAt).toLocaleDateString("en-PK", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  {!notif.isRead && (
-                    <div style={{ width: '8px', height: '8px', backgroundColor: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: '0.3rem' }} />
-                  )}
+            <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                  <Bell size={28} color="#d1d5db" style={{ margin: '0 auto 0.5rem' }} />
+                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No notifications yet</p>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-                <button onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '2rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-                  <div style={{ width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700' }}>
-                    {user.avatar ? (
-                      <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
-                    ) : (
-                      user.name.charAt(0).toUpperCase()
+              ) : notifications.map(notif => (
+                <div key={notif._id}
+                  onClick={() => { markAsRead(notif._id); setShowNotifications(false); if (notif.link) window.location.href = notif.link; }}
+                  style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = notif.isRead ? 'white' : '#f0f7ff')}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: notif.type === 'verification' ? '#f0fdf4' : notif.type === 'bid' ? '#eff6ff' : notif.type === 'booking' ? '#fdf4ff' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.9rem' }}>
+                      {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.82rem', marginBottom: '0.2rem' }}>{notif.title}</p>
+                      <p style={{ color: '#6b7280', fontSize: '0.78rem', lineHeight: '1.4' }}>{notif.message}</p>
+                      <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                        {new Date(notif.createdAt).toLocaleDateString("en-PK", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    {!notif.isRead && (
+                      <div style={{ width: '8px', height: '8px', backgroundColor: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: '4px' }} />
                     )}
                   </div>
-                  {user.name.split(' ')[0]}
-                  <ChevronDown size={14} />
-                </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* User Dropdown */}
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => { setActiveDropdown(activeDropdown === 'user' ? null : 'user'); setShowNotifications(false); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '2rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+          <div style={{ width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden' }}>
+            {user.avatar ? (
+              <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : user.name.charAt(0).toUpperCase()}
+          </div>
+          {user.name.split(' ')[0]}
+          <ChevronDown size={14} />
+        </button>
+
                 {activeDropdown === 'user' && (
                   <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', minWidth: '180px', zIndex: 100, overflow: 'hidden' }}>
                     <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
@@ -236,6 +229,7 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+              </>
             ) : (
               <>
                 <Link href="/login" style={{ padding: '0.5rem 1rem', color: C.primary, textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500', borderRadius: '0.4rem' }}
@@ -262,6 +256,55 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {isOpen && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #e5e7eb', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+
+    {/* Mobile Notification Banner */}
+    {user && (
+      <div style={{ backgroundColor: '#f0f7ff', borderRadius: '0.75rem', padding: '0.875rem 1rem', marginBottom: '0.75rem', border: '1px solid #bfdbfe' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: notifications.filter(n => !n.isRead).length > 0 ? '0.75rem' : '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Bell size={16} color={C.accent} />
+            <span style={{ fontWeight: '700', color: C.primary, fontSize: '0.875rem' }}>
+              Notifications
+            </span>
+            {unreadCount > 0 && (
+              <span style={{ backgroundColor: '#e94560', color: 'white', fontSize: '0.65rem', fontWeight: '800', padding: '0.1rem 0.4rem', borderRadius: '999px' }}>
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <button onClick={markAllAsRead}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: '0.75rem', fontWeight: '600' }}>
+              Mark all read
+            </button>
+          )}
+        </div>
+
+        {/* Show last 3 notifications on mobile */}
+        {notifications.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem 0' }}>No notifications yet</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+            {notifications.slice(0, 5).map(notif => (
+              <div key={notif._id}
+                onClick={() => { markAsRead(notif._id); setIsOpen(false); if (notif.link) window.location.href = notif.link; }}
+                style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', padding: '0.5rem', borderRadius: '0.5rem', backgroundColor: notif.isRead ? 'transparent' : 'white', cursor: 'pointer' }}>
+                <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>
+                  {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
+                </span>
+                <div>
+                  <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>{notif.title}</p>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', lineHeight: '1.3' }}>{notif.message}</p>
+                </div>
+                {!notif.isRead && (
+                  <div style={{ width: '7px', height: '7px', backgroundColor: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: '4px' }} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
           <Link href="/" onClick={() => setIsOpen(false)} style={{ padding: '0.7rem 0', color: C.primary, textDecoration: 'none', fontSize: '0.95rem', fontWeight: '500', borderBottom: '1px solid #f3f4f6' }}>Home</Link>
           <Link href="/tutors" onClick={() => setIsOpen(false)} style={{ padding: '0.7rem 0', color: C.primary, textDecoration: 'none', fontSize: '0.95rem', fontWeight: '500', borderBottom: '1px solid #f3f4f6' }}>Find a Tutor</Link>
           <Link href="/become-a-tutor" onClick={() => setIsOpen(false)}
