@@ -206,19 +206,37 @@ export default function Navbar() {
             </div>
           ))}
           {user ? (
-            <div style={{ paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {user.role !== "admin" && (
-                <Link href="/dashboard" onClick={() => setIsOpen(false)} style={{ padding: '0.7rem', textAlign: 'center', border: `1px solid ${C.accent}`, color: C.accent, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>Dashboard</Link>
-              )}
-              {user.role === "admin" && (
-                <Link href="/admin" onClick={() => setIsOpen(false)}
+            <>
+           {user.role !== "admin" && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem' }}>
+              <Link href="/dashboard" onClick={() => setIsOpen(false)}
+                style={{ padding: '0.7rem', textAlign: 'center', border: `1px solid ${C.accent}`, color: C.accent, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
+                Dashboard
+              </Link>
+              <Link href="/profile" onClick={() => setIsOpen(false)}
+                style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #e5e7eb', color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
+                My Profile
+              </Link>
+              <button onClick={handleLogout}
+                style={{ padding: '0.7rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>
+                Logout
+              </button>
+            </div>
+          )}
+
+          {user.role === "admin" && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem' }}>
+              <Link href="/admin" onClick={() => setIsOpen(false)}
                   style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #7c3aed', color: '#7c3aed', textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
                 ⚙️ Admin Panel
-                </Link>
-              )}
-              
-              <button onClick={handleLogout} style={{ padding: '0.7rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>Logout</button>
+              </Link>
+              <button onClick={handleLogout}
+                style={{ padding: '0.7rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>
+                Logout
+              </button>
             </div>
+          )}
+          </>
           ) : (
             <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.75rem' }}>
               <Link href="/login" onClick={() => setIsOpen(false)} style={{ flex: 1, textAlign: 'center', padding: '0.7rem', border: `1px solid ${C.primary}`, color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>Log in</Link>
