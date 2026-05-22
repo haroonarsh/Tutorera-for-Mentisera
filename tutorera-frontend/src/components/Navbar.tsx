@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, X, ChevronDown, BookOpen, User, LogOut, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
+import { Bell } from "lucide-react";
 
 const C = {
   primary: '#1a1a2e',
@@ -21,6 +23,8 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey>(null);
   const [mobileExpanded, setMobileExpanded] = useState<DropdownKey>(null);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
+  const [showNotifications, setShowNotifications] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -108,6 +112,81 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }} className="hidden-mobile">
             {user ? (
               <div style={{ position: 'relative' }}>
+                {/* Notification Bell */}
+{user && (
+  <div style={{ position: 'relative' }}>
+    <button
+      onClick={() => setShowNotifications(!showNotifications)}
+      style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '0.5rem', color: C.primary }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+      <Bell size={20} />
+      {unreadCount > 0 && (
+        <span style={{ position: 'absolute', top: '0', right: '0', width: '18px', height: '18px', backgroundColor: '#e94560', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '800', color: 'white' }}>
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      )}
+    </button>
+
+    {/* Notification Dropdown */}
+    {showNotifications && (
+      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.875rem', boxShadow: '0 10px 25px rgba(0,0,0,0.12)', width: '340px', zIndex: 100, overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>
+            Notifications {unreadCount > 0 && <span style={{ color: '#e94560' }}>({unreadCount})</span>}
+          </p>
+          {unreadCount > 0 && (
+            <button onClick={markAllAsRead}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: '0.8rem', fontWeight: '600' }}>
+              Mark all read
+            </button>
+          )}
+        </div>
+
+        {/* Notifications List */}
+        <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
+          {notifications.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <Bell size={28} color="#d1d5db" style={{ margin: '0 auto 0.5rem' }} />
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No notifications yet</p>
+            </div>
+          ) : (
+            notifications.map(notif => (
+              <div key={notif._id}
+                onClick={() => {
+                  markAsRead(notif._id);
+                  setShowNotifications(false);
+                  if (notif.link) window.location.href = notif.link;
+                }}
+                style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff', transition: 'background 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = notif.isRead ? 'white' : '#f0f7ff')}>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  {/* Type Icon */}
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: notif.type === 'verification' ? '#f0fdf4' : notif.type === 'bid' ? '#eff6ff' : notif.type === 'booking' ? '#fdf4ff' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>
+                    {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.85rem', marginBottom: '0.2rem' }}>{notif.title}</p>
+                    <p style={{ color: '#6b7280', fontSize: '0.8rem', lineHeight: '1.4' }}>{notif.message}</p>
+                    <p style={{ color: '#9ca3af', fontSize: '0.72rem', marginTop: '0.3rem' }}>
+                      {new Date(notif.createdAt).toLocaleDateString("en-PK", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  {!notif.isRead && (
+                    <div style={{ width: '8px', height: '8px', backgroundColor: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: '0.3rem' }} />
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+)}
                 <button onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '2rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
                   <div style={{ width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700' }}>
