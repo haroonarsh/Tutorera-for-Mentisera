@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, ChevronDown, BookOpen, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, ChevronDown, BookOpen, User, LogOut, LayoutDashboard, MessageSquare } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import { Bell } from "lucide-react";
@@ -220,6 +220,14 @@ export default function Navbar() {
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
                       <User size={15} /> Profile
                     </Link>
+                    {user.role !== "admin" && (
+                      <Link href="/chat" onClick={() => setActiveDropdown(null)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: C.primary }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                      <MessageSquare size={15} /> Messages
+                      </Link>
+                    )}
                     <button onClick={handleLogout}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', width: '100%', borderTop: '1px solid #f3f4f6' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#fef2f2')}
@@ -338,6 +346,12 @@ export default function Navbar() {
               <Link href="/profile" onClick={() => setIsOpen(false)}
                 style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #e5e7eb', color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
                 My Profile
+              </Link>
+              <Link href="/chat" onClick={() => setActiveDropdown(null)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: C.primary }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                <MessageSquare size={15} /> Messages
               </Link>
               <button onClick={handleLogout}
                 style={{ padding: '0.7rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>

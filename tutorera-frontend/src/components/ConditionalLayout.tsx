@@ -9,6 +9,7 @@ const HIDE_LAYOUT_PATHS = [
   "/onboarding/tutor/complete",
   "/onboarding/student",
   "/onboarding/student/complete",
+  "/chat",
 ];
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {

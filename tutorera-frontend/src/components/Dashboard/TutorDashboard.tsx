@@ -7,6 +7,13 @@ import axiosInstance from "@/lib/axios";
 import { DashRequest, DashBooking, TutorProfileData } from "@/types/dashboard";
 import PlaceBidModal from "./PlaceBidModal";
 import s from "@/app/dashboard/dashboard.module.css";
+import { useRouter } from "next/navigation";
+
+const C = {
+  primary: '#1a1a2e',
+  accent: '#2563eb',
+  highlight: '#e94560',
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +38,23 @@ function timeAgo(dateStr: string): string {
 // ─── Booking Card (tutor perspective) ────────────────────────────────────────
 
 function BookingCard({ booking }: { booking: DashBooking }) {
+  const [creatingChat, setCreatingChat] = useState(false);
+  const router = useRouter();
+
+  const handleChatClick = async () => {
+  setCreatingChat(true);
+  try {
+    const res = await axiosInstance.post("/chat/conversation", {
+      bookingId: booking._id,
+    });
+    const conversationId = res.data.conversation._id;
+    router.push(`/chat/${conversationId}`);
+  } catch (err) {
+    console.error("Failed to create conversation:", err);
+  } finally {
+    setCreatingChat(false);
+  }
+};
   return (
     <div className={s.card}>
       <div className={s.cardHeader}>
@@ -47,6 +71,18 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         </div>
         <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
       </div>
+      <button
+        onClick={handleChatClick}
+        disabled={creatingChat}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+          padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#eff6ff',
+          color: creatingChat ? '#9ca3af' : '#2563eb', borderRadius: '0.5rem',
+          border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600',
+          cursor: creatingChat ? 'not-allowed' : 'pointer', marginBottom: '0.5rem'
+        }}>
+        {creatingChat ? "Opening..." : "💬 Chat"}
+      </button>
       <div className={s.infoRow} style={{ marginTop: 12 }}>
         <span className={s.infoChip}>
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
