@@ -19,6 +19,7 @@ import contactRoutes from "./routes/contact.routes";
 import uploadRoutes from "./routes/upload.routes";
 import adminRoutes from "./routes/admin.routes";
 import notificationRoutes from "./routes/notification.routes";
+import chatRoutes from "./routes/chat.routes";
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Health check
 app.get("/", (req, res) => {

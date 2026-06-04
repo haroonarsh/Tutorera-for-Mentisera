@@ -37,8 +37,27 @@ export const initSocket = (httpServer: HttpServer): Server => {
     connectedUsers[userId] = socket.id;
     console.log(`✅ User connected: ${userId}`);
 
-    // Join personal room
+    // Join personal room for notifications
     socket.join(userId);
+
+    // Join a chat conversation room
+    socket.on("join_conversation", (conversationId: string) => {
+      socket.join(conversationId);
+      console.log(`User ${userId} joined conversation ${conversationId}`);
+    });
+
+    // Leave conversation room
+    socket.on("leave_conversation", (conversationId: string) => {
+      socket.leave(conversationId);
+    });
+
+    // Typing indicator
+    socket.on("typing", (data: { conversationId: string; isTyping: boolean }) => {
+      socket.to(data.conversationId).emit("user_typing", {
+        userId,
+        isTyping: data.isTyping,
+      });
+    });
 
     socket.on("disconnect", () => {
       delete connectedUsers[userId];
