@@ -1,10 +1,14 @@
-"use client";
 
-import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import Link from "next/link";
 import { Search, Shield, MapPin, BookOpen, Users, Star, CheckCircle, XCircle } from "lucide-react";
 import TopTutorsSection from "@/components/TopTutorsSection";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Find Tutors in Pakistan | TUTORERA®",
+  description: "Pakistan's modern tutoring marketplace. Search verified tutors by subject, level, city, and budget. Safe, clear, and structured.",
+};
 
 const C = {
   primary: '#1a1a2e',

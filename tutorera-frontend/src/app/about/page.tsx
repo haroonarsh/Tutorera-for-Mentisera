@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { BookOpen, Users, Shield, Target, Heart, Award } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About TUTORERA®",
+  description: "TUTORERA® is Pakistan's trusted tutoring marketplace, operated by MENTISERA (SMC-Private) Limited.",
+};
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 

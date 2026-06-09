@@ -3,31 +3,38 @@ import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 
-const HIDE_LAYOUT_PATHS = [
+const HIDE_NAVBAR_AND_FOOTER = [
   "/onboarding",
-  "/onboarding/tutor",
-  "/onboarding/tutor/complete",
-  "/onboarding/student",
-  "/onboarding/student/complete",
   "/chat",
+  "/dashboard",
+  "/settings",
+  "/notifications",
+  "/billing",
+  "/profile",
+];
+
+const HIDE_FOOTER_ONLY = [
+  "/dashboard",
+  "/admin",
+  "/profile",
+  "/settings",
+  "/notifications",
+  "/billing",
 ];
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  const hideLayout = HIDE_LAYOUT_PATHS.some(path =>
-    pathname.startsWith(path)
-  );
+  const hideAll = HIDE_NAVBAR_AND_FOOTER.some(path => pathname.startsWith(path));
+  const hideFooter = HIDE_FOOTER_ONLY.some(path => pathname.startsWith(path));
 
-  if (hideLayout) {
-    return <>{children}</>;
-  }
+  if (hideAll) return <>{children}</>;
 
   return (
     <>
       <Navbar />
       <main>{children}</main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </>
   );
 }

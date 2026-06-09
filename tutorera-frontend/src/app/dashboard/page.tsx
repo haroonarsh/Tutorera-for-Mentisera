@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import StudentDashboard from "@/components/Dashboard/StudentDashboard";
 import TutorDashboard from "@/components/Dashboard/TutorDashboard";
+import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
 function LoadingScreen() {
   return (
+    <DashboardLayout>
     <div
       style={{
         minHeight: "100vh",
@@ -39,6 +41,7 @@ function LoadingScreen() {
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
+    </DashboardLayout>
   );
 }
 
@@ -60,19 +63,23 @@ export default function DashboardPage() {
   // Render the correct dashboard based on role
   if (user.role === "tutor") {
     return (
+      <DashboardLayout>
       <TutorDashboard
         userId={user._id}
         userName={user.name}
         userAvatar={user.avatar}
       />
+      </DashboardLayout>
     );
   }
 
   // Default: student
   return (
+    <DashboardLayout>
     <StudentDashboard
       userName={user.name}
       userAvatar={user.avatar}
     />
+    </DashboardLayout>
   );
 }
