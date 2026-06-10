@@ -93,20 +93,24 @@
 /* ── Stats row ── */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .statCard {
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1.5px solid #e5e7eb;
-  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  gap: 14px;
-  transition: box-shadow 0.2s;
+  gap: 12px;
+  min-width: 0;        /* ← THIS IS THE KEY FIX */
+  overflow: hidden;    /* ← prevents content overflow */
+  box-sizing: border-box;
 }
 
 .statCard:hover {
@@ -124,17 +128,19 @@
 }
 
 .statValue {
-  font-size: 26px;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #1a1a2e;
   line-height: 1;
-  margin-bottom: 3px;
+  white-space: nowrap;
 }
 
 .statLabel {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #6b7280;
-  font-weight: 500;
+  margin-top: 2px;
+  white-space: normal;   /* ← allow wrapping */
+  word-break: break-word;
 }
 
 /* ── Tabs ── */

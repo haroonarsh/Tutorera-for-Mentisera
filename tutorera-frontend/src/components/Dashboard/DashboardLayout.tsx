@@ -208,8 +208,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        minWidth: 0,
-        overflow: 'hidden',
+         minWidth: 0,
+         maxWidth: '100%',
+        overflowX: 'hidden',  
       }} className="dashboard-main">
 
         {/* Top Bar */}
@@ -254,8 +255,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Page Content */}
-        <div style={{ flex: 1, padding: '1.5rem' }}>
-          {children}
+        <div style={{
+          flex: 1,
+          padding: '1.5rem',
+          width: '100%',
+          boxSizing: 'border-box',
+          overflowX: 'hidden',   /* ← KEY FIX */
+          minWidth: 0,           /* ← prevents flex overflow */
+        }}>
+            {children}
         </div>
       </div>
 
