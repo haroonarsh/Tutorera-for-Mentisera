@@ -101,13 +101,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <style>{`
         @media (min-width: 769px) {
-          .admin-mobile-header { display: none !important; }
+        .admin-mobile-header { display: none !important; }
         }
         @media (max-width: 768px) {
           .admin-sidebar-desktop { display: none !important; }
-          .admin-main { margin-left: 0 !important; }
+           .admin-main {
+           margin-left: 0 !important;
+            width: 100% !important;
+             max-width: 100vw !important;
+              overflow-x: hidden !important;
+          }
         }
-      `}</style>
+        `}</style>
     </AdminGuard>
   );
 }

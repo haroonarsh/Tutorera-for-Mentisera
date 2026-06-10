@@ -81,49 +81,93 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Replace the existing table div with this */}
       <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }}>
-          {["Name", "Email", "Role", "City", "Status", "Action"].map(h => (
-            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</p>
-          ))}
+
+      {/* Desktop Table Header — hide on mobile */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="admin-table-header">
+        {["Name", "Email", "Role", "City", "Status", "Action"].map(h => (
+         <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</p>
+        ))}
         </div>
 
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          </div>
+        <div style={{ padding: '3rem', textAlign: 'center' }}>
+       <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+         </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>No users found.</div>
-        ) : (
+         ) : (
           filtered.map((user, idx) => (
-            <div key={user._id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr', padding: '1rem 1.5rem', borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : 'none', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div key={user._id} style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+
+              {/* Desktop Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <div style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
-                  {user.name.charAt(0)}
-                </div>
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user.name}</span>
-              </div>
-              <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.email}</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', width: 'fit-content' }}>{user.role}</span>
-              <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
-                {user.isActive ? "Active" : "Inactive"}
-              </span>
-              <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a', width: 'fit-content' }}>
-                {user.isActive ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
-              </button>
+              {user.name.charAt(0)}
             </div>
-          ))
-        )}
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user.name}</span>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: C.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', width: 'fit-content' }}>{user.role}</span>
+          <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
+            {user.isActive ? "Active" : "Inactive"}
+          </span>
+          <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a', width: 'fit-content' }}>
+            {user.isActive ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
+          </button>
+        </div>
+
+        {/* Mobile Card — show on small screens */}
+        <div style={{ padding: '1rem 1.25rem' }} className="admin-mobile-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
+                {user.name.charAt(0)}
+              </div>
+              <div>
+                <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem' }}>{user.name}</p>
+                <p style={{ color: C.gray500, fontSize: '0.75rem' }}>{user.email}</p>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', flexShrink: 0 }}>
+              {user.role}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
+                • {user.isActive ? "Active" : "Inactive"}
+              </span>
+            </div>
+            <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a' }}>
+              {user.isActive ? "Deactivate" : "Activate"}
+            </button>
+               </div>
+           </div>
+
+          </div>
+       ))
+      )}
       </div>
 
-      <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '1rem' }}>
-        Showing {filtered.length} of {users.length} users
-      </p>
+      {/* Add this CSS */}
+      <style>{`
+        @media (min-width: 769px) {
+        .admin-mobile-card { display: none !important; }
+          }
+         @media (max-width: 768px) {
+          .admin-table-header { display: none !important; }
+         .admin-table-row { display: none !important; }
+           .admin-mobile-card { display: block !important; }
+         }
+      `}</style>
     </div>
   );
 }

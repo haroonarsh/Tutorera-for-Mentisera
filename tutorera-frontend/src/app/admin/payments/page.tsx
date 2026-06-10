@@ -62,7 +62,7 @@ export default function PaymentsPage() {
   const totalPlatformFees = Math.round(totalReceived * PLATFORM_FEE_PERCENT / 100);
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Track student payments and tutor payouts. All transfers are manual bank transfers.</p>
@@ -174,7 +174,7 @@ export default function PaymentsPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {activeTab === "payments" ? (
                         <>
-                          <select value={booking.paymentStatus}
+                          <select title="Payment status" className="paymentStatusSelect" value={booking.paymentStatus}
                             onChange={e => {
                               const newStatus = e.target.value;
                               setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, paymentStatus: newStatus } : b));

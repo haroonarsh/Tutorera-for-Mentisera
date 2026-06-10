@@ -96,7 +96,7 @@ export default function VerificationsPage() {
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Tutor Verifications</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Review full tutor applications and manage verification.</p>

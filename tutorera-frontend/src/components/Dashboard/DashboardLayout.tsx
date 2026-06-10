@@ -205,7 +205,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         flex: 1,
         marginLeft: collapsed ? '60px' : '240px',
         transition: 'margin-left 0.25s ease',
-        display: 'flex', flexDirection: 'column', minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        minWidth: 0,
+        overflow: 'hidden',
       }} className="dashboard-main">
 
         {/* Top Bar */}
@@ -257,9 +261,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <style>{`
         @media (max-width: 768px) {
-          .hidden-mobile { display: none !important; }
-          .show-mobile { display: flex !important; }
-          .dashboard-main { margin-left: 0 !important; }
+        .hidden-mobile { display: none !important; }
+        .show-mobile { display: flex !important; }
+        .dashboard-main {
+          margin-left: 0 !important;
+          width: 100% !important;
+          max-width: 100vw !important;
+          overflow-x: hidden !important;
+        }
         }
         @media (min-width: 769px) {
           .show-mobile { display: none !important; }
