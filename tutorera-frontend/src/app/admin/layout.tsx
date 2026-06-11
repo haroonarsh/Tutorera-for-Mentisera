@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen, CreditCard, MessageSquare, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen, CreditCard, MessageSquare, Menu, X, FileText } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
@@ -16,6 +16,7 @@ const navItems = [
   { href: "/admin/bookings", label: "Bookings", icon: <BookOpen size={18} /> },
   { href: "/admin/payments", label: "Payments", icon: <CreditCard size={18} /> },
   { href: "/admin/contacts", label: "Messages", icon: <MessageSquare size={18} /> },
+  { href: "/admin/blogs", label: "Blog Posts", icon: <FileText size={18} /> },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

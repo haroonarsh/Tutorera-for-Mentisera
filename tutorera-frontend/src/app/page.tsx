@@ -178,35 +178,51 @@ export default function Home() {
 
       {/* ── BLOG ── */}
       <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Insights From Our Blog</h2>
-            <p style={{ color: C.gray500 }}>Expert advice for parents, students, and educators in Pakistan.</p>
+       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+         <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Insights From Our Blog</h2>
+         <p style={{ color: C.gray500 }}>Expert advice for parents, students, and educators in Pakistan.</p>
+        </div>
+         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          {[
+           {
+             title: "How to Find a Trusted Tutor in Pakistan",
+            desc: "Feeling overwhelmed finding a tutor? This guide breaks down the process into simple, safe steps.",
+           slug: "how-to-find-a-trusted-tutor-in-pakistan",
+            color: "linear-gradient(135deg, #1a1a2e, #2563eb)"
+         },
+        {
+            title: "Online Tutoring vs. Traditional Home Tuition",
+          desc: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition?",
+          slug: "online-vs-home-tuition-in-pakistan",
+          color: "linear-gradient(135deg, #2563eb, #7c3aed)"
+        },
+        {
+          title: "What Parents Should Look for Before Hiring a Tutor",
+          desc: "Don't hire a tutor blindly. This checklist covers 5 critical areas every parent must consider.",
+          slug: "what-to-look-for-before-hiring-a-tutor-pakistan",
+          color: "linear-gradient(135deg, #0f3460, #2563eb)"
+        },
+          ].map((post) => (
+        <div key={post.slug} style={{ backgroundColor: '#f9fafb', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+          <div style={{ height: '180px', background: post.color, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+            <h3 style={{ color: 'white', fontWeight: '700', fontSize: '1rem', textAlign: 'center', lineHeight: '1.5' }}>{post.title}</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {[
-              { title: "How to Find a Trusted Tutor in Pakistan", desc: "Feeling overwhelmed finding a tutor? This guide breaks down the process into simple, safe steps.", slug: "how-to-find-a-trusted-tutor-in-pakistan", img: "/blog1.webp" },
-              { title: "Online Tutoring vs. Traditional Home Tuition", desc: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition?", slug: "online-vs-home-tuition-in-pakistan", img: "/blog2.webp" },
-              { title: "What Parents Should Look for Before Hiring a Tutor", desc: "Don't hire a tutor blindly. This checklist covers 5 critical areas every parent must consider.", slug: "what-to-look-for-before-hiring-a-tutor-pakistan", img: "/blog4.png" },
-            ].map((post) => (
-              <div key={post.slug} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                <img src={post.img} alt={post.title} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
-                <div style={{ padding: '1.5rem' }}>
-                  <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', marginBottom: '0.5rem', lineHeight: '1.4' }}>{post.title}</h3>
-                  <p style={{ color: C.gray500, fontSize: '0.85rem', marginBottom: '1rem', lineHeight: '1.6' }}>{post.desc}</p>
-                  <Link href={`/blog/${post.slug}`} style={{ color: C.accent, fontWeight: '600', fontSize: '0.875rem', textDecoration: 'none' }}>
-                    Read More →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link href="/blog" style={{ border: `1.5px solid ${C.primary}`, color: C.primary, padding: '0.75rem 2rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
-              Visit Our Blog
+          <div style={{ padding: '1.5rem' }}>
+            <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.6' }}>{post.desc}</p>
+            <Link href={`/blog/${post.slug}`} style={{ color: C.accent, fontWeight: '600', fontSize: '0.875rem', textDecoration: 'none' }}>
+              Read More →
             </Link>
           </div>
+           </div>
+         ))}
         </div>
+          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
+         <Link href="/blog" style={{ border: `1.5px solid ${C.primary}`, color: C.primary, padding: '0.75rem 2rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
+         Visit Our Blog
+         </Link>
+         </div>
+         </div>
       </section>
 
       {/* ── BECOME TUTOR CTA ── */}
