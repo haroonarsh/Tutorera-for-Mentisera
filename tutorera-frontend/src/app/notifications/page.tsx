@@ -4,11 +4,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { Bell } from "lucide-react";
+import { useTutorGuard } from "@/hooks/useTutorGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const tutorStatus = useTutorGuard(); 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
   const [prefs, setPrefs] = useState({
     emailNotifications: true,
@@ -20,6 +22,9 @@ export default function NotificationsPage() {
     securityAlerts: true,
     platformUpdates: false,
   });
+
+  // ← ADD: block pending/rejected tutors + show spinner while checking
+  if (!user || tutorStatus === "loading") return null;
 
   const togglePref = (key: keyof typeof prefs) => {
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));

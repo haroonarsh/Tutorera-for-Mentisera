@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
+import { useTutorGuard } from "@/hooks/useTutorGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -14,6 +15,7 @@ const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Lev
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const tutorStatus = useTutorGuard();
 
   const [activeTab, setActiveTab] = useState<"personal" | "tutor">("personal");
   const [saving, setSaving] = useState(false);
@@ -75,6 +77,9 @@ export default function ProfilePage() {
       }
     }
   }, [user, loading, router]);
+
+    // ← ADD: block pending/rejected tutors + show spinner while checking
+  if (loading || !user || tutorStatus === "loading") return null;
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -244,7 +249,7 @@ export default function ProfilePage() {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
                     <MapPin size={15} /> City
                   </label>
-                  <select value={personalForm.city} onChange={e => setPersonalForm({ ...personalForm, city: e.target.value })}
+                  <select title="City" value={personalForm.city} onChange={e => setPersonalForm({ ...personalForm, city: e.target.value })}
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
@@ -364,7 +369,7 @@ export default function ProfilePage() {
                 {/* City */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Your City</label>
-                  <select value={tutorForm.city} onChange={e => setTutorForm({ ...tutorForm, city: e.target.value })}
+                  <select title="select city" value={tutorForm.city} onChange={e => setTutorForm({ ...tutorForm, city: e.target.value })}
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>

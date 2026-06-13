@@ -24,6 +24,7 @@ interface TutorProfile {
   cnicFront: string;
   cnicBack: string;
   videoIntro: string;
+  policeCertificate: string;
   verificationStatus: string;
   rejectionReason: string;
   onboardingComplete: boolean;
@@ -257,16 +258,33 @@ export default function VerificationsPage() {
                           { label: "CNIC Front", url: tutor.cnicFront },
                           { label: "CNIC Back", url: tutor.cnicBack },
                           { label: "Video Intro", url: tutor.videoIntro },
+                          {
+                            label: "Police Certificate",
+                            url: tutor.policeCertificate,
+                            required: tutor.teachingMode === "in-person" || tutor.teachingMode === "both",
+                          },
                         ].map(doc => (
                           <div key={doc.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{doc.label}</span>
+                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                              {doc.label}
+                              {"required" in doc && doc.required && (
+                                <span style={{ color: '#ef4444', marginLeft: '3px', fontSize: '0.7rem' }}>*</span>
+                              )}
+                              </span>
                             {doc.url ? (
                               <a href={doc.url} target="_blank" rel="noopener noreferrer"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
                                 <Download size={12} /> View
                               </a>
                             ) : (
-                              <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>Not uploaded</span>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                // Red "Missing" if it was required, grey "Not uploaded" if optional
+                                color: "required" in doc && doc.required ? '#ef4444' : '#9ca3af',
+                                fontWeight: "required" in doc && doc.required ? '600' : '400',
+                              }}>
+                                {"required" in doc && doc.required ? "⚠ Missing" : "Not uploaded"}
+                              </span>
                             )}
                           </div>
                         ))}

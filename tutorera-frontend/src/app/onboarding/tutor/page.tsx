@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { CheckCircle, BookOpen } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import api from "@/lib/axios";
 
 const C = {
@@ -53,6 +53,7 @@ export default function TutorOnboardingPage() {
   const [cnicFront, setCnicFront] = useState<File | null>(null);
   const [cnicBack, setCnicBack] = useState<File | null>(null);
   const [videoIntro, setVideoIntro] = useState<File | null>(null);
+  const [policeCertificate, setPoliceCertificate] = useState<File | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -80,6 +81,9 @@ export default function TutorOnboardingPage() {
   const isSlotSelected = (day: string, slot: string) => {
     return availability.find(a => a.day === day)?.slots.includes(slot) || false;
   };
+
+  // Whether teaching mode requires police cert (set in Step 4)
+  const requiresPoliceCert = step4.teachingMode === "in-person" || step4.teachingMode === "both";
 
   const handleNext = async () => {
     setError(""); setSaving(true);
@@ -128,10 +132,15 @@ export default function TutorOnboardingPage() {
         if (!cnicFront || !cnicBack) {
           setError("Please upload both CNIC front and back."); setSaving(false); return;
         }
+        // Frontend validation: if in-person or both, police cert is required
+        if (requiresPoliceCert && !policeCertificate) {
+          setError("Police clearance certificate is required for in-person tutoring."); setSaving(false); return;
+        }
         formData.append("data", JSON.stringify({}));
         formData.append("cnicFront", cnicFront);
         formData.append("cnicBack", cnicBack);
         if (videoIntro) formData.append("videoIntro", videoIntro);
+        if (policeCertificate) formData.append("policeCertificate", policeCertificate);
       }
 
       await api.post("/tutors/onboarding/step", formData, {
@@ -170,29 +179,29 @@ export default function TutorOnboardingPage() {
       </div>
 
       {/* Progress Steps */}
-        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1rem', overflowX: 'auto' }}>
-          <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 'fit-content', padding: '0 0.5rem' }}>
-            {STEPS.map((step, idx) => (
-              <div key={step.number} style={{ display: 'flex', alignItems: 'center', flex: idx < STEPS.length - 1 ? 1 : 'none' }}>
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1rem', overflowX: 'auto' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 'fit-content', padding: '0 0.5rem' }}>
+          {STEPS.map((step, idx) => (
+            <div key={step.number} style={{ display: 'flex', alignItems: 'center', flex: idx < STEPS.length - 1 ? 1 : 'none' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', backgroundColor: step.number < currentStep ? '#16a34a' : step.number === currentStep ? C.accent : '#e5e7eb', color: step.number <= currentStep ? 'white' : '#9ca3af', transition: 'all 0.3s', flexShrink: 0 }}>
                   {step.number < currentStep ? '✓' : step.number}
+                </div>
+                <span style={{ fontSize: '0.62rem', fontWeight: '600', color: step.number === currentStep ? C.accent : step.number < currentStep ? '#16a34a' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                  {step.title}
+                </span>
               </div>
-              <span style={{ fontSize: '0.62rem', fontWeight: '600', color: step.number === currentStep ? C.accent : step.number < currentStep ? '#16a34a' : '#9ca3af', whiteSpace: 'nowrap' }}>
-              {step.title}
-            </span>
-          </div>
-        {idx < STEPS.length - 1 && (
-          <div style={{ flex: 1, height: '2px', backgroundColor: step.number < currentStep ? '#16a34a' : '#e5e7eb', margin: '0 0.25rem', marginBottom: '1rem', minWidth: '20px', transition: 'background 0.3s' }} />
-        )}
-          </div>
+              {idx < STEPS.length - 1 && (
+                <div style={{ flex: 1, height: '2px', backgroundColor: step.number < currentStep ? '#16a34a' : '#e5e7eb', margin: '0 0.25rem', marginBottom: '1rem', minWidth: '20px', transition: 'background 0.3s' }} />
+              )}
+            </div>
           ))}
         </div>
-        </div>
-            
+      </div>
+
       {/* Form Content */}
-        <div style={{ maxWidth: '600px', margin: '1.5rem auto', padding: '0 1rem' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+      <div style={{ maxWidth: '600px', margin: '1.5rem auto', padding: '0 1rem' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
 
           {/* Error */}
           {error && (
@@ -201,7 +210,7 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 1 — Personal Info ── */}
+          {/* ── STEP 1 ── */}
           {currentStep === 1 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Personal Information</h2>
@@ -224,7 +233,7 @@ export default function TutorOnboardingPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>City *</label>
-                    <select value={step1.city} onChange={e => setStep1({ ...step1, city: e.target.value })}
+                    <select title="city" value={step1.city} onChange={e => setStep1({ ...step1, city: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
@@ -236,7 +245,7 @@ export default function TutorOnboardingPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Gender</label>
-                    <select value={step1.gender} onChange={e => setStep1({ ...step1, gender: e.target.value })}
+                    <select title="gender" value={step1.gender} onChange={e => setStep1({ ...step1, gender: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
@@ -257,7 +266,7 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 2 — Education ── */}
+          {/* ── STEP 2 ── */}
           {currentStep === 2 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Educational Background</h2>
@@ -305,7 +314,7 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 3 — Experience ── */}
+          {/* ── STEP 3 ── */}
           {currentStep === 3 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Teaching Experience</h2>
@@ -351,7 +360,7 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 4 — Profile Setup ── */}
+          {/* ── STEP 4 ── */}
           {currentStep === 4 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Profile Setup</h2>
@@ -375,7 +384,7 @@ export default function TutorOnboardingPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Teaching Mode</label>
-                    <select value={step4.teachingMode} onChange={e => setStep4({ ...step4, teachingMode: e.target.value as "online" | "in-person" | "both" })}
+                    <select title="teachingMode" value={step4.teachingMode} onChange={e => setStep4({ ...step4, teachingMode: e.target.value as "online" | "in-person" | "both" })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
@@ -385,8 +394,6 @@ export default function TutorOnboardingPage() {
                     </select>
                   </div>
                 </div>
-
-                {/* Availability */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Availability Schedule</label>
                   <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginBottom: '0.75rem' }}>Click on time slots to mark your availability</p>
@@ -414,7 +421,9 @@ export default function TutorOnboardingPage() {
           {currentStep === 5 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Verification Documents</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Upload your documents for verification. This keeps our platform safe and trusted.</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>
+                Upload your documents for verification. This keeps our platform safe and trusted.
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                 {/* CNIC Front */}
@@ -422,7 +431,9 @@ export default function TutorOnboardingPage() {
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Front *</label>
                   <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
                     onClick={() => document.getElementById('cnicFront')?.click()}>
-                    {cnicFront ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {cnicFront.name}</p> : <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload CNIC Front</p>}
+                    {cnicFront
+                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {cnicFront.name}</p>
+                      : <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload CNIC Front</p>}
                   </div>
                   <input id="cnicFront" type="file" accept="image/*" onChange={e => setCnicFront(e.target.files?.[0] || null)} aria-label="upload" style={{ display: 'none' }} />
                 </div>
@@ -432,9 +443,50 @@ export default function TutorOnboardingPage() {
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Back *</label>
                   <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
                     onClick={() => document.getElementById('cnicBack')?.click()}>
-                    {cnicBack ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {cnicBack.name}</p> : <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload CNIC Back</p>}
+                    {cnicBack
+                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {cnicBack.name}</p>
+                      : <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload CNIC Back</p>}
                   </div>
                   <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="image" style={{ display: 'none' }} />
+                </div>
+
+                {/* ── Police Certificate — NEW ── */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                    Police Clearance Certificate
+                    {requiresPoliceCert
+                      ? <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
+                      : <span style={{ color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>(Optional — online tutors only)</span>}
+                  </label>
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.6rem', lineHeight: '1.5' }}>
+                    {requiresPoliceCert
+                      ? "Required for in-person tutoring. Must be issued within the last 6 months by a relevant authority (e.g. local police station or NADRA)."
+                      : "Not required for online-only tutors, but uploading one builds student trust."}
+                  </p>
+                  <div
+                    style={{
+                      border: `2px dashed ${requiresPoliceCert && !policeCertificate ? '#fca5a5' : '#e5e7eb'}`,
+                      borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center',
+                      cursor: 'pointer', backgroundColor: requiresPoliceCert && !policeCertificate ? '#fff5f5' : C.gray50
+                    }}
+                    onClick={() => document.getElementById('policeCertificate')?.click()}>
+                    {policeCertificate
+                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {policeCertificate.name}</p>
+                      : (
+                        <>
+                          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload Police Certificate</p>
+                          <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>PDF, JPG, PNG (max 5MB)</p>
+                        </>
+                      )}
+                  </div>
+                  <input
+                    id="policeCertificate"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={e => setPoliceCertificate(e.target.files?.[0] || null)}
+                    aria-label="Police Certificate"
+                    style={{ display: 'none' }}
+                  />
                 </div>
 
                 {/* Video Intro */}
@@ -444,12 +496,14 @@ export default function TutorOnboardingPage() {
                   </label>
                   <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
                     onClick={() => document.getElementById('videoIntro')?.click()}>
-                    {videoIntro ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {videoIntro.name}</p> : (
-                      <>
-                        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Upload a short intro video (max 2 min)</p>
-                        <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>MP4, MOV (max 50MB)</p>
-                      </>
-                    )}
+                    {videoIntro
+                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {videoIntro.name}</p>
+                      : (
+                        <>
+                          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Upload a short intro video (max 2 min)</p>
+                          <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>MP4, MOV (max 50MB)</p>
+                        </>
+                      )}
                   </div>
                   <input id="videoIntro" type="file" accept="video/*" onChange={e => setVideoIntro(e.target.files?.[0] || null)} aria-label="Introduction Video" style={{ display: 'none' }} />
                 </div>
@@ -457,26 +511,30 @@ export default function TutorOnboardingPage() {
                 {/* Info box */}
                 <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '1rem' }}>
                   <p style={{ color: '#92400e', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.3rem' }}>⏳ Review Process</p>
-                  <p style={{ color: '#a16207', fontSize: '0.8rem', lineHeight: '1.5' }}>After submission, our team will review your documents within 24-48 hours. You'll receive an email notification once approved.</p>
+                  <p style={{ color: '#a16207', fontSize: '0.8rem', lineHeight: '1.5' }}>
+                    After submission, our team will review your documents within 24–48 hours. You'll receive an email notification once approved.
+                  </p>
                 </div>
+
               </div>
             </div>
           )}
 
-          {/* Navigation Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f3f4f6', gap: '1rem' }}>
-           {currentStep > 1 ? (
-           <button onClick={() => { setError(""); setCurrentStep(prev => prev - 1); }}
-             style={{ flex: 1, padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-             ← Back
-           </button>
-          ) : <div style={{ flex: 1 }} />}
+          {/* Navigation */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f3f4f6', gap: '1rem' }}>
+            {currentStep > 1 ? (
+              <button onClick={() => { setError(""); setCurrentStep(prev => prev - 1); }}
+                style={{ flex: 1, padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+                ← Back
+              </button>
+            ) : <div style={{ flex: 1 }} />}
 
             <button onClick={handleNext} disabled={saving}
               style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '700' }}>
-                {saving ? "Saving..." : currentStep === 5 ? "Submit 🚀" : "Continue →"}
+              {saving ? "Saving..." : currentStep === 5 ? "Submit 🚀" : "Continue →"}
             </button>
-            </div>
+          </div>
+
         </div>
       </div>
     </div>

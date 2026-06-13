@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { Camera, Save, Shield, Monitor, Smartphone } from "lucide-react";
 import api from "@/lib/axios";
+import { useTutorGuard } from "@/hooks/useTutorGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const tutorStatus = useTutorGuard(); 
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -29,6 +31,9 @@ export default function SettingsPage() {
       }).catch(() => {});
     }
   }, [user, loading, router]);
+
+  // ← ADD: block pending/rejected tutors + show spinner while checking
+  if (loading || !user || tutorStatus === "loading") return null;
 
   const handleProfileSave = async () => {
     setSaving(true); setError(""); setSuccess("");

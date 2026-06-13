@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { CheckCircle, Zap, Star } from "lucide-react";
 import Link from "next/link";
+import { useTutorGuard } from "@/hooks/useTutorGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -53,7 +54,11 @@ const plans = [
 
 export default function BillingPage() {
   const { user } = useAuth();
+  const tutorStatus = useTutorGuard();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
+
+  // ← ADD: block pending/rejected tutors + show spinner while checking
+  if (!user || tutorStatus === "loading") return null;
 
   return (
     <DashboardLayout>
