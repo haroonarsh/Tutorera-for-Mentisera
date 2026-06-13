@@ -37,6 +37,7 @@ export interface ITutorProfile extends Document {
   cnicFront: string;
   cnicBack: string;
   videoIntro: string;
+  policeCertificate: string;
 
   // Status
   onboardingStep: number;
@@ -94,6 +95,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     cnicFront: { type: String, default: "" },
     cnicBack: { type: String, default: "" },
     videoIntro: { type: String, default: "" },
+    policeCertificate: { type: String, default: "" },
 
     // Status
     onboardingStep: { type: Number, default: 1 },

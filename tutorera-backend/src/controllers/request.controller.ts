@@ -18,6 +18,20 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
 // @route   GET /api/requests
 // @access  Private
 export const getAllRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  // Block unapproved tutors
+  if (req.user?.role === "tutor") {
+    const TutorProfile = (await import("../models/TutorProfile.model")).default;
+    const profile = await TutorProfile.findOne({ user: req.user._id });
+    if (!profile || profile.verificationStatus !== "approved") {
+      res.status(403).json({
+        success: false,
+        code: "TUTOR_NOT_APPROVED",
+        message: "Your profile must be approved before you can browse requests.",
+      });
+      return;
+    }
+  }
+
   const { subject, level, city, page = "1", limit = "10" } = req.query;
   const filter: Record<string, unknown> = { status: "open" };
 
@@ -65,6 +79,18 @@ export const cancelRequest = async (req: AuthRequest, res: Response): Promise<vo
 // @route   POST /api/requests/:id/bids
 // @access  Private (tutor)
 export const placeBid = async (req: AuthRequest, res: Response): Promise<void> => {
+  // Block unapproved tutors
+  const TutorProfile = (await import("../models/TutorProfile.model")).default;
+  const tutorProfile = await TutorProfile.findOne({ user: req.user?._id });
+  if (!tutorProfile || tutorProfile.verificationStatus !== "approved") {
+    res.status(403).json({
+      success: false,
+      code: "TUTOR_NOT_APPROVED",
+      message: "Your profile must be approved before you can place bids.",
+    });
+    return;
+  }
+
   const request = await Request.findById(req.params.id);
   if (!request || request.status !== "open") {
     res.status(400).json({ success: false, message: "Request not available for bidding" });

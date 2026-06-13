@@ -24,6 +24,7 @@ router.post("/onboarding/step", protect, authorize("tutor"), upload.fields([
   { name: "cnicFront", maxCount: 1 },
   { name: "cnicBack", maxCount: 1 },
   { name: "videoIntro", maxCount: 1 },
+  { name: "policeCertificate", maxCount: 1 },
 ]), saveOnboardingStep);
 
 // Profile

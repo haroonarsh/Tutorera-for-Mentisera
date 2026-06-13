@@ -182,6 +182,7 @@ export const getOnboardingStatus = async (
     onboardingStep: profile.onboardingStep,
     onboardingComplete: profile.onboardingComplete,
     verificationStatus: profile.verificationStatus,
+    rejectionReason: profile.rejectionReason || "",
   });
 };
 
@@ -273,6 +274,7 @@ export const saveOnboardingStep = async (
     let cnicFrontUrl = "";
     let cnicBackUrl = "";
     let videoIntroUrl = "";
+    let policeCertificateUrl = "";
 
     if (files?.cnicFront?.[0]) {
       const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic");
@@ -286,11 +288,29 @@ export const saveOnboardingStep = async (
       const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/videos", "auto");
       videoIntroUrl = result.secure_url;
     }
+    if (files?.policeCertificate?.[0]) {
+      const result = await uploadToCloudinary(
+        files.policeCertificate[0].buffer,
+        "tutorera/police-certificates",
+        "auto"   // accepts both image and PDF
+      );
+      policeCertificateUrl = result.secure_url;
+    }
+    // Validation: in-person tutors MUST upload police certificate
+    const teachingMode = profile.teachingMode;
+      if ((teachingMode === "in-person" || teachingMode === "both") && !policeCertificateUrl) {
+        res.status(400).json({
+        success: false,
+        message: "Police clearance certificate is required for in-person tutoring.",
+      });
+      return;
+    }
 
     updateData = {
-      cnicFront: cnicFrontUrl,
-      cnicBack: cnicBackUrl,
-      videoIntro: videoIntroUrl,
+      ...(cnicFrontUrl && { cnicFront: cnicFrontUrl }),
+      ...(cnicBackUrl && { cnicBack: cnicBackUrl }),
+      ...(videoIntroUrl && { videoIntro: videoIntroUrl }),
+      ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl }),
       onboardingStep: 5,
       onboardingComplete: true,
       verificationStatus: "pending",

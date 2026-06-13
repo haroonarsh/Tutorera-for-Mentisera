@@ -8,11 +8,11 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf", "video/mp4",];
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only images (jpg, png, webp) and PDFs are allowed"));
+    cb(new Error("Only images (jpg, png, webp, jpeg, mp4) and PDFs are allowed"));
   }
 };
 
