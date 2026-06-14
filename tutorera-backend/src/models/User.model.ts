@@ -27,6 +27,19 @@ const userSchema = new Schema<IUser>(
       enum: ["student", "tutor", "admin"],
       default: "student",
     },
+    plan: {
+      type: String,
+      enum: ["free", "standard", "premium"],
+      default: "free",
+    },
+    bidsThisMonth: {
+      type: Number,
+      default: 0,
+    },
+    bidsResetDate: {
+      type: Date,
+      default: Date.now,
+    },
     phone: { type: String, trim: true },
     city: { type: String, trim: true },
     avatar: { type: String, default: "" },

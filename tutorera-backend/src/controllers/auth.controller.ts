@@ -104,3 +104,30 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
 
   res.status(200).json({ success: true, message: "Password changed successfully" });
 };
+
+// @desc    Upgrade user plan
+// @route   PATCH /api/auth/upgrade-plan
+// @access  Private
+export const upgradePlan = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { plan } = req.body;
+
+  if (!["free", "standard", "premium"].includes(plan)) {
+    res.status(400).json({ success: false, message: "Invalid plan" });
+    return;
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { plan },
+    { new: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: `Plan upgraded to ${plan}`,
+    user,
+  });
+};

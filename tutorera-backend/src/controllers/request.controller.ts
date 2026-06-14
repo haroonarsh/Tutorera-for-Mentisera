@@ -5,6 +5,8 @@ import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import { sendNotification } from "../utils/socket";
+import { TOTAL_FEE_PERCENT } from "../config/constants";
+import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 
 // @desc    Create tuition request
 // @route   POST /api/requests
@@ -111,6 +113,8 @@ const bid = await Bid.create({
     message: req.body.message,
 });
 
+await incrementBidCount(req.user?._id?.toString() || "");
+
 // After bid is created, add:
 const io = req.app.get("io");
 await sendNotification(io, request.student.toString(), {
@@ -173,6 +177,10 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
   request.status = "closed";
   await request.save();
 
+  // When creating booking
+  const platformFee = Math.round(bid.amount * TOTAL_FEE_PERCENT / 100);
+  const tutorPayout = bid.amount - platformFee;
+
   // Auto-create booking
   const booking = await Booking.create({
     student: req.user?._id,
@@ -180,6 +188,8 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     request: request._id,
     bid: bid._id,
     amount: bid.amount,
+    platformFee,
+    tutorPayout,
     schedule: request.schedule,
     teachingMode: request.teachingMode,
   });

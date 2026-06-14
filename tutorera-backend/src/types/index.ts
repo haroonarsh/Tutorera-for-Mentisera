@@ -3,6 +3,7 @@ import { Document, Types } from "mongoose";
 
 // User Roles
 export type UserRole = "student" | "tutor" | "admin";
+export type UserPlan = "free" | "standard" | "premium";
 
 // User Document Interface
 export interface IUser extends Document {
@@ -11,6 +12,9 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
+  plan: UserPlan;
+  bidsThisMonth: number;
+  bidsResetDate: Date;
   phone?: string;
   city?: string;
   avatar?: string;

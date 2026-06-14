@@ -6,6 +6,7 @@ import User from "../models/User.model";
 import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
+import { TOTAL_FEE_PERCENT } from "../config/constants";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -187,6 +188,14 @@ export const updatePaymentStatus = async (
   if (payoutStatus !== undefined) booking.payoutStatus = payoutStatus;
   if (payoutNote !== undefined) booking.payoutNote = payoutNote;
 
+  // ← ADD: Auto-calculate fees with new 34.5% when payment confirmed
+  if (paymentStatus === "confirmed" && booking.amount) {
+    const platformFee = Math.round(booking.amount * TOTAL_FEE_PERCENT / 100);
+    const tutorPayout = booking.amount - platformFee;
+    booking.platformFee = platformFee;
+    booking.tutorPayout = tutorPayout;
+  }
+  
   await booking.save();
 
   res.status(200).json({
