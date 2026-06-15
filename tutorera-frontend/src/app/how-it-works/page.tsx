@@ -85,8 +85,9 @@ export default function HowItWorksPage() {
           <p style={{ color: C.gray500, marginBottom: '2rem' }}>Simple and transparent pricing.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
             {[
-              { label: "Student Fee", value: "28.75%", desc: "Added on top of tutor's hourly rate", color: C.accentLight, textColor: C.accent },
-              { label: "Tutor Deduction", value: "28.75%", desc: "Deducted from tutor's earnings per session", color: '#f0fdf4', textColor: '#16a34a' },
+                { label: "Platform Fee", value: "30%", color: '#d97706', textColor: C.accent, desc: "TUTORERA® charges a 30% fee on each booking to cover operational costs and platform maintenance." },
+                { label: "GST (15% of 30%)", value: "4.5%", color: '#d97706', textColor: 'white', desc: "As per Pakistani tax regulations, a 15% GST is applied on the platform fee." },
+                { label: "Total", value: "34.5%", color: '#92400e', bold: true, textColor: 'white', desc: "The total fee deducted from tutor earnings is 34.5% (30% platform fee + 4.5% GST)." },
             ].map(item => (
               <div key={item.label} style={{ backgroundColor: item.color, borderRadius: '1rem', padding: '2rem', textAlign: 'center' }}>
                 <p style={{ fontSize: '2.5rem', fontWeight: '800', color: item.textColor, marginBottom: '0.5rem' }}>{item.value}</p>
