@@ -77,6 +77,9 @@ function BookingCard({ booking }: { booking: DashBooking }) {
           {booking.status}
         </span>
       </div>
+
+      {/* Action buttons row */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
       <button
         onClick={handleChatClick}
         disabled={creatingChat}
@@ -89,6 +92,19 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         }}>
         {creatingChat ? "Opening..." : "💬 Chat"}
       </button>
+      {/* ── NEW: Need Help button ── */}
+        <button
+          onClick={() => router.push(`/support?bookingId=${booking._id}`)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.5rem 1rem', backgroundColor: '#fff7ed',
+            color: '#d97706', borderRadius: '0.5rem',
+            border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600',
+            cursor: 'pointer', marginBottom: '0.5rem'
+          }}>
+          🆘 Need Help?
+        </button>
+      </div>
 
       <div className={s.infoRow}>
         <span className={s.infoChip}>
