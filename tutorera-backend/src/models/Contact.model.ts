@@ -7,6 +7,14 @@ export interface IContact extends Document {
   subject: string;
   message: string;
   isRead: boolean;
+
+  // ── Support request fields (NEW) ──
+  type: "general" | "support";
+  bookingId?: string;
+  userRole?: "student" | "tutor";
+  priority?: "low" | "normal" | "urgent";
+  status: "open" | "in_progress" | "resolved";
+
   createdAt: Date;
 }
 
@@ -18,6 +26,13 @@ const contactSchema = new Schema<IContact>(
     subject: { type: String, required: true, trim: true },
     message: { type: String, required: true, trim: true, minlength: 10 },
     isRead: { type: Boolean, default: false },
+
+    // NEW
+    type: { type: String, enum: ["general", "support"], default: "general" },
+    bookingId: { type: String, default: "" },
+    userRole: { type: String, enum: ["student", "tutor"], default: undefined },
+    priority: { type: String, enum: ["low", "normal", "urgent"], default: "normal" },
+    status: { type: String, enum: ["open", "in_progress", "resolved"], default: "open" },
   },
   { timestamps: true }
 );
