@@ -9,6 +9,7 @@ import {
   getAllBookings,
   updatePaymentStatus,
   getAllContacts,
+  updateContactStatus,
 } from "../controllers/admin.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 
@@ -25,5 +26,6 @@ router.patch("/users/:id/status", toggleUserStatus);
 router.get("/bookings", getAllBookings);
 router.patch("/bookings/:id/payment", updatePaymentStatus);
 router.get("/contacts", getAllContacts);
+router.patch("/contacts/:id", updateContactStatus);
 
 export default router;

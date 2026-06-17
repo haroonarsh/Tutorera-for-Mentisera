@@ -212,3 +212,21 @@ export const getAllContacts = async (req: AuthRequest, res: Response): Promise<v
   const contacts = await Contact.find().sort("-createdAt");
   res.status(200).json({ success: true, total: contacts.length, contacts });
 };
+
+
+// @desc    Update contact/support request status
+// @route   PATCH /api/admin/contacts/:id
+// @access  Private (admin)
+export const updateContactStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { status } = req.body;
+  const contact = await Contact.findByIdAndUpdate(
+    req.params.id,
+    { status, isRead: true },
+    { new: true }
+  );
+  if (!contact) {
+    res.status(404).json({ success: false, message: "Contact not found" });
+    return;
+  }
+  res.status(200).json({ success: true, contact });
+};
