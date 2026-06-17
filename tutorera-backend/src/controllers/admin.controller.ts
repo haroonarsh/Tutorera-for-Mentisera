@@ -7,6 +7,10 @@ import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
 import { TOTAL_FEE_PERCENT } from "../config/constants";
+import ExcelJS from "exceljs";
+import PDFDocument from "pdfkit";
+import Request from "../models/Request.model";
+import Review from "../models/Review.model";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -229,4 +233,412 @@ export const updateContactStatus = async (req: AuthRequest, res: Response): Prom
     return;
   }
   res.status(200).json({ success: true, contact });
+};
+
+// @desc    Generate weekly or monthly report
+// @route   GET /api/admin/reports
+// @access  Private (admin)
+export const generateReport = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { period = "monthly", format = "excel" } = req.query;
+
+  // ── Date range ──────────────────────────────────────────────────
+  const now = new Date();
+  let startDate: Date;
+  const periodLabel = period === "weekly" ? "Weekly" : "Monthly";
+
+  if (period === "weekly") {
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 7);
+  } else {
+    startDate = new Date(now);
+    startDate.setMonth(now.getMonth() - 1);
+  }
+
+  const dateFilter = { createdAt: { $gte: startDate, $lte: now } };
+  const dateRangeLabel = `${startDate.toLocaleDateString("en-PK")} – ${now.toLocaleDateString("en-PK")}`;
+
+  // ── Fetch all data in parallel ────────────────────────────────
+  const [bookings, users, tutorProfiles, requests, reviews] = await Promise.all([
+    Booking.find(dateFilter)
+      .populate("student", "name email")
+      .populate("tutor", "name email"),
+    User.find(dateFilter),
+    TutorProfile.find({
+      verificationStatus: "approved",
+    }).populate("user", "name email"),
+    Request.find(dateFilter).populate("student", "name"),
+    Review.find(dateFilter),
+  ]);
+
+  // ── Derived calculations ──────────────────────────────────────
+  const PLATFORM_FEE_PERCENT = 30;
+  const GST_PERCENT = 15;
+  const totalRevenue = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const platformFeeTotal = Math.round(totalRevenue * (PLATFORM_FEE_PERCENT / 100));
+  const gstTotal = Math.round(platformFeeTotal * (GST_PERCENT / 100));
+  const tutorPayoutTotal = totalRevenue - platformFeeTotal;
+
+  const bookingsByStatus = {
+    upcoming:  bookings.filter(b => b.status === "upcoming").length,
+    ongoing:   bookings.filter(b => b.status === "ongoing").length,
+    completed: bookings.filter(b => b.status === "completed").length,
+    cancelled: bookings.filter(b => b.status === "cancelled").length,
+  };
+
+  const newStudents = users.filter(u => u.role === "student").length;
+  const newTutors   = users.filter(u => u.role === "tutor").length;
+
+  // Tutor performance map
+  const tutorMap: Record<string, {
+    name: string; email: string;
+    bookings: number; earnings: number; avgRating: number; totalReviews: number;
+  }> = {};
+
+  for (const b of bookings) {
+    const tutor = b.tutor as unknown as { _id: { toString(): string }; name: string; email: string } | null;
+    if (!tutor) continue;
+    const tid = tutor._id.toString();
+    if (!tutorMap[tid]) {
+      tutorMap[tid] = { name: tutor.name, email: tutor.email, bookings: 0, earnings: 0, avgRating: 0, totalReviews: 0 };
+    }
+    tutorMap[tid].bookings++;
+    tutorMap[tid].earnings += b.amount || 0;
+  }
+
+  // Add ratings from TutorProfile
+  for (const tp of tutorProfiles) {
+    const uid = (tp.user as unknown as { _id: { toString(): string } })._id.toString();
+    if (tutorMap[uid]) {
+      tutorMap[uid].avgRating = tp.averageRating || 0;
+      tutorMap[uid].totalReviews = tp.totalReviews || 0;
+    }
+  }
+
+  const tutorRows = Object.values(tutorMap).sort((a, b) => b.bookings - a.bookings);
+
+  // Student activity map
+  const studentMap: Record<string, {
+    name: string; email: string; requests: number; bookings: number;
+  }> = {};
+
+  for (const r of requests) {
+    const student = r.student as unknown as { _id: { toString(): string }; name: string } | null;
+    if (!student) continue;
+    const sid = student._id.toString();
+    if (!studentMap[sid]) studentMap[sid] = { name: student.name, email: "", requests: 0, bookings: 0 };
+    studentMap[sid].requests++;
+  }
+
+  for (const b of bookings) {
+    const student = b.student as unknown as { _id: { toString(): string }; name: string; email: string } | null;
+    if (!student) continue;
+    const sid = student._id.toString();
+    if (!studentMap[sid]) studentMap[sid] = { name: student.name, email: student.email, requests: 0, bookings: 0 };
+    studentMap[sid].bookings++;
+    studentMap[sid].email = student.email;
+  }
+
+  const studentRows = Object.values(studentMap).sort((a, b) => b.bookings - a.bookings);
+
+  // ── EXCEL FORMAT ──────────────────────────────────────────────
+  if (format === "excel") {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "TUTORERA®";
+    wb.created = new Date();
+
+    // ── Styles helpers ──
+    const headerFill: ExcelJS.Fill = {
+      type: "pattern", pattern: "solid",
+      fgColor: { argb: "FF1A1A2E" },
+    };
+    const headerFont: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    const sectionFill: ExcelJS.Fill = {
+      type: "pattern", pattern: "solid",
+      fgColor: { argb: "FFEFF6FF" },
+    };
+    const sectionFont: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FF2563EB" }, size: 11 };
+
+    const styleHeader = (row: ExcelJS.Row) => {
+      row.eachCell(cell => {
+        cell.fill = headerFill;
+        cell.font = headerFont;
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "FF2563EB" } },
+        };
+      });
+      row.height = 22;
+    };
+
+    const styleSection = (row: ExcelJS.Row) => {
+      row.eachCell(cell => {
+        cell.fill = sectionFill;
+        cell.font = sectionFont;
+      });
+    };
+
+    // ════════════════════════════════════════
+    // SHEET 1 — Summary
+    // ════════════════════════════════════════
+    const ws1 = wb.addWorksheet("Summary");
+    ws1.columns = [
+      { key: "a", width: 35 },
+      { key: "b", width: 25 },
+    ];
+
+    ws1.addRow(["TUTORERA® Platform Report", ""]);
+    ws1.mergeCells("A1:B1");
+    const titleRow = ws1.getRow(1);
+    titleRow.getCell(1).font = { bold: true, size: 16, color: { argb: "FF1A1A2E" } };
+    titleRow.getCell(1).alignment = { horizontal: "center" };
+    titleRow.height = 32;
+
+    ws1.addRow([`${periodLabel} Report · ${dateRangeLabel}`, ""]);
+    ws1.mergeCells("A2:B2");
+    ws1.getRow(2).getCell(1).font = { size: 11, color: { argb: "FF6B7280" } };
+    ws1.getRow(2).getCell(1).alignment = { horizontal: "center" };
+
+    ws1.addRow([]);
+
+    // Bookings summary
+    styleSection(ws1.addRow(["📋 BOOKINGS SUMMARY", ""]));
+    styleHeader(ws1.addRow(["Metric", "Value"]));
+    [
+      ["Total Bookings", bookings.length],
+      ["Upcoming", bookingsByStatus.upcoming],
+      ["Ongoing", bookingsByStatus.ongoing],
+      ["Completed", bookingsByStatus.completed],
+      ["Cancelled", bookingsByStatus.cancelled],
+      ["Total Requests Posted", requests.length],
+    ].forEach(([k, v]) => ws1.addRow([k, v]));
+
+    ws1.addRow([]);
+
+    // Revenue summary
+    styleSection(ws1.addRow(["💰 REVENUE SUMMARY", ""]));
+    styleHeader(ws1.addRow(["Metric", "Amount (PKR)"]));
+    [
+      ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
+      ["Platform Fee (30%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
+      ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
+    ].forEach(([k, v]) => ws1.addRow([k, v]));
+
+    ws1.addRow([]);
+
+    // User summary
+    styleSection(ws1.addRow(["👥 USER SUMMARY", ""]));
+    styleHeader(ws1.addRow(["Metric", "Count"]));
+    [
+      ["New Students This Period", newStudents],
+      ["New Tutors This Period", newTutors],
+      ["Total Reviews This Period", reviews.length],
+    ].forEach(([k, v]) => ws1.addRow([k, v]));
+
+    // ════════════════════════════════════════
+    // SHEET 2 — Bookings Detail
+    // ════════════════════════════════════════
+    const ws2 = wb.addWorksheet("Bookings Detail");
+    ws2.columns = [
+      { header: "Booking ID", key: "id", width: 28 },
+      { header: "Student", key: "student", width: 22 },
+      { header: "Tutor", key: "tutor", width: 22 },
+      { header: "Amount (PKR)", key: "amount", width: 16 },
+      { header: "Platform Fee", key: "fee", width: 16 },
+      { header: "Tutor Payout", key: "payout", width: 16 },
+      { header: "Status", key: "status", width: 14 },
+      { header: "Teaching Mode", key: "mode", width: 16 },
+      { header: "Date", key: "date", width: 16 },
+    ];
+    styleHeader(ws2.getRow(1));
+
+    for (const b of bookings) {
+      const fee = Math.round((b.amount || 0) * 0.30);
+      const payout = (b.amount || 0) - fee;
+      const student = b.student as unknown as { name: string } | null;
+      const tutor   = b.tutor   as unknown as { name: string } | null;
+      ws2.addRow({
+        id:      b._id.toString(),
+        student: student?.name || "—",
+        tutor:   tutor?.name   || "—",
+        amount:  b.amount || 0,
+        fee,
+        payout,
+        status:  b.status,
+        mode:    b.teachingMode,
+        date:    new Date(b.createdAt).toLocaleDateString("en-PK"),
+      });
+    }
+
+    // ════════════════════════════════════════
+    // SHEET 3 — Tutor Performance
+    // ════════════════════════════════════════
+    const ws3 = wb.addWorksheet("Tutor Performance");
+    ws3.columns = [
+      { header: "Tutor Name", key: "name", width: 24 },
+      { header: "Email", key: "email", width: 28 },
+      { header: "Bookings", key: "bookings", width: 14 },
+      { header: "Earnings (PKR)", key: "earnings", width: 18 },
+      { header: "Avg. Rating", key: "rating", width: 14 },
+      { header: "Total Reviews", key: "reviews", width: 16 },
+    ];
+    styleHeader(ws3.getRow(1));
+    tutorRows.forEach(t => ws3.addRow({
+      name: t.name, email: t.email,
+      bookings: t.bookings, earnings: t.earnings,
+      rating: t.avgRating.toFixed(1), reviews: t.totalReviews,
+    }));
+
+    // ════════════════════════════════════════
+    // SHEET 4 — Student Activity
+    // ════════════════════════════════════════
+    const ws4 = wb.addWorksheet("Student Activity");
+    ws4.columns = [
+      { header: "Student Name", key: "name", width: 24 },
+      { header: "Email", key: "email", width: 28 },
+      { header: "Requests Posted", key: "requests", width: 18 },
+      { header: "Bookings Made", key: "bookings", width: 18 },
+    ];
+    styleHeader(ws4.getRow(1));
+    studentRows.forEach(s => ws4.addRow({
+      name: s.name, email: s.email,
+      requests: s.requests, bookings: s.bookings,
+    }));
+
+    // ── Stream response ──
+    const filename = `tutorera-${period}-report-${now.toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    await wb.xlsx.write(res);
+    res.end();
+    return;
+  }
+
+  // ── PDF FORMAT ────────────────────────────────────────────────
+  if (format === "pdf") {
+    const filename = `tutorera-${period}-report-${now.toISOString().slice(0, 10)}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
+    doc.pipe(res);
+
+    // ── Helpers ──
+    const COL_DARK = "#1a1a2e";
+    const COL_ACCENT = "#2563eb";
+    const COL_GRAY = "#6b7280";
+
+    const drawSectionTitle = (title: string) => {
+      doc.moveDown(0.5);
+      doc.rect(50, doc.y, 495, 22).fill("#eff6ff");
+      doc.fillColor(COL_ACCENT).fontSize(11).font("Helvetica-Bold")
+        .text(title, 58, doc.y - 18);
+      doc.moveDown(0.3);
+      doc.fillColor(COL_DARK);
+    };
+
+    const drawTableRow = (
+      cols: string[],
+      widths: number[],
+      isHeader = false,
+      y?: number
+    ) => {
+      const rowY = y ?? doc.y;
+      let x = 50;
+      if (isHeader) {
+        doc.rect(50, rowY, 495, 18).fill(COL_DARK);
+      }
+      cols.forEach((col, i) => {
+        doc
+          .fillColor(isHeader ? "#ffffff" : COL_DARK)
+          .fontSize(9)
+          .font(isHeader ? "Helvetica-Bold" : "Helvetica")
+          .text(col, x + 4, rowY + 4, { width: widths[i] - 8, lineBreak: false });
+        x += widths[i];
+      });
+      doc.moveDown(0.1);
+      if (!isHeader) {
+        doc.moveTo(50, doc.y + 2).lineTo(545, doc.y + 2)
+          .strokeColor("#e5e7eb").lineWidth(0.5).stroke();
+      }
+    };
+
+    // ── Cover ──
+    doc.rect(0, 0, 595, 120).fill(COL_DARK);
+    doc.fillColor("white").fontSize(26).font("Helvetica-Bold")
+      .text("TUTORERA®", 50, 35);
+    doc.fillColor("#9ca3af").fontSize(13).font("Helvetica")
+      .text(`${periodLabel} Platform Report`, 50, 68);
+    doc.fillColor("#6b7280").fontSize(10)
+      .text(dateRangeLabel, 50, 88);
+    doc.fillColor("#e94560").fontSize(10)
+      .text(`Generated: ${now.toLocaleDateString("en-PK")}`, 50, 104);
+    doc.y = 140;
+
+    // ── 1. Bookings Summary ──
+    drawSectionTitle("📋  BOOKINGS SUMMARY");
+    const bCols = ["Metric", "Value"];
+    const bWidths = [350, 145];
+    drawTableRow(bCols, bWidths, true);
+    [
+      ["Total Bookings", bookings.length],
+      ["Upcoming", bookingsByStatus.upcoming],
+      ["Ongoing", bookingsByStatus.ongoing],
+      ["Completed", bookingsByStatus.completed],
+      ["Cancelled", bookingsByStatus.cancelled],
+      ["Total Requests Posted", requests.length],
+    ].forEach(([k, v]) => drawTableRow([String(k), String(v)], bWidths));
+
+    // ── 2. Revenue ──
+    drawSectionTitle("💰  REVENUE & FEES");
+    const rWidths = [350, 145];
+    drawTableRow(["Metric", "Amount (PKR)"], rWidths, true);
+    [
+      ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
+      ["Platform Fee (30%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
+      ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
+    ].forEach(([k, v]) => drawTableRow([k, v], rWidths));
+
+    // ── 3. User Summary ──
+    drawSectionTitle("👥  USER SUMMARY");
+    drawTableRow(["Metric", "Count"], [350, 145], true);
+    [
+      ["New Students This Period", newStudents],
+      ["New Tutors This Period", newTutors],
+      ["Total Reviews This Period", reviews.length],
+    ].forEach(([k, v]) => drawTableRow([String(k), String(v)], [350, 145]));
+
+    // ── 4. Tutor Performance ──
+    doc.addPage();
+    drawSectionTitle("🎓  TUTOR PERFORMANCE");
+    const tWidths = [160, 160, 60, 75, 40];
+    drawTableRow(["Name", "Email", "Bookings", "Earnings", "Rating"], tWidths, true);
+    tutorRows.slice(0, 40).forEach(t =>
+      drawTableRow([
+        t.name, t.email,
+        String(t.bookings),
+        `Rs.${t.earnings.toLocaleString()}`,
+        t.avgRating.toFixed(1),
+      ], tWidths)
+    );
+
+    // ── 5. Student Activity ──
+    doc.addPage();
+    drawSectionTitle("📚  STUDENT ACTIVITY");
+    const sWidths = [190, 180, 65, 60];
+    drawTableRow(["Name", "Email", "Requests", "Bookings"], sWidths, true);
+    studentRows.slice(0, 40).forEach(s =>
+      drawTableRow([s.name, s.email, String(s.requests), String(s.bookings)], sWidths)
+    );
+
+    // ── Footer ──
+    doc.fontSize(8).fillColor(COL_GRAY)
+      .text(`TUTORERA® — Confidential · Generated ${now.toLocaleDateString("en-PK")}`, 50, 780, { align: "center" });
+
+    doc.end();
+    return;
+  }
+
+  res.status(400).json({ success: false, message: "Invalid format. Use pdf or excel." });
 };

@@ -10,6 +10,7 @@ import {
   updatePaymentStatus,
   getAllContacts,
   updateContactStatus,
+  generateReport,
 } from "../controllers/admin.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 
@@ -27,5 +28,6 @@ router.get("/bookings", getAllBookings);
 router.patch("/bookings/:id/payment", updatePaymentStatus);
 router.get("/contacts", getAllContacts);
 router.patch("/contacts/:id", updateContactStatus);
+router.get("/reports", generateReport);
 
 export default router;
