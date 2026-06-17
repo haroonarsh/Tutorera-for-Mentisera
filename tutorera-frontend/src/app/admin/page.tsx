@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, ShieldCheck, BookOpen, MessageSquare, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import { Users, ShieldCheck, BookOpen, MessageSquare, CheckCircle, Clock, TrendingUp, Download, FileSpreadsheet, FileText } from "lucide-react";
 import api from "@/lib/axios";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
@@ -19,6 +19,7 @@ interface Stats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     api.get("/admin/stats")
@@ -26,6 +27,32 @@ export default function AdminDashboard() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDownload = async (period: "weekly" | "monthly", format: "excel" | "pdf") => {
+    const key = `${period}-${format}`;
+    setDownloading(key);
+    try {
+      const response = await api.get("/admin/reports", {
+        params: { period, format },
+        responseType: "blob",
+      });
+
+      const ext = format === "excel" ? "xlsx" : "pdf";
+      const filename = `tutorera-${period}-report.${ext}`;
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to generate report. Please try again.");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const statCards = [
     { label: "Total Users", value: stats?.totalUsers, icon: <Users size={22} color={C.accent} />, bg: '#eff6ff', link: "/admin/users" },
@@ -36,6 +63,21 @@ export default function AdminDashboard() {
     { label: "Total Bookings", value: stats?.totalBookings, icon: <TrendingUp size={22} color={C.accent} />, bg: '#eff6ff', link: "/admin/bookings" },
     { label: "Contact Messages", value: stats?.totalContacts, icon: <MessageSquare size={22} color="#e94560" />, bg: '#fff1f2', link: "/admin/contacts" },
     { label: "Verifications Done", value: (stats?.approvedTutors || 0), icon: <ShieldCheck size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/verifications" },
+  ];
+
+  const reportButtons: {
+    period: "weekly" | "monthly";
+    format: "excel" | "pdf";
+    label: string;
+    icon: React.ReactNode;
+    bg: string;
+    color: string;
+    border: string;
+  }[] = [
+    { period: "weekly",  format: "excel", label: "Weekly Excel",   icon: <FileSpreadsheet size={16} />, bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+    { period: "weekly",  format: "pdf",   label: "Weekly PDF",     icon: <FileText size={16} />,        bg: '#fef2f2', color: '#ef4444', border: '#fecaca' },
+    { period: "monthly", format: "excel", label: "Monthly Excel",  icon: <FileSpreadsheet size={16} />, bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+    { period: "monthly", format: "pdf",   label: "Monthly PDF",    icon: <FileText size={16} />,        bg: '#fef2f2', color: '#ef4444', border: '#fecaca' },
   ];
 
   return (
@@ -81,6 +123,58 @@ export default function AdminDashboard() {
             📬 View Messages
           </Link>
         </div>
+      </div>
+
+      {/* ── Generate Reports ── */}
+      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <Download size={20} color={C.primary} />
+          <h2 style={{ fontSize: '1rem', fontWeight: '700', color: C.primary, margin: 0 }}>Generate Reports</h2>
+        </div>
+        <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+          Download platform reports as Excel or PDF. Reports include bookings, revenue, tutor performance, and student activity.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+          {reportButtons.map(btn => {
+            const key = `${btn.period}-${btn.format}`;
+            const isLoading = downloading === key;
+            return (
+              <button key={key}
+                onClick={() => handleDownload(btn.period, btn.format)}
+                disabled={isLoading || downloading !== null}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '1rem 1.25rem',
+                  backgroundColor: isLoading ? C.gray50 : btn.bg,
+                  color: isLoading ? C.gray500 : btn.color,
+                  border: `1px solid ${isLoading ? '#e5e7eb' : btn.border}`,
+                  borderRadius: '0.75rem',
+                  cursor: isLoading || downloading !== null ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem', fontWeight: '600',
+                  transition: 'all 0.2s', textAlign: 'left',
+                  opacity: downloading !== null && !isLoading ? 0.5 : 1,
+                }}
+                onMouseEnter={e => { if (!isLoading && !downloading) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}>
+                <div style={{ width: 36, height: 36, borderRadius: '0.5rem', backgroundColor: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {isLoading ? (
+                    <div style={{ width: 16, height: 16, border: `2px solid ${btn.color}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  ) : btn.icon}
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700 }}>{btn.label}</p>
+                  <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75, fontWeight: 400 }}>
+                    {btn.period === "weekly" ? "Last 7 days" : "Last 30 days"} · {btn.format === "excel" ? "4 sheets" : "4 sections"}
+                  </p>
+                </div>
+                {!isLoading && <Download size={14} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
+              </button>
+            );
+          })}
+        </div>
+
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );
