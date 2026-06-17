@@ -14,6 +14,7 @@ const HIDE_NAVBAR_AND_FOOTER = [
   "/admin",
   "/login",
   "/register",
+  "/support",
 ];
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
