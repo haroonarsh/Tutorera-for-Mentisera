@@ -18,7 +18,6 @@ import SkeletonCard from "@/components/Tutors/SkeletonCard";
 import EmptyState from "@/components/Tutors/EmptyState";
 import Pagination from "@/components/Tutors/Pagination";
 import { FilterSidebar, MobileFilterSidebar } from "@/components/Tutors/FilterSidebar";
-import { useTutorGuard } from "@/hooks/useTutorGuard";
 
 import styles from "./page.module.css";
 
@@ -58,10 +57,6 @@ export default function TutorsPage() {
   const debounceTimer               = useRef<NodeJS.Timeout | null>(null);
   const activeFilterCount           = countActiveFilters(filters);
   const DEBOUNCED: (keyof FiltersState)[] = ["search", "minPrice", "maxPrice"];
-  const tutorStatus = useTutorGuard();
-
-  // ← ADD: block pending/rejected tutors + show spinner while checking
-  if (loading || tutorStatus === "loading") return null;
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
