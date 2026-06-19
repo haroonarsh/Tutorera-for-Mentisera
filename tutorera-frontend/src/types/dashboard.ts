@@ -34,6 +34,7 @@ export interface DashBooking {
   schedule: string;
   teachingMode: string;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  isFirstSession: boolean;
   createdAt: string;
 }
 

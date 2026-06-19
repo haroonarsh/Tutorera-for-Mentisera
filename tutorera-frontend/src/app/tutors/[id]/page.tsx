@@ -1,14 +1,13 @@
+// app/tutors/[id]/page.tsx
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Star, MapPin, BookOpen, Clock, CheckCircle, MessageSquare } from "lucide-react";
+import { Star, MapPin, BookOpen, Clock, CheckCircle, MessageSquare, Play } from "lucide-react";
 import api from "@/lib/axios";
 import { TutorProfile, Review } from "@/types/tutor";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
-
-
 
 export default function TutorDetailPage() {
   const { id } = useParams();
@@ -16,6 +15,7 @@ export default function TutorDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
+  const [videoPlaying, setVideoPlaying] = useState(false);   // ← NEW
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,9 +61,10 @@ export default function TutorDetailPage() {
           {/* Avatar */}
           <div style={{ width: '110px', height: '110px', borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, #1d4ed8)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: '800', color: 'white', flexShrink: 0, border: '4px solid rgba(255,255,255,0.2)' }}>
             {tutor.user?.avatar ? (
-            <img src={tutor.user?.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
+              <img src={tutor.user?.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
             ) : (tutor.user?.name?.charAt(0) || "T")}
           </div>
+
           {/* Info */}
           <div style={{ flex: 1, minWidth: '200px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
@@ -71,6 +72,12 @@ export default function TutorDetailPage() {
               {tutor.isVerified && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', backgroundColor: '#16a34a', color: 'white', fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
                   <CheckCircle size={12} /> Verified
+                </span>
+              )}
+              {/* ── NEW: Video intro badge in hero ── */}
+              {tutor.videoIntro && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.25)' }}>
+                  <Play size={10} fill="white" /> Intro Video
                 </span>
               )}
             </div>
@@ -85,6 +92,7 @@ export default function TutorDetailPage() {
               ))}
             </div>
           </div>
+
           {/* Rating + Price */}
           <div style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '1rem', padding: '1.5rem', textAlign: 'center', minWidth: '160px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
@@ -115,11 +123,67 @@ export default function TutorDetailPage() {
 
           {activeTab === "about" && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
               {/* Bio */}
               {tutor.bio && (
                 <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
                   <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>About</h2>
                   <p style={{ color: C.gray500, lineHeight: '1.8', fontSize: '0.95rem' }}>{tutor.bio}</p>
+                </div>
+              )}
+
+              {/* ── NEW: Introduction Video ── */}
+              {tutor.videoIntro && (
+                <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Play size={18} color={C.accent} />
+                    Introduction Video
+                  </h2>
+                  <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+                    Watch {tutor.user?.name?.split(' ')[0]} introduce themselves and their teaching style.
+                  </p>
+
+                  {!videoPlaying ? (
+                    /* Thumbnail / Play button state */
+                    <div
+                      onClick={() => setVideoPlaying(true)}
+                      style={{
+                        position: 'relative', borderRadius: '0.75rem', overflow: 'hidden',
+                        backgroundColor: C.primary, cursor: 'pointer',
+                        aspectRatio: '16/9', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      {/* Dark overlay with play button */}
+                      <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem',
+                      }}>
+                        <div style={{
+                          width: '64px', height: '64px', backgroundColor: C.accent, borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 0 0 12px rgba(37,99,235,0.2)',
+                          transition: 'transform 0.2s',
+                        }}>
+                          <Play size={28} color="white" fill="white" style={{ marginLeft: '3px' }} />
+                        </div>
+                        <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                          Watch Introduction
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Actual video player */
+                    <div style={{ borderRadius: '0.75rem', overflow: 'hidden', aspectRatio: '16/9' }}>
+                      <video
+                        src={tutor.videoIntro}
+                        controls
+                        autoPlay
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        onError={() => setVideoPlaying(false)}
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  )}
                 </div>
               )}
 

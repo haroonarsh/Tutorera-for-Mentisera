@@ -46,24 +46,54 @@ function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; si
 
 // ─── Booking Card ─────────────────────────────────────────────────────────────
 
-function BookingCard({ booking }: { booking: DashBooking }) {
+function BookingCard({ booking, onClaimSubmitted }: {
+  booking: DashBooking;
+  onClaimSubmitted?: () => void;
+}) {
   const [creatingChat, setCreatingChat] = useState(false);
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [claimReason, setClaimReason] = useState("");
+  const [claimDetails, setClaimDetails] = useState("");
+  const [submittingClaim, setSubmittingClaim] = useState(false);
+  const [claimSubmitted, setClaimSubmitted] = useState(false);
   const router = useRouter();
 
   const handleChatClick = async () => {
     setCreatingChat(true);
     try {
-      const res = await axiosInstance.post("/chat/conversation", {
-        bookingId: booking._id,
-      });
-      const conversationId = res.data.conversation._id;
-      router.push(`/chat/${conversationId}`);
+      const res = await axiosInstance.post("/chat/conversation", { bookingId: booking._id });
+      router.push(`/chat/${res.data.conversation._id}`);
     } catch (err) {
       console.error("Failed to create conversation:", err);
     } finally {
       setCreatingChat(false);
     }
   };
+
+  const handleClaimSubmit = async () => {
+    if (!claimReason) return;
+    setSubmittingClaim(true);
+    try {
+      await axiosInstance.post("/guarantee/claim", {
+        bookingId: booking._id,
+        reason: claimReason,
+        details: claimDetails,
+      });
+      setClaimSubmitted(true);
+      setShowClaimForm(false);
+      onClaimSubmitted?.();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || "Failed to submit claim. Please try again.");
+    } finally {
+      setSubmittingClaim(false);
+    }
+  };
+
+  // Show "Not Satisfied?" only on completed first sessions that haven't been claimed yet
+  const showGuaranteeButton = booking.isFirstSession
+    && booking.status === "completed"
+    && !claimSubmitted;
 
   return (
     <div className={s.card}>
@@ -73,52 +103,99 @@ function BookingCard({ booking }: { booking: DashBooking }) {
           <p className={s.personName}>{booking.tutor.name}</p>
           <p className={s.personSub}>Your Tutor</p>
         </div>
-        <span className={statusBadgeClass(booking.status)} style={{ marginLeft: "auto" }}>
-          {booking.status}
-        </span>
+        <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.3rem" }}>
+          <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
+          {/* First session badge */}
+          {booking.isFirstSession && (
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
+              1st Session
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Action buttons row */}
+      {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-      <button
-        onClick={handleChatClick}
-        disabled={creatingChat}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-          padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#eff6ff',
-          color: creatingChat ? '#9ca3af' : '#2563eb', borderRadius: '0.5rem',
-          border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600',
-          cursor: creatingChat ? 'not-allowed' : 'pointer', marginBottom: '0.5rem'
-        }}>
-        {creatingChat ? "Opening..." : "💬 Chat"}
-      </button>
-      {/* ── NEW: Need Help button ── */}
-        <button
-          onClick={() => router.push(`/support?bookingId=${booking._id}`)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-            padding: '0.5rem 1rem', backgroundColor: '#fff7ed',
-            color: '#d97706', borderRadius: '0.5rem',
-            border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600',
-            cursor: 'pointer', marginBottom: '0.5rem'
-          }}>
+        <button onClick={handleChatClick} disabled={creatingChat}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#eff6ff', color: creatingChat ? '#9ca3af' : '#2563eb', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600', cursor: creatingChat ? 'not-allowed' : 'pointer' }}>
+          {creatingChat ? "Opening..." : "💬 Chat"}
+        </button>
+
+        <button onClick={() => router.push(`/support?bookingId=${booking._id}`)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#fff7ed', color: '#d97706', borderRadius: '0.5rem', border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
           🆘 Need Help?
         </button>
+
+        {/* ── First Session Guarantee button ── */}
+        {showGuaranteeButton && (
+          <button onClick={() => setShowClaimForm(!showClaimForm)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showClaimForm ? '#fef2f2' : '#fff1f2', color: '#e94560', borderRadius: '0.5rem', border: '1px solid #fecdd3', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+            😕 Not Satisfied?
+          </button>
+        )}
       </div>
 
+      {/* Claim submitted confirmation */}
+      {claimSubmitted && (
+        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+          ✅ Guarantee claim submitted. We'll review it within 24–48 hours.
+        </div>
+      )}
+
+      {/* Claim form — expands inline */}
+      {showClaimForm && (
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e94560', marginBottom: '0.75rem' }}>
+            First Session Guarantee Claim
+          </p>
+          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.875rem', lineHeight: 1.5 }}>
+            Not happy with your first session? Tell us why and we'll make it right — credit to try another tutor or a refund.
+          </p>
+
+          {/* Reason select */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#1a1a2e', marginBottom: '0.3rem' }}>
+              What went wrong? *
+            </label>
+            <select title="Claim reasons" value={claimReason} onChange={e => setClaimReason(e.target.value)}
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: '#1a1a2e', backgroundColor: 'white', boxSizing: 'border-box' }}>
+              <option value="">Select a reason</option>
+              <option value="Tutor didn't show up">Tutor didn't show up</option>
+              <option value="Tutor was unprepared">Tutor was unprepared</option>
+              <option value="Teaching quality was poor">Teaching quality was poor</option>
+              <option value="Tutor was rude or unprofessional">Tutor was rude or unprofessional</option>
+              <option value="Session was too short">Session was too short</option>
+              <option value="Subject knowledge was insufficient">Subject knowledge was insufficient</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* Optional details */}
+          <div style={{ marginBottom: '0.875rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#1a1a2e', marginBottom: '0.3rem' }}>
+              Additional details <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+            </label>
+            <textarea value={claimDetails} onChange={e => setClaimDetails(e.target.value)} rows={3}
+              placeholder="Tell us more about what happened..."
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#1a1a2e', boxSizing: 'border-box' }} />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim}
+              style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#e94560', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
+              {submittingClaim ? "Submitting..." : "Submit Claim"}
+            </button>
+            <button onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}
+              style={{ padding: '0.6rem 1rem', backgroundColor: 'white', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={s.infoRow}>
-        <span className={s.infoChip}>
-          <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
-          </svg>
-          PKR {booking.amount.toLocaleString()}/hr
-        </span>
-        <span className={s.infoChip}>
-          <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-          </svg>
-          {booking.schedule}
-        </span>
+        <span className={s.infoChip}>PKR {booking.amount.toLocaleString()}/hr</span>
+        <span className={s.infoChip}>{booking.schedule}</span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
@@ -457,7 +534,7 @@ const fetchRequests = useCallback(async () => {
                 <p className={s.emptyDesc}>Accept a tutor bid from your requests to create a booking.</p>
               </div>
             ) : (
-              bookings.map((b) => <BookingCard key={b._id} booking={b} />)
+              bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)
             )}
           </section>
         )}

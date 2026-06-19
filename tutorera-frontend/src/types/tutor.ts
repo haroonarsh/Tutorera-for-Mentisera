@@ -19,6 +19,7 @@ export interface TutorProfile {
   averageRating: number;      // API returns "averageRating" not "rating"
   totalReviews: number;
   bio: string;
+  videoIntro?: string;
   isVerified: boolean;
   experience?: number;
   education: { degree: string; institution: string; year: number; _id: string }[];

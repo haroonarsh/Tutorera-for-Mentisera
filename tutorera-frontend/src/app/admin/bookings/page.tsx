@@ -25,6 +25,7 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const url = filter === "all" ? "/admin/bookings" : `/admin/bookings?status=${filter}`;
@@ -53,6 +54,18 @@ export default function BookingsPage() {
     confirmed: { bg: '#f0fdf4', color: '#16a34a' },
     refunded: { bg: '#fef2f2', color: '#ef4444' },
   };
+
+  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+  setUpdatingStatus(bookingId);
+  try {
+    await api.patch(`/admin/bookings/${bookingId}/status`, { status: newStatus });
+    setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
+  } catch {
+    alert("Failed to update status.");
+  } finally {
+    setUpdatingStatus(null);
+  }
+};
 
   return (
     <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
@@ -122,10 +135,29 @@ export default function BookingsPage() {
                     <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Status</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <div>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Booking</p>
-                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: statusColors[booking.status]?.bg, color: statusColors[booking.status]?.color, textTransform: 'capitalize' }}>
-                          {booking.status}
-                        </span>
+                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Booking</p>
+                        <select
+                          title="status"
+                          value={booking.status}
+                          onChange={e => handleStatusChange(booking._id, e.target.value)}
+                          disabled={updatingStatus === booking._id}
+                          style={{
+                            padding: '0.35rem 0.6rem',
+                            borderRadius: '0.4rem',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '0.78rem',
+                            fontWeight: '600',
+                            cursor: updatingStatus === booking._id ? 'not-allowed' : 'pointer',
+                            backgroundColor: statusColors[booking.status]?.bg,
+                            color: statusColors[booking.status]?.color,
+                            textTransform: 'capitalize',
+                            outline: 'none',
+                          }}>
+                          <option value="upcoming">Upcoming</option>
+                          <option value="ongoing">Ongoing</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
                       </div>
                       <div>
                         <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Payment</p>
