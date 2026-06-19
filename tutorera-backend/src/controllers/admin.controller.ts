@@ -235,6 +235,59 @@ export const updateContactStatus = async (req: AuthRequest, res: Response): Prom
   res.status(200).json({ success: true, contact });
 };
 
+// @desc    Update booking status
+// @route   PATCH /api/admin/bookings/:id/status
+// @access  Private (admin)
+export const updateBookingStatus = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { status } = req.body;
+
+  if (!["upcoming", "ongoing", "completed", "cancelled"].includes(status)) {
+    res.status(400).json({ success: false, message: "Invalid status" });
+    return;
+  }
+
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    res.status(404).json({ success: false, message: "Booking not found" });
+    return;
+  }
+
+  booking.status = status;
+  await booking.save();
+
+  // Notify both parties
+  const io = req.app.get("io");
+  const statusMessages: Record<string, string> = {
+    ongoing: "Your session has started.",
+    completed: "Your session has been marked as completed.",
+    cancelled: "Your booking has been cancelled.",
+  };
+
+  if (statusMessages[status]) {
+    await sendNotification(io, booking.student.toString(), {
+      title: "📅 Booking Update",
+      message: statusMessages[status],
+      type: "booking",
+      link: "/dashboard",
+    });
+    await sendNotification(io, booking.tutor.toString(), {
+      title: "📅 Booking Update",
+      message: statusMessages[status],
+      type: "booking",
+      link: "/dashboard",
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `Booking status updated to ${status}`,
+    booking,
+  });
+};
+
 // @desc    Generate weekly or monthly report
 // @route   GET /api/admin/reports
 // @access  Private (admin)

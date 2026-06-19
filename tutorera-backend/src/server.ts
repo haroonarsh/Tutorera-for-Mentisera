@@ -20,6 +20,7 @@ import uploadRoutes from "./routes/upload.routes";
 import adminRoutes from "./routes/admin.routes";
 import notificationRoutes from "./routes/notification.routes";
 import chatRoutes from "./routes/chat.routes";
+import guaranteeRoutes from "./routes/guarantee.routes";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/guarantee", guaranteeRoutes);
 
 // Health check
 app.get("/", (req, res) => {
