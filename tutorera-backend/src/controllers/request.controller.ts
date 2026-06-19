@@ -177,6 +177,12 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
   request.status = "closed";
   await request.save();
 
+  // Auto-detect if this is the first booking between this student and this tutor
+  const existingBookingsCount = await Booking.countDocuments({
+    student: req.user?._id,
+    tutor: bid.tutor,
+  });
+
   // When creating booking
   const platformFee = Math.round(bid.amount * TOTAL_FEE_PERCENT / 100);
   const tutorPayout = bid.amount - platformFee;
@@ -192,6 +198,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     tutorPayout,
     schedule: request.schedule,
     teachingMode: request.teachingMode,
+    isFirstSession: existingBookingsCount === 0,
   });
 
   const io = req.app.get("io");

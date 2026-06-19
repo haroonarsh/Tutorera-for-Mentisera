@@ -16,6 +16,7 @@ export interface IBooking extends Document {
   paymentNote?: string;
   payoutStatus: "pending" | "paid";
   payoutNote?: string;
+  isFirstSession: boolean;
   createdAt: Date;
 }
 
@@ -36,6 +37,7 @@ const bookingSchema = new Schema<IBooking>(
     paymentNote: { type: String, default: "" },
     payoutStatus: { type: String, enum: ["pending", "paid"], default: "pending" },
     payoutNote: { type: String, default: "" },
+    isFirstSession: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

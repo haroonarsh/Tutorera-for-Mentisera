@@ -11,7 +11,12 @@ import {
   getAllContacts,
   updateContactStatus,
   generateReport,
+  updateBookingStatus,
 } from "../controllers/admin.controller";
+import {
+  getAllClaims,
+  updateClaimStatus,
+} from "../controllers/guaranteeClaim.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 
 const router = Router();
@@ -28,6 +33,9 @@ router.get("/bookings", getAllBookings);
 router.patch("/bookings/:id/payment", updatePaymentStatus);
 router.get("/contacts", getAllContacts);
 router.patch("/contacts/:id", updateContactStatus);
+router.patch("/bookings/:id/status", updateBookingStatus);
 router.get("/reports", generateReport);
+router.get("/guarantee-claims", getAllClaims);
+router.patch("/guarantee-claims/:id", updateClaimStatus);
 
 export default router;
