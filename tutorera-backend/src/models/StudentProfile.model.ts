@@ -13,6 +13,7 @@ export interface IStudentProfile extends Document {
   budgetRange: string;
   teachingModePreference: "online" | "in-person" | "both";
   onboardingComplete: boolean;
+  favouriteTutors: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +36,7 @@ const studentProfileSchema = new Schema<IStudentProfile>(
       default: "both",
     },
     onboardingComplete: { type: Boolean, default: false },
+    favouriteTutors: [{ type: Schema.Types.ObjectId, ref: "TutorProfile", default: [] }],
   },
   { timestamps: true }
 );
