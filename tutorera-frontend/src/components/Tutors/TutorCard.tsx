@@ -1,7 +1,10 @@
 // components/tutors/TutorCard.tsx
+"use client";
 import Link from "next/link";
+import { Heart } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import StarRating from "./StarRating";
+import { useFavourites } from "@/hooks/useFavourites";
 import styles from "./Tutorcard.module.css";
 
 interface TutorCardProps {
@@ -25,8 +28,17 @@ function getModeLabel(mode: TutorProfile["teachingMode"]): string {
 }
 
 export default function TutorCard({ tutor }: TutorCardProps) {
+  const { isFavourited, toggleFavourite, isStudent } = useFavourites();
+  const favourited = isFavourited(tutor._id);
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.preventDefault();   // don't navigate to profile when clicking heart
+    e.stopPropagation();
+    toggleFavourite(tutor._id);
+  };
+  
   return (
-    <Link href={`/tutors/${tutor._id}`} className={styles.card}>
+    <Link href={`/tutors/${tutor._id}`} className={styles.card} style={{ position: 'relative' }}>
       {/* Verified badge */}
       {tutor.isVerified && (
         <span className={styles.verifiedBadge} aria-label="Verified tutor">
@@ -39,6 +51,30 @@ export default function TutorCard({ tutor }: TutorCardProps) {
           </svg>
           Verified
         </span>
+      )}
+
+            {/* ── NEW: Favourite heart button — only for students ── */}
+      {isStudent && (
+        <button
+          onClick={handleHeartClick}
+          aria-label={favourited ? "Remove from favourites" : "Add to favourites"}
+          style={{
+            position: 'absolute', top: '12px', left: '12px', zIndex: 2,
+            width: '32px', height: '32px', borderRadius: '50%',
+            backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid #e5e7eb',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            transition: 'transform 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.1)')}
+          onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          <Heart
+            size={16}
+            color={favourited ? "#e94560" : "#9ca3af"}
+            fill={favourited ? "#e94560" : "none"}
+          />
+        </button>
       )}
 
       {/* Avatar + Name + City */}

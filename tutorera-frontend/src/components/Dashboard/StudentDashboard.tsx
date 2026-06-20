@@ -8,6 +8,8 @@ import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
 import PostRequestModal from "./PostRequestModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
+import { Heart, Trash2 } from "lucide-react";
+import { TutorProfile } from "@/types/tutor";
 
 const C = {
   primary: '#1a1a2e',
@@ -203,6 +205,47 @@ function BookingCard({ booking, onClaimSubmitted }: {
   );
 }
 
+// -------- Add a SavedTutorCard component -------------------------
+
+function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (id: string) => void }) {
+  const [removing, setRemoving] = useState(false);
+
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setRemoving(true);
+    try {
+      await axiosInstance.post(`/students/favourites/${tutor._id}`);
+      onRemove(tutor._id);
+    } catch {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div className={s.card}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+        <Link href={`/tutors/${tutor._id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', flex: 1 }}>
+          <Avatar name={tutor.user.name} avatar={tutor.user.avatar} />
+          <div>
+            <p className={s.personName}>{tutor.user.name}</p>
+            <p className={s.personSub}>{tutor.city} · Rs. {tutor.hourlyRate.toLocaleString()}/hr</p>
+          </div>
+        </Link>
+        <button onClick={handleRemove} disabled={removing}
+          style={{ background: 'none', border: 'none', cursor: removing ? 'not-allowed' : 'pointer', color: '#e94560', padding: '0.4rem', flexShrink: 0 }}
+          aria-label="Remove from favourites">
+          <Trash2 size={16} />
+        </button>
+      </div>
+      <div className={s.infoRow} style={{ marginTop: 10 }}>
+        {tutor.subjects?.slice(0, 3).map((sub: string) => (
+          <span key={sub} className={s.infoChip}>{sub}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Request Card (with expandable bids) ─────────────────────────────────────
 
 function RequestCard({
@@ -346,7 +389,7 @@ function RequestCard({
 
 // ─── Student Dashboard ────────────────────────────────────────────────────────
 
-type Tab = "requests" | "bookings";
+type Tab = "requests" | "bookings" | "favourites";
 
 interface Props {
   userName: string;
@@ -360,6 +403,22 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [loadingR, setLoadingR]         = useState(true);
   const [loadingB, setLoadingB]         = useState(true);
   const [showModal, setShowModal]       = useState(false);
+  const [favourites, setFavourites]     = useState<TutorProfile[]>([]);
+  const [loadingF, setLoadingF]         = useState(false);
+
+  const fetchFavourites = useCallback(async () => {
+    setLoadingF(true);
+    try {
+      const res = await axiosInstance.get("/students/favourites");
+      setFavourites(res.data.tutors ?? []);
+    } catch { setFavourites([]); }
+    finally { setLoadingF(false); }
+  }, []);
+
+  // Lazy load on tab switch
+  useEffect(() => {
+    if (tab === "favourites" && favourites.length === 0) fetchFavourites();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
 const fetchRequests = useCallback(async () => {
   setLoadingR(true);
@@ -484,6 +543,13 @@ const fetchRequests = useCallback(async () => {
         >
           ...My Bookings
         </button>
+        <button
+          onClick={() => setTab("favourites")}
+          aria-current={tab === "favourites" ? "true" : undefined}
+          className={`${s.tab} ${tab === "favourites" ? s.tabActive : ""}`}
+        >
+          ❤️ Saved Tutors {favourites.length > 0 && `(${favourites.length})`}
+        </button>
         </nav>
 
         {/* Tab: My Requests */}
@@ -535,6 +601,36 @@ const fetchRequests = useCallback(async () => {
               </div>
             ) : (
               bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)
+            )}
+          </section>
+        )}
+
+        {/* Tab: Saved Tutors */}
+        {tab === "favourites" && (
+          <section aria-label="Saved tutors">
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>Saved Tutors</h2>
+            </div>
+
+            {loadingF ? (
+              <div className={s.spinner} />
+            ) : favourites.length === 0 ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>❤️</div>
+                <p className={s.emptyTitle}>No saved tutors yet</p>
+                <p className={s.emptyDesc}>Browse tutors and tap the heart icon to save your favourites here.</p>
+                <Link href="/tutors" className={s.btnPrimary} style={{ textDecoration: 'none' }}>
+                  Browse Tutors
+                </Link>
+              </div>
+            ) : (
+              favourites.map((t) => (
+                <SavedTutorCard
+                  key={t._id}
+                  tutor={t}
+                  onRemove={(id) => setFavourites(prev => prev.filter(f => f._id !== id))}
+                />
+              ))
             )}
           </section>
         )}

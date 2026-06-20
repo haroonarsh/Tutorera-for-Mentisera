@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Star, MapPin, BookOpen, Clock, CheckCircle, MessageSquare, Play } from "lucide-react";
 import api from "@/lib/axios";
 import { TutorProfile, Review } from "@/types/tutor";
+import { Heart } from "lucide-react";
+import { useFavourites } from "@/hooks/useFavourites";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -16,6 +18,8 @@ export default function TutorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
   const [videoPlaying, setVideoPlaying] = useState(false);   // ← NEW
+  const { isFavourited, toggleFavourite, isStudent, loaded } = useFavourites();
+  const [togglingFav, setTogglingFav] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,6 +38,13 @@ export default function TutorDetailPage() {
     };
     if (id) fetchData();
   }, [id]);
+
+  const handleFavClick = async () => {
+    if (!tutor) return;
+    setTogglingFav(true);
+    await toggleFavourite(tutor._id);
+    setTogglingFav(false);
+  };
 
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -273,6 +284,24 @@ export default function TutorDetailPage() {
 
         {/* Right Sidebar — Book Now */}
         <div>
+          {/* ── NEW: Favourite button — only for logged-in students ── */}
+            {loaded && isStudent && (
+              <button
+                onClick={handleFavClick}
+                disabled={togglingFav}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  padding: '0.75rem', marginBottom: '1rem',
+                  backgroundColor: isFavourited(tutor._id) ? '#fff1f2' : 'white',
+                  color: isFavourited(tutor._id) ? '#e94560' : C.gray500,
+                  border: `1.5px solid ${isFavourited(tutor._id) ? '#fecdd3' : '#e5e7eb'}`,
+                  borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.875rem',
+                  cursor: togglingFav ? 'not-allowed' : 'pointer',
+                }}>
+                <Heart size={16} fill={isFavourited(tutor._id) ? "#e94560" : "none"} />
+                {isFavourited(tutor._id) ? "Saved to Favourites" : "Save to Favourites"}
+              </button>
+            )}
           <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb', position: 'sticky', top: '90px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '0.5rem' }}>Book a Session</h3>
             <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>Contact this tutor to discuss your needs and schedule.</p>
