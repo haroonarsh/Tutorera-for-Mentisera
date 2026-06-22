@@ -8,6 +8,7 @@ import api from "@/lib/axios";
 import { TutorProfile, Review } from "@/types/tutor";
 import { Heart } from "lucide-react";
 import { useFavourites } from "@/hooks/useFavourites";
+import DirectBookingModal from "@/components/Dashboard/DirectBookingModal";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -20,6 +21,7 @@ export default function TutorDetailPage() {
   const [videoPlaying, setVideoPlaying] = useState(false);   // ← NEW
   const { isFavourited, toggleFavourite, isStudent, loaded } = useFavourites();
   const [togglingFav, setTogglingFav] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -284,27 +286,28 @@ export default function TutorDetailPage() {
 
         {/* Right Sidebar — Book Now */}
         <div>
-          {/* ── NEW: Favourite button — only for logged-in students ── */}
-            {loaded && isStudent && (
-              <button
-                onClick={handleFavClick}
-                disabled={togglingFav}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                  padding: '0.75rem', marginBottom: '1rem',
-                  backgroundColor: isFavourited(tutor._id) ? '#fff1f2' : 'white',
-                  color: isFavourited(tutor._id) ? '#e94560' : C.gray500,
-                  border: `1.5px solid ${isFavourited(tutor._id) ? '#fecdd3' : '#e5e7eb'}`,
-                  borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.875rem',
-                  cursor: togglingFav ? 'not-allowed' : 'pointer',
-                }}>
-                <Heart size={16} fill={isFavourited(tutor._id) ? "#e94560" : "none"} />
-                {isFavourited(tutor._id) ? "Saved to Favourites" : "Save to Favourites"}
-              </button>
-            )}
+          {/* Favourite button (from Feature 3) */}
+          {loaded && isStudent && (
+            <button
+              onClick={handleFavClick}
+              disabled={togglingFav}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                padding: '0.75rem', marginBottom: '1rem',
+                backgroundColor: isFavourited(tutor._id) ? '#fff1f2' : 'white',
+                color: isFavourited(tutor._id) ? '#e94560' : C.gray500,
+                border: `1.5px solid ${isFavourited(tutor._id) ? '#fecdd3' : '#e5e7eb'}`,
+                borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.875rem',
+                cursor: togglingFav ? 'not-allowed' : 'pointer',
+              }}>
+              <Heart size={16} fill={isFavourited(tutor._id) ? "#e94560" : "none"} />
+              {isFavourited(tutor._id) ? "Saved to Favourites" : "Save to Favourites"}
+            </button>
+          )}
+
           <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb', position: 'sticky', top: '90px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '0.5rem' }}>Book a Session</h3>
-            <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>Contact this tutor to discuss your needs and schedule.</p>
+            <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>Send a direct booking request to this tutor.</p>
             <div style={{ borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', padding: '1rem 0', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ color: C.gray500, fontSize: '0.875rem' }}>Hourly Rate</span>
@@ -315,16 +318,34 @@ export default function TutorDetailPage() {
                 <span style={{ fontWeight: '600', color: C.primary, textTransform: 'capitalize', fontSize: '0.875rem' }}>{tutor.teachingMode}</span>
               </div>
             </div>
+
+            {/* ── NEW: Book Now button — primary CTA ── */}
+            <button
+              onClick={() => setShowBookingModal(true)}
+              style={{ display: 'block', width: '100%', textAlign: 'center', backgroundColor: C.accent, color: 'white', padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '700', border: 'none', fontSize: '0.95rem', marginBottom: '0.75rem', cursor: 'pointer' }}>
+              Book Now
+            </button>
+
             <Link href={`/contact?tutor=${tutor.user?._id}&name=${tutor.user?.name}`}
-              style={{ display: 'block', textAlign: 'center', backgroundColor: C.accent, color: 'white', padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', fontSize: '0.95rem', marginBottom: '0.75rem' }}>
-              Contact Tutor
-            </Link>
-            <Link href="/register"
               style={{ display: 'block', textAlign: 'center', border: `1.5px solid ${C.accent}`, color: C.accent, padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', fontSize: '0.95rem' }}>
-              Post a Tuition Request
+              Contact Tutor
             </Link>
           </div>
         </div>
+
+        {/* ── NEW: Direct Booking Modal ── */}
+        {showBookingModal && tutor.user && (
+          <DirectBookingModal
+            tutorId={tutor.user._id}
+            tutorName={tutor.user.name}
+            hourlyRate={tutor.hourlyRate}
+            tutorSubjects={tutor.subjects || []}
+            tutorTeachingMode={tutor.teachingMode}
+            tutorCity={tutor.city}
+            onClose={() => setShowBookingModal(false)}
+            onSuccess={() => {}}
+          />
+        )}
       </div>
 
       <style>{`

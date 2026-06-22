@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import axiosInstance from "@/lib/axios";
-import { DashRequest, DashBooking, TutorProfileData } from "@/types/dashboard";
+import { DashRequest, DashBooking, TutorProfileData, DashDirectRequest } from "@/types/dashboard";
 import PlaceBidModal from "./PlaceBidModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
@@ -186,6 +186,101 @@ function OpenRequestCard({
   );
 }
 
+// ─── Direct Booking Request Card (tutor accepts/declines, rate is fixed) ──────
+
+function DirectRequestCard({
+  request,
+  onActioned,
+}: {
+  request: DashDirectRequest;
+  onActioned: () => void;
+}) {
+  const [actioning, setActioning] = useState<"accept" | "reject" | null>(null);
+
+  const handleAccept = async () => {
+    if (!request.bid) return;
+    setActioning("accept");
+    try {
+      await axiosInstance.patch(`/requests/${request._id}/bids/${request.bid._id}/accept`);
+      onActioned();
+    } catch (err) {
+      console.error("Failed to accept direct booking:", err);
+      alert("Failed to accept. Please try again.");
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!request.bid) return;
+    setActioning("reject");
+    try {
+      await axiosInstance.patch(`/requests/${request._id}/bids/${request.bid._id}/reject`);
+      onActioned();
+    } catch (err) {
+      console.error("Failed to reject direct booking:", err);
+      alert("Failed to decline. Please try again.");
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  return (
+    <div className={s.card} style={{ borderColor: '#bfdbfe', backgroundColor: '#fafbff' }}>
+      <div className={s.cardHeader}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+            <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
+            <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
+              📩 Direct Request
+            </span>
+          </div>
+          <div className={s.cardMeta}>
+            <span>{request.level}</span>
+            <span>·</span>
+            <span>{request.city}</span>
+            <span>·</span>
+            <span>{timeAgo(request.createdAt)}</span>
+          </div>
+        </div>
+      </div>
+
+      <p className={s.cardDesc}>{request.description}</p>
+
+      <div className={s.infoRow}>
+        <span className={s.infoChip}>
+          <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+          </svg>
+          Rs. {request.budget.toLocaleString()}/hr <span style={{ opacity: 0.6, marginLeft: 4 }}>(your rate)</span>
+        </span>
+        <span className={s.infoChip}>{request.teachingMode}</span>
+        <span className={s.infoChip}>{request.schedule}</span>
+      </div>
+
+      <div style={{ marginTop: 14, display: "flex", gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          onClick={handleAccept}
+          disabled={actioning !== null}
+          className={s.btnSuccess}
+        >
+          {actioning === "accept" ? "Accepting…" : "✓ Accept Booking"}
+        </button>
+        <button
+          onClick={handleReject}
+          disabled={actioning !== null}
+          className={s.btnDanger}
+        >
+          {actioning === "reject" ? "Declining…" : "Decline"}
+        </button>
+        <span className={s.infoChip} style={{ alignSelf: "center", marginLeft: 'auto' }}>
+          Student: {request.student.name}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Profile Summary ──────────────────────────────────────────────────────────
 
 function ProfileSection({ profile }: { profile: TutorProfileData }) {
@@ -303,6 +398,8 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   const [tab, setTab]               = useState<Tab>("bookings");
   const [bookings, setBookings]     = useState<DashBooking[]>([]);
   const [requests, setRequests]     = useState<DashRequest[]>([]);
+  const [directRequests, setDirectRequests] = useState<DashDirectRequest[]>([]);
+  const [loadingD, setLoadingD]     = useState(false);
   const [profile, setProfile]       = useState<TutorProfileData | null>(null);
   const [loadingB, setLoadingB]     = useState(true);
   const [loadingR, setLoadingR]     = useState(false);
@@ -327,6 +424,15 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   finally { setLoadingR(false); }
   }, []);
 
+  const fetchDirectRequests = useCallback(async () => {
+  setLoadingD(true);
+  try {
+    const res = await axiosInstance.get("/requests/direct/my");
+    setDirectRequests(res.data.requests ?? []);
+  } catch { setDirectRequests([]); }
+  finally { setLoadingD(false); }
+  }, []);
+
   const fetchProfile = useCallback(async () => {
   setLoadingP(true);
   try {
@@ -345,6 +451,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   // Lazy load on tab switch
   useEffect(() => {
     if (tab === "browse" && requests.length === 0) fetchRequests();
+    if (tab === "browse") fetchDirectRequests();
     if (tab === "profile" && !profile) fetchProfile();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -496,6 +603,30 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
         {/* Tab: Browse Requests */}
         {tab === "browse" && (
           <section aria-label="Browse student requests">
+
+            {/* ── Direct Booking Requests — shown first, only if any exist ── */}
+            {(loadingD || directRequests.length > 0) && (
+              <div style={{ marginBottom: 28 }}>
+                <div className={s.sectionHeader}>
+                  <h2 className={s.sectionTitle}>📩 Direct Booking Requests</h2>
+                </div>
+                {loadingD ? (
+                  <div className={s.spinner} />
+                ) : (
+                  directRequests.map((r) => (
+                    <DirectRequestCard
+                      key={r._id}
+                      request={r}
+                      onActioned={() => {
+                        fetchDirectRequests();
+                        fetchBookings();
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+            
             <div className={s.sectionHeader}>
               <h2 className={s.sectionTitle}>Open Student Requests</h2>
               <button onClick={fetchRequests} className={s.btnOutline}>↻ Refresh</button>

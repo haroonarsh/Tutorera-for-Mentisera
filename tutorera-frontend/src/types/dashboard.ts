@@ -73,3 +73,8 @@ export interface PlaceBidPayload {
   amount: string;
   message: string;
 }
+
+export interface DashDirectRequest extends DashRequest {
+  isDirect: true;
+  bid: DashBid | null;
+}
