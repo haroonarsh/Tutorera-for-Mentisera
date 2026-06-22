@@ -10,6 +10,8 @@ export interface IRequest extends Document {
   city?: string;
   schedule: string;
   status: "open" | "closed" | "cancelled";
+  targetTutor?: Types.ObjectId;       // set only for direct booking requests
+  isDirect: boolean;                  // flags this as a direct booking, not open bidding
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +43,8 @@ const requestSchema = new Schema<IRequest>(
       enum: ["open", "closed", "cancelled"],
       default: "open",
     },
+    targetTutor: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    isDirect: { type: Boolean, default: false }, 
   },
   { timestamps: true }
 );

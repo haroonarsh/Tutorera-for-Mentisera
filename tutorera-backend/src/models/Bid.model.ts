@@ -6,6 +6,7 @@ export interface IBid extends Document {
   amount: number;
   message: string;
   status: "pending" | "accepted" | "rejected";
+  isDirect: boolean;
   createdAt: Date;
 }
 
@@ -20,6 +21,7 @@ const bidSchema = new Schema<IBid>(
       enum: ["pending", "accepted", "rejected"],
       default: "pending",
     },
+    isDirect: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -35,7 +35,7 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
 
   const { subject, level, city, page = "1", limit = "10" } = req.query;
-  const filter: Record<string, unknown> = { status: "open" };
+  const filter: Record<string, unknown> = { status: "open", isDirect: { $ne: true }, };
 
   if (subject) filter.subject = new RegExp(subject as string, "i");
   if (level) filter.level = level;
@@ -99,6 +99,12 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
+  // ← NEW: block bidding on direct requests not targeted at this tutor
+  if (request.isDirect && request.targetTutor?.toString() !== req.user?._id?.toString()) {
+    res.status(403).json({ success: false, message: "This is a private booking request." });
+    return;
+  }
+
   // Check if tutor already bid
   const existingBid = await Bid.findOne({ request: req.params.id, tutor: req.user?._id });
   if (existingBid) {
@@ -148,10 +154,8 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
 // @route   PATCH /api/requests/:id/bids/:bidId/accept
 // @access  Private (student)
 export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
-  const request = await Request.findOne({ 
-    _id: new Types.ObjectId(req.params.id as string), 
-    student: req.user?._id 
-  });
+  const request = await Request.findById(new Types.ObjectId(req.params.id as string));
+
   if (!request || request.status !== "open") {
     res.status(400).json({ success: false, message: "Request not available" });
     return;
@@ -160,6 +164,15 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
   const bid = await Bid.findById(new Types.ObjectId(req.params.bidId as string));
   if (!bid) {
     res.status(404).json({ success: false, message: "Bid not found" });
+    return;
+  }
+
+  // Authorization: either the student who owns the request, OR the tutor on a direct request accepting their own bid
+  const isOwner = request.student.toString() === req.user?._id?.toString();
+  const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
+
+  if (!isOwner && !isDirectTutorAccept) {
+    res.status(403).json({ success: false, message: "Not authorized to accept this bid" });
     return;
   }
 
@@ -224,4 +237,145 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     message: "Bid accepted. Booking created successfully.",
     booking,
   });
+};
+
+// @desc    Create a direct booking request targeted at a specific tutor
+// @route   POST /api/requests/direct
+// @access  Private (student)
+export const createDirectBookingRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { tutorId, subject, level, description, teachingMode, city, schedule } = req.body;
+
+  if (!tutorId || !subject || !level || !description || !schedule) {
+    res.status(400).json({ success: false, message: "Missing required fields." });
+    return;
+  }
+
+  // Fetch tutor's profile to get their listed rate + verify they're approved
+  const TutorProfile = (await import("../models/TutorProfile.model")).default;
+  const tutorProfile = await TutorProfile.findOne({ user: tutorId });
+  if (!tutorProfile || tutorProfile.verificationStatus !== "approved") {
+    res.status(404).json({ success: false, message: "Tutor not found or not available for booking." });
+    return;
+  }
+
+  // Prevent duplicate direct requests to the same tutor while one is still pending
+  const existingPending = await Request.findOne({
+    student: req.user?._id,
+    targetTutor: tutorId,
+    status: "open",
+  });
+  if (existingPending) {
+    res.status(400).json({
+      success: false,
+      message: "You already have a pending booking request with this tutor.",
+    });
+    return;
+  }
+
+  // Create the private request
+  const request = await Request.create({
+    student: req.user?._id,
+    subject,
+    level,
+    description,
+    budget: tutorProfile.hourlyRate,
+    teachingMode: teachingMode || tutorProfile.teachingMode,
+    city: city || tutorProfile.city,
+    schedule,
+    targetTutor: tutorId,
+    isDirect: true,
+  });
+
+  // Auto-create the bid at the tutor's listed rate
+  const bid = await Bid.create({
+    request: request._id,
+    tutor: tutorId,
+    amount: tutorProfile.hourlyRate,
+    message: "Direct booking request",
+    isDirect: true,
+  });
+
+  // Notify tutor
+  const io = req.app.get("io");
+  await sendNotification(io, tutorId, {
+    title: "📩 New Direct Booking Request",
+    message: `${req.user?.name} wants to book a session with you for ${subject}.`,
+    type: "booking",
+    link: "/dashboard?tab=requests",
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Booking request sent to the tutor. You'll be notified once they respond.",
+    request,
+    bid,
+  });
+};
+
+// @desc    Get direct booking requests for the logged-in tutor
+// @route   GET /api/requests/direct/my
+// @access  Private (tutor)
+export const getMyDirectRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  const requests = await Request.find({
+    targetTutor: req.user?._id,
+    isDirect: true,
+    status: "open",
+  })
+    .populate("student", "name city avatar")
+    .sort("-createdAt");
+
+  // Attach the bid (always exactly one — the auto-created one) for each request
+  const requestsWithBid = await Promise.all(
+    requests.map(async (r) => {
+      const bid = await Bid.findOne({ request: r._id, tutor: req.user?._id });
+      return { ...r.toObject(), bid };
+    })
+  );
+
+  res.status(200).json({ success: true, total: requestsWithBid.length, requests: requestsWithBid });
+};
+
+// @desc    Reject a bid (used for direct booking decline, or general reject)
+// @route   PATCH /api/requests/:id/bids/:bidId/reject
+// @access  Private (student who owns the request, OR the tutor on a direct request)
+export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> => {
+  const bid = await Bid.findById(req.params.bidId);
+  if (!bid) {
+    res.status(404).json({ success: false, message: "Bid not found" });
+    return;
+  }
+
+  const request = await Request.findById(req.params.id);
+  if (!request) {
+    res.status(404).json({ success: false, message: "Request not found" });
+    return;
+  }
+
+  // Allow either the student who owns the request, or the tutor (only for direct requests)
+  const isOwner = request.student.toString() === req.user?._id?.toString();
+  const isTargetTutorDecline = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
+
+  if (!isOwner && !isTargetTutorDecline) {
+    res.status(403).json({ success: false, message: "Not authorized to reject this bid" });
+    return;
+  }
+
+  bid.status = "rejected";
+  await bid.save();
+
+  // If this was a direct request and the tutor declined, close the request entirely
+  if (request.isDirect && isTargetTutorDecline) {
+    request.status = "cancelled";
+    await request.save();
+
+    const io = req.app.get("io");
+    await sendNotification(io, request.student.toString(), {
+      title: "Booking Request Declined",
+      message: `The tutor was unable to accept your booking request for ${request.subject}.`,
+      type: "booking",
+      link: "/dashboard",
+    });
+  }
+
+  res.status(200).json({ success: true, message: "Bid rejected", bid });
 };
