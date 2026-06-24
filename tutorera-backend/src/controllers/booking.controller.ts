@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
+import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 
 // @desc    Get my bookings
 // @route   GET /api/bookings
@@ -42,6 +43,11 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   }
 
   await booking.save();
+
+  // After booking status is set to "completed":
+  if (status === "completed" && booking.isFirstSession) {
+    await creditReferrerOnFirstBooking(booking.student.toString());
+  }
 
   res.status(200).json({ success: true, message: "Booking status updated", booking });
 };

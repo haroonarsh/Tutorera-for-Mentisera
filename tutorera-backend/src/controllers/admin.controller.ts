@@ -11,6 +11,7 @@ import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import Request from "../models/Request.model";
 import Review from "../models/Review.model";
+import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -178,7 +179,7 @@ export const updatePaymentStatus = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
+  const { paymentStatus, paymentNote, payoutStatus, payoutNote, status } = req.body;
 
   const booking = await Booking.findById(req.params.id);
   if (!booking) {
@@ -192,6 +193,11 @@ export const updatePaymentStatus = async (
   if (payoutStatus !== undefined) booking.payoutStatus = payoutStatus;
   if (payoutNote !== undefined) booking.payoutNote = payoutNote;
 
+  // Handle booking status change from admin
+  if (status !== undefined) {
+    booking.status = status;
+  }
+
   // ← ADD: Auto-calculate fees with new 34.5% when payment confirmed
   if (paymentStatus === "confirmed" && booking.amount) {
     const platformFee = Math.round(booking.amount * TOTAL_FEE_PERCENT / 100);
@@ -201,6 +207,11 @@ export const updatePaymentStatus = async (
   }
   
   await booking.save();
+
+  // ── trigger referral credit when admin marks booking completed ──
+  if (status === "completed" && booking.isFirstSession) {
+    await creditReferrerOnFirstBooking(booking.student.toString());
+  }
 
   res.status(200).json({
     success: true,
@@ -255,9 +266,15 @@ export const updateBookingStatus = async (
     return;
   }
 
+  const previousStatus = booking.status;
   booking.status = status;
   await booking.save();
 
+   // ── Trigger referral credit when admin marks booking as completed ──
+  if (status === "completed" && previousStatus !== "completed" && booking.isFirstSession) {
+    await creditReferrerOnFirstBooking(booking.student.toString());
+  }
+  
   // Notify both parties
   const io = req.app.get("io");
   const statusMessages: Record<string, string> = {

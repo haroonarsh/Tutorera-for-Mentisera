@@ -48,6 +48,9 @@ const userSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    referralCode: { type: String, unique: true, sparse: true },
+    referralCredit: { type: Number, default: 0 },       // PKR credit balance
+    referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true }
 );

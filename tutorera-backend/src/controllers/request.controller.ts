@@ -192,7 +192,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
   // Auto-detect if this is the first booking between this student and this tutor
   const existingBookingsCount = await Booking.countDocuments({
-    student: req.user?._id,
+     student: request.student,
     tutor: bid.tutor,
   });
 
@@ -202,7 +202,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
   // Auto-create booking
   const booking = await Booking.create({
-    student: req.user?._id,
+    student: request.student,
     tutor: bid.tutor,
     request: request._id,
     bid: bid._id,

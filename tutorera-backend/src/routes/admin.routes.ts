@@ -17,6 +17,7 @@ import {
   getAllClaims,
   updateClaimStatus,
 } from "../controllers/guaranteeClaim.controller";
+import { getAllReferrals } from "../controllers/referral.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 
 const router = Router();
@@ -37,5 +38,6 @@ router.patch("/bookings/:id/status", updateBookingStatus);
 router.get("/reports", generateReport);
 router.get("/guarantee-claims", getAllClaims);
 router.patch("/guarantee-claims/:id", updateClaimStatus);
+router.get("/referrals", getAllReferrals);
 
 export default router;

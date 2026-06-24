@@ -21,6 +21,7 @@ import adminRoutes from "./routes/admin.routes";
 import notificationRoutes from "./routes/notification.routes";
 import chatRoutes from "./routes/chat.routes";
 import guaranteeRoutes from "./routes/guarantee.routes";
+import referralRoutes from "./routes/referral.routes";
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/guarantee", guaranteeRoutes);
+app.use("/api/referral", referralRoutes);
 
 // Health check
 app.get("/", (req, res) => {
