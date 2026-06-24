@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import axiosInstance from "@/lib/axios";
-import styles from "@/components/dashboard/PostRequestModal.module.css";
+import styles from "./PostRequestModal.module.css";
 
 const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 

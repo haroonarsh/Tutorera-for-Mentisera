@@ -23,6 +23,9 @@ export interface IUser extends Document {
   isActive: boolean;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
+  referralCode?: string;
+  referralCredit: number;
+  referredBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;
