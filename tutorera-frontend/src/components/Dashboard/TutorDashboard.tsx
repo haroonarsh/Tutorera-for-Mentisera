@@ -8,6 +8,7 @@ import { DashRequest, DashBooking, TutorProfileData, DashDirectRequest } from "@
 import PlaceBidModal from "./PlaceBidModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
+import AvailabilityManager from "./AvailabilityManager";
 
 const C = {
   primary: '#1a1a2e',
@@ -366,18 +367,9 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           )) : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
         </div>
 
-        <div className={s.profileCard}>
+        <div className={s.profileCard} style={{ gridColumn: '1 / -1' }}>
           <p className={s.profileCardTitle}>Availability</p>
-          {profile.availability.length > 0 ? profile.availability.map((a) => (
-            <div key={a._id} style={{ marginBottom: 8 }}>
-              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "#1a1a2e" }}>{a.day}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {a.slots.map((slot) => (
-                  <span key={slot} className={s.infoChip} style={{ fontSize: 11 }}>{slot}</span>
-                ))}
-              </div>
-            </div>
-          )) : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+          <AvailabilityManager />
         </div>
       </div>
     </div>
@@ -477,8 +469,8 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
               </span>
             </div>
           </div>
-          <Link href={`/tutors/${userId}`} className={s.btnOutline}
-            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <Link href={`/tutors/${userId}`} className={s.btnOutline} 
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "#d4d5d9" }}>
             View Public Profile
           </Link>
         </div>

@@ -337,6 +337,7 @@ export default function TutorDetailPage() {
         {showBookingModal && tutor.user && (
           <DirectBookingModal
             tutorId={tutor.user._id}
+            tutorUserId={tutor.user._id}
             tutorName={tutor.user.name}
             hourlyRate={tutor.hourlyRate}
             tutorSubjects={tutor.subjects || []}
