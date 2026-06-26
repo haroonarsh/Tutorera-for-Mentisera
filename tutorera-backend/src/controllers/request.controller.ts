@@ -7,6 +7,7 @@ import Booking from "../models/Booking.model";
 import { sendNotification } from "../utils/socket";
 import { TOTAL_FEE_PERCENT } from "../config/constants";
 import { incrementBidCount } from "../middlewares/bidLimit.middleware";
+import BookedSlot from "../models/BookedSlot.model";
 
 // @desc    Create tuition request
 // @route   POST /api/requests
@@ -214,6 +215,18 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     isFirstSession: existingBookingsCount === 0,
   });
 
+  // lock the slot if it's a direct booking with a slot
+if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
+  await BookedSlot.create({
+    tutor: bid.tutor,
+    student: request.student,
+    booking: booking._id,
+    date: new Date(request.selectedDate),
+    startTime: request.selectedStartTime,
+    endTime: request.selectedEndTime,
+  });
+}
+
   const io = req.app.get("io");
 
   // Notify tutor
@@ -243,7 +256,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 // @route   POST /api/requests/direct
 // @access  Private (student)
 export const createDirectBookingRequest = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { tutorId, subject, level, description, teachingMode, city, schedule } = req.body;
+  const { tutorId, subject, level, description, teachingMode, city, schedule, selectedDate, selectedStartTime, selectedEndTime } = req.body;
 
   if (!tutorId || !subject || !level || !description || !schedule) {
     res.status(400).json({ success: false, message: "Missing required fields." });
@@ -281,9 +294,14 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     budget: tutorProfile.hourlyRate,
     teachingMode: teachingMode || tutorProfile.teachingMode,
     city: city || tutorProfile.city,
-    schedule,
+    schedule: selectedDate && selectedStartTime
+      ? `${selectedDate} ${selectedStartTime}–${selectedEndTime}`
+      : schedule,
     targetTutor: tutorId,
     isDirect: true,
+    selectedDate: selectedDate || "",
+    selectedStartTime: selectedStartTime || "",
+    selectedEndTime: selectedEndTime || "",
   });
 
   // Auto-create the bid at the tutor's listed rate
