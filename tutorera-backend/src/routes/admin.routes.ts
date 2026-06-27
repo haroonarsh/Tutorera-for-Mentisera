@@ -18,6 +18,7 @@ import {
   updateClaimStatus,
 } from "../controllers/guaranteeClaim.controller";
 import { getAllReferrals } from "../controllers/referral.controller";
+import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 
 const router = Router();
@@ -39,5 +40,7 @@ router.get("/reports", generateReport);
 router.get("/guarantee-claims", getAllClaims);
 router.patch("/guarantee-claims/:id", updateClaimStatus);
 router.get("/referrals", getAllReferrals);
+router.get("/student-ratings", getAllStudentRatings);
+router.get("/student-ratings/:studentId", getStudentRatings);
 
 export default router;

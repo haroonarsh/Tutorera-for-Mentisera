@@ -3,6 +3,7 @@ import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import TutorAvailability from "../models/TutorAvailability.model";
 
 // @desc    Create or update tutor profile
 // @route   POST /api/tutors/profile
@@ -267,6 +268,37 @@ export const saveOnboardingStep = async (
       availability: parsedData.availability || [],
       onboardingStep: 5,
     };
+
+    // ── NEW: Write to TutorAvailability in 24hr format ──
+    // Onboarding format: { day: "Monday", slots: ["5:00 PM", "6:00 PM"] }
+    // TutorAvailability format: { day: "Monday", startTime: "17:00", endTime: "18:00" }
+    if (parsedData.availability?.length > 0) {
+      const weeklySlots = (parsedData.availability as { day: string; slots: string[] }[])
+        .flatMap(a =>
+          a.slots.map(slot => {
+            // Convert "5:00 PM" → startTime: "17:00", endTime: "18:00"
+            const parts = slot.split(" ");
+            const period = parts[1]; // "AM" or "PM"
+            const [hourStr, minStr] = parts[0].split(":");
+            let hour = parseInt(hourStr);
+
+            if (period === "PM" && hour !== 12) hour += 12;
+            if (period === "AM" && hour === 12) hour = 0;
+
+            const startTime = `${String(hour).padStart(2, "0")}:${minStr}`;
+            const endHour = hour + 1 > 23 ? 23 : hour + 1; // cap at 23:00
+            const endTime = `${String(endHour).padStart(2, "0")}:${minStr}`;
+
+            return { day: a.day, startTime, endTime };
+          })
+        );
+
+      await TutorAvailability.findOneAndUpdate(
+        { tutor: req.user?._id },
+        { tutor: req.user?._id, weeklySlots },
+        { upsert: true, new: true }
+      );
+    }
   }
 
   else if (stepNum === 5) {
