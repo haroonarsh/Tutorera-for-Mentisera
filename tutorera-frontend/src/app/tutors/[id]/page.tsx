@@ -16,6 +16,8 @@ export default function TutorDetailPage() {
   const { id } = useParams();
   const [tutor, setTutor] = useState<TutorProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [availabilitySlots, setAvailabilitySlots] = useState<{
+  date: string; dayName: string; startTime: string; endTime: string; }[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"about" | "reviews">("about");
   const [videoPlaying, setVideoPlaying] = useState(false);   // ← NEW
@@ -26,12 +28,18 @@ export default function TutorDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tutorRes, reviewRes] = await Promise.all([
-          api.get(`/tutors/${id}`),
-          api.get(`/reviews/${id}`),
+        // First fetch tutor profile
+        const tutorRes = await api.get(`/tutors/${id}`);
+        const tutorData = tutorRes.data.profile;
+        setTutor(tutorData);
+
+        // Then fetch reviews + availability in parallel using user._id
+        const [reviewRes, availRes] = await Promise.all([
+          api.get(`/reviews/${tutorData.user._id}`),
+          api.get(`/tutors/${tutorData.user._id}/availability`),
         ]);
-        setTutor(tutorRes.data.profile);
         setReviews(reviewRes.data.reviews);
+        setAvailabilitySlots(availRes.data.slots || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -222,7 +230,35 @@ export default function TutorDetailPage() {
               )}
 
               {/* Availability */}
-              {tutor.availability?.length > 0 && (
+              {availabilitySlots.length > 0 && (
+                <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>Availability</h2>
+                  <p style={{ fontSize: '0.8rem', color: C.gray500, marginBottom: '1rem' }}>Next 2 weeks — click "Book Now" to reserve a slot</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {/* Group slots by dayName, show unique days */}
+                    {Array.from(new Set(availabilitySlots.map(s => s.dayName))).map(dayName => {
+                      const daySlots = availabilitySlots.filter(s => s.dayName === dayName);
+                      // Show unique start times for this day
+                      const uniqueTimes = Array.from(new Set(daySlots.map(s => s.startTime)));
+                      return (
+                        <div key={dayName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: C.gray50, borderRadius: '0.5rem' }}>
+                          <span style={{ fontWeight: '600', color: C.primary, fontSize: '0.9rem', minWidth: '90px' }}>{dayName}</span>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {uniqueTimes.map(time => (
+                              <span key={time} style={{ backgroundColor: C.accentLight, color: C.accent, fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: '500' }}>
+                                {time}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback — show old onboarding availability if no new slots set */}
+              {availabilitySlots.length === 0 && tutor.availability?.length > 0 && (
                 <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
                   <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>Availability</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

@@ -9,6 +9,7 @@ import PlaceBidModal from "./PlaceBidModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
 import AvailabilityManager from "./AvailabilityManager";
+import RatingModal from "./RatingModal";
 
 const C = {
   primary: '#1a1a2e',
@@ -40,7 +41,20 @@ function timeAgo(dateStr: string): string {
 
 function BookingCard({ booking }: { booking: DashBooking }) {
   const [creatingChat, setCreatingChat] = useState(false);
+  const [showStudentRatingModal, setShowStudentRatingModal] = useState(false);
+  const [studentRated, setStudentRated] = useState(false);
   const router = useRouter();
+
+  const handleRateStudent = async (rating: number, comment: string) => {
+    await axiosInstance.post("/reviews/student-ratings", {
+      studentId: booking.student._id,
+      bookingId: booking._id,
+      rating,
+      comment,
+    });
+    setStudentRated(true);
+    setShowStudentRatingModal(false);
+  };
 
   const handleChatClick = async () => {
   setCreatingChat(true);
@@ -58,6 +72,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
 };
 
   return (
+    <>
     <div className={s.card}>
       <div className={s.cardHeader}>
         <div className={s.personRow} style={{ margin: 0 }}>
@@ -101,6 +116,26 @@ function BookingCard({ booking }: { booking: DashBooking }) {
           }}>
           🆘 Need Help?
         </button>
+
+        {booking.status === "completed" && !studentRated && (
+          <button
+            onClick={() => setShowStudentRatingModal(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.5rem 1rem', backgroundColor: '#f5f3ff',
+              color: '#7c3aed', borderRadius: '0.5rem',
+              border: '1px solid #ddd6fe', fontSize: '0.8rem', fontWeight: '600',
+              cursor: 'pointer',
+            }}>
+            ⭐ Rate Student
+          </button>
+        )}
+
+        {studentRated && (
+          <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, padding: '0.5rem 0' }}>
+            ✓ Student Rated
+          </span>
+        )}
       </div>
       <div className={s.infoRow} style={{ marginTop: 12 }}>
         <span className={s.infoChip}>
@@ -119,6 +154,17 @@ function BookingCard({ booking }: { booking: DashBooking }) {
       </div>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>
+
+    {/* Rating modal rendered OUTSIDE the card div */}
+      {showStudentRatingModal && (
+        <RatingModal
+          title={`Rate ${booking.student.name.split(' ')[0]}`}
+          subtitle="How was this student? This helps us maintain platform quality."
+          onSubmit={handleRateStudent}
+          onClose={() => setShowStudentRatingModal(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -438,13 +484,15 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   }
   }, []);
 
-  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+  useEffect(() => {
+    fetchBookings();
+    fetchProfile();
+  }, [fetchBookings, fetchProfile]);
 
   // Lazy load on tab switch
   useEffect(() => {
     if (tab === "browse" && requests.length === 0) fetchRequests();
     if (tab === "browse") fetchDirectRequests();
-    if (tab === "profile" && !profile) fetchProfile();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const upcomingCount  = bookings.filter((b) => b.status === "upcoming").length;

@@ -10,6 +10,7 @@ import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
 import { Heart, Trash2 } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
+import RatingModal from "./RatingModal";
 
 const C = {
   primary: '#1a1a2e',
@@ -58,6 +59,8 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const [claimDetails, setClaimDetails] = useState("");
   const [submittingClaim, setSubmittingClaim] = useState(false);
   const [claimSubmitted, setClaimSubmitted] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [alreadyRated, setAlreadyRated] = useState(false);
   const router = useRouter();
 
   const handleChatClick = async () => {
@@ -70,6 +73,16 @@ function BookingCard({ booking, onClaimSubmitted }: {
     } finally {
       setCreatingChat(false);
     }
+  };
+
+  const handleRateSubmit = async (rating: number, comment: string) => {
+    await axiosInstance.post(`/reviews/${booking.tutor._id}`, {
+      rating,
+      comment,
+      bookingId: booking._id,
+    });
+    setAlreadyRated(true);
+    setShowRatingModal(false);
   };
 
   const handleClaimSubmit = async () => {
@@ -98,6 +111,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
     && !claimSubmitted;
 
   return (
+    <>
     <div className={s.card}>
       <div className={s.personRow}>
         <Avatar name={booking.tutor.name} avatar={booking.tutor.avatar} />
@@ -127,6 +141,27 @@ function BookingCard({ booking, onClaimSubmitted }: {
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#fff7ed', color: '#d97706', borderRadius: '0.5rem', border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
           🆘 Need Help?
         </button>
+
+        {/* ── Rate Tutor — only on completed bookings ── */}
+        {booking.status === "completed" && !alreadyRated && (
+          <button
+            onClick={() => setShowRatingModal(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.5rem 1rem', backgroundColor: '#fffbeb',
+              color: '#d97706', borderRadius: '0.5rem',
+              border: '1px solid #fde68a', fontSize: '0.8rem', fontWeight: '600',
+              cursor: 'pointer',
+            }}>
+            ⭐ Rate Tutor
+          </button>
+        )}
+
+        {alreadyRated && (
+          <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, padding: '0.5rem 0' }}>
+            ✓ Rated
+          </span>
+        )}
 
         {/* ── First Session Guarantee button ── */}
         {showGuaranteeButton && (
@@ -202,6 +237,16 @@ function BookingCard({ booking, onClaimSubmitted }: {
       </div>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>
+
+      {showRatingModal && (
+        <RatingModal
+          title={`Rate ${booking.tutor.name.split(' ')[0]}`}
+          subtitle="How was your session? Your review helps other students."
+          onSubmit={handleRateSubmit}
+          onClose={() => setShowRatingModal(false)}
+        />
+      )}
+    </>
   );
 }
 
