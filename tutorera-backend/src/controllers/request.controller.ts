@@ -239,8 +239,8 @@ if (request.isDirect && request.selectedDate && request.selectedStartTime && req
 
   // Notify student
   await sendNotification(io, request.student.toString(), {
-    title: "📅 Booking Confirmed",
-    message: "Your booking has been created successfully. Check your dashboard.",
+    title: "📅 Booking Confirmed — Payment Required",
+    message: `Your booking has been created! Please send Rs. ${bid.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.pk.`,
     type: "booking",
     link: "/dashboard",
   });
