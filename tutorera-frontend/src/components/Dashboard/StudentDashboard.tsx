@@ -172,6 +172,33 @@ function BookingCard({ booking, onClaimSubmitted }: {
         )}
       </div>
 
+      {/* ── NayaPay Payment Instructions — only when payment is pending ── */}
+      {booking.paymentStatus === "pending" && booking.status !== "cancelled" && (
+        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534', marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            💳 Payment Required
+          </p>
+          <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
+            Please send your session payment to TUTORERA®'s NayaPay account and email proof to <strong>billing@tutorera.pk</strong>.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            {[
+              { label: "NayaPay ID",     value: "mentisera@nayapay" },
+              { label: "Account Title",  value: "MENTISERA (SMC-PRIVATE) LIMITED" },
+              { label: "IBAN",           value: "PK27NAYA7556428306882526" },
+            ].map(item => (
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#14532d', fontFamily: 'monospace' }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.7rem', color: '#15803d', margin: 0 }}>
+            Amount: <strong>Rs. {booking.amount.toLocaleString()}</strong> · Payment confirmed within 24 hrs
+          </p>
+        </div>
+      )}
+
       {/* Claim submitted confirmation */}
       {claimSubmitted && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>

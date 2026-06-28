@@ -226,92 +226,124 @@ export default function BillingPage() {
           </div>
 
         {/* Fee Breakdown Card */}
-<div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '2rem' }}>
-  <h3 style={{ fontWeight: '800', color: C.primary, fontSize: '1.1rem', marginBottom: '0.25rem' }}>
-    📊 Platform Fee Breakdown
-  </h3>
-  <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-    This fee applies to all bookings on TUTORERA® regardless of your plan.
-  </p>
+        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '2rem' }}>
+          <h3 style={{ fontWeight: '800', color: C.primary, fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+            📊 Platform Fee Breakdown
+          </h3>
+          <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            This fee applies to all bookings on TUTORERA® regardless of your plan.
+          </p>
 
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-    {/* From Student */}
-    <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
-      <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-        Charged to Student
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {[
-          { label: "Platform Fee", value: "30%" },
-          { label: "GST (15% of 30%)", value: "4.5%" },
-        ].map(item => (
-          <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#1d4ed8' }}>{item.label}</span>
-            <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            {/* From Student */}
+            <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                Charged to Student
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  { label: "Platform Fee", value: "30%" },
+                  { label: "GST (15% of 30%)", value: "4.5%" },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                    <span style={{ color: '#1d4ed8' }}>{item.label}</span>
+                    <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: '1px solid #bfdbfe' }}>
+                  <span style={{ color: C.primary }}>Total Added</span>
+                  <span style={{ color: '#1d4ed8' }}>{PLATFORM_FEE}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* From Tutor */}
+            <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bbf7d0' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                Deducted from Tutor
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  { label: "Platform Fee", value: "30%" },
+                  { label: "GST (15% of 30%)", value: "4.5%" },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                    <span style={{ color: '#16a34a' }}>{item.label}</span>
+                    <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: '1px solid #bbf7d0' }}>
+                  <span style={{ color: C.primary }}>Total Deducted</span>
+                  <span style={{ color: '#16a34a' }}>{PLATFORM_FEE}%</span>
+                </div>
+              </div>
+            </div>
           </div>
-        ))}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: '1px solid #bfdbfe' }}>
-          <span style={{ color: C.primary }}>Total Added</span>
-          <span style={{ color: '#1d4ed8' }}>{PLATFORM_FEE}%</span>
-        </div>
-      </div>
-    </div>
 
-    {/* From Tutor */}
-    <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bbf7d0' }}>
-      <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-        Deducted from Tutor
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {[
-          { label: "Platform Fee", value: "30%" },
-          { label: "GST (15% of 30%)", value: "4.5%" },
-        ].map(item => (
-          <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#16a34a' }}>{item.label}</span>
-            <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>
+          {/* Example Calculation */}
+          <div style={{ backgroundColor: '#fffbeb', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
+            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>
+              💡 Example — Tutor charges Rs. 1,000/hr
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
+              {[
+                { label: "Student Pays", value: "Rs. 1,345", color: '#1d4ed8', bg: '#eff6ff' },
+                { label: "Platform Earns", value: "Rs. 345", color: '#d97706', bg: '#fffbeb' },
+                { label: "Tutor Receives", value: "Rs. 655", color: '#16a34a', bg: '#f0fdf4' },
+              ].map(item => (
+                <div key={item.label} style={{ backgroundColor: item.bg, borderRadius: '0.5rem', padding: '0.875rem', textAlign: 'center' }}>
+                  <p style={{ fontSize: '1.1rem', fontWeight: '800', color: item.color }}>{item.value}</p>
+                  <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.2rem' }}>{item.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: '1px solid #bbf7d0' }}>
-          <span style={{ color: C.primary }}>Total Deducted</span>
-          <span style={{ color: '#16a34a' }}>{PLATFORM_FEE}%</span>
         </div>
-      </div>
-    </div>
-  </div>
 
-  {/* Example Calculation */}
-  <div style={{ backgroundColor: '#fffbeb', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
-    <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>
-      💡 Example — Tutor charges Rs. 1,000/hr
-    </p>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
-      {[
-        { label: "Student Pays", value: "Rs. 1,345", color: '#1d4ed8', bg: '#eff6ff' },
-        { label: "Platform Earns", value: "Rs. 345", color: '#d97706', bg: '#fffbeb' },
-        { label: "Tutor Receives", value: "Rs. 655", color: '#16a34a', bg: '#f0fdf4' },
-      ].map(item => (
-        <div key={item.label} style={{ backgroundColor: item.bg, borderRadius: '0.5rem', padding: '0.875rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '1.1rem', fontWeight: '800', color: item.color }}>{item.value}</p>
-          <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.2rem' }}>{item.label}</p>
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
-
-        {/* Payment Info */}
-        <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.875rem', padding: '1.5rem' }}>
+                {/* How to Upgrade */}
+        <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.875rem', padding: '1.5rem', marginBottom: '1.5rem' }}>
           <p style={{ fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>🏦 How to Upgrade</p>
           <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#a16207', fontSize: '0.875rem' }}>
-            <li>Click "Upgrade to Premium" and note down the plan price</li>
-            <li>Transfer the amount to TUTORERA®'s bank account</li>
+            <li>Click "Upgrade to Premium" / "Upgrade to Standard" and note down the plan price</li>
+            <li>Transfer the amount to TUTORERA®'s NayaPay account below</li>
             <li>Send payment proof to <strong>billing@tutorera.pk</strong></li>
             <li>Your plan will be activated within 24 hours</li>
           </ol>
-          <p style={{ color: '#a16207', fontSize: '0.8rem', marginTop: '0.75rem' }}>
-            For payment details, contact us at <strong>support@tutorera.pk</strong> or WhatsApp: <strong>+92 334 888 0859</strong>
-          </p>
+        </div>
+
+        {/* ── NayaPay Payment Details ── */}
+        <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.875rem', padding: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <div style={{ width: 44, height: 44, backgroundColor: '#f0fdf4', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>
+              💳
+            </div>
+            <div>
+              <p style={{ fontWeight: '800', color: C.primary, fontSize: '1rem', margin: 0 }}>Payment Account Details</p>
+              <p style={{ color: C.gray500, fontSize: '0.8rem', margin: 0 }}>Send your payment to this NayaPay account</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            {[
+              { label: "Bank Name",       value: "NayaPay" },
+              { label: "Account Title",   value: "MENTISERA (SMC-PRIVATE) LIMITED" },
+              { label: "NayaPay ID",      value: "mentisera@nayapay" },
+              { label: "Account Number",  value: "7556428306882526" },
+              { label: "IBAN",            value: "PK27NAYA7556428306882526" },
+            ].map(item => (
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: C.gray50, borderRadius: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.8rem', color: C.gray500, fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, fontFamily: 'monospace', letterSpacing: '0.02em' }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.875rem 1rem' }}>
+            <p style={{ fontSize: '0.8rem', color: '#b91c1c', fontWeight: 600, margin: '0 0 0.25rem' }}>⚠ Important</p>
+            <p style={{ fontSize: '0.8rem', color: '#ef4444', margin: 0, lineHeight: 1.6 }}>
+              After sending payment, email your proof to <strong>billing@tutorera.pk</strong> with your registered email and booking/plan details. Payments are verified within 24 hours.
+            </p>
+          </div>
         </div>
       </div>
     </DashboardLayout>
