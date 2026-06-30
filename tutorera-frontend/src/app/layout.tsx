@@ -6,6 +6,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import CookieBanner from "@/components/CookieBanner";
+import AIChatWidget from "@/components/AIChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -82,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </ConditionalLayout>
             <WhatsAppButton />
+            <AIChatWidget />
             <CookieBanner />
           </SocketProvider>
         </AuthProvider>
