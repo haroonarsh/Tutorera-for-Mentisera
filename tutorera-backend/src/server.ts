@@ -22,6 +22,7 @@ import notificationRoutes from "./routes/notification.routes";
 import chatRoutes from "./routes/chat.routes";
 import guaranteeRoutes from "./routes/guarantee.routes";
 import referralRoutes from "./routes/referral.routes";
+import aiRoutes from "./routes/ai.routes";
 
 dotenv.config();
 
@@ -57,6 +58,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/guarantee", guaranteeRoutes);
 app.use("/api/referral", referralRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Health check
 app.get("/", (req, res) => {
