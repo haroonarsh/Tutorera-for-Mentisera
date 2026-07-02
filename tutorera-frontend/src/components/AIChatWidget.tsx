@@ -218,26 +218,26 @@ export default function AIChatWidget() {
           e.currentTarget.style.boxShadow = '0 4px 16px rgba(26,26,46,0.4)';
         }}>
         {open ? (
-  <svg width={24} height={24} viewBox="0 0 20 20" fill="white">
-    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-  </svg>
-) : (
-  <svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-    {/* Antenna */}
-    <line x1="12" y1="2.5" x2="12" y2="5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-    <circle cx="12" cy="2" r="1.2" fill="white" />
-    {/* Head */}
-    <rect x="4.5" y="5" width="15" height="13" rx="4" fill="white" />
-    {/* Eyes */}
-    <circle cx="9" cy="11.2" r="1.6" fill="#1a1a2e" />
-    <circle cx="15" cy="11.2" r="1.6" fill="#1a1a2e" />
-    {/* Mouth */}
-    <rect x="9" y="14.5" width="6" height="1.3" rx="0.65" fill="#1a1a2e" />
-    {/* Side ears/antennae nubs */}
-    <rect x="2.5" y="9.5" width="2" height="4" rx="1" fill="white" />
-    <rect x="19.5" y="9.5" width="2" height="4" rx="1" fill="white" />
-  </svg>
-)}
+          <svg width={24} height={24} viewBox="0 0 20 20" fill="white">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+            {/* Antenna */}
+            <line x1="12" y1="2.5" x2="12" y2="5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="12" cy="2" r="1.2" fill="white" />
+            {/* Head */}
+            <rect x="4.5" y="5" width="15" height="13" rx="4" fill="white" />
+            {/* Eyes */}
+            <circle cx="9" cy="11.2" r="1.6" fill="#1a1a2e" />
+            <circle cx="15" cy="11.2" r="1.6" fill="#1a1a2e" />
+            {/* Mouth */}
+            <rect x="9" y="14.5" width="6" height="1.3" rx="0.65" fill="#1a1a2e" />
+            {/* Side ears/antennae nubs */}
+            <rect x="2.5" y="9.5" width="2" height="4" rx="1" fill="white" />
+            <rect x="19.5" y="9.5" width="2" height="4" rx="1" fill="white" />
+          </svg>
+        )}
       </button>
 
       <style>{`

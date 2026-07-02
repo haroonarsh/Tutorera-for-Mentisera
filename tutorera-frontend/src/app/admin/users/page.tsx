@@ -10,11 +10,24 @@ interface User {
   name: string;
   email: string;
   role: string;
+  plan: string;
   city: string;
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;
 }
+
+const planColors: Record<string, { bg: string; color: string }> = {
+  free:     { bg: '#f3f4f6', color: '#6b7280' },
+  standard: { bg: '#eff6ff', color: '#2563eb' },
+  premium:  { bg: '#fdf4ff', color: '#9333ea' },
+};
+
+const roleColors: Record<string, { bg: string; color: string }> = {
+  student: { bg: '#eff6ff', color: '#2563eb' },
+  tutor:   { bg: '#f0fdf4', color: '#16a34a' },
+  admin:   { bg: '#f5f3ff', color: '#7c3aed' },
+};
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -22,6 +35,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [planLoading, setPlanLoading] = useState<string | null>(null);
+  const [planDropdown, setPlanDropdown] = useState<string | null>(null); // userId with open dropdown
 
   useEffect(() => {
     api.get("/admin/users")
@@ -42,6 +57,19 @@ export default function UsersPage() {
     }
   };
 
+  const handleChangePlan = async (userId: string, plan: string) => {
+    setPlanLoading(userId);
+    setPlanDropdown(null);
+    try {
+      await api.patch(`/admin/users/${userId}/plan`, { plan });
+      setUsers(prev => prev.map(u => u._id === userId ? { ...u, plan } : u));
+    } catch {
+      alert("Failed to update plan.");
+    } finally {
+      setPlanLoading(null);
+    }
+  };
+
   const filtered = users.filter(u => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase());
@@ -49,17 +77,11 @@ export default function UsersPage() {
     return matchSearch && matchRole;
   });
 
-  const roleColors: Record<string, { bg: string; color: string }> = {
-    student: { bg: '#eff6ff', color: '#2563eb' },
-    tutor: { bg: '#f0fdf4', color: '#16a34a' },
-    admin: { bg: '#f5f3ff', color: '#7c3aed' },
-  };
-
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Users</h1>
-        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Manage all registered users.</p>
+        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Manage all registered users and their plans.</p>
       </div>
 
       {/* Filters */}
@@ -81,92 +103,144 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Replace the existing table div with this */}
-      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'visible' }}>
 
-      {/* Desktop Table Header — hide on mobile */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="admin-table-header">
-        {["Name", "Email", "Role", "City", "Status", "Action"].map(h => (
-         <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</p>
-        ))}
+        {/* Desktop Table Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="admin-table-header">
+          {["Name", "Email", "Role", "Plan", "City", "Status", "Actions"].map(h => (
+            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
+          ))}
         </div>
 
         {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center' }}>
-       <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-         </div>
+          <div style={{ padding: '3rem', textAlign: 'center' }}>
+            <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>No users found.</div>
-         ) : (
+        ) : (
           filtered.map((user, idx) => (
             <div key={user._id} style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
 
               {/* Desktop Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
+
+                {/* Name */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <div style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
-              {user.name.charAt(0)}
-            </div>
-            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user.name}</span>
-          </div>
-          <span style={{ fontSize: '0.8rem', color: C.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</span>
-          <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', width: 'fit-content' }}>{user.role}</span>
-          <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
-          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
-            {user.isActive ? "Active" : "Inactive"}
-          </span>
-          <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a', width: 'fit-content' }}>
-            {user.isActive ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
-          </button>
-        </div>
+                  <div style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
+                    {user.name.charAt(0)}
+                  </div>
+                  <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user.name}</span>
+                </div>
 
-        {/* Mobile Card — show on small screens */}
-        <div style={{ padding: '1rem 1.25rem' }} className="admin-mobile-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
-                {user.name.charAt(0)}
-              </div>
-              <div>
-                <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem' }}>{user.name}</p>
-                <p style={{ color: C.gray500, fontSize: '0.75rem' }}>{user.email}</p>
-              </div>
-            </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', flexShrink: 0 }}>
-              {user.role}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
-                • {user.isActive ? "Active" : "Inactive"}
-              </span>
-            </div>
-            <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a' }}>
-              {user.isActive ? "Deactivate" : "Activate"}
-            </button>
-               </div>
-           </div>
+                {/* Email */}
+                <span style={{ fontSize: '0.8rem', color: C.gray500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</span>
 
-          </div>
-       ))
-      )}
+                {/* Role */}
+                <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', width: 'fit-content' }}>
+                  {user.role}
+                </span>
+
+                {/* Plan — click to change */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setPlanDropdown(planDropdown === user._id ? null : user._id)}
+                    disabled={planLoading === user._id}
+                    style={{ fontSize: '0.75rem', fontWeight: '700', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: planColors[user.plan]?.bg || '#f3f4f6', color: planColors[user.plan]?.color || '#6b7280', textTransform: 'capitalize', border: '1px dashed currentColor', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    {planLoading === user._id ? '...' : user.plan || 'free'}
+                    <span style={{ fontSize: '0.6rem' }}>▾</span>
+                  </button>
+
+                  {/* Plan Dropdown */}
+                  {planDropdown === user._id && (
+                    <div style={{ position: 'absolute', top: '110%', left: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '110px', overflow: 'hidden' }}>
+                      {["free", "standard", "premium"].map(plan => (
+                        <button key={plan}
+                          onClick={() => handleChangePlan(user._id, plan)}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 0.875rem', fontSize: '0.8rem', fontWeight: user.plan === plan ? '700' : '500', color: user.plan === plan ? C.accent : C.primary, backgroundColor: user.plan === plan ? '#eff6ff' : 'transparent', border: 'none', cursor: 'pointer', textTransform: 'capitalize' }}>
+                          {plan} {user.plan === plan && '✓'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* City */}
+                <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
+
+                {/* Status */}
+                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
+                  {user.isActive ? "Active" : "Inactive"}
+                </span>
+
+                {/* Action */}
+                <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a', width: 'fit-content' }}>
+                  {user.isActive ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
+                </button>
+              </div>
+
+              {/* Mobile Card */}
+              <div style={{ padding: '1rem 1.25rem' }} className="admin-mobile-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', margin: 0 }}>{user.name}</p>
+                      <p style={{ color: C.gray500, fontSize: '0.75rem', margin: 0 }}>{user.email}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize' }}>
+                      {user.role}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: planColors[user.plan]?.bg || '#f3f4f6', color: planColors[user.plan]?.color || '#6b7280', textTransform: 'capitalize' }}>
+                      {user.plan || 'free'}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
+                      • {user.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {/* Mobile plan change */}
+                    <select
+                      title="Change Plan"
+                      value={user.plan || 'free'}
+                      onChange={e => handleChangePlan(user._id, e.target.value)}
+                      disabled={planLoading === user._id}
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', cursor: 'pointer', color: C.primary, backgroundColor: 'white' }}>
+                      <option value="free">Free</option>
+                      <option value="standard">Standard</option>
+                      <option value="premium">Premium</option>
+                    </select>
+                    <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a' }}>
+                      {user.isActive ? "Deactivate" : "Activate"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Add this CSS */}
       <style>{`
-        @media (min-width: 769px) {
-        .admin-mobile-card { display: none !important; }
-          }
-         @media (max-width: 768px) {
+        @media (min-width: 769px) { .admin-mobile-card { display: none !important; } }
+        @media (max-width: 768px) {
           .admin-table-header { display: none !important; }
-         .admin-table-row { display: none !important; }
-           .admin-mobile-card { display: block !important; }
-         }
+          .admin-table-row { display: none !important; }
+          .admin-mobile-card { display: block !important; }
+        }
       `}</style>
     </div>
   );

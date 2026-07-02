@@ -8,6 +8,7 @@ interface User {
   email: string;
   role: "student" | "tutor" | "admin";
   avatar?: string;
+  plan: string;
   isVerified: boolean;
   isApproved: boolean;
 }
