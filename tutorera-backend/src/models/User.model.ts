@@ -40,6 +40,14 @@ const userSchema = new Schema<IUser>(
       type: Date,
       default: Date.now,
     },
+    requestsThisMonth: {
+      type: Number,
+      default: 0,
+    },
+    requestsResetDate: {
+      type: Date,
+      default: Date.now,
+    },
     phone: { type: String, trim: true },
     city: { type: String, trim: true },
     avatar: { type: String, default: "" },

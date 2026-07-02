@@ -4,16 +4,65 @@ import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
 import { TOTAL_FEE_PERCENT } from "../config/constants";
 import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
 
+// ─── Plan Limits ───────────────────────────────────────────────────────────────
+const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
+const PLAN_REQUEST_LIMITS: Record<string, number> = { free: 2, standard: 10, premium: -1 };
+
+// Returns true if the stored reset date is from a previous calendar month
+function isNewMonth(resetDate: Date): boolean {
+  const now = new Date();
+  return (
+    now.getMonth() !== resetDate.getMonth() ||
+    now.getFullYear() !== resetDate.getFullYear()
+  );
+}
+
 // @desc    Create tuition request
 // @route   POST /api/requests
 // @access  Private (student)
 export const createRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found." });
+    return;
+  }
+
+  // ── Reset monthly count if new month has started ──
+  const resetDate = (user as any).requestsResetDate as Date | undefined;
+  if (!resetDate || isNewMonth(resetDate)) {
+    (user as any).requestsThisMonth = 0;
+    (user as any).requestsResetDate = new Date();
+    await user.save();
+  }
+
+  // ── Enforce plan limit ──
+  const limit = PLAN_REQUEST_LIMITS[user.plan || "free"];
+  const used = (user as any).requestsThisMonth || 0;
+
+  if (limit !== -1 && used >= limit) {
+    const planNames: Record<string, string> = { free: "Free", standard: "Standard", premium: "Premium" };
+    res.status(403).json({
+      success: false,
+      code: "REQUEST_LIMIT_REACHED",
+      message: `You've used all ${limit} tuition requests included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to post more requests.`,
+    });
+    return;
+  }
+
+  // ── Create request ──
   const request = await Request.create({ student: req.user?._id, ...req.body });
+
+  // ── Increment monthly counter ──
+  await User.findByIdAndUpdate(req.user?._id, {
+    $inc: { requestsThisMonth: 1 },
+  });
+
   res.status(201).json({ success: true, message: "Request created", request });
 };
 
@@ -36,7 +85,7 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
 
   const { subject, level, city, page = "1", limit = "10" } = req.query;
-  const filter: Record<string, unknown> = { status: "open", isDirect: { $ne: true }, };
+  const filter: Record<string, unknown> = { status: "open", isDirect: { $ne: true } };
 
   if (subject) filter.subject = new RegExp(subject as string, "i");
   if (level) filter.level = level;
@@ -94,13 +143,40 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
+  // ── Enforce bid limit ──
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found." });
+    return;
+  }
+
+  // Reset monthly count if new month has started
+  if (!user.bidsResetDate || isNewMonth(new Date(user.bidsResetDate))) {
+    user.bidsThisMonth = 0;
+    user.bidsResetDate = new Date();
+    await user.save();
+  }
+
+  const bidLimit = PLAN_BID_LIMITS[user.plan || "free"];
+  const bidsUsed = user.bidsThisMonth || 0;
+
+  if (bidLimit !== -1 && bidsUsed >= bidLimit) {
+    const planNames: Record<string, string> = { free: "Free", standard: "Standard", premium: "Premium" };
+    res.status(403).json({
+      success: false,
+      code: "BID_LIMIT_REACHED",
+      message: `You've used all ${bidLimit} bids included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to place more bids.`,
+    });
+    return;
+  }
+
   const request = await Request.findById(req.params.id);
   if (!request || request.status !== "open") {
     res.status(400).json({ success: false, message: "Request not available for bidding" });
     return;
   }
 
-  // ← NEW: block bidding on direct requests not targeted at this tutor
+  // Block bidding on direct requests not targeted at this tutor
   if (request.isDirect && request.targetTutor?.toString() !== req.user?._id?.toString()) {
     res.status(403).json({ success: false, message: "This is a private booking request." });
     return;
@@ -113,23 +189,23 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
-const bid = await Bid.create({
+  const bid = await Bid.create({
     request: new Types.ObjectId(req.params.id as string),
     tutor: req.user?._id,
     amount: req.body.amount,
     message: req.body.message,
-});
+  });
 
-await incrementBidCount(req.user?._id?.toString() || "");
+  await incrementBidCount(req.user?._id?.toString() || "");
 
-// After bid is created, add:
-const io = req.app.get("io");
-await sendNotification(io, request.student.toString(), {
-  title: "📬 New Bid Received",
-  message: `A tutor has placed a bid of Rs. ${req.body.amount} on your tuition request.`,
-  type: "bid",
-  link: "/dashboard",
-});
+  // Notify student
+  const io = req.app.get("io");
+  await sendNotification(io, request.student.toString(), {
+    title: "📬 New Bid Received",
+    message: `A tutor has placed a bid of Rs. ${req.body.amount} on your tuition request.`,
+    type: "bid",
+    link: "/dashboard",
+  });
 
   res.status(201).json({ success: true, message: "Bid placed successfully", bid });
 };
@@ -183,9 +259,9 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
   // Reject all other bids
   await Bid.updateMany(
-  { request: new Types.ObjectId(req.params.id as string), _id: { $ne: bid._id } },
-  { status: "rejected" }
-);
+    { request: new Types.ObjectId(req.params.id as string), _id: { $ne: bid._id } },
+    { status: "rejected" }
+  );
 
   // Close the request
   request.status = "closed";
@@ -193,11 +269,10 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
   // Auto-detect if this is the first booking between this student and this tutor
   const existingBookingsCount = await Booking.countDocuments({
-     student: request.student,
+    student: request.student,
     tutor: bid.tutor,
   });
 
-  // When creating booking
   const platformFee = Math.round(bid.amount * TOTAL_FEE_PERCENT / 100);
   const tutorPayout = bid.amount - platformFee;
 
@@ -215,21 +290,20 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     isFirstSession: existingBookingsCount === 0,
   });
 
-  // lock the slot if it's a direct booking with a slot
-if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
-  await BookedSlot.create({
-    tutor: bid.tutor,
-    student: request.student,
-    booking: booking._id,
-    date: new Date(request.selectedDate),
-    startTime: request.selectedStartTime,
-    endTime: request.selectedEndTime,
-  });
-}
+  // Lock the slot if it's a direct booking with a slot
+  if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
+    await BookedSlot.create({
+      tutor: bid.tutor,
+      student: request.student,
+      booking: booking._id,
+      date: new Date(request.selectedDate),
+      startTime: request.selectedStartTime,
+      endTime: request.selectedEndTime,
+    });
+  }
 
   const io = req.app.get("io");
 
-  // Notify tutor
   await sendNotification(io, bid.tutor.toString(), {
     title: "✅ Bid Accepted!",
     message: "Your bid has been accepted! A booking has been created.",
@@ -237,7 +311,6 @@ if (request.isDirect && request.selectedDate && request.selectedStartTime && req
     link: "/dashboard",
   });
 
-  // Notify student
   await sendNotification(io, request.student.toString(), {
     title: "📅 Booking Confirmed — Payment Required",
     message: `Your booking has been created! Please send Rs. ${bid.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.pk.`,
@@ -263,7 +336,6 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     return;
   }
 
-  // Fetch tutor's profile to get their listed rate + verify they're approved
   const TutorProfile = (await import("../models/TutorProfile.model")).default;
   const tutorProfile = await TutorProfile.findOne({ user: tutorId });
   if (!tutorProfile || tutorProfile.verificationStatus !== "approved") {
@@ -285,7 +357,6 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     return;
   }
 
-  // Create the private request
   const request = await Request.create({
     student: req.user?._id,
     subject,
@@ -304,7 +375,6 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     selectedEndTime: selectedEndTime || "",
   });
 
-  // Auto-create the bid at the tutor's listed rate
   const bid = await Bid.create({
     request: request._id,
     tutor: tutorId,
@@ -313,7 +383,6 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     isDirect: true,
   });
 
-  // Notify tutor
   const io = req.app.get("io");
   await sendNotification(io, tutorId, {
     title: "📩 New Direct Booking Request",
@@ -342,7 +411,6 @@ export const getMyDirectRequests = async (req: AuthRequest, res: Response): Prom
     .populate("student", "name city avatar")
     .sort("-createdAt");
 
-  // Attach the bid (always exactly one — the auto-created one) for each request
   const requestsWithBid = await Promise.all(
     requests.map(async (r) => {
       const bid = await Bid.findOne({ request: r._id, tutor: req.user?._id });
@@ -353,7 +421,7 @@ export const getMyDirectRequests = async (req: AuthRequest, res: Response): Prom
   res.status(200).json({ success: true, total: requestsWithBid.length, requests: requestsWithBid });
 };
 
-// @desc    Reject a bid (used for direct booking decline, or general reject)
+// @desc    Reject a bid
 // @route   PATCH /api/requests/:id/bids/:bidId/reject
 // @access  Private (student who owns the request, OR the tutor on a direct request)
 export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -369,7 +437,6 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
     return;
   }
 
-  // Allow either the student who owns the request, or the tutor (only for direct requests)
   const isOwner = request.student.toString() === req.user?._id?.toString();
   const isTargetTutorDecline = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
 
@@ -381,7 +448,6 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
   bid.status = "rejected";
   await bid.save();
 
-  // If this was a direct request and the tutor declined, close the request entirely
   if (request.isDirect && isTargetTutorDecline) {
     request.status = "cancelled";
     await request.save();

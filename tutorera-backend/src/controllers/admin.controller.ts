@@ -3,6 +3,7 @@ import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
 import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
+import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
@@ -303,6 +304,27 @@ export const updateBookingStatus = async (
     message: `Booking status updated to ${status}`,
     booking,
   });
+};
+
+// @desc    Update a user's plan (admin manually activates after NayaPay payment confirmation)
+// @route   PATCH /api/admin/users/:id/plan
+// @access  Private (admin)
+export const updateUserPlan = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { plan } = req.body;
+  if (!["free", "standard", "premium"].includes(plan)) {
+    res.status(400).json({ success: false, message: "Invalid plan" });
+    return;
+  }
+  const user = await User.findByIdAndUpdate(
+    new Types.ObjectId(req.params.id as string),
+    { plan },
+    { new: true }
+  );
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+  res.status(200).json({ success: true, message: `Plan updated to ${plan}`, user });
 };
 
 // @desc    Generate weekly or monthly report

@@ -15,6 +15,8 @@ export interface IUser extends Document {
   plan: UserPlan;
   bidsThisMonth: number;
   bidsResetDate: Date;
+  requestsThisMonth: number;
+  requestsResetDate: Date;
   phone?: string;
   city?: string;
   avatar?: string;

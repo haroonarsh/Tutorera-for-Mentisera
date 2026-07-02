@@ -3,6 +3,10 @@ import User from "../models/User.model";
 import { sendTokenResponse } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 
+// Plan limits reference
+const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
+const PLAN_REQUEST_LIMITS: Record<string, number> = { free: 2, standard: 10, premium: -1 };
+
 // @desc    Register user
 // @route   POST /api/auth/register
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -57,6 +61,34 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
   res.status(200).json({ success: true, user });
 };
 
+// @desc    Get current user's plan usage
+// @route   GET /api/auth/me/usage
+// @access  Private
+export const getMyUsage = async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+ 
+  const plan = user.plan || "free";
+  const bidLimit = PLAN_BID_LIMITS[plan];
+  const requestLimit = PLAN_REQUEST_LIMITS[plan];
+ 
+  res.status(200).json({
+    success: true,
+    usage: {
+      plan,
+      // Tutor usage
+      bidsThisMonth: user.bidsThisMonth || 0,
+      bidLimit, // -1 means unlimited
+      // Student usage
+      requestsThisMonth: (user as any).requestsThisMonth || 0,
+      requestLimit, // -1 means unlimited
+    },
+  });
+};
+
 // @desc    Update personal info
 // @route   PATCH /api/auth/update-profile
 // @access  Private
@@ -105,29 +137,47 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
   res.status(200).json({ success: true, message: "Password changed successfully" });
 };
 
-// @desc    Upgrade user plan
+// @desc    Upgrade user plan — ADMIN ONLY
 // @route   PATCH /api/auth/upgrade-plan
-// @access  Private
+// @access  Private (admin)
+// Used by the admin panel to manually activate a plan after confirming NayaPay payment.
 export const upgradePlan = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { plan } = req.body;
-
+  // Only admins can upgrade plans — payment is confirmed manually
+  if (req.user?.role !== "admin") {
+    res.status(403).json({
+      success: false,
+      message: "Plan upgrades are processed manually after payment confirmation. Please transfer payment to NayaPay and email proof to billing@tutorera.pk",
+    });
+    return;
+  }
+ 
+  const { plan, userId } = req.body;
+ 
   if (!["free", "standard", "premium"].includes(plan)) {
     res.status(400).json({ success: false, message: "Invalid plan" });
     return;
   }
-
+ 
+  // Admin can upgrade any user (pass userId in body), or themselves
+  const targetId = userId || req.user?._id;
+ 
   const user = await User.findByIdAndUpdate(
-    req.user?._id,
+    targetId,
     { plan },
     { new: true }
   );
-
+ 
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+ 
   res.status(200).json({
     success: true,
-    message: `Plan upgraded to ${plan}`,
+    message: `Plan updated to ${plan}`,
     user,
   });
 };

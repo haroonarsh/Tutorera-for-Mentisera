@@ -12,6 +12,7 @@ import {
   updateContactStatus,
   generateReport,
   updateBookingStatus,
+  updateUserPlan,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -27,6 +28,7 @@ router.use(protect, authorize("admin"));
 
 router.get("/stats", getDashboardStats);
 router.get("/verifications", getPendingVerifications);
+router.patch("/users/:id/plan", protect, authorize("admin"), updateUserPlan);
 router.get("/tutors/:id", getTutorFullData);
 router.patch("/verify/:id", verifyTutor);
 router.get("/users", getAllUsers);
