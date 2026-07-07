@@ -327,6 +327,48 @@ export const updateUserPlan = async (req: AuthRequest, res: Response): Promise<v
   res.status(200).json({ success: true, message: `Plan updated to ${plan}`, user });
 };
 
+// @desc    Get all payouts (bookings where student payment is confirmed)
+// @route   GET /api/admin/payouts
+// @access  Private (admin)
+export const getPayouts = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { status } = req.query; // "pending" | "paid" | undefined (all)
+
+  // Only show bookings where the student has already paid — those are the ones
+  // that need a tutor payout. Unconfirmed payments haven't earned a payout yet.
+  const filter: Record<string, unknown> = {
+    paymentStatus: "confirmed",
+  };
+
+  if (status && status !== "all") {
+    filter.payoutStatus = status;
+  }
+
+  const bookings = await Booking.find(filter)
+    .populate("student", "name email")
+    .populate("tutor", "name email phone city")
+    .sort("-createdAt");
+
+  // ── Summary stats across ALL confirmed bookings (ignore status filter for stats) ──
+  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" });
+  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus === "pending");
+  const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
+
+  const totalPendingAmount = pendingOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const totalPaidAmount    = paidOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+
+  res.status(200).json({
+    success: true,
+    stats: {
+      pendingCount:        pendingOnes.length,
+      paidCount:           paidOnes.length,
+      totalPendingAmount,
+      totalPaidAmount,
+    },
+    total: bookings.length,
+    bookings,
+  });
+};
+
 // @desc    Generate weekly or monthly report
 // @route   GET /api/admin/reports
 // @access  Private (admin)
