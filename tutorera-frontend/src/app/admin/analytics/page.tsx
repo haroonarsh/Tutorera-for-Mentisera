@@ -2,6 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
+} from "recharts";
 
 const C = {
   primary: '#1a1a2e',
@@ -63,79 +67,43 @@ interface AnalyticsData {
   recentPayments: RecentPayment[];
 }
 
-// ── SVG Bar Chart ─────────────────────────────────────────────────────────────
-function BarChart({ data }: { data: SignupPoint[] }) {
-  const W = 560, H = 180, PAD_L = 32, PAD_B = 36, PAD_T = 16, PAD_R = 12;
-  const chartW = W - PAD_L - PAD_R;
-  const chartH = H - PAD_B - PAD_T;
-  const maxVal = Math.max(...data.map(d => d.count), 1);
-  const barW   = chartW / data.length;
-  const barGap = barW * 0.25;
-
+// Custom tooltip matching Quizzera dark style
+function ChartTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: { value: number }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
-      {/* Y-axis gridlines */}
-      {[0, 0.25, 0.5, 0.75, 1].map(frac => {
-        const y = PAD_T + chartH * (1 - frac);
-        return (
-          <g key={frac}>
-            <line x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} stroke="#e5e7eb" strokeWidth={1} />
-            <text x={PAD_L - 4} y={y + 4} textAnchor="end" fontSize={9} fill="#9ca3af">
-              {Math.round(maxVal * frac)}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Bars */}
-      {data.map((d, i) => {
-        const barH  = d.count === 0 ? 2 : (d.count / maxVal) * chartH;
-        const x     = PAD_L + i * barW + barGap / 2;
-        const y     = PAD_T + chartH - barH;
-        const bw    = barW - barGap;
-        return (
-          <g key={d.week}>
-            <rect
-              x={x} y={y} width={bw} height={barH}
-              rx={3}
-              fill={d.count === 0 ? '#e5e7eb' : '#2563eb'}
-              opacity={d.count === 0 ? 0.5 : 0.85}
-            />
-            {/* Value label on top */}
-            {d.count > 0 && (
-              <text x={x + bw / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#2563eb" fontWeight="bold">
-                {d.count}
-              </text>
-            )}
-            {/* X-axis label */}
-            <text x={x + bw / 2} y={H - 4} textAnchor="middle" fontSize={9} fill="#9ca3af">
-              {d.label}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* X axis line */}
-      <line x1={PAD_L} y1={PAD_T + chartH} x2={W - PAD_R} y2={PAD_T + chartH} stroke="#e5e7eb" strokeWidth={1} />
-    </svg>
+    <div style={{
+      backgroundColor: '#1a1a2e',
+      borderRadius: '0.5rem',
+      padding: '0.6rem 0.875rem',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+    }}>
+      <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
+      <p style={{ color: 'white', fontSize: '0.875rem', fontWeight: '700', margin: 0 }}>
+        users : {payload[0].value}
+      </p>
+    </div>
   );
 }
 
-// ── Plan colour map ───────────────────────────────────────────────────────────
 const planColors: Record<string, { bar: string; bg: string; text: string }> = {
   free:     { bar: '#6b7280', bg: '#f3f4f6', text: '#6b7280' },
   standard: { bar: '#2563eb', bg: '#eff6ff', text: '#2563eb' },
   premium:  { bar: '#9333ea', bg: '#fdf4ff', text: '#9333ea' },
 };
 
-const bookingStatusConfig: { key: keyof BookingStatus; label: string; color: string; bg: string }[] = [
+const bookingStatusConfig: {
+  key: keyof BookingStatus; label: string; color: string; bg: string;
+}[] = [
   { key: 'upcoming',  label: 'Upcoming',  color: '#2563eb', bg: '#eff6ff' },
   { key: 'ongoing',   label: 'Ongoing',   color: '#9333ea', bg: '#fdf4ff' },
   { key: 'completed', label: 'Completed', color: '#16a34a', bg: '#f0fdf4' },
   { key: 'cancelled', label: 'Cancelled', color: '#ef4444', bg: '#fef2f2' },
 ];
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
   const [data, setData]       = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,7 +117,12 @@ export default function AnalyticsPage() {
 
   const ov = data?.overview;
 
-  // ── Loading skeleton ──
+  // Map signupTrend to "Week 1" ... "Week 8" labels matching Quizzera
+  const chartData = (data?.signupTrend ?? []).map((d, i) => ({
+    name:  `Week ${i + 1}`,
+    users: d.count,
+  }));
+
   if (loading) {
     return (
       <div style={{ padding: '2rem' }}>
@@ -168,7 +141,7 @@ export default function AnalyticsPage() {
   return (
     <div style={{ padding: '2rem' }}>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Analytics</h1>
@@ -179,7 +152,7 @@ export default function AnalyticsPage() {
         </Link>
       </div>
 
-      {/* ── Overview Cards ── */}
+      {/* Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
           { label: 'Total Users',         value: ov?.totalUsers,           sub: `+${ov?.newUsersThisMonth ?? 0} this month`,  color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
@@ -189,41 +162,67 @@ export default function AnalyticsPage() {
           { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
           { label: 'Pending Payouts',      value: `Rs. ${(ov?.pendingPayouts ?? 0).toLocaleString()}`,    sub: 'owed to tutors',      color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
         ].map(card => (
-          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: `1px solid #e5e7eb`, borderTop: `3px solid ${card.color}` }}>
-            <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-              {card.label}
-            </p>
-            <p style={{ fontSize: '1.35rem', fontWeight: '800', color: C.primary, marginBottom: '0.2rem' }}>
-              {card.value ?? 0}
-            </p>
+          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', borderTop: `3px solid ${card.color}` }}>
+            <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{card.label}</p>
+            <p style={{ fontSize: '1.35rem', fontWeight: '800', color: C.primary, marginBottom: '0.2rem' }}>{card.value ?? 0}</p>
             <p style={{ fontSize: '0.72rem', color: C.gray500 }}>{card.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Charts Row ── */}
+      {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }} className="analytics-chart-row">
 
-        {/* Signup Trend */}
+        {/* Signup Trend — recharts AreaChart */}
         <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+          <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
             User Signup Trend
           </h3>
-          <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.25rem' }}>
-            Weekly registrations — last 8 weeks
+          <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+            Weekly registrations (last 8 weeks)
           </p>
-          {data?.signupTrend && <BarChart data={data.signupTrend} />}
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                <linearGradient id="signupGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#2563eb" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                content={<ChartTooltip />}
+                cursor={{ stroke: '#2563eb', strokeWidth: 1, strokeDasharray: '4 4' }}
+              />
+              <Area
+                type="monotone"
+                dataKey="users"
+                stroke="#2563eb"
+                strokeWidth={2.5}
+                fill="url(#signupGradient)"
+                dot={false}
+                activeDot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: 'white' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Plan Breakdown */}
         <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-            Active Subscriptions
-          </h3>
-          <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem' }}>
-            Users by plan
-          </p>
-
+          <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.25rem' }}>Active Subscriptions</h3>
+          <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem' }}>Users by plan</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
             {(data?.planBreakdown ?? []).map(item => {
               const meta = planColors[item.plan] || planColors.free;
@@ -238,13 +237,7 @@ export default function AnalyticsPage() {
                     </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#f3f4f6', borderRadius: '999px', overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${item.percent}%`,
-                      backgroundColor: meta.bar,
-                      borderRadius: '999px',
-                      transition: 'width 0.6s ease',
-                    }} />
+                    <div style={{ height: '100%', width: `${item.percent}%`, backgroundColor: meta.bar, borderRadius: '999px', transition: 'width 0.6s ease' }} />
                   </div>
                 </div>
               );
@@ -282,7 +275,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* ── Bottom Row: Top Tutors + Recent Payments ── */}
+      {/* Bottom Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="analytics-bottom-row">
 
         {/* Top Tutors */}
@@ -292,11 +285,8 @@ export default function AnalyticsPage() {
               <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.1rem' }}>Top Tutors</h3>
               <p style={{ color: C.gray500, fontSize: '0.78rem' }}>By number of bookings</p>
             </div>
-            <Link href="/admin/bookings" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>
-              View all →
-            </Link>
+            <Link href="/admin/bookings" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>View all →</Link>
           </div>
-
           {(data?.topTutors ?? []).length === 0 ? (
             <p style={{ color: C.gray500, fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>No bookings yet.</p>
           ) : (
@@ -330,15 +320,12 @@ export default function AnalyticsPage() {
               <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.1rem' }}>Recent Payments</h3>
               <p style={{ color: C.gray500, fontSize: '0.78rem' }}>Latest confirmed bookings</p>
             </div>
-            <Link href="/admin/payments" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>
-              View all →
-            </Link>
+            <Link href="/admin/payments" style={{ fontSize: '0.75rem', color: C.accent, fontWeight: '600', textDecoration: 'none' }}>View all →</Link>
           </div>
-
           {(data?.recentPayments ?? []).length === 0 ? (
             <p style={{ color: C.gray500, fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>No confirmed payments yet.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {(data?.recentPayments ?? []).map((payment, idx) => (
                 <div key={payment._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: idx < (data?.recentPayments.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none', gap: '0.5rem' }}>
                   <div style={{ minWidth: 0 }}>
