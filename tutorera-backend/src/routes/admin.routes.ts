@@ -14,6 +14,7 @@ import {
   updateBookingStatus,
   updateUserPlan,
   getPayouts,
+  getAnalytics,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -28,6 +29,7 @@ const router = Router();
 router.use(protect, authorize("admin"));
 
 router.get("/stats", getDashboardStats);
+router.get("/analytics", getAnalytics);
 router.get("/verifications", getPendingVerifications);
 router.get("/payouts", getPayouts);
 router.patch("/users/:id/plan", protect, authorize("admin"), updateUserPlan);

@@ -199,7 +199,7 @@ export const updatePaymentStatus = async (
     booking.status = status;
   }
 
-  // ← ADD: Auto-calculate fees with new 34.5% when payment confirmed
+  // ← ADD: Auto-calculate fees with new 23% when payment confirmed
   if (paymentStatus === "confirmed" && booking.amount) {
     const platformFee = Math.round(booking.amount * TOTAL_FEE_PERCENT / 100);
     const tutorPayout = booking.amount - platformFee;
@@ -369,6 +369,126 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
   });
 };
 
+// @desc    Get analytics data for admin analytics page
+// @route   GET /api/admin/analytics
+// @access  Private (admin)
+export const getAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
+  const now = new Date();
+
+  // ── Date boundaries ──
+  const weekStart   = new Date(now); weekStart.setDate(now.getDate() - 7);
+  const monthStart  = new Date(now.getFullYear(), now.getMonth(), 1);
+  const eightWeeksAgo = new Date(now); eightWeeksAgo.setDate(now.getDate() - 56);
+
+  // ── Parallel fetches ──
+  const [
+    totalUsers,
+    newUsersThisWeek,
+    newUsersThisMonth,
+    totalBookings,
+    allBookings,
+    monthBookings,
+    allUsersForPlan,
+    recentSignups,
+    pendingPayoutBookings,
+  ] = await Promise.all([
+    User.countDocuments(),
+    User.countDocuments({ createdAt: { $gte: weekStart } }),
+    User.countDocuments({ createdAt: { $gte: monthStart } }),
+    Booking.countDocuments(),
+    Booking.find()
+      .select("status paymentStatus amount platformFee tutorPayout tutor createdAt")
+      .populate("tutor", "name"),
+    Booking.find({ createdAt: { $gte: monthStart }, paymentStatus: "confirmed" })
+      .select("amount platformFee tutorPayout"),
+    User.find().select("plan"),
+    User.find({ createdAt: { $gte: eightWeeksAgo } }).select("createdAt"),
+    Booking.find({ paymentStatus: "confirmed", payoutStatus: "pending" }).select("tutorPayout"),
+  ]);
+
+  // ── Revenue ──
+  const revenueThisMonth     = monthBookings.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const platformFeeThisMonth = monthBookings.reduce((sum, b) => sum + (b.platformFee || 0), 0);
+  const pendingPayouts       = pendingPayoutBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+
+  // ── Plan breakdown ──
+  const planCounts: Record<string, number> = { free: 0, standard: 0, premium: 0 };
+  allUsersForPlan.forEach(u => {
+    const p = (u.plan || "free") as string;
+    planCounts[p] = (planCounts[p] || 0) + 1;
+  });
+  const totalForPlan = allUsersForPlan.length || 1;
+  const planBreakdown = Object.entries(planCounts).map(([plan, count]) => ({
+    plan,
+    count,
+    percent: Math.round((count / totalForPlan) * 100),
+  }));
+
+  // ── Booking status breakdown ──
+  const bookingStatusBreakdown = {
+    upcoming:  allBookings.filter(b => b.status === "upcoming").length,
+    ongoing:   allBookings.filter(b => b.status === "ongoing").length,
+    completed: allBookings.filter(b => b.status === "completed").length,
+    cancelled: allBookings.filter(b => b.status === "cancelled").length,
+  };
+
+  // ── Signup trend — last 8 weeks ──
+  const signupTrend = [];
+  for (let i = 7; i >= 0; i--) {
+    const weekEnd   = new Date(now); weekEnd.setDate(now.getDate() - i * 7);
+    const weekBegin = new Date(weekEnd); weekBegin.setDate(weekEnd.getDate() - 7);
+    const count = recentSignups.filter(u => {
+      const d = new Date(u.createdAt as unknown as string);
+      return d >= weekBegin && d < weekEnd;
+    }).length;
+    signupTrend.push({
+      week:  `W${8 - i}`,
+      label: weekEnd.toLocaleDateString("en-PK", { month: "short", day: "numeric" }),
+      count,
+    });
+  }
+
+  // ── Top 5 tutors by bookings ──
+  const tutorMap: Record<string, { name: string; count: number; revenue: number }> = {};
+  allBookings.forEach(b => {
+    if (!b.tutor) return;
+    const tutor = b.tutor as unknown as { _id: { toString(): string }; name: string };
+    const id = tutor._id.toString();
+    if (!tutorMap[id]) tutorMap[id] = { name: tutor.name, count: 0, revenue: 0 };
+    tutorMap[id].count++;
+    tutorMap[id].revenue += b.amount || 0;
+  });
+  const topTutors = Object.values(tutorMap)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // ── Recent confirmed payments ──
+  const recentPayments = await Booking.find({ paymentStatus: "confirmed" })
+    .populate("student", "name")
+    .populate("tutor", "name")
+    .sort("-updatedAt")
+    .limit(5)
+    .select("amount student tutor status createdAt");
+
+  res.status(200).json({
+    success: true,
+    overview: {
+      totalUsers,
+      newUsersThisWeek,
+      newUsersThisMonth,
+      totalBookings,
+      revenueThisMonth,
+      platformFeeThisMonth,
+      pendingPayouts,
+    },
+    planBreakdown,
+    signupTrend,
+    bookingStatusBreakdown,
+    topTutors,
+    recentPayments,
+  });
+};
+
 // @desc    Generate weekly or monthly report
 // @route   GET /api/admin/reports
 // @access  Private (admin)
@@ -405,7 +525,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   ]);
 
   // ── Derived calculations ──────────────────────────────────────
-  const PLATFORM_FEE_PERCENT = 30;
+  const PLATFORM_FEE_PERCENT = 20;
   const GST_PERCENT = 15;
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
   const platformFeeTotal = Math.round(totalRevenue * (PLATFORM_FEE_PERCENT / 100));
@@ -553,7 +673,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
     styleHeader(ws1.addRow(["Metric", "Amount (PKR)"]));
     [
       ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
-      ["Platform Fee (30%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["Platform Fee (20%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
       ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
       ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
     ].forEach(([k, v]) => ws1.addRow([k, v]));
@@ -729,7 +849,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
     drawTableRow(["Metric", "Amount (PKR)"], rWidths, true);
     [
       ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
-      ["Platform Fee (30%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["Platform Fee (20%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
       ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
       ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
     ].forEach(([k, v]) => drawTableRow([k, v], rWidths));

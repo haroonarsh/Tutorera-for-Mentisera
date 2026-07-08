@@ -33,9 +33,9 @@ STUDENTS:
 - Get a First Session Guarantee — if not satisfied with the first session, can claim a credit or refund
 
 PLATFORM FEES:
-- Platform fee: 30% + 15% GST on platform fee = 34.5% total
+- Platform fee: 20% + 15% GST on platform fee = 23% total
 - Charged to both student and tutor
-- Example: Tutor charges Rs. 1,000 → Student pays Rs. 1,345 → Tutor receives Rs. 655
+- Example: Tutor charges Rs. 1,000 → Student pays Rs. 1,230 → Tutor receives Rs. 770
 
 PAYMENTS:
 - Manual bank transfer via NayaPay
