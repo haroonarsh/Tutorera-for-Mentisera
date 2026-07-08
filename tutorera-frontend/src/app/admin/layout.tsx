@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen, CreditCard, MessageSquare, Menu, X, FileText, Shield, Gift, Star, Banknote } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen, CreditCard, MessageSquare, Menu, X, FileText, Shield, Gift, Star, Banknote, BarChart2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
@@ -11,6 +11,7 @@ const C = { primary: '#1a1a2e', accent: '#2563eb' };
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={18} /> },
   { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={18} /> },
   { href: "/admin/users", label: "Users", icon: <Users size={18} /> },
   { href: "/admin/referrals", label: "Referrals", icon: <Gift size={18} /> },

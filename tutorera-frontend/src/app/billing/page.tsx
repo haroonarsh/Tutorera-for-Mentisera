@@ -7,7 +7,7 @@ import { useTutorGuard } from "@/hooks/useTutorGuard";
 import api from "@/lib/axios";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
-const PLATFORM_FEE = 34.5;
+const PLATFORM_FEE = 23; // 20% + 3% GST
 
 interface Usage {
   plan: string;
@@ -298,7 +298,7 @@ export default function BillingPage() {
             ].map(box => (
               <div key={box.title} style={{ backgroundColor: box.bg, borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${box.border}` }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: '700', color: box.titleColor, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{box.title}</p>
-                {[{ label: "Platform Fee", value: "30%" }, { label: "GST (15% of 30%)", value: "4.5%" }].map(item => (
+                {[{ label: "Platform Fee", value: "20%" }, { label: "GST (15% of 20%)", value: "3%" }].map(item => (
                   <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
                     <span style={{ color: box.titleColor }}>{item.label}</span>
                     <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>

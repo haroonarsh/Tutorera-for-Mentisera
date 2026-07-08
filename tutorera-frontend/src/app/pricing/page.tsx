@@ -36,7 +36,7 @@ export default function PricingPage() {
                   "Post unlimited tuition requests",
                   "Receive bids from tutors",
                   "Real-time chat with tutors",
-                  "30% service fee per booking",
+                  "20% service fee per booking",
                 ].map((item, i) => (
                   <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: C.gray500 }}>
                     <CheckCircle size={16} color={i < 4 ? "#16a34a" : "#d97706"} style={{ flexShrink: 0 }} />
@@ -63,7 +63,7 @@ export default function PricingPage() {
                   "Browse student requests",
                   "Place bids on requests",
                   "Real-time chat with students",
-                  "30% platform fee per session",
+                  "20% platform fee per session",
                 ].map((item, i) => (
                   <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#9ca3af' }}>
                     <CheckCircle size={16} color={i < 4 ? "#86efac" : "#fde68a"} style={{ flexShrink: 0 }} />
@@ -82,9 +82,9 @@ export default function PricingPage() {
               <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>How the 28.75% is calculated</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                 {[
-                  { label: "Platform Fee", value: "30%", color: '#d97706' },
-                  { label: "GST (15% of 30%)", value: "4.5%%", color: '#d97706' },
-                  { label: "Total", value: "34.5%", color: '#92400e', bold: true },
+                  { label: "Platform Fee", value: "20%", color: '#d97706' },
+                  { label: "GST (15% of 20%)", value: "3%", color: '#d97706' },
+                  { label: "Total", value: "23%", color: '#92400e', bold: true },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: item.bold ? 'none' : '1px solid #fde68a' }}>
                     <span style={{ fontSize: '0.875rem', color: item.bold ? '#92400e' : '#a16207', fontWeight: item.bold ? '700' : '400' }}>{item.label}</span>

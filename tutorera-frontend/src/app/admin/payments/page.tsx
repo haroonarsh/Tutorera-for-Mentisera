@@ -5,6 +5,9 @@ import api from "@/lib/axios";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
+// Platform fee: 20% base + 15% GST on that fee = 3% GST = 23% total
+const PLATFORM_FEE_PERCENT = 23;
+
 interface Booking {
   _id: string;
   student: { name: string; email: string; phone: string; };
@@ -18,8 +21,6 @@ interface Booking {
   payoutNote: string;
   createdAt: string;
 }
-
-const PLATFORM_FEE_PERCENT = 34.5; // 30% platform fee + 4.5% GST on fee
 
 export default function PaymentsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -57,23 +58,26 @@ export default function PaymentsPage() {
   };
 
   // Summary stats
-  const totalReceived = bookings.filter(b => b.paymentStatus === "confirmed").reduce((sum, b) => sum + b.amount, 0);
-  const totalPending = bookings.filter(b => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
+  const confirmedBookings = bookings.filter(b => b.paymentStatus === "confirmed");
+  const totalReceived     = confirmedBookings.reduce((sum, b) => sum + b.amount, 0);
+  const totalPending      = bookings.filter(b => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
   const totalPlatformFees = Math.round(totalReceived * PLATFORM_FEE_PERCENT / 100);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
-        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Track student payments and tutor payouts. All transfers are manual bank transfers.</p>
+        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+          Track student payments and tutor payouts. All transfers are manual via NayaPay.
+        </p>
       </div>
 
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: "Total Confirmed", value: `Rs. ${totalReceived.toLocaleString()}`, icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
-          { label: "Pending Payments", value: `Rs. ${totalPending.toLocaleString()}`, icon: <Clock size={20} color="#d97706" />, bg: '#fffbeb' },
-          { label: "Platform Revenue", value: `Rs. ${totalPlatformFees.toLocaleString()}`, icon: <AlertCircle size={20} color={C.accent} />, bg: '#eff6ff' },
+          { label: "Total Confirmed",  value: `Rs. ${totalReceived.toLocaleString()}`,     icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
+          { label: "Pending Payments", value: `Rs. ${totalPending.toLocaleString()}`,       icon: <Clock size={20} color="#d97706" />,        bg: '#fffbeb' },
+          { label: "Platform Revenue", value: `Rs. ${totalPlatformFees.toLocaleString()}`,  icon: <AlertCircle size={20} color={C.accent} />, bg: '#eff6ff' },
         ].map(card => (
           <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -87,23 +91,29 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-      {/* Bank Account Info */}
+      {/* NayaPay Account Info */}
       <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem', marginBottom: '2rem' }}>
-        <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', marginBottom: '0.5rem' }}>🏦 Company Bank Account</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
-          <div>
-            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Bank</p>
-            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>HBL / Meezan Bank</p>
-          </div>
-          <div>
-            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Account Title</p>
-            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>MENTISERA (SMC-Private) Limited</p>
-          </div>
-          <div>
-            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Account Number</p>
-            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>XXXX-XXXX-XXXX</p>
-          </div>
+        <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', marginBottom: '0.75rem' }}>💳 Company NayaPay Account</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
+          {[
+            { label: "Bank",           value: "NayaPay" },
+            { label: "Account Title",  value: "MENTISERA (SMC-PRIVATE) LIMITED" },
+            { label: "NayaPay ID",     value: "mentisera@nayapay" },
+            { label: "Account Number", value: "7556428306882526" },
+            { label: "IBAN",           value: "PK27NAYA7556428306882526" },
+          ].map(item => (
+            <div key={item.label}>
+              <p style={{ fontSize: '0.72rem', color: '#9ca3af', marginBottom: '0.2rem' }}>{item.label}</p>
+              <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, fontFamily: 'monospace' }}>{item.value}</p>
+            </div>
+          ))}
         </div>
+      </div>
+
+      {/* Fee info banner */}
+      <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: '#166534' }}>
+        💡 <strong>Platform fee: 20% + 15% GST = 23% total.</strong> Applied to both student charge and tutor payout.
+        Example: Tutor charges Rs. 1,000 → Student pays Rs. 1,230 → Tutor receives Rs. 770.
       </div>
 
       {/* Tabs */}
@@ -121,6 +131,11 @@ export default function PaymentsPage() {
           <div style={{ width: '36px', height: '36px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
+      ) : bookings.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: C.gray500 }}>
+          <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💳</p>
+          <p style={{ fontWeight: '600', color: C.primary }}>No bookings yet</p>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {bookings.map(booking => {
@@ -129,7 +144,7 @@ export default function PaymentsPage() {
               <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
 
-                  {/* Info */}
+                  {/* Person Info */}
                   <div>
                     {activeTab === "payments" ? (
                       <>
@@ -151,22 +166,28 @@ export default function PaymentsPage() {
                     </p>
                   </div>
 
-                  {/* Amount */}
+                  {/* Amount Breakdown */}
                   <div style={{ backgroundColor: C.gray50, borderRadius: '0.625rem', padding: '1rem' }}>
                     <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
                       {activeTab === "payments" ? "Amount to Receive from Student" : "Amount to Pay Tutor"}
                     </p>
                     <p style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary }}>
-                      Rs. {activeTab === "payments" ? booking.amount?.toLocaleString() : tutorPayout.toLocaleString()}
+                      Rs. {activeTab === "payments"
+                        ? booking.amount?.toLocaleString()
+                        : tutorPayout.toLocaleString()}
                     </p>
-                    {activeTab === "payments" && (
+                    {activeTab === "payments" ? (
                       <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
                         Platform keeps: Rs. {platformFee.toLocaleString()} ({PLATFORM_FEE_PERCENT}%)
+                      </p>
+                    ) : (
+                      <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
+                        Total booking: Rs. {booking.amount?.toLocaleString()} · Fee: Rs. {platformFee.toLocaleString()}
                       </p>
                     )}
                   </div>
 
-                  {/* Payment Status + Actions */}
+                  {/* Status + Actions */}
                   <div>
                     <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
                       {activeTab === "payments" ? "Payment Status" : "Payout Status"}
@@ -174,22 +195,23 @@ export default function PaymentsPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {activeTab === "payments" ? (
                         <>
-                          <select title="Payment status" className="paymentStatusSelect" value={booking.paymentStatus}
-                            onChange={e => {
-                              const newStatus = e.target.value;
-                              setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, paymentStatus: newStatus } : b));
-                            }}
+                          <select
+                            title="Payment status"
+                            value={booking.paymentStatus}
+                            onChange={e => setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, paymentStatus: e.target.value } : b))}
                             style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: 'white' }}>
                             <option value="pending">Pending</option>
                             <option value="received">Received (Unconfirmed)</option>
                             <option value="confirmed">Confirmed ✅</option>
                             <option value="refunded">Refunded</option>
                           </select>
-                          <input value={note[booking._id] || ""}
+                          <input
+                            value={note[booking._id] || ""}
                             onChange={e => setNote(prev => ({ ...prev, [booking._id]: e.target.value }))}
                             placeholder="Add note (optional)..."
                             style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
-                          <button onClick={() => updatePayment(booking._id, booking.paymentStatus)}
+                          <button
+                            onClick={() => updatePayment(booking._id, booking.paymentStatus)}
                             disabled={updating === booking._id}
                             style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
                             {updating === booking._id ? "Saving..." : "Update Payment"}
@@ -197,48 +219,31 @@ export default function PaymentsPage() {
                         </>
                       ) : (
                         <>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? '#f0fdf4' : '#fffbeb', color: booking.payoutStatus === 'paid' ? '#16a34a' : '#d97706' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? '#f0fdf4' : '#fffbeb', color: booking.payoutStatus === 'paid' ? '#16a34a' : '#d97706', width: 'fit-content' }}>
                             {booking.payoutStatus === 'paid' ? <CheckCircle size={13} /> : <Clock size={13} />}
                             {booking.payoutStatus === 'paid' ? 'Paid Out' : 'Payout Pending'}
                           </div>
                           {booking.payoutStatus !== 'paid' && booking.paymentStatus === 'confirmed' && (
                             <button
                               onClick={async () => {
-                                  setUpdating(booking._id);
-                                  try {
-                                  const { tutorPayout } = calculateFees(booking.amount);
+                                setUpdating(booking._id);
+                                try {
                                   await api.patch(`/admin/bookings/${booking._id}/payment`, {
-                                  payoutStatus: 'paid',
-                                  payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
-                                });
-                            // Update local state
-                            setBookings(prev =>
-                              prev.map(b =>
-                                b._id === booking._id
-                                ? { ...b, payoutStatus: 'paid' }
-                                : b
-                                )
-                              );
-                            } catch {
-                              alert("Failed to update payout status.");
-                            } finally {
-                              setUpdating(null);
-                            }
-                          }}
-                        disabled={updating === booking._id}
-                      style={{
-                        padding: '0.5rem',
-                        backgroundColor: updating === booking._id ? '#86efac' : '#16a34a',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.4rem',
-                        cursor: updating === booking._id ? 'not-allowed' : 'pointer',
-                        fontSize: '0.8rem',
-                        fontWeight: '600'
-                    }}>
-                      {updating === booking._id ? "Saving..." : "Mark as Paid Out"}
-                    </button>
-                      )}
+                                    payoutStatus: 'paid',
+                                    payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
+                                  });
+                                  setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, payoutStatus: 'paid' } : b));
+                                } catch {
+                                  alert("Failed to update payout status.");
+                                } finally {
+                                  setUpdating(null);
+                                }
+                              }}
+                              disabled={updating === booking._id}
+                              style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#86efac' : '#16a34a', color: 'white', border: 'none', borderRadius: '0.4rem', cursor: updating === booking._id ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+                              {updating === booking._id ? "Saving..." : "Mark as Paid Out"}
+                            </button>
+                          )}
                           {booking.paymentStatus !== 'confirmed' && (
                             <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>⚠️ Confirm student payment first</p>
                           )}
@@ -246,6 +251,7 @@ export default function PaymentsPage() {
                       )}
                     </div>
                   </div>
+
                 </div>
               </div>
             );

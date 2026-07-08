@@ -19,7 +19,7 @@ interface Booking {
   createdAt: string;
 }
 
-const PLATFORM_FEE_PERCENT = 34.5; // 30% + 4.5% GST
+const PLATFORM_FEE_PERCENT = 23; // 20% + 3% GST
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
