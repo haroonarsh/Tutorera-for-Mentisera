@@ -13,6 +13,8 @@ import PDFDocument from "pdfkit";
 import Request from "../models/Request.model";
 import Review from "../models/Review.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
+import { logAudit } from "../utils/logAudit";
+import AuditLog from "../models/AuditLog.model";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -100,6 +102,16 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   }
   await profile.save();
 
+  await logAudit({
+    action: status === "approved" ? "tutor_approved" : "tutor_rejected",
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "TutorProfile",
+    targetId: profile._id.toString(),
+    targetName: (profile.user as any)?.name || profile._id.toString(),
+    metadata: status === "rejected" ? { reason } : undefined,
+  });
+
   // Send real-time notification to tutor
   const io = req.app.get("io");
   await sendNotification(io, profile.user.toString(), {
@@ -147,6 +159,16 @@ export const toggleUserStatus = async (req: AuthRequest, res: Response): Promise
   }
   user.isActive = !user.isActive;
   await user.save();
+
+  await logAudit({
+    action: user.isActive ? "user_activated" : "user_deactivated",
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "User",
+    targetId: user._id.toString(),
+    targetName: user.name,
+  });
+
   res.status(200).json({ success: true, message: `User ${user.isActive ? "activated" : "deactivated"}` });
 };
 
@@ -182,7 +204,9 @@ export const updatePaymentStatus = async (
 ): Promise<void> => {
   const { paymentStatus, paymentNote, payoutStatus, payoutNote, status } = req.body;
 
-  const booking = await Booking.findById(req.params.id);
+  const booking = await Booking.findById(req.params.id)
+    .populate("student", "name")
+    .populate("tutor", "name");
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
     return;
@@ -208,6 +232,29 @@ export const updatePaymentStatus = async (
   }
   
   await booking.save();
+
+  if (paymentStatus === "confirmed") {
+    await logAudit({
+      action: "payment_confirmed",
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "Booking",
+      targetId: booking._id.toString(),
+      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      metadata: { amount: booking.amount },
+    });
+  }
+  if (payoutStatus === "paid") {
+    await logAudit({
+      action: "payout_marked_paid",
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "Booking",
+      targetId: booking._id.toString(),
+      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      metadata: { tutorPayout: booking.tutorPayout },
+    });
+  }
 
   // ── trigger referral credit when admin marks booking completed ──
   if (status === "completed" && booking.isFirstSession) {
@@ -261,7 +308,9 @@ export const updateBookingStatus = async (
     return;
   }
 
-  const booking = await Booking.findById(req.params.id);
+  const booking = await Booking.findById(req.params.id)
+    .populate("student", "name")
+    .populate("tutor", "name");
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
     return;
@@ -270,6 +319,16 @@ export const updateBookingStatus = async (
   const previousStatus = booking.status;
   booking.status = status;
   await booking.save();
+
+  await logAudit({
+    action: `booking_${status}`,   // booking_completed, booking_cancelled, etc.
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "Booking",
+    targetId: booking._id.toString(),
+    targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+    metadata: { previousStatus },
+  });
 
    // ── Trigger referral credit when admin marks booking as completed ──
   if (status === "completed" && previousStatus !== "completed" && booking.isFirstSession) {
@@ -320,6 +379,19 @@ export const updateUserPlan = async (req: AuthRequest, res: Response): Promise<v
     { plan },
     { new: true }
   );
+
+  if (user) {
+    await logAudit({
+      action: "plan_changed",
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "User",
+      targetId: user._id.toString(),
+      targetName: user.name,
+      metadata: { newPlan: plan },
+    });
+  }
+
   if (!user) {
     res.status(404).json({ success: false, message: "User not found" });
     return;
@@ -486,6 +558,44 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
     bookingStatusBreakdown,
     topTutors,
     recentPayments,
+  });
+};
+
+// @desc    Get audit logs
+// @route   GET /api/admin/audit-logs
+// @access  Private (admin)
+export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { action, entity, page = "1", limit = "50" } = req.query;
+ 
+  const filter: Record<string, unknown> = {};
+  if (action && action !== "all") filter.action = action;
+  if (entity && entity !== "all") filter.entity = entity;
+ 
+  const pageNum  = parseInt(page as string);
+  const limitNum = parseInt(limit as string);
+  const skip     = (pageNum - 1) * limitNum;
+ 
+  const [total, logs] = await Promise.all([
+    AuditLog.countDocuments(filter),
+    AuditLog.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum),
+  ]);
+ 
+  // Distinct values for filter dropdowns
+  const [actions, entities] = await Promise.all([
+    AuditLog.distinct("action"),
+    AuditLog.distinct("entity"),
+  ]);
+ 
+  res.status(200).json({
+    success: true,
+    total,
+    page: pageNum,
+    pages: Math.ceil(total / limitNum),
+    logs,
+    filters: { actions, entities },
   });
 };
 

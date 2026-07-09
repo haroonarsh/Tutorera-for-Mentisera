@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/User.model";
+import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 
@@ -19,6 +20,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   const user = await User.create({ name, email, password, role, phone, city });
+
+  await logAudit({
+    action: "user_registered",
+    actor: "System",
+    entity: "User",
+    targetId: user._id.toString(),
+    targetName: user.name,
+    metadata: { role: user.role, email: user.email },
+  });
+  
   sendTokenResponse(user, 201, res);
 };
 
