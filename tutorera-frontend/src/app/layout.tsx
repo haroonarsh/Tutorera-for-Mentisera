@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     default: "TUTORERA® | Pakistan's Tutoring Marketplace",
     template: "%s | TUTORERA®",
   },
+  verification: {
+       google: "your-verification-code-here",
+  },
   description: "Pakistan's trusted tutoring marketplace. Find verified tutors for Matric, O-Level, FSc, A-Level, and university subjects. Search, compare, and book tutors online.",
   keywords: [
     "tutors in Pakistan",
