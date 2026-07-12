@@ -2,15 +2,16 @@ import { Request } from "express";
 import { Document, Types } from "mongoose";
 
 // User Roles
-export type UserRole = "student" | "tutor" | "admin";
+export type UserRole = "student" | "tutor" | "admin" | "pending";
 export type UserPlan = "free" | "standard" | "premium";
+export type AuthProvider = "local" | "google";
 
 // User Document Interface
 export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
   plan: UserPlan;
   bidsThisMonth: number;
@@ -28,6 +29,8 @@ export interface IUser extends Document {
   referralCode?: string;
   referralCredit: number;
   referredBy?: Types.ObjectId;
+  googleId?: string;
+  authProvider: AuthProvider;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;

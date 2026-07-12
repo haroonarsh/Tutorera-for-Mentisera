@@ -18,13 +18,18 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: [
+        function (this: IUser) {
+          return this.authProvider === "local";
+        },
+        "Password is required",
+      ],
       minlength: 6,
       select: false,
     },
     role: {
       type: String,
-      enum: ["student", "tutor", "admin"],
+      enum: ["student", "tutor", "admin", "pending"],
       default: "student",
     },
     plan: {
@@ -57,15 +62,21 @@ const userSchema = new Schema<IUser>(
     resetPasswordToken: String,
     resetPasswordExpire: Date,
     referralCode: { type: String, unique: true, sparse: true },
-    referralCredit: { type: Number, default: 0 },       // PKR credit balance
+    referralCredit: { type: Number, default: 0 },
     referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    googleId: { type: String, unique: true, sparse: true },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
   },
   { timestamps: true }
 );
 
 // Hash password before saving
 userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+  if (!this.isModified("password") || !this.password) return;
   this.password = await bcrypt.hash(this.password as string, 12);
 });
 
@@ -73,6 +84,7 @@ userSchema.pre("save", async function () {
 userSchema.methods.comparePassword = async function (
   enteredPassword: string
 ): Promise<boolean> {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

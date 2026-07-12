@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse } from "../utils/generateToken";
@@ -7,6 +8,8 @@ import { AuthRequest } from "../types";
 // Plan limits reference
 const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
 const PLAN_REQUEST_LIMITS: Record<string, number> = { free: 2, standard: 10, premium: -1 };
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -44,6 +47,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  if (user.authProvider === "google" && !user.password) {
+    res.status(400).json({
+      success: false,
+      message: "This account uses Google Sign-In. Please log in with Google.",
+    });
+    return;
+  }
+
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     res.status(401).json({ success: false, message: "Invalid email or password" });
@@ -54,6 +65,128 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.status(403).json({ success: false, message: "Your account has been deactivated" });
     return;
   }
+
+  sendTokenResponse(user, 200, res);
+};
+
+// @desc    Google Sign-In / Sign-Up
+// @route   POST /api/auth/google
+export const googleAuth = async (req: Request, res: Response): Promise<void> => {
+  const { idToken } = req.body;
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch {
+    res.status(401).json({ success: false, message: "Invalid Google token" });
+    return;
+  }
+
+  if (!payload || !payload.email) {
+    res.status(401).json({ success: false, message: "Could not verify Google account" });
+    return;
+  }
+
+  const { sub: googleId, email, name, picture } = payload;
+
+  // 1. Existing user linked to this Google account
+  let user = await User.findOne({ googleId });
+
+  // 2. Existing local account with the same email — link it
+  if (!user) {
+    user = await User.findOne({ email });
+    if (user) {
+      user.googleId = googleId;
+      if (!user.avatar) user.avatar = picture || "";
+      await user.save();
+    }
+  }
+
+  let isNewUser = false;
+
+  // 3. No existing user at all — create one, role undecided
+  if (!user) {
+    isNewUser = true;
+    user = await User.create({
+      name: name || email.split("@")[0],
+      email,
+      googleId,
+      authProvider: "google",
+      role: "pending",
+      avatar: picture || "",
+    });
+
+    await logAudit({
+      action: "user_registered",
+      actor: "System",
+      entity: "User",
+      targetId: user._id.toString(),
+      targetName: user.name,
+      metadata: { role: user.role, email: user.email, via: "google" },
+    });
+  }
+
+  if (!user.isActive) {
+    res.status(403).json({ success: false, message: "Your account has been deactivated" });
+    return;
+  }
+
+  const token = require("../utils/generateToken").generateToken(user._id.toString(), user.role);
+  const cookieOptions = {
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict" as const,
+  };
+  res.cookie("token", token, cookieOptions);
+
+  res.status(isNewUser ? 201 : 200).json({
+    success: true,
+    token,
+    needsRole: user.role === "pending",
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isVerified: user.isVerified,
+      isApproved: user.isApproved,
+      avatar: user.avatar,
+    },
+  });
+};
+
+// @desc    Set role for a Google user who registered as "pending"
+// @route   PATCH /api/auth/select-role
+export const selectRole = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { role } = req.body;
+
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+
+  if (user.role !== "pending") {
+    res.status(400).json({ success: false, message: "Role has already been set for this account" });
+    return;
+  }
+
+  user.role = role;
+  await user.save();
+
+  await logAudit({
+    action: "user_role_selected",
+    actor: user.name,
+    entity: "User",
+    targetId: user._id.toString(),
+    targetName: user.name,
+    metadata: { role },
+  });
 
   sendTokenResponse(user, 200, res);
 };
@@ -90,12 +223,10 @@ export const getMyUsage = async (req: AuthRequest, res: Response): Promise<void>
     success: true,
     usage: {
       plan,
-      // Tutor usage
       bidsThisMonth: user.bidsThisMonth || 0,
-      bidLimit, // -1 means unlimited
-      // Student usage
+      bidLimit,
       requestsThisMonth: (user as any).requestsThisMonth || 0,
-      requestLimit, // -1 means unlimited
+      requestLimit,
     },
   });
 };
@@ -136,6 +267,14 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
     return;
   }
 
+  if (user.authProvider === "google" && !user.password) {
+    res.status(400).json({
+      success: false,
+      message: "This account uses Google Sign-In and has no password to change",
+    });
+    return;
+  }
+
   const isMatch = await user.comparePassword(currentPassword);
   if (!isMatch) {
     res.status(400).json({ success: false, message: "Current password is incorrect" });
@@ -151,12 +290,10 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
 // @desc    Upgrade user plan — ADMIN ONLY
 // @route   PATCH /api/auth/upgrade-plan
 // @access  Private (admin)
-// Used by the admin panel to manually activate a plan after confirming NayaPay payment.
 export const upgradePlan = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  // Only admins can upgrade plans — payment is confirmed manually
   if (req.user?.role !== "admin") {
     res.status(403).json({
       success: false,
@@ -172,7 +309,6 @@ export const upgradePlan = async (
     return;
   }
  
-  // Admin can upgrade any user (pass userId in body), or themselves
   const targetId = userId || req.user?._id;
  
   const user = await User.findByIdAndUpdate(

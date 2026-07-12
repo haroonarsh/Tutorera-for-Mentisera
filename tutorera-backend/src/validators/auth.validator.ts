@@ -15,8 +15,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const googleAuthSchema = z.object({
+  idToken: z.string().min(1, "Google ID token is required"),
+});
+
+export const selectRoleSchema = z.object({
+  role: z.enum(["student", "tutor"]),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
+export type SelectRoleInput = z.infer<typeof selectRoleSchema>;
 
 export const validate =
   (schema: z.ZodSchema) =>
