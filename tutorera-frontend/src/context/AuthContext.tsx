@@ -6,11 +6,16 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  role: "student" | "tutor" | "admin";
+  role: "student" | "tutor" | "admin" | "pending";
   avatar?: string;
   plan: string;
   isVerified: boolean;
   isApproved: boolean;
+}
+
+interface GoogleAuthResult {
+  user: User;
+  needsRole: boolean;
 }
 
 interface AuthContextType {
@@ -18,6 +23,8 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
+  loginWithGoogle: (idToken: string) => Promise<GoogleAuthResult>;
+  selectRole: (role: "student" | "tutor") => Promise<User>;
   logout: () => void;
 }
 
@@ -36,7 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -63,13 +69,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return res.data.user;
   };
 
+  const loginWithGoogle = async (idToken: string): Promise<GoogleAuthResult> => {
+    const res = await api.post("/auth/google", { idToken });
+    localStorage.setItem("token", res.data.token);
+    setUser(res.data.user);
+    return { user: res.data.user, needsRole: res.data.needsRole };
+  };
+
+  const selectRole = async (role: "student" | "tutor"): Promise<User> => {
+    const res = await api.patch("/auth/select-role", { role });
+    localStorage.setItem("token", res.data.token);
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, selectRole, logout }}>
       {children}
     </AuthContext.Provider>
   );

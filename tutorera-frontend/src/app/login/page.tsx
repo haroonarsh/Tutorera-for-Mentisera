@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import GoogleButton from "@/components/GoogleButton";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', error: '#ef4444' };
 
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,11 +36,27 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleToken = async (idToken: string) => {
+    setError("");
+    try {
+      const { user, needsRole } = await loginWithGoogle(idToken);
+      if (needsRole) {
+        router.push("/select-role");
+      } else if (user.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Google sign-in failed. Please try again.");
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
 
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <BookOpen size={28} color={C.accent} />
@@ -49,14 +66,12 @@ export default function LoginPage() {
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Log in to your account</p>
         </div>
 
-        {/* Error */}
         {error && (
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.5rem', color: C.error, fontSize: '0.875rem' }}>
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Email address</label>
@@ -94,6 +109,14 @@ export default function LoginPage() {
             {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.5rem 0' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+          <span style={{ fontSize: '0.8rem', color: C.gray500 }}>or</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+        </div>
+
+        <GoogleButton onToken={handleGoogleToken} text="signin_with" />
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: C.gray500 }}>
           Don't have an account?{" "}

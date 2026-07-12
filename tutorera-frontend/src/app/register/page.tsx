@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import GoogleButton from "@/components/GoogleButton";
 import api from "@/lib/axios";
 import { Suspense } from "react";
 
@@ -19,7 +20,7 @@ function RegisterForm() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -63,6 +64,23 @@ function RegisterForm() {
   } finally {
     setLoading(false);
   }
+  };
+  
+  const handleGoogleToken = async (idToken: string) => {
+    setError("");
+    try {
+      const { user, needsRole } = await loginWithGoogle(idToken);
+      if (needsRole) {
+        router.push("/select-role");
+      } else if (user.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Google sign-in failed. Please try again.");
+    }
   };
 
   return (
@@ -178,6 +196,14 @@ function RegisterForm() {
             {loading ? "Creating account..." : `Create ${form.role} account`}
           </button>
         </form>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.5rem 0' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+          <span style={{ fontSize: '0.8rem', color: C.gray500 }}>or</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+        </div>
+
+        <GoogleButton onToken={handleGoogleToken} text="signin_with" />
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: C.gray500 }}>
           Already have an account?{" "}
