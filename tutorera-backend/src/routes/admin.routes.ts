@@ -16,6 +16,8 @@ import {
   getPayouts,
   getAnalytics,
   getAuditLogs,
+  getBroadcasts,
+  sendBroadcast,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -34,6 +36,8 @@ router.get("/analytics", getAnalytics);
 router.get("/verifications", getPendingVerifications);
 router.get("/payouts", getPayouts);
 router.get("/audit-logs", getAuditLogs);
+router.post("/broadcasts", sendBroadcast);
+router.get("/broadcasts",  getBroadcasts);
 router.patch("/users/:id/plan", protect, authorize("admin"), updateUserPlan);
 router.get("/tutors/:id", getTutorFullData);
 router.patch("/verify/:id", verifyTutor);

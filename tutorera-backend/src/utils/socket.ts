@@ -75,7 +75,7 @@ export const sendNotification = async (
   notification: {
     title: string;
     message: string;
-    type: "verification" | "bid" | "booking" | "payment" | "general";
+    type: "verification" | "bid" | "booking" | "payment" | "general" | "broadcast";
     link?: string;
   }
 ) => {

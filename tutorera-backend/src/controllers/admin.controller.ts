@@ -15,6 +15,8 @@ import Review from "../models/Review.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 import { logAudit } from "../utils/logAudit";
 import AuditLog from "../models/AuditLog.model";
+import Broadcast from "../models/Broadcast.model";
+import Notification from "../models/Notification.model";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -597,6 +599,98 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
     logs,
     filters: { actions, entities },
   });
+};
+
+// @desc    Send a broadcast notification to a group of users
+// @route   POST /api/admin/broadcasts
+// @access  Private (admin)
+export const sendBroadcast = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { title, message, audience } = req.body;
+ 
+  if (!title?.trim() || !message?.trim() || !audience) {
+    res.status(400).json({ success: false, message: "Title, message and audience are required." });
+    return;
+  }
+ 
+  // Build the user filter based on audience
+  const filter: Record<string, unknown> = { isActive: true };
+  switch (audience) {
+    case "students": filter.role = "student"; break;
+    case "tutors":   filter.role = "tutor";   break;
+    case "premium":  filter.plan = "premium"; break;
+    default:         filter.role = { $in: ["student", "tutor"] }; // "all" excludes admins
+  }
+ 
+  const users = await User.find(filter).select("_id");
+ 
+  if (users.length === 0) {
+    res.status(400).json({ success: false, message: "No active users found for this audience." });
+    return;
+  }
+ 
+  // ── Send real-time notification to every matched user ──
+  const io = req.app.get("io");
+  const notificationDocs = users.map(u => ({
+    user:    u._id,
+    title,
+    message,
+    type:    "broadcast",
+    link:    "/notifications",
+    isRead:  false,
+  }));
+ 
+  // Bulk insert into Notification collection (saves to DB for users who are offline)
+  await Notification.insertMany(notificationDocs);
+ 
+  // Also emit real-time socket event for online users
+  for (const user of users) {
+    await sendNotification(io, user._id.toString(), {
+      title,
+      message,
+      type: "broadcast",
+      link: "/notifications",
+    });
+  }
+ 
+  // ── Save broadcast record ──
+  const broadcast = await Broadcast.create({
+    title,
+    message,
+    audience,
+    sentCount:  users.length,
+    sentBy:     req.user?._id,
+    sentByName: req.user?.name || "Admin",
+  });
+ 
+  // ── Audit log ──
+  await logAudit({
+    action:     "broadcast_sent",
+    actor:      req.user?.name || "Admin",
+    actorId:    req.user?._id?.toString(),
+    entity:     "Broadcast",
+    targetId:   broadcast._id.toString(),
+    targetName: title,
+    metadata:   { audience, sentCount: users.length },
+  });
+ 
+  res.status(201).json({
+    success: true,
+    message: `Broadcast sent to ${users.length} user${users.length !== 1 ? "s" : ""}.`,
+    broadcast,
+  });
+};
+ 
+// @desc    Get broadcast history
+// @route   GET /api/admin/broadcasts
+// @access  Private (admin)
+export const getBroadcasts = async (req: AuthRequest, res: Response): Promise<void> => {
+  const broadcasts = await Broadcast.find()
+    .sort({ createdAt: -1 })
+    .limit(50);
+ 
+  const totalSent = broadcasts.reduce((sum, b) => sum + b.sentCount, 0);
+ 
+  res.status(200).json({ success: true, total: broadcasts.length, totalSent, broadcasts });
 };
 
 // @desc    Generate weekly or monthly report

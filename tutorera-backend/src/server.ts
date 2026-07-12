@@ -23,6 +23,7 @@ import chatRoutes from "./routes/chat.routes";
 import guaranteeRoutes from "./routes/guarantee.routes";
 import referralRoutes from "./routes/referral.routes";
 import aiRoutes from "./routes/ai.routes";
+import earningsRoutes from "./routes/earnings.routes";
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/guarantee", guaranteeRoutes);
 app.use("/api/referral", referralRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/earnings", earningsRoutes);
 
 // Health check
 app.get("/", (req, res) => {

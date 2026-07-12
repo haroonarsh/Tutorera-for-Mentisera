@@ -4,7 +4,7 @@ export interface INotification extends Document {
   user: Types.ObjectId;
   title: string;
   message: string;
-  type: "verification" | "bid" | "booking" | "payment" | "general";
+  type: "verification" | "bid" | "booking" | "payment" | "general" | "broadcast";
   isRead: boolean;
   link?: string;
   createdAt: Date;
@@ -17,7 +17,7 @@ const notificationSchema = new Schema<INotification>(
     message: { type: String, required: true },
     type: {
       type: String,
-      enum: ["verification", "bid", "booking", "payment", "general"],
+      enum: ["verification", "bid", "booking", "payment", "general" , "broadcast"],
       default: "general",
     },
     isRead: { type: Boolean, default: false },
