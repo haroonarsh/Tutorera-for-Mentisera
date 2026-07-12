@@ -6,6 +6,7 @@ import Footer from "./Footer";
 const HIDE_NAVBAR_AND_FOOTER = [
   "/onboarding",
   "/chat",
+  "/earnings",
   "/dashboard",
   "/settings",
   "/notifications",

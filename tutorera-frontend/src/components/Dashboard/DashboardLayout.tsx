@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Bell, Settings, LogOut,
   ChevronLeft, ChevronRight, MessageSquare,
-  CreditCard, User, BookOpen, Search, Menu, X
+  CreditCard, User, BookOpen, Search, Menu, TrendingUp,
 } from "lucide-react";
 
 const C = {
@@ -26,48 +26,59 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  { href: "/dashboard",  label: "Dashboard",       icon: <LayoutDashboard size={18} /> },
+  { href: "/earnings",   label: "Earnings & Progress", icon: <TrendingUp size={18} />, roles: ["student", "tutor"] },
   { href: "/notifications", label: "Notifications", icon: <Bell size={18} /> },
-  { href: "/chat", label: "Messages", icon: <MessageSquare size={18} /> },
-  { href: "/settings", label: "Settings", icon: <Settings size={18} /> },
-  { href: "/billing", label: "Plans & Billing", icon: <CreditCard size={18} />, roles: ["student", "tutor"] },
+  { href: "/chat",       label: "Messages",         icon: <MessageSquare size={18} /> },
+  { href: "/settings",   label: "Settings",         icon: <Settings size={18} /> },
+  { href: "/billing",    label: "Plans & Billing",  icon: <CreditCard size={18} />, roles: ["student", "tutor"] },
 ];
 
 const tutorItems: NavItem[] = [
   { href: "/dashboard?tab=requests", label: "Browse Requests", icon: <Search size={18} /> },
-  { href: "/profile", label: "My Profile", icon: <User size={18} /> },
+  { href: "/profile",                label: "My Profile",      icon: <User size={18} /> },
 ];
 
 const studentItems: NavItem[] = [
-  { href: "/tutors", label: "Find a Tutor", icon: <Search size={18} /> },
-  { href: "/profile", label: "My Profile", icon: <User size={18} /> },
+  { href: "/tutors",  label: "Find a Tutor", icon: <Search size={18} /> },
+  { href: "/profile", label: "My Profile",   icon: <User size={18} /> },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
+// Page title map
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard':     'Dashboard',
+  '/earnings':      'Earnings & Progress',
+  '/notifications': 'Notifications',
+  '/settings':      'Settings',
+  '/billing':       'Plans & Billing',
+  '/profile':       'My Profile',
+};
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [collapsed, setCollapsed]   = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout }            = useAuth();
+  const pathname                    = usePathname();
+  const router                      = useRouter();
+
+  const handleLogout = () => { logout(); router.push("/"); };
 
   const roleItems = user?.role === "tutor" ? tutorItems : studentItems;
+
+  const pageTitle = PAGE_TITLES[pathname]
+    ?? (pathname.startsWith('/chat') ? 'Messages' : 'Dashboard');
 
   const SidebarContent = () => (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      backgroundColor: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}`
+      backgroundColor: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}`,
     }}>
       {/* Logo */}
       <div style={{
         padding: collapsed ? '1.25rem 0.75rem' : '1.25rem 1.25rem',
         borderBottom: `1px solid ${C.sidebarBorder}`,
         display: 'flex', alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between'
+        justifyContent: collapsed ? 'center' : 'space-between',
       }}>
         {!collapsed && (
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -100,10 +111,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* Nav Items */}
+      {/* Nav */}
       <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-
-        {/* Main */}
         {navItems.filter(item => !item.roles || item.roles.includes(user?.role || "")).map(item => {
           const isActive = pathname === item.href;
           return (
@@ -127,7 +136,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           );
         })}
 
-        {/* Section divider */}
         {!collapsed && (
           <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem' }}>
             {user?.role === "tutor" ? "TEACHING" : "LEARNING"}
@@ -193,9 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
-          <div style={{ width: '240px', height: '100vh' }}>
-            <SidebarContent />
-          </div>
+          <div style={{ width: '240px', height: '100vh' }}><SidebarContent /></div>
           <div style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setMobileOpen(false)} />
         </div>
       )}
@@ -205,12 +211,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         flex: 1,
         marginLeft: collapsed ? '60px' : '240px',
         transition: 'margin-left 0.25s ease',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-         minWidth: 0,
-         maxWidth: '100%',
-        overflowX: 'hidden',  
+        display: 'flex', flexDirection: 'column',
+        minHeight: '100vh', minWidth: 0, maxWidth: '100%', overflowX: 'hidden',
       }} className="dashboard-main">
 
         {/* Top Bar */}
@@ -221,30 +223,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           position: 'sticky', top: 0, zIndex: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {/* Mobile menu button */}
             <button title="mobile menu" onClick={() => setMobileOpen(true)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, display: 'none' }}
               className="show-mobile">
               <Menu size={22} />
             </button>
             <div>
-              <p style={{ fontWeight: '700', color: C.primary, fontSize: '1rem' }}>
-                {pathname === '/dashboard' ? 'Dashboard' :
-                  pathname === '/notifications' ? 'Notifications' :
-                    pathname === '/settings' ? 'Settings' :
-                      pathname === '/billing' ? 'Plans & Billing' :
-                        pathname.startsWith('/chat') ? 'Messages' : 'Dashboard'}
-              </p>
+              <p style={{ fontWeight: '700', color: C.primary, fontSize: '1rem' }}>{pageTitle}</p>
               <p style={{ color: C.gray500, fontSize: '0.75rem' }}>TUTORERA® learning workspace</p>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {/* Bell */}
             <Link href="/notifications" style={{ position: 'relative', color: C.gray500, display: 'flex' }}>
               <Bell size={20} />
             </Link>
-            {/* Profile */}
             <Link href="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.25rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '2rem', backgroundColor: 'white' }}>
               <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden' }}>
                 {user?.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user?.name?.charAt(0).toUpperCase()}
@@ -255,28 +248,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Page Content */}
-        <div style={{
-          flex: 1,
-          padding: '1.5rem',
-          width: '100%',
-          boxSizing: 'border-box',
-          overflowX: 'hidden',   /* ← KEY FIX */
-          minWidth: 0,           /* ← prevents flex overflow */
-        }}>
-            {children}
+        <div style={{ flex: 1, padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflowX: 'hidden', minWidth: 0 }}>
+          {children}
         </div>
       </div>
 
       <style>{`
         @media (max-width: 768px) {
-        .hidden-mobile { display: none !important; }
-        .show-mobile { display: flex !important; }
-        .dashboard-main {
-          margin-left: 0 !important;
-          width: 100% !important;
-          max-width: 100vw !important;
-          overflow-x: hidden !important;
-        }
+          .hidden-mobile { display: none !important; }
+          .show-mobile { display: flex !important; }
+          .dashboard-main { margin-left: 0 !important; width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; }
         }
         @media (min-width: 769px) {
           .show-mobile { display: none !important; }

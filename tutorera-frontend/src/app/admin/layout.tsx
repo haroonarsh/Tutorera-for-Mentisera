@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen,
   CreditCard, MessageSquare, Menu, FileText, Shield, Gift,
   Star, Banknote, BarChart2, ClipboardList,
+  Radio,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/admin",                  label: "Dashboard",        icon: <LayoutDashboard size={18} /> },
   { href: "/admin/analytics",        label: "Analytics",        icon: <BarChart2 size={18} /> },
   { href: "/admin/audit-logs",       label: "Audit Logs",       icon: <ClipboardList size={18} /> },
+  { href: "/admin/broadcasts",       label: "Broadcasts",       icon: <Radio size={18} /> },
   { href: "/admin/verifications",    label: "Verifications",    icon: <ShieldCheck size={18} /> },
   { href: "/admin/users",            label: "Users",            icon: <Users size={18} /> },
   { href: "/admin/referrals",        label: "Referrals",        icon: <Gift size={18} /> },
