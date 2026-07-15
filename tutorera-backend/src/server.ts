@@ -40,7 +40,26 @@ app.set("io", io);
 connectDB();
 
 // Middlewares
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "https://tutorera-frontend.vercel.app",
+  "https://tutorera.mentisera.pk",
+  "http://localhost:3000",
+].filter(Boolean) as string[];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, mobile apps)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
