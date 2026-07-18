@@ -43,7 +43,7 @@ connectDB();
 const allowedOrigins = [
   process.env.CLIENT_URL,
   "https://tutorera-frontend.vercel.app",
-  "https://tutorera.mentisera.pk",
+  "https://tutorera.ac.pk",
   "http://localhost:3000",
 ].filter(Boolean) as string[];
 
