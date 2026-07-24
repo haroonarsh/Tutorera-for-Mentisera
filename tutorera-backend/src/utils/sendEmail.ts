@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 interface EmailOptions {
   to: string;
@@ -7,20 +7,18 @@ interface EmailOptions {
 }
 
 const sendEmail = async (options: EmailOptions): Promise<void> => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-  await transporter.sendMail({
-    from: `"TUTORERA®" <${process.env.EMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: "TUTORERA® <noreply@tutorera.ac.pk>",
     to: options.to,
     subject: options.subject,
     html: options.html,
   });
+
+  if (error) {
+    throw new Error(`Failed to send email: ${error.message}`);
+  }
 };
 
 export default sendEmail;

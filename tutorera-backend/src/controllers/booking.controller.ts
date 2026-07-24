@@ -2,6 +2,9 @@ import { Response } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
+import sendEmail from "../utils/sendEmail";
+import { bookingCancelledEmail } from "../utils/emailTemplates";
+import User from "../models/User.model";
 
 // @desc    Get my bookings
 // @route   GET /api/bookings
@@ -43,6 +46,25 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   }
 
   await booking.save();
+
+  if (status === "cancelled") {
+    try {
+      const [studentUser, tutorUser] = await Promise.all([
+        User.findById(booking.student).select("name email"),
+        User.findById(booking.tutor).select("name email"),
+      ]);
+      if (studentUser && tutorUser) {
+        const studentMail = bookingCancelledEmail(studentUser.name, tutorUser.name);
+        const tutorMail = bookingCancelledEmail(tutorUser.name, studentUser.name);
+        await Promise.all([
+          sendEmail({ to: studentUser.email, subject: studentMail.subject, html: studentMail.html }),
+          sendEmail({ to: tutorUser.email, subject: tutorMail.subject, html: tutorMail.html }),
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to send cancellation emails:", err);
+    }
+  }
 
   // After booking status is set to "completed":
   if (status === "completed" && booking.isFirstSession) {

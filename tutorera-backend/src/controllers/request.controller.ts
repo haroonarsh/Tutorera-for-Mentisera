@@ -9,6 +9,8 @@ import { sendNotification } from "../utils/socket";
 import { TOTAL_FEE_PERCENT } from "../config/constants";
 import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
+import sendEmail from "../utils/sendEmail";
+import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail } from "../utils/emailTemplates";
 
 // ─── Plan Limits ───────────────────────────────────────────────────────────────
 const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
@@ -207,6 +209,16 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     link: "/dashboard",
   });
 
+  try {
+    const studentUser = await User.findById(request.student).select("name email");
+    if (studentUser) {
+      const { subject, html } = newBidEmail(studentUser.name, req.body.amount);
+      await sendEmail({ to: studentUser.email, subject, html });
+    }
+  } catch (err) {
+    console.error("Failed to send new bid email:", err);
+  }
+
   res.status(201).json({ success: true, message: "Bid placed successfully", bid });
 };
 
@@ -318,6 +330,36 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     link: "/dashboard",
   });
 
+  // ── Email notifications (best-effort — don't block the response if email fails) ──
+  try {
+    const [tutorUser, studentUser] = await Promise.all([
+      User.findById(bid.tutor).select("name email"),
+      User.findById(request.student).select("name email"),
+    ]);
+
+    if (tutorUser && studentUser) {
+      if (request.isDirect && request.selectedDate) {
+        // Direct booking — send exact slot details to both
+        const tutorMail = directBookingAcceptedEmail(tutorUser.name, studentUser.name, request.subject, request.selectedDate, request.selectedStartTime, request.selectedEndTime);
+        const studentMail = directBookingAcceptedEmail(studentUser.name, tutorUser.name, request.subject, request.selectedDate, request.selectedStartTime, request.selectedEndTime, { amount: bid.amount });
+        await Promise.all([
+          sendEmail({ to: tutorUser.email, subject: tutorMail.subject, html: tutorMail.html }),
+          sendEmail({ to: studentUser.email, subject: studentMail.subject, html: studentMail.html }),
+        ]);
+      } else {
+        // Regular bid-based booking
+        const bidEmail = bidAcceptedEmail(tutorUser.name, studentUser.name, bid.amount);
+        const bookingEmail = bookingConfirmedEmail(studentUser.name, tutorUser.name, bid.amount);
+        await Promise.all([
+          sendEmail({ to: tutorUser.email, subject: bidEmail.subject, html: bidEmail.html }),
+          sendEmail({ to: studentUser.email, subject: bookingEmail.subject, html: bookingEmail.html }),
+        ]);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to send booking/bid emails:", err);
+  }
+
   res.status(200).json({
     success: true,
     message: "Bid accepted. Booking created successfully.",
@@ -391,6 +433,16 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     link: "/dashboard?tab=requests",
   });
 
+   try {
+    const tutorUser = await User.findById(tutorId).select("name email");
+    if (tutorUser) {
+      const { subject: emailSubject, html } = directBookingRequestEmail(tutorUser.name, req.user?.name || "A student", subject);
+      await sendEmail({ to: tutorUser.email, subject: emailSubject, html });
+    }
+  } catch (err) {
+    console.error("Failed to send direct booking request email:", err);
+  }
+
   res.status(201).json({
     success: true,
     message: "Booking request sent to the tutor. You'll be notified once they respond.",
@@ -459,6 +511,16 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
       type: "booking",
       link: "/dashboard",
     });
+
+    try {
+      const studentUser = await User.findById(request.student).select("name email");
+      if (studentUser) {
+        const { subject, html } = directBookingDeclinedEmail(studentUser.name, request.subject);
+        await sendEmail({ to: studentUser.email, subject, html });
+      }
+    } catch (err) {
+      console.error("Failed to send booking decline email:", err);
+    }
   }
 
   res.status(200).json({ success: true, message: "Bid rejected", bid });

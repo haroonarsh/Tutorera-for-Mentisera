@@ -17,6 +17,8 @@ import { logAudit } from "../utils/logAudit";
 import AuditLog from "../models/AuditLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
+import sendEmail from "../utils/sendEmail";
+import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail } from "../utils/emailTemplates";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -103,6 +105,18 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     profile.rejectionReason = reason;
   }
   await profile.save();
+
+  try {
+    const tutorUser = await User.findById(profile.user).select("name email");
+    if (tutorUser) {
+      const { subject, html } = status === "approved"
+        ? tutorApprovedEmail(tutorUser.name)
+        : tutorRejectedEmail(tutorUser.name, reason);
+      await sendEmail({ to: tutorUser.email, subject, html });
+    }
+  } catch (err) {
+    console.error("Failed to send tutor verification email:", err);
+  }
 
   await logAudit({
     action: status === "approved" ? "tutor_approved" : "tutor_rejected",
@@ -245,6 +259,20 @@ export const updatePaymentStatus = async (
       targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
       metadata: { amount: booking.amount },
     });
+
+    try {
+      const studentUser = await User.findById(booking.student).select("email");
+      if (studentUser) {
+        const { subject, html } = paymentConfirmedEmail(
+          (booking.student as any)?.name || "Student",
+          (booking.tutor as any)?.name || "Tutor",
+          booking.amount
+        );
+        await sendEmail({ to: studentUser.email, subject, html });
+      }
+    } catch (err) {
+      console.error("Failed to send payment confirmation email:", err);
+    }
   }
   if (payoutStatus === "paid") {
     await logAudit({
@@ -399,6 +427,34 @@ export const updateUserPlan = async (req: AuthRequest, res: Response): Promise<v
     return;
   }
   res.status(200).json({ success: true, message: `Plan updated to ${plan}`, user });
+};
+
+// @desc    Get all Standard/Premium subscribers for quick management
+// @route   GET /api/admin/subscriptions
+// @access  Private (admin)
+export const getSubscriptions = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { plan } = req.query; // optional filter: "standard" | "premium"
+
+  const filter: Record<string, unknown> = { plan: { $ne: "free" } };
+  if (plan && ["standard", "premium"].includes(plan as string)) {
+    filter.plan = plan;
+  }
+
+  const users = await User.find(filter)
+    .select("name email role plan bidsThisMonth requestsThisMonth createdAt")
+    .sort("-createdAt");
+
+  const counts = {
+    standard: await User.countDocuments({ plan: "standard" }),
+    premium: await User.countDocuments({ plan: "premium" }),
+  };
+
+  res.status(200).json({
+    success: true,
+    total: users.length,
+    counts,
+    users,
+  });
 };
 
 // @desc    Get all payouts (bookings where student payment is confirmed)
