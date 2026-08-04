@@ -15,9 +15,6 @@ export const metadata: Metadata = {
     default: "TUTORERA® | Pakistan's Tutoring Marketplace",
     template: "%s | TUTORERA®",
   },
-  verification: {
-       google: "your-verification-code-here",
-  },
   description: "Pakistan's trusted tutoring marketplace. Find verified tutors for Matric, O-Level, FSc, A-Level, and university subjects. Search, compare, and book tutors online.",
   keywords: [
     "tutors in Pakistan",
@@ -34,11 +31,11 @@ export const metadata: Metadata = {
   authors: [{ name: "MENTISERA (SMC-Private) Limited" }],
   creator: "MENTISERA",
   publisher: "TUTORERA®",
-  metadataBase: new URL("https://tutorera-frontend.vercel.app"),
+  metadataBase: new URL("https://tutorera.ac.pk"),
   openGraph: {
     type: "website",
     locale: "en_PK",
-    url: "https://tutorera-frontend.vercel.app",
+    url: "https://tutorera.ac.pk",
     siteName: "TUTORERA®",
     title: "TUTORERA® | Pakistan's Tutoring Marketplace",
     description: "Find verified tutors for every subject and level in Pakistan. Safe, structured, and transparent.",

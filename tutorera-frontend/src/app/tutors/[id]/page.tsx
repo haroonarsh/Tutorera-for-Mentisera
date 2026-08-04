@@ -361,11 +361,6 @@ export default function TutorDetailPage() {
               style={{ display: 'block', width: '100%', textAlign: 'center', backgroundColor: C.accent, color: 'white', padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '700', border: 'none', fontSize: '0.95rem', marginBottom: '0.75rem', cursor: 'pointer' }}>
               Book Now
             </button>
-
-            <Link href={`/contact?tutor=${tutor.user?._id}&name=${tutor.user?.name}`}
-              style={{ display: 'block', textAlign: 'center', border: `1.5px solid ${C.accent}`, color: C.accent, padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', fontSize: '0.95rem' }}>
-              Contact Tutor
-            </Link>
           </div>
         </div>
 

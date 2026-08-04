@@ -25,6 +25,8 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<User>;
   loginWithGoogle: (idToken: string) => Promise<GoogleAuthResult>;
   selectRole: (role: "student" | "tutor") => Promise<User>;
+  forgotPassword: (email: string) => Promise<string>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
   logout: () => void;
 }
 
@@ -83,13 +85,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return res.data.user;
   };
 
+  const forgotPassword = async (email: string): Promise<string> => {
+    const res = await api.post("/auth/forgot-password", { email });
+    return res.data.message;
+  };
+
+  const resetPassword = async (email: string, otp: string, newPassword: string): Promise<string> => {
+    const res = await api.post("/auth/reset-password", { email, otp, newPassword });
+    return res.data.message;
+  };
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, selectRole, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, selectRole, forgotPassword, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );
