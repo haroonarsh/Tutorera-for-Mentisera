@@ -1,6 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
+import PDFDocument from "pdfkit";
+import User from "../models/User.model";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -28,6 +30,11 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
     const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
     const sessionsCount = completedBookings.length;
     const hoursTaught   = sessionsCount; // 1 hr per session
+
+    // ── On-hold payments: completed + payment confirmed, but not yet paid out ──
+    const onHoldBookings = completedBookings.filter(b => b.payoutStatus === "pending");
+    const onHoldAmount = onHoldBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+    const onHoldCount = onHoldBookings.length;
 
     // Subjects taught breakdown
     const subjectMap: Record<string, number> = {};
@@ -75,6 +82,8 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
         sessionsCount,
         hoursTaught,
         subjectsCount: Object.keys(subjectMap).length,
+        onHoldAmount,
+        onHoldCount,
       },
       monthlyData,
       subjectBreakdown,
@@ -159,4 +168,171 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
     tutorsWorkedWith,
     recentSessions,
   });
+};
+
+// @desc    Download tutor's earnings/progress report as PDF
+// @route   GET /api/earnings/report/pdf
+// @access  Private (tutor)
+export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+
+  if (req.user?.role !== "tutor") {
+    res.status(403).json({ success: false, message: "Only tutors can download this report." });
+    return;
+  }
+
+  const tutorUser = await User.findById(userId).select("name email");
+  const completedBookings = await Booking.find({
+    tutor: userId,
+    status: "completed",
+    paymentStatus: "confirmed",
+  })
+    .populate("student", "name")
+    .populate("request", "subject level")
+    .sort("-createdAt");
+
+  const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const sessionsCount = completedBookings.length;
+
+  // Subjects breakdown
+  const subjectMap: Record<string, number> = {};
+  for (const b of completedBookings) {
+    const reqData = b.request as unknown as { subject?: string } | null;
+    const subj = reqData?.subject || "General";
+    subjectMap[subj] = (subjectMap[subj] || 0) + 1;
+  }
+  const subjectBreakdown = Object.entries(subjectMap)
+    .map(([subject, count]) => ({ subject, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Monthly earnings — all months with activity, oldest first
+  const monthlyMap: Record<string, { earnings: number; sessions: number }> = {};
+  for (const b of completedBookings) {
+    const d = new Date(b.createdAt as unknown as string);
+    const key = d.toLocaleDateString("en-PK", { month: "short", year: "numeric" });
+    if (!monthlyMap[key]) monthlyMap[key] = { earnings: 0, sessions: 0 };
+    monthlyMap[key].earnings += b.tutorPayout || 0;
+    monthlyMap[key].sessions += 1;
+  }
+  const monthlyRows = Object.entries(monthlyMap)
+    .map(([month, data]) => ({ month, ...data }))
+    .reverse(); // oldest first for a report reading top-to-bottom
+
+  const onHoldBookings = completedBookings.filter(b => b.payoutStatus === "pending");
+  const onHoldAmount = onHoldBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const paidOutAmount = totalEarnings - onHoldAmount;
+
+  const now = new Date();
+  const filename = `tutorera-earnings-report-${now.toISOString().slice(0, 10)}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  const doc = new PDFDocument({ margin: 50, size: "A4" });
+  doc.pipe(res);
+
+  const COL_DARK = "#1a1a2e";
+  const COL_ACCENT = "#2563eb";
+  const COL_GRAY = "#6b7280";
+
+  const drawSectionTitle = (title: string) => {
+    doc.moveDown(0.5);
+    doc.rect(50, doc.y, 495, 22).fill("#eff6ff");
+    doc.fillColor(COL_ACCENT).fontSize(11).font("Helvetica-Bold")
+      .text(title, 58, doc.y - 18);
+    doc.moveDown(0.3);
+    doc.fillColor(COL_DARK);
+  };
+
+  const drawTableRow = (cols: string[], widths: number[], isHeader = false, y?: number) => {
+    const rowY = y ?? doc.y;
+    let x = 50;
+    if (isHeader) {
+      doc.rect(50, rowY, 495, 18).fill(COL_DARK);
+    }
+    cols.forEach((col, i) => {
+      doc
+        .fillColor(isHeader ? "#ffffff" : COL_DARK)
+        .fontSize(9)
+        .font(isHeader ? "Helvetica-Bold" : "Helvetica")
+        .text(col, x + 4, rowY + 4, { width: widths[i] - 8, lineBreak: false });
+      x += widths[i];
+    });
+    doc.moveDown(0.1);
+    if (!isHeader) {
+      doc.moveTo(50, doc.y + 2).lineTo(545, doc.y + 2)
+        .strokeColor("#e5e7eb").lineWidth(0.5).stroke();
+    }
+  };
+
+  // ── Cover ──
+  doc.rect(0, 0, 595, 120).fill(COL_DARK);
+  doc.fillColor("white").fontSize(26).font("Helvetica-Bold")
+    .text("TUTORERA®", 50, 35);
+  doc.fillColor("#9ca3af").fontSize(13).font("Helvetica")
+    .text("Tutor Earnings & Progress Report", 50, 68);
+  doc.fillColor("#6b7280").fontSize(10)
+    .text(tutorUser?.name || "Tutor", 50, 88);
+  doc.fillColor("#e94560").fontSize(10)
+    .text(`Generated: ${now.toLocaleDateString("en-PK")}`, 50, 104);
+  doc.y = 140;
+
+  // ── 1. Overview ──
+  drawSectionTitle("📊  OVERVIEW");
+  const oWidths = [350, 145];
+  drawTableRow(["Metric", "Value"], oWidths, true);
+  [
+    ["Total Sessions Completed", String(sessionsCount)],
+    ["Total Earnings", `Rs. ${totalEarnings.toLocaleString()}`],
+    ["Paid Out", `Rs. ${paidOutAmount.toLocaleString()}`],
+    ["On Hold (Pending Payout)", `Rs. ${onHoldAmount.toLocaleString()}`],
+    ["Subjects Taught", String(subjectBreakdown.length)],
+  ].forEach(([k, v]) => drawTableRow([k, v], oWidths));
+
+  // ── 2. Monthly Breakdown ──
+  drawSectionTitle("📅  MONTHLY BREAKDOWN");
+  const mWidths = [200, 150, 145];
+  drawTableRow(["Month", "Sessions", "Earnings (PKR)"], mWidths, true);
+  if (monthlyRows.length === 0) {
+    drawTableRow(["No completed sessions yet", "—", "—"], mWidths);
+  } else {
+    monthlyRows.forEach(m =>
+      drawTableRow([m.month, String(m.sessions), `Rs. ${m.earnings.toLocaleString()}`], mWidths)
+    );
+  }
+
+  // ── 3. Subjects Taught ──
+  drawSectionTitle("📖  SUBJECTS TAUGHT");
+  const sWidths = [350, 145];
+  drawTableRow(["Subject", "Sessions"], sWidths, true);
+  if (subjectBreakdown.length === 0) {
+    drawTableRow(["No subjects yet", "—"], sWidths);
+  } else {
+    subjectBreakdown.forEach(s =>
+      drawTableRow([s.subject, String(s.count)], sWidths)
+    );
+  }
+
+  // ── 4. Session History ──
+  if (completedBookings.length > 0) {
+    doc.addPage();
+    drawSectionTitle("📋  SESSION HISTORY");
+    const hWidths = [140, 150, 90, 115];
+    drawTableRow(["Student", "Subject", "Amount", "Date"], hWidths, true);
+    completedBookings.slice(0, 60).forEach(b => {
+      const student = b.student as unknown as { name?: string } | null;
+      const reqData = b.request as unknown as { subject?: string } | null;
+      drawTableRow([
+        student?.name || "Student",
+        reqData?.subject || "General",
+        `Rs. ${(b.tutorPayout || 0).toLocaleString()}`,
+        new Date(b.createdAt as unknown as string).toLocaleDateString("en-PK"),
+      ], hWidths);
+    });
+  }
+
+  // ── Footer ──
+  doc.fontSize(8).fillColor(COL_GRAY)
+    .text(`TUTORERA® — Confidential · Generated ${now.toLocaleDateString("en-PK")}`, 50, 780, { align: "center" });
+
+  doc.end();
 };

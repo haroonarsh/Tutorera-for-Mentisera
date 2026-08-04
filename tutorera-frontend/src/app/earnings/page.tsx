@@ -8,6 +8,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
+import { Download } from "lucide-react";
 
 const C = {
   primary: '#1a1a2e',
@@ -46,6 +47,8 @@ interface TutorData {
     sessionsCount: number;
     hoursTaught: number;
     subjectsCount: number;
+    onHoldAmount: number;
+    onHoldCount: number;
   };
   monthlyData: MonthlyPoint[];
   subjectBreakdown: SubjectItem[];
@@ -132,6 +135,23 @@ export default function EarningsPage() {
 
   if (!user || tutorStatus === "loading") return null;
 
+  const handleDownloadPDF = async () => {
+    try {
+      const res = await api.get("/earnings/report/pdf", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `tutorera-earnings-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download report:", err);
+      alert("Failed to download report. Please try again.");
+    }
+  };
+
   const isTutor    = user.role === "tutor";
   const tutorData  = isTutor ? data as TutorData   : null;
   const studentData = !isTutor ? data as StudentData : null;
@@ -160,15 +180,23 @@ export default function EarningsPage() {
       <div style={{ maxWidth: '900px' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>
-            {isTutor ? "Earnings & Progress" : "Learning Progress"}
-          </h1>
-          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-            {isTutor
-              ? "Track your earnings, sessions, and subjects taught over time."
-              : "Track your sessions, subjects learned, and tutors you've worked with."}
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>
+              {isTutor ? "Earnings & Progress" : "Learning Progress"}
+            </h1>
+            <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+              {isTutor
+                ? "Track your earnings, sessions, and subjects taught over time."
+                : "Track your sessions, subjects learned, and tutors you've worked with."}
+            </p>
+          </div>
+          {isTutor && (
+            <button onClick={handleDownloadPDF}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: C.primary, color: 'white', padding: '0.65rem 1.25rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}>
+              <Download size={16} /> Download PDF Report
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -196,6 +224,30 @@ export default function EarningsPage() {
                 </div>
               ))}
             </div>
+
+            {/* Payment On Hold Card — tutor only */}
+            {isTutor && (tutorData?.stats.onHoldCount ?? 0) > 0 && (
+              <div style={{
+                backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.875rem',
+                padding: '1.25rem 1.5rem', marginBottom: '1.5rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                  <span style={{ fontSize: '1.75rem' }}>⏳</span>
+                  <div>
+                    <p style={{ fontWeight: '700', color: '#92400e', fontSize: '0.95rem', margin: '0 0 0.2rem' }}>
+                      Rs. {(tutorData?.stats.onHoldAmount ?? 0).toLocaleString()} On Hold
+                    </p>
+                    <p style={{ color: '#92400e', fontSize: '0.8rem', margin: 0, opacity: 0.85 }}>
+                      From {tutorData?.stats.onHoldCount} completed session{tutorData?.stats.onHoldCount !== 1 ? "s" : ""} — payment confirmed, payout pending
+                    </p>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#d97706', backgroundColor: 'white', padding: '0.35rem 0.85rem', borderRadius: '999px', border: '1px solid #fde68a' }}>
+                  Pending Release
+                </span>
+              </div>
+            )}
 
             {/* Chart + Subjects row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }} className="earnings-chart-row">

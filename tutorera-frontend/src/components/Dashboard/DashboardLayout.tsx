@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
 ];
 
 const tutorItems: NavItem[] = [
-  { href: "/dashboard?tab=requests", label: "Browse Requests", icon: <Search size={18} /> },
+  { href: "/browse-requests", label: "Browse Requests", icon: <Search size={18} /> },
   { href: "/profile",                label: "My Profile",      icon: <User size={18} /> },
 ];
 

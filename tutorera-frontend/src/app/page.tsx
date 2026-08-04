@@ -3,6 +3,7 @@ import api from "@/lib/axios";
 import Link from "next/link";
 import { Search, Shield, MapPin, BookOpen, Users, Star, CheckCircle, XCircle } from "lucide-react";
 import TopTutorsSection from "@/components/TopTutorsSection";
+import TopRequestsSection from "@/components/TopRequestsSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -118,7 +119,8 @@ export default function Home() {
               { icon: <Users size={26} color={C.accent} />, title: "For Parents", items: ["Who want trusted tutors", "Who want clarity & structure", "Who want peace of mind"] },
               { icon: <Star size={26} color={C.accent} />, title: "For Tutors", items: ["Who want serious students", "Who want flexible schedules", "Who want a professional platform"] },
             ].map((card) => (
-              <div key={card.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
+              <div key={card.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s', }}
+              >
                 <div style={{ marginBottom: '1rem' }}>{card.icon}</div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1.25rem' }}>{card.title}</h3>
                 <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -176,8 +178,11 @@ export default function Home() {
       {/* ── TOP TUTORS ── */}
       <TopTutorsSection />
 
+      {/* ── TOP REQUESTS ── */}
+      <TopRequestsSection />
+
       {/* ── BLOG ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
+      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
          <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Insights From Our Blog</h2>

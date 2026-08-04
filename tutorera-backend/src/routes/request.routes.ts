@@ -3,12 +3,14 @@ import {
   createRequest, getAllRequests, getMyRequests,
   cancelRequest, placeBid, getBidsForRequest, acceptBid,
   createDirectBookingRequest, getMyDirectRequests, rejectBid,
+  getPublicRequestsPreview,
 } from "../controllers/request.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { checkBidLimit } from "../middlewares/bidLimit.middleware";
 
 const router = Router();
 
+router.get("/public/preview", getPublicRequestsPreview);
 router.get("/", protect, getAllRequests);
 router.post("/direct", protect, createDirectBookingRequest);
 router.get("/direct/my", protect, getMyDirectRequests);

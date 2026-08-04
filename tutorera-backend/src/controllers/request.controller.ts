@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Response } from "express";
+import { Request as ExpressRequest } from "express"; 
 import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
@@ -524,4 +525,17 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
   }
 
   res.status(200).json({ success: true, message: "Bid rejected", bid });
+};
+
+// @desc    Get a preview of open requests for public homepage (no auth required)
+// @route   GET /api/requests/public/preview
+// @access  Public
+export const getPublicRequestsPreview = async (req: ExpressRequest, res: Response): Promise<void> => {
+  const requests = await Request.find({ status: "open", isDirect: { $ne: true } })
+    .populate("student", "name city")
+    .sort("-createdAt")
+    .limit(3)
+    .select("subject level budget teachingMode city schedule createdAt student");
+
+  res.status(200).json({ success: true, requests });
 };
