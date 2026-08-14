@@ -39,7 +39,7 @@ export default function Home() {
             TUTORS. Trusted. Transparent.
           </p>
           <p style={{ fontSize: '1rem', color: C.gray500, maxWidth: '640px', margin: '0 auto 0.75rem', lineHeight: '1.75' }}>
-            Pakistan's modern tutoring marketplace where parents and students{" "}
+            Pakistan&apos;s modern tutoring marketplace where parents and students{" "}
             <strong style={{ color: C.primary }}>search, compare, and book tutors</strong>{" "}
             for one-to-one learning—by subject, level, budget, and schedule.
           </p>
@@ -60,7 +60,7 @@ export default function Home() {
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Why TUTORERA®?</h2>
-            <p style={{ color: C.gray500, fontSize: '1.05rem' }}>Because choosing a tutor shouldn't feel risky.</p>
+            <p style={{ color: C.gray500, fontSize: '1.05rem' }}>Because choosing a tutor shouldn&apos;t feel risky.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.5rem' }}>
             {[
