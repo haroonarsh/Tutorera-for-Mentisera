@@ -41,11 +41,7 @@ export default function TopRequestsSection() {
   if (!loading && requests.length === 0) return null;
 
   const handleSeeAll = () => {
-    if (!user) {
-      router.push("/register?role=tutor");
-    } else {
-      router.push("/browse-requests");
-    }
+    router.push("/browse-requests");
   };
 
   return (
