@@ -251,9 +251,12 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     return;
   }
 
-  const bid = await Bid.findById(new Types.ObjectId(req.params.bidId as string));
+  const bid = await Bid.findOne({
+    _id: new Types.ObjectId(req.params.bidId as string),
+    request: new Types.ObjectId(req.params.id as string),
+  });
   if (!bid) {
-    res.status(404).json({ success: false, message: "Bid not found" });
+    res.status(404).json({ success: false, message: "Bid not found or does not belong to this request" });
     return;
   }
 
@@ -478,15 +481,18 @@ export const getMyDirectRequests = async (req: AuthRequest, res: Response): Prom
 // @route   PATCH /api/requests/:id/bids/:bidId/reject
 // @access  Private (student who owns the request, OR the tutor on a direct request)
 export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> => {
-  const bid = await Bid.findById(req.params.bidId);
-  if (!bid) {
-    res.status(404).json({ success: false, message: "Bid not found" });
-    return;
-  }
-
   const request = await Request.findById(req.params.id);
   if (!request) {
     res.status(404).json({ success: false, message: "Request not found" });
+    return;
+  }
+
+  const bid = await Bid.findOne({
+    _id: req.params.bidId,
+    request: req.params.id,
+  });
+  if (!bid) {
+    res.status(404).json({ success: false, message: "Bid not found or does not belong to this request" });
     return;
   }
 

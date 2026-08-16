@@ -27,7 +27,7 @@ interface AuthContextType {
   selectRole: (role: "student" | "tutor") => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -94,9 +94,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const res = await api.post("/auth/reset-password", { email, otp, newPassword });
     return res.data.message;
   };
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.error("Logout request failed:", err);
+      // Continue clearing local state even if the request fails —
+      // the user should never appear "stuck" logged in on the frontend.
+    } finally {
+      localStorage.removeItem("token");
+      setUser(null);
+    }
   };
 
   return (

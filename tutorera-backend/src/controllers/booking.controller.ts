@@ -23,12 +23,14 @@ export const getMyBookings = async (req: AuthRequest, res: Response): Promise<vo
   res.status(200).json({ success: true, total: bookings.length, bookings });
 };
 
-// @desc    Update booking status
+// @desc    Update booking status (student/tutor — limited, safe transitions only)
 // @route   PATCH /api/bookings/:id/status
 // @access  Private
 export const updateBookingStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   const { status, cancelReason } = req.body;
   const userId = req.user?._id;
+  const isStudent = req.user?.role === "student";
+  const isTutor = req.user?.role === "tutor";
 
   const booking = await Booking.findOne({
     _id: req.params.id,
@@ -37,6 +39,32 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
+    return;
+  }
+
+  // ── Explicit, role-restricted state machine ──
+  // Students may only cancel an upcoming booking.
+  // Tutors may only start (mark ongoing) an upcoming booking, or cancel it.
+  // Nobody but admin can mark a booking "completed" — that's a payment-sensitive transition.
+  const allowedTransitions: Record<string, string[]> = {
+    student: ["cancelled"],
+    tutor: ["ongoing", "cancelled"],
+  };
+
+  const actorRole = isStudent ? "student" : isTutor ? "tutor" : null;
+  if (!actorRole || !allowedTransitions[actorRole].includes(status)) {
+    res.status(403).json({
+      success: false,
+      message: "You are not allowed to set this booking status. Completion must be confirmed by an admin.",
+    });
+    return;
+  }
+
+  if (booking.status !== "upcoming") {
+    res.status(400).json({
+      success: false,
+      message: `Booking is already "${booking.status}" and cannot be changed from here.`,
+    });
     return;
   }
 
@@ -64,11 +92,6 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
     } catch (err) {
       console.error("Failed to send cancellation emails:", err);
     }
-  }
-
-  // After booking status is set to "completed":
-  if (status === "completed" && booking.isFirstSession) {
-    await creditReferrerOnFirstBooking(booking.student.toString());
   }
 
   res.status(200).json({ success: true, message: "Booking status updated", booking });

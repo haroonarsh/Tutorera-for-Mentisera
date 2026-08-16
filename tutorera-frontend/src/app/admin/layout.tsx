@@ -67,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Logout */}
       <div style={{ padding: '1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-        <button onClick={() => { logout(); router.push("/"); }}
+        <button onClick={async () => { await logout(); router.push("/"); }}
           style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', borderRadius: '0.5rem', width: '100%', border: 'none', background: 'none', color: '#9ca3af', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>

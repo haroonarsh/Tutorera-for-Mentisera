@@ -28,7 +28,7 @@ interface Conversation {
   _id: string;
   student: { _id: string; name: string; avatar?: string; };
   tutor: { _id: string; name: string; avatar?: string; };
-  booking: { amount: number; status: string; schedule: string; };
+  booking: { amount: number | string; status: string; schedule: string; };
 }
 
 export default function ChatPage() {
@@ -41,7 +41,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -64,7 +64,11 @@ export default function ChatPage() {
     );
 
     newSocket.on("connect", () => {
-      newSocket.emit("join_conversation", conversationId);
+      newSocket.emit("join_conversation", conversationId, (res: { ok: boolean; error?: string }) => {
+        if (!res.ok) {
+          console.error("Failed to join conversation:", res.error);
+        }
+      });
     });
 
     // Receive new message
@@ -80,7 +84,7 @@ export default function ChatPage() {
       }
     });
 
-    setSocket(newSocket);
+    socketRef.current = newSocket;
     return () => {
       newSocket.emit("leave_conversation", conversationId);
       newSocket.disconnect();
@@ -112,12 +116,12 @@ export default function ChatPage() {
   const handleTyping = () => {
     if (!isTyping) {
       setIsTyping(true);
-      socket?.emit("typing", { conversationId, isTyping: true });
+      socketRef.current?.emit("typing", { conversationId, isTyping: true });
     }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      socket?.emit("typing", { conversationId, isTyping: false });
+      socketRef.current?.emit("typing", { conversationId, isTyping: false });
     }, 1500);
   };
 
@@ -128,7 +132,7 @@ export default function ChatPage() {
     setNewMessage("");
 
     // Stop typing
-    socket?.emit("typing", { conversationId, isTyping: false });
+    socketRef.current?.emit("typing", { conversationId, isTyping: false });
     setIsTyping(false);
 
     try {
@@ -190,7 +194,7 @@ export default function ChatPage() {
         {conversation?.booking && (
           <div style={{ backgroundColor: C.gray50, border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
             <p style={{ fontSize: '0.75rem', color: C.gray500 }}>Booking</p>
-            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>Rs. {(conversation.booking as any).amount?.toLocaleString()}</p>
+            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>Rs. {(conversation.booking).amount?.toLocaleString()}</p>
           </div>
         )}
       </div>
