@@ -5,15 +5,15 @@ import {
   createDirectBookingRequest, getMyDirectRequests, rejectBid,
   getPublicRequestsPreview,
 } from "../controllers/request.controller";
-import { protect, authorize } from "../middlewares/auth.middleware";
+import { protect, authorize, optionalAuth } from "../middlewares/auth.middleware";
 import { checkBidLimit } from "../middlewares/bidLimit.middleware";
 
 const router = Router();
 
 router.get("/public/preview", getPublicRequestsPreview);
-router.get("/", protect, getAllRequests);
-router.post("/direct", protect, createDirectBookingRequest);
-router.get("/direct/my", protect, getMyDirectRequests);
+router.get("/", optionalAuth, getAllRequests);
+router.post("/direct", protect, authorize("student"), createDirectBookingRequest);
+router.get("/direct/my", protect, authorize("tutor"), getMyDirectRequests);
 router.patch("/:id/bids/:bidId/reject", protect, rejectBid);
 router.post("/", protect, authorize("student"), createRequest);
 router.get("/my", protect, authorize("student"), getMyRequests);

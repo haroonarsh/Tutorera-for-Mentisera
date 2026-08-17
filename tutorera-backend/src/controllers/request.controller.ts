@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { Response } from "express";
 import { Request as ExpressRequest } from "express"; 
 import { AuthRequest } from "../types";
@@ -244,131 +244,186 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
 // @route   PATCH /api/requests/:id/bids/:bidId/accept
 // @access  Private (student)
 export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
-  const request = await Request.findById(new Types.ObjectId(req.params.id as string));
+  const session = await mongoose.startSession();
 
-  if (!request || request.status !== "open") {
-    res.status(400).json({ success: false, message: "Request not available" });
-    return;
-  }
-
-  const bid = await Bid.findOne({
-    _id: new Types.ObjectId(req.params.bidId as string),
-    request: new Types.ObjectId(req.params.id as string),
-  });
-  if (!bid) {
-    res.status(404).json({ success: false, message: "Bid not found or does not belong to this request" });
-    return;
-  }
-
-  // Authorization: either the student who owns the request, OR the tutor on a direct request accepting their own bid
-  const isOwner = request.student.toString() === req.user?._id?.toString();
-  const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
-
-  if (!isOwner && !isDirectTutorAccept) {
-    res.status(403).json({ success: false, message: "Not authorized to accept this bid" });
-    return;
-  }
-
-  // Accept this bid
-  bid.status = "accepted";
-  await bid.save();
-
-  // Reject all other bids
-  await Bid.updateMany(
-    { request: new Types.ObjectId(req.params.id as string), _id: { $ne: bid._id } },
-    { status: "rejected" }
-  );
-
-  // Close the request
-  request.status = "closed";
-  await request.save();
-
-  // Auto-detect if this is the first booking between this student and this tutor
-  const existingBookingsCount = await Booking.countDocuments({
-    student: request.student,
-    tutor: bid.tutor,
-  });
-
-  const platformFee = Math.round(bid.amount * TOTAL_FEE_PERCENT / 100);
-  const tutorPayout = bid.amount - platformFee;
-
-  // Auto-create booking
-  const booking = await Booking.create({
-    student: request.student,
-    tutor: bid.tutor,
-    request: request._id,
-    bid: bid._id,
-    amount: bid.amount,
-    platformFee,
-    tutorPayout,
-    schedule: request.schedule,
-    teachingMode: request.teachingMode,
-    isFirstSession: existingBookingsCount === 0,
-  });
-
-  // Lock the slot if it's a direct booking with a slot
-  if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
-    await BookedSlot.create({
-      tutor: bid.tutor,
-      student: request.student,
-      booking: booking._id,
-      date: new Date(request.selectedDate),
-      startTime: request.selectedStartTime,
-      endTime: request.selectedEndTime,
-    });
-  }
-
-  const io = req.app.get("io");
-
-  await sendNotification(io, bid.tutor.toString(), {
-    title: "✅ Bid Accepted!",
-    message: "Your bid has been accepted! A booking has been created.",
-    type: "booking",
-    link: "/dashboard",
-  });
-
-  await sendNotification(io, request.student.toString(), {
-    title: "📅 Booking Confirmed — Payment Required",
-    message: `Your booking has been created! Please send Rs. ${bid.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.pk.`,
-    type: "booking",
-    link: "/dashboard",
-  });
-
-  // ── Email notifications (best-effort — don't block the response if email fails) ──
   try {
-    const [tutorUser, studentUser] = await Promise.all([
-      User.findById(bid.tutor).select("name email"),
-      User.findById(request.student).select("name email"),
-    ]);
+    let responseBooking: any = null;
+    let responsePayload: {
+      bidTutor: string;
+      requestStudent: string;
+      isDirect: boolean;
+      selectedDate?: string;
+      selectedStartTime?: string;
+      selectedEndTime?: string;
+      subject: string;
+      amount: number;
+    } | null = null;
 
-    if (tutorUser && studentUser) {
-      if (request.isDirect && request.selectedDate) {
-        // Direct booking — send exact slot details to both
-        const tutorMail = directBookingAcceptedEmail(tutorUser.name, studentUser.name, request.subject, request.selectedDate, request.selectedStartTime, request.selectedEndTime);
-        const studentMail = directBookingAcceptedEmail(studentUser.name, tutorUser.name, request.subject, request.selectedDate, request.selectedStartTime, request.selectedEndTime, { amount: bid.amount });
-        await Promise.all([
-          sendEmail({ to: tutorUser.email, subject: tutorMail.subject, html: tutorMail.html }),
-          sendEmail({ to: studentUser.email, subject: studentMail.subject, html: studentMail.html }),
-        ]);
-      } else {
-        // Regular bid-based booking
-        const bidEmail = bidAcceptedEmail(tutorUser.name, studentUser.name, bid.amount);
-        const bookingEmail = bookingConfirmedEmail(studentUser.name, tutorUser.name, bid.amount);
-        await Promise.all([
-          sendEmail({ to: tutorUser.email, subject: bidEmail.subject, html: bidEmail.html }),
-          sendEmail({ to: studentUser.email, subject: bookingEmail.subject, html: bookingEmail.html }),
-        ]);
+    await session.withTransaction(async () => {
+      const request = await Request.findById(new Types.ObjectId(req.params.id as string)).session(session);
+
+      if (!request || request.status !== "open") {
+        throw { statusCode: 400, message: "Request not available" };
       }
-    }
-  } catch (err) {
-    console.error("Failed to send booking/bid emails:", err);
-  }
 
-  res.status(200).json({
-    success: true,
-    message: "Bid accepted. Booking created successfully.",
-    booking,
-  });
+      const bid = await Bid.findOne({
+        _id: new Types.ObjectId(req.params.bidId as string),
+        request: new Types.ObjectId(req.params.id as string),
+      }).session(session);
+
+      if (!bid) {
+        throw { statusCode: 404, message: "Bid not found or does not belong to this request" };
+      }
+
+      // Authorization: either the student who owns the request, OR the tutor on a direct request accepting their own bid
+      const isOwner = request.student.toString() === req.user?._id?.toString();
+      const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
+
+      if (!isOwner && !isDirectTutorAccept) {
+        throw { statusCode: 403, message: "Not authorized to accept this bid" };
+      }
+
+      // Atomic conditional update — only succeeds if request is still "open".
+      // This is what prevents two concurrent accept calls from both proceeding.
+      const closedRequest = await Request.findOneAndUpdate(
+        { _id: request._id, status: "open" },
+        { status: "closed" },
+        { new: true, session }
+      );
+
+      if (!closedRequest) {
+        throw { statusCode: 409, message: "This request was just accepted or is no longer available." };
+      }
+
+      // Accept this bid
+      bid.status = "accepted";
+      await bid.save({ session });
+
+      // Reject all other bids
+      await Bid.updateMany(
+        { request: request._id, _id: { $ne: bid._id } },
+        { status: "rejected" },
+        { session }
+      );
+
+      // Auto-detect if this is the first booking between this student and this tutor
+      const existingBookingsCount = await Booking.countDocuments({
+        student: request.student,
+        tutor: bid.tutor,
+      }).session(session);
+
+      const platformFee = Math.round(bid.amount * TOTAL_FEE_PERCENT / 100);
+      const tutorPayout = bid.amount - platformFee;
+
+      // Auto-create booking
+      const bookingArr = await Booking.create([{
+        student: request.student,
+        tutor: bid.tutor,
+        request: request._id,
+        bid: bid._id,
+        amount: bid.amount,
+        platformFee,
+        tutorPayout,
+        schedule: request.schedule,
+        teachingMode: request.teachingMode,
+        isFirstSession: existingBookingsCount === 0,
+      }], { session });
+      const booking = bookingArr[0];
+
+      // Lock the slot if it's a direct booking with a slot
+      if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
+        await BookedSlot.create([{
+          tutor: bid.tutor,
+          student: request.student,
+          booking: booking._id,
+          date: new Date(request.selectedDate),
+          startTime: request.selectedStartTime,
+          endTime: request.selectedEndTime,
+        }], { session });
+      }
+
+      responseBooking = booking;
+      responsePayload = {
+        bidTutor: bid.tutor.toString(),
+        requestStudent: request.student.toString(),
+        isDirect: !!request.isDirect,
+        selectedDate: request.selectedDate,
+        selectedStartTime: request.selectedStartTime,
+        selectedEndTime: request.selectedEndTime,
+        subject: request.subject,
+        amount: bid.amount,
+      };
+    });
+
+    // ── Everything below happens AFTER the transaction commits successfully ──
+    // Notifications/emails are best-effort side effects, not part of the atomic write.
+    if (responsePayload && responseBooking) {
+      const payload = responsePayload as {
+        bidTutor: string;
+        requestStudent: string;
+        isDirect: boolean;
+        selectedDate?: string;
+        selectedStartTime?: string;
+        selectedEndTime?: string;
+        subject: string;
+        amount: number;
+      };
+      const io = req.app.get("io");
+
+      await sendNotification(io, payload.bidTutor, {
+        title: "✅ Bid Accepted!",
+        message: "Your bid has been accepted! A booking has been created.",
+        type: "booking",
+        link: "/dashboard",
+      });
+
+      await sendNotification(io, payload.requestStudent, {
+        title: "📅 Booking Confirmed — Payment Required",
+        message: `Your booking has been created! Please send Rs. ${payload.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.pk.`,
+        type: "booking",
+        link: "/dashboard",
+      });
+
+      try {
+        const [tutorUser, studentUser] = await Promise.all([
+          User.findById(payload.bidTutor).select("name email"),
+          User.findById(payload.requestStudent).select("name email"),
+        ]);
+
+        if (tutorUser && studentUser) {
+          if (payload.isDirect && payload.selectedDate) {
+            const tutorMail = directBookingAcceptedEmail(tutorUser.name, studentUser.name, payload.subject, payload.selectedDate, payload.selectedStartTime, payload.selectedEndTime);
+            const studentMail = directBookingAcceptedEmail(studentUser.name, tutorUser.name, payload.subject, payload.selectedDate, payload.selectedStartTime, payload.selectedEndTime, { amount: payload.amount });
+            await Promise.all([
+              sendEmail({ to: tutorUser.email, subject: tutorMail.subject, html: tutorMail.html }),
+              sendEmail({ to: studentUser.email, subject: studentMail.subject, html: studentMail.html }),
+            ]);
+          } else {
+            const bidEmail = bidAcceptedEmail(tutorUser.name, studentUser.name, payload.amount);
+            const bookingEmail = bookingConfirmedEmail(studentUser.name, tutorUser.name, payload.amount);
+            await Promise.all([
+              sendEmail({ to: tutorUser.email, subject: bidEmail.subject, html: bidEmail.html }),
+              sendEmail({ to: studentUser.email, subject: bookingEmail.subject, html: bookingEmail.html }),
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to send booking/bid emails:", err);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Bid accepted. Booking created successfully.",
+        booking: responseBooking,
+      });
+    }
+  } catch (err: any) {
+    const statusCode = err?.statusCode || 500;
+    const message = err?.message || "Failed to accept bid. Please try again.";
+    res.status(statusCode).json({ success: false, message });
+  } finally {
+    await session.endSession();
+  }
 };
 
 // @desc    Create a direct booking request targeted at a specific tutor

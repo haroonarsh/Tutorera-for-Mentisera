@@ -4,9 +4,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import http from "http";
+import helmet from "helmet";
 import connectDB from "./config/db";
 import errorHandler from "./middlewares/errorHandler";
 import { initSocket } from "./utils/socket";
+import { generalLimiter } from "./middlewares/rateLimiters";
 
 import authRoutes from "./routes/auth.routes";
 import tutorRoutes from "./routes/tutor.routes";
@@ -39,6 +41,12 @@ app.set("io", io);
 // Connect DB
 connectDB();
 
+// Security headers
+app.use(helmet());
+
+// Trust proxy — required for correct client IPs behind Render's proxy (needed for rate limiting to work correctly)
+app.set("trust proxy", 1);
+
 // Middlewares
 const allowedOrigins = [
   process.env.CLIENT_URL,
@@ -50,7 +58,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (server-to-server, curl, mobile apps)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -62,6 +69,9 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+
+// General rate limit across all API routes
+app.use("/api", generalLimiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
