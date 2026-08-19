@@ -2,8 +2,12 @@ import { Response } from "express";
 import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 import TutorAvailability from "../models/TutorAvailability.model";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary";
+import { verifyFileSignature } from "../middlewares/upload.middleware";
+
+const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const VIDEO_TYPES = ["video/mp4"];
 
 // @desc    Create or update tutor profile
 // @route   POST /api/tutors/profile
@@ -226,23 +230,40 @@ export const saveOnboardingStep = async (
     });
   }
 
-  else if (stepNum === 2) {
+    else if (stepNum === 2) {
     // Education
     let degreeDocUrl = "";
+    let degreeDocPublicId = "";
+
     if (files?.degreeDoc?.[0]) {
+      const { valid, detectedType } = await verifyFileSignature(files.degreeDoc[0].buffer, DOCUMENT_TYPES);
+      if (!valid) {
+        res.status(400).json({ success: false, message: `Degree document is invalid (detected: ${detectedType || "unknown"})` });
+        return;
+      }
+
+      // Delete old degree doc if this tutor is re-uploading (education array has one entry currently)
+      const oldPublicId = profile.education?.[0]?.degreeDocPublicId;
+      if (oldPublicId) {
+        await deleteFromCloudinary(oldPublicId).catch(() => {});
+      }
+
       const result = await uploadToCloudinary(
         files.degreeDoc[0].buffer,
         "tutorera/degrees",
-        "auto"
+        "auto",
+        true // private — academic records are sensitive
       );
       degreeDocUrl = result.secure_url;
+      degreeDocPublicId = result.public_id;
     }
 
     const education = [{
       degree: parsedData.degree,
       institution: parsedData.institution,
       year: parseInt(parsedData.year),
-      degreeDoc: degreeDocUrl,
+      degreeDoc: degreeDocUrl || profile.education?.[0]?.degreeDoc || "",
+      degreeDocPublicId: degreeDocPublicId || profile.education?.[0]?.degreeDocPublicId || "",
     }];
 
     updateData = { education, onboardingStep: 3 };
@@ -301,37 +322,77 @@ export const saveOnboardingStep = async (
     }
   }
 
-  else if (stepNum === 5) {
+    else if (stepNum === 5) {
     // Verification Docs
     let cnicFrontUrl = "";
+    let cnicFrontPublicId = "";
     let cnicBackUrl = "";
+    let cnicBackPublicId = "";
     let videoIntroUrl = "";
+    let videoIntroPublicId = "";
     let policeCertificateUrl = "";
+    let policeCertificatePublicId = "";
 
     if (files?.cnicFront?.[0]) {
-      const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic");
+      const { valid, detectedType } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES);
+      if (!valid) {
+        res.status(400).json({ success: false, message: `CNIC front is invalid (detected: ${detectedType || "unknown"})` });
+        return;
+      }
+      if (profile.cnicFrontPublicId) {
+        await deleteFromCloudinary(profile.cnicFrontPublicId).catch(() => {});
+      }
+      const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic", "auto", true);
       cnicFrontUrl = result.secure_url;
+      cnicFrontPublicId = result.public_id;
     }
+
     if (files?.cnicBack?.[0]) {
-      const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic");
+      const { valid, detectedType } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES);
+      if (!valid) {
+        res.status(400).json({ success: false, message: `CNIC back is invalid (detected: ${detectedType || "unknown"})` });
+        return;
+      }
+      if (profile.cnicBackPublicId) {
+        await deleteFromCloudinary(profile.cnicBackPublicId).catch(() => {});
+      }
+      const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic", "auto", true);
       cnicBackUrl = result.secure_url;
+      cnicBackPublicId = result.public_id;
     }
+
     if (files?.videoIntro?.[0]) {
-      const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/videos", "auto");
+      const { valid, detectedType } = await verifyFileSignature(files.videoIntro[0].buffer, VIDEO_TYPES);
+      if (!valid) {
+        res.status(400).json({ success: false, message: `Video file is invalid (detected: ${detectedType || "unknown"})` });
+        return;
+      }
+      if (profile.videoIntroPublicId) {
+        await deleteFromCloudinary(profile.videoIntroPublicId, "video").catch(() => {});
+      }
+      const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/videos", "video", false);
       videoIntroUrl = result.secure_url;
+      videoIntroPublicId = result.public_id;
     }
+
     if (files?.policeCertificate?.[0]) {
-      const result = await uploadToCloudinary(
-        files.policeCertificate[0].buffer,
-        "tutorera/police-certificates",
-        "auto"   // accepts both image and PDF
-      );
+      const { valid, detectedType } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
+      if (!valid) {
+        res.status(400).json({ success: false, message: `Police certificate is invalid (detected: ${detectedType || "unknown"})` });
+        return;
+      }
+      if (profile.policeCertificatePublicId) {
+        await deleteFromCloudinary(profile.policeCertificatePublicId).catch(() => {});
+      }
+      const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/police-certificates", "auto", true);
       policeCertificateUrl = result.secure_url;
+      policeCertificatePublicId = result.public_id;
     }
+
     // Validation: in-person tutors MUST upload police certificate
     const teachingMode = profile.teachingMode;
-      if ((teachingMode === "in-person" || teachingMode === "both") && !policeCertificateUrl) {
-        res.status(400).json({
+    if ((teachingMode === "in-person" || teachingMode === "both") && !policeCertificateUrl && !profile.policeCertificate) {
+      res.status(400).json({
         success: false,
         message: "Police clearance certificate is required for in-person tutoring.",
       });
@@ -339,10 +400,10 @@ export const saveOnboardingStep = async (
     }
 
     updateData = {
-      ...(cnicFrontUrl && { cnicFront: cnicFrontUrl }),
-      ...(cnicBackUrl && { cnicBack: cnicBackUrl }),
-      ...(videoIntroUrl && { videoIntro: videoIntroUrl }),
-      ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl }),
+      ...(cnicFrontUrl && { cnicFront: cnicFrontUrl, cnicFrontPublicId }),
+      ...(cnicBackUrl && { cnicBack: cnicBackUrl, cnicBackPublicId }),
+      ...(videoIntroUrl && { videoIntro: videoIntroUrl, videoIntroPublicId }),
+      ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl, policeCertificatePublicId }),
       onboardingStep: 5,
       onboardingComplete: true,
       verificationStatus: "pending",

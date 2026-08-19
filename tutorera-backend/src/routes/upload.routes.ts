@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { uploadAvatar, uploadVerificationDocs } from "../controllers/upload.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
-import { upload } from "../middlewares/upload.middleware";
+import { uploadAvatar as uploadAvatarMulter, uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
 import { uploadLimiter } from "../middlewares/rateLimiters";
 
 const router = Router();
@@ -11,16 +11,17 @@ router.post(
   "/avatar",
   uploadLimiter,
   protect,
-  upload.single("avatar"),
+  uploadAvatarMulter.single("avatar"),
   uploadAvatar
 );
 
 // Verification docs — tutor only
 router.post(
   "/verification",
+  uploadLimiter,
   protect,
   authorize("tutor"),
-  upload.fields([
+  uploadVerificationMulter.fields([
     { name: "cnic", maxCount: 1 },
     { name: "degree", maxCount: 1 },
     { name: "videoIntro", maxCount: 1 },

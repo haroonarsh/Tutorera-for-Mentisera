@@ -19,6 +19,7 @@ import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import sendEmail from "../utils/sendEmail";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail } from "../utils/emailTemplates";
+import { getSignedViewUrl } from "../utils/uploadToCloudinary";
 
 // @desc    Get dashboard stats
 // @route   GET /api/admin/stats
@@ -1155,4 +1156,38 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   }
 
   res.status(400).json({ success: false, message: "Invalid format. Use pdf or excel." });
+};
+
+// @desc    Get a short-lived signed URL to view a tutor's private verification document
+// @route   GET /api/admin/tutors/:id/document/:field
+// @access  Private (admin)
+export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id, field } = req.params as { id: string; field: string };
+  const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
+
+  if (!allowedFields.includes(field)) {
+    res.status(400).json({ success: false, message: "Invalid document field" });
+    return;
+  }
+
+  const profile = await TutorProfile.findById(id);
+  if (!profile) {
+    res.status(404).json({ success: false, message: "Tutor profile not found" });
+    return;
+  }
+
+  let publicId: string | undefined;
+  if (field === "degreeDoc") {
+    publicId = profile.education?.[0]?.degreeDocPublicId;
+  } else {
+    publicId = (profile as any)[`${field}PublicId`];
+  }
+
+  if (!publicId) {
+    res.status(404).json({ success: false, message: "Document not found" });
+    return;
+  }
+
+  const signedUrl = getSignedViewUrl(publicId, "image", 300);
+  res.status(200).json({ success: true, url: signedUrl });
 };

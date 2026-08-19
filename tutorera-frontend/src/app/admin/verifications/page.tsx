@@ -83,6 +83,15 @@ export default function VerificationsPage() {
     }
   };
 
+  const handleViewDocument = async (tutorId: string, field: string) => {
+    try {
+      const res = await api.get(`/admin/tutors/${tutorId}/document/${field}`);
+      window.open(res.data.url, "_blank");
+    } catch {
+      alert("Failed to load document. It may not exist.");
+    }
+  };
+
   const statusBadge = (status: string) => {
     const colors: Record<string, { bg: string; color: string }> = {
       pending: { bg: '#fffbeb', color: '#d97706' },
@@ -210,10 +219,10 @@ export default function VerificationsPage() {
                           <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary }}>{edu.degree}</p>
                           <p style={{ fontSize: '0.8rem', color: C.gray500 }}>{edu.institution} — {edu.year}</p>
                           {edu.degreeDoc && (
-                            <a href={edu.degreeDoc} target="_blank" rel="noopener noreferrer"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none', marginTop: '0.3rem' }}>
+                            <button onClick={() => handleViewDocument(tutor._id, "degreeDoc")}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '0.3rem' }}>
                               <Download size={12} /> View Degree Certificate
-                            </a>
+                            </button>
                           )}
                         </div>
                       )) : <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No education data</p>}
@@ -255,12 +264,13 @@ export default function VerificationsPage() {
                       <h3 style={{ fontSize: '0.85rem', fontWeight: '700', color: C.primary, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔐 Verification Docs</h3>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {[
-                          { label: "CNIC Front", url: tutor.cnicFront },
-                          { label: "CNIC Back", url: tutor.cnicBack },
-                          { label: "Video Intro", url: tutor.videoIntro },
+                          { label: "CNIC Front", url: tutor.cnicFront, field: "cnicFront" },
+                          { label: "CNIC Back", url: tutor.cnicBack, field: "cnicBack" },
+                          { label: "Video Intro", url: tutor.videoIntro, field: "videoIntro" },
                           {
                             label: "Police Certificate",
                             url: tutor.policeCertificate,
+                            field: "policeCertificate",
                             required: tutor.teachingMode === "in-person" || tutor.teachingMode === "both",
                           },
                         ].map(doc => (
@@ -272,14 +282,20 @@ export default function VerificationsPage() {
                               )}
                               </span>
                             {doc.url ? (
-                              <a href={doc.url} target="_blank" rel="noopener noreferrer"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
-                                <Download size={12} /> View
-                              </a>
+                              doc.field === "videoIntro" ? (
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
+                                  <Download size={12} /> View
+                                </a>
+                              ) : (
+                                <button onClick={() => handleViewDocument(tutor._id, doc.field)}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                  <Download size={12} /> View
+                                </button>
+                              )
                             ) : (
                               <span style={{
                                 fontSize: '0.75rem',
-                                // Red "Missing" if it was required, grey "Not uploaded" if optional
                                 color: "required" in doc && doc.required ? '#ef4444' : '#9ca3af',
                                 fontWeight: "required" in doc && doc.required ? '600' : '400',
                               }}>

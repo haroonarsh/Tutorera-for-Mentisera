@@ -19,6 +19,7 @@ import {
   getBroadcasts,
   sendBroadcast,
   getSubscriptions,
+  getTutorDocumentUrl,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -40,6 +41,7 @@ router.get("/audit-logs", getAuditLogs);
 router.post("/broadcasts", sendBroadcast);
 router.get("/broadcasts",  getBroadcasts);
 router.get("/subscriptions", getSubscriptions);
+router.get("/tutors/:id/document/:field", getTutorDocumentUrl);
 router.patch("/users/:id/plan", protect, authorize("admin"), updateUserPlan);
 router.get("/tutors/:id", getTutorFullData);
 router.patch("/verify/:id", verifyTutor);

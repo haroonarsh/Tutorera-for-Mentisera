@@ -512,7 +512,7 @@ export default function TutorOnboardingPage() {
                 <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '1rem' }}>
                   <p style={{ color: '#92400e', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.3rem' }}>⏳ Review Process</p>
                   <p style={{ color: '#a16207', fontSize: '0.8rem', lineHeight: '1.5' }}>
-                    After submission, our team will review your documents within 24–48 hours. You'll receive an email notification once approved.
+                    After submission, our team will review your documents within 24–48 hours. You&apos;ll receive an email notification once approved.
                   </p>
                 </div>
 

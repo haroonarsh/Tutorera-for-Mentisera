@@ -14,7 +14,7 @@ import {
 } from "../controllers/availability.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, tutorProfileSchema } from "../validators/tutor.validator";
-import { upload } from "../middlewares/upload.middleware";
+import { uploadVerification } from "../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 
 // Onboarding
 router.get("/onboarding/status", protect, authorize("tutor"), getOnboardingStatus);
-router.post("/onboarding/step", protect, authorize("tutor"), upload.fields([
+router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.fields([
   { name: "degreeDoc", maxCount: 1 },
   { name: "cnicFront", maxCount: 1 },
   { name: "cnicBack", maxCount: 1 },

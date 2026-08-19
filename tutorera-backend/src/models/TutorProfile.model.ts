@@ -16,6 +16,7 @@ export interface ITutorProfile extends Document {
     institution: string;
     year: number;
     degreeDoc: string;
+    degreeDocPublicId: string;
   }[];
 
   // Step 3 — Experience
@@ -35,9 +36,13 @@ export interface ITutorProfile extends Document {
 
   // Step 5 — Verification
   cnicFront: string;
+  cnicFrontPublicId: string;
   cnicBack: string;
+  cnicBackPublicId: string;
   videoIntro: string;
+  videoIntroPublicId: string;
   policeCertificate: string;
+  policeCertificatePublicId: string;
 
   // Status
   onboardingStep: number;
@@ -71,6 +76,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       institution: { type: String, trim: true },
       year: { type: Number },
       degreeDoc: { type: String, default: "" },
+      degreeDocPublicId: { type: String, default: "" },
     }],
 
     // Step 3
@@ -93,9 +99,13 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
 
     // Step 5
     cnicFront: { type: String, default: "" },
+    cnicFrontPublicId: { type: String, default: "" },
     cnicBack: { type: String, default: "" },
+    cnicBackPublicId: { type: String, default: "" },
     videoIntro: { type: String, default: "" },
+    videoIntroPublicId: { type: String, default: "" },
     policeCertificate: { type: String, default: "" },
+    policeCertificatePublicId: { type: String, default: "" },
 
     // Status
     onboardingStep: { type: Number, default: 1 },
