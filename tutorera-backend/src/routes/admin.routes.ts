@@ -28,6 +28,7 @@ import {
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
+import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.patch("/contacts/:id", updateContactStatus);
 router.patch("/bookings/:id/status", updateBookingStatus);
 router.get("/reports", generateReport);
 router.get("/guarantee-claims", getAllClaims);
-router.patch("/guarantee-claims/:id", updateClaimStatus);
+router.patch("/guarantee-claims/:id", validateGuarantee(updateClaimStatusSchema), updateClaimStatus);
 router.get("/referrals", getAllReferrals);
 router.get("/student-ratings", getAllStudentRatings);
 router.get("/student-ratings/:studentId", getStudentRatings);

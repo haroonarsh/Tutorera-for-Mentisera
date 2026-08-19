@@ -14,6 +14,7 @@ import {
 } from "../controllers/availability.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, tutorProfileSchema } from "../validators/tutor.validator";
+import { validate as validateAvailability, saveAvailabilitySchema } from "../validators/availability.validator";
 import { uploadVerification } from "../middlewares/upload.middleware";
 
 const router = Router();
@@ -24,7 +25,7 @@ router.get("/:tutorUserId/availability", getTutorAvailability);
 router.get("/:id", getTutorById);
 
 // Availability (tutor)
-router.post("/availability", protect, authorize("tutor"), saveAvailability);
+router.post("/availability", protect, authorize("tutor"), validateAvailability(saveAvailabilitySchema), saveAvailability);
 router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 
 // Onboarding
