@@ -27,13 +27,24 @@ export default function ContactsPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "support" | "general">("all");
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [counts, setCounts] = useState({ all: 0, support: 0, general: 0 });
 
-  useEffect(() => {
-    api.get("/admin/contacts")
-      .then(res => setContacts(res.data.contacts))
+  const fetchContacts = (page: number = 1, type: string = filter) => {
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: "30" });
+    if (type !== "all") params.set("type", type);
+    api.get(`/admin/contacts?${params.toString()}`)
+      .then(res => {
+        setContacts(res.data.contacts);
+        setPagination(res.data.pagination);
+        setCounts(res.data.counts);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchContacts(1, filter); }, [filter]);
 
   const handleStatusChange = async (id: string, newStatus: Contact["status"]) => {
     setStatusLoading(id);
@@ -49,14 +60,14 @@ export default function ContactsPage() {
     }
   };
 
-  const filtered = contacts.filter(c => {
-    if (filter === "all") return true;
-    return c.type === filter;
-  });
+  // const filtered = contacts.filter(c => {
+  //   if (filter === "all") return true;
+  //   return c.type === filter;
+  // });
 
-  // Counts for tab badges
-  const supportCount = contacts.filter(c => c.type === "support" && c.status === "open").length;
-  const generalCount = contacts.filter(c => c.type !== "support").length;
+  // // Counts for tab badges
+  // const supportCount = contacts.filter(c => c.type === "support" && c.status === "open").length;
+  // const generalCount = contacts.filter(c => c.type !== "support").length;
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -68,9 +79,9 @@ export default function ContactsPage() {
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
-          { key: "all", label: "All", count: contacts.length },
-          { key: "support", label: "🆘 Support Requests", count: supportCount },
-          { key: "general", label: "General Contact", count: generalCount },
+          { key: "all", label: "All", count: counts.all },
+          { key: "support", label: "🆘 Support Requests", count: counts.support },
+          { key: "general", label: "General Contact", count: counts.general },
         ].map(tab => (
           <button key={tab.key} onClick={() => setFilter(tab.key as typeof filter)}
             style={{
@@ -105,14 +116,14 @@ export default function ContactsPage() {
           <div style={{ width: '36px', height: '36px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : contacts.length === 0 ? (
         <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
           <MessageSquare size={40} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
           <p style={{ color: C.gray500 }}>No messages in this category.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filtered.map(contact => {
+          {contacts.map(contact => {
             const isSupport = contact.type === "support";
             const isUrgent = contact.priority === "urgent";
             const isResolved = contact.status === "resolved";
@@ -250,6 +261,21 @@ export default function ContactsPage() {
               </div>
             );
           })}
+        {!loading && pagination.pages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
+          <button onClick={() => fetchContacts(pagination.page - 1, filter)} disabled={pagination.page <= 1}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page <= 1 ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
+            ← Previous
+          </button>
+          <span style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '0.85rem', color: C.gray500, fontWeight: '600' }}>
+            Page {pagination.page} of {pagination.pages}
+          </span>
+          <button onClick={() => fetchContacts(pagination.page + 1, filter)} disabled={pagination.page >= pagination.pages}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page >= pagination.pages ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
+            Next →
+          </button>
+        </div>
+      )}
         </div>
       )}
     </div>

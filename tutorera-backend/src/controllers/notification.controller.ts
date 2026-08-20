@@ -9,16 +9,34 @@ export const getMyNotifications = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
+  const { page = "1", limit = "20" } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await Notification.countDocuments({ user: req.user?._id });
+
   const notifications = await Notification.find({ user: req.user?._id })
     .sort("-createdAt")
-    .limit(20);
+    .skip(skip)
+    .limit(limitNum);
 
   const unreadCount = await Notification.countDocuments({
     user: req.user?._id,
     isRead: false,
   });
 
-  res.status(200).json({ success: true, notifications, unreadCount });
+  res.status(200).json({
+    success: true,
+    notifications,
+    unreadCount,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
 };
 
 // @desc    Mark notification as read

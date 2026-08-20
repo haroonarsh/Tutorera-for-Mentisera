@@ -5,6 +5,7 @@ import GuaranteeClaim from "../models/GuaranteeClaim.model";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
+import { escapeHtml } from "../utils/escapeHtml";
 
 // @desc    Submit a first session guarantee claim
 // @route   POST /api/guarantee/claim
@@ -56,7 +57,7 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
   // Email to admin
   await sendEmail({
     to: process.env.EMAIL_USER as string,
-    subject: `🔴 First Session Guarantee Claim — ${req.user?.name}`,
+    subject: `🔴 First Session Guarantee Claim — ${escapeHtml(req.user?.name)}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">First Session Guarantee Claim</h2>
@@ -64,12 +65,12 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
           A student was not satisfied with their first session and is requesting a remedy.
         </p>
         <hr />
-        <p><strong>Student:</strong> ${req.user?.name} (${req.user?.email})</p>
-        <p><strong>Tutor:</strong> ${tutor.name} (${tutor.email})</p>
-        <p><strong>Booking ID:</strong> ${bookingId}</p>
+        <p><strong>Student:</strong> ${escapeHtml(req.user?.name)} (${escapeHtml(req.user?.email)})</p>
+        <p><strong>Tutor:</strong> ${escapeHtml(tutor.name)} (${escapeHtml(tutor.email)})</p>
+        <p><strong>Booking ID:</strong> ${escapeHtml(bookingId)}</p>
         <p><strong>Amount Paid:</strong> Rs. ${booking.amount.toLocaleString()}</p>
-        <p><strong>Reason:</strong> ${reason}</p>
-        ${details ? `<p><strong>Details:</strong></p><p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${details}</p>` : ""}
+        <p><strong>Reason:</strong> ${escapeHtml(reason)}</p>
+        ${details ? `<p><strong>Details:</strong></p><p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(details)}</p>` : ""}
         <hr />
         <p style="color: #6b7280; font-size: 0.875rem;">
           Please review this claim in the admin panel and take appropriate action.
@@ -85,11 +86,11 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
     subject: "Your First Session Guarantee Claim — TUTORERA®",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">We received your claim, ${req.user?.name}!</h2>
+        <h2 style="color: #1a1a2e;">We received your claim, ${escapeHtml(req.user?.name)}!</h2>
         <p>Our team will review your first session guarantee claim and get back to you within <strong>24–48 hours</strong>.</p>
         <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin: 1rem 0;">
-          <p style="margin: 0 0 0.5rem;"><strong>Your reason:</strong> ${reason}</p>
-          ${details ? `<p style="margin: 0;"><strong>Details:</strong> ${details}</p>` : ""}
+          <p style="margin: 0 0 0.5rem;"><strong>Your reason:</strong> ${escapeHtml(reason)}</p>
+          ${details ? `<p style="margin: 0;"><strong>Details:</strong> ${escapeHtml(details)}</p>` : ""}
         </div>
         <p>If approved, we will either:</p>
         <ul>
@@ -147,9 +148,9 @@ export const updateClaimStatus = async (req: AuthRequest, res: Response): Promis
       subject: "✅ Your Guarantee Claim Was Approved — TUTORERA®",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #16a34a;">Great news, ${student.name}!</h2>
+          <h2 style="color: #16a34a;">Great news, ${escapeHtml(student.name)}!</h2>
           <p>Your first session guarantee claim has been <strong>approved</strong>.</p>
-          ${adminNote ? `<p><strong>Note from our team:</strong> ${adminNote}</p>` : ""}
+          ${adminNote ? `<p><strong>Note from our team:</strong> ${escapeHtml(adminNote)}</p>` : ""}
           <p>Our team will contact you shortly to arrange your session credit or refund.</p>
           <hr />
           <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
@@ -162,9 +163,9 @@ export const updateClaimStatus = async (req: AuthRequest, res: Response): Promis
       subject: "Update on your Guarantee Claim — TUTORERA®",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a1a2e;">Update on your claim, ${student.name}</h2>
+          <h2 style="color: #1a1a2e;">Update on your claim, ${escapeHtml(student.name)}</h2>
           <p>After reviewing your first session guarantee claim, we were unable to approve it at this time.</p>
-          ${adminNote ? `<p><strong>Reason:</strong> ${adminNote}</p>` : ""}
+          ${adminNote ? `<p><strong>Reason:</strong> ${escapeHtml(adminNote)}</p>` : ""}
           <p>If you have questions, please contact our support team.</p>
           <hr />
           <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>

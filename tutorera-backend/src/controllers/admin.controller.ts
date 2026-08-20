@@ -58,14 +58,34 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 // @access  Private (admin)
 export const getPendingVerifications = async (req: AuthRequest, res: Response): Promise<void> => {
   const status = (req.query.status as string) || "pending";
+  const { page = "1", limit = "20" } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await TutorProfile.countDocuments({
+    verificationStatus: status as "pending" | "approved" | "rejected",
+  });
 
   const tutors = await TutorProfile.find({
     verificationStatus: status as "pending" | "approved" | "rejected",
   })
     .populate("user", "name email phone city createdAt")
-    .sort("-createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum);
 
-  res.status(200).json({ success: true, total: tutors.length, tutors });
+  res.status(200).json({
+    success: true,
+    total,
+    tutors,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
 };
 
 // @desc    Get single tutor full data
@@ -151,18 +171,23 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
 // @route   GET /api/admin/users
 // @access  Private (admin)
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { role, page = "1", limit = "20" } = req.query;
+  const { role, search, page = "1", limit = "20" } = req.query;
   const filter: Record<string, unknown> = {};
-  if (role) filter.role = role;
+  if (role && role !== "all") filter.role = role;
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  if (search && (search as string).trim()) {
+    const searchRegex = new RegExp((search as string).trim(), "i");
+    filter.$or = [{ name: searchRegex }, { email: searchRegex }];
+  }
+
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await User.countDocuments(filter);
   const users = await User.find(filter).skip(skip).limit(limitNum).sort("-createdAt");
 
-  res.status(200).json({ success: true, total, page: pageNum, users });
+  res.status(200).json({ success: true, total, page: pageNum, pages: Math.ceil(total / limitNum), users });
 };
 
 // @desc    Toggle user status
@@ -197,8 +222,8 @@ export const getAllBookings = async (req: AuthRequest, res: Response): Promise<v
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Booking.countDocuments(filter);
@@ -303,10 +328,45 @@ export const updatePaymentStatus = async (
 // @route   GET /api/admin/contacts
 // @access  Private (admin)
 export const getAllContacts = async (req: AuthRequest, res: Response): Promise<void> => {
-  const contacts = await Contact.find().sort("-createdAt");
-  res.status(200).json({ success: true, total: contacts.length, contacts });
-};
+  const { type, page = "1", limit = "30" } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 30));
+  const skip = (pageNum - 1) * limitNum;
 
+  const filter: Record<string, unknown> = {};
+  if (type && type !== "all") {
+    if (type === "support") {
+      filter.type = "support";
+    } else if (type === "general") {
+      filter.type = { $ne: "support" };
+    }
+  }
+
+  const total = await Contact.countDocuments(filter);
+
+  const contacts = await Contact.find(filter)
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum);
+
+  // Counts for tab badges — computed across ALL contacts, not just current page
+  const supportOpenCount = await Contact.countDocuments({ type: "support", status: "open" });
+  const generalCount = await Contact.countDocuments({ type: { $ne: "support" } });
+  const allCount = await Contact.countDocuments();
+
+  res.status(200).json({
+    success: true,
+    total,
+    contacts,
+    counts: { all: allCount, support: supportOpenCount, general: generalCount },
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
+};
 
 // @desc    Update contact/support request status
 // @route   PATCH /api/admin/contacts/:id
@@ -434,16 +494,24 @@ export const updateUserPlan = async (req: AuthRequest, res: Response): Promise<v
 // @route   GET /api/admin/subscriptions
 // @access  Private (admin)
 export const getSubscriptions = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { plan } = req.query; // optional filter: "standard" | "premium"
+  const { plan, page = "1", limit = "30" } = req.query;
 
   const filter: Record<string, unknown> = { plan: { $ne: "free" } };
   if (plan && ["standard", "premium"].includes(plan as string)) {
     filter.plan = plan;
   }
 
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 30));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await User.countDocuments(filter);
+
   const users = await User.find(filter)
     .select("name email role plan bidsThisMonth requestsThisMonth createdAt")
-    .sort("-createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum);
 
   const counts = {
     standard: await User.countDocuments({ plan: "standard" }),
@@ -452,9 +520,15 @@ export const getSubscriptions = async (req: AuthRequest, res: Response): Promise
 
   res.status(200).json({
     success: true,
-    total: users.length,
+    total,
     counts,
     users,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
   });
 };
 
@@ -625,15 +699,15 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
 // @access  Private (admin)
 export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<void> => {
   const { action, entity, page = "1", limit = "50" } = req.query;
- 
+
   const filter: Record<string, unknown> = {};
   if (action && action !== "all") filter.action = action;
   if (entity && entity !== "all") filter.entity = entity;
- 
-  const pageNum  = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+
+  const pageNum  = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 50));
   const skip     = (pageNum - 1) * limitNum;
- 
+
   const [total, logs] = await Promise.all([
     AuditLog.countDocuments(filter),
     AuditLog.find(filter)
@@ -641,13 +715,12 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
       .skip(skip)
       .limit(limitNum),
   ]);
- 
-  // Distinct values for filter dropdowns
+
   const [actions, entities] = await Promise.all([
     AuditLog.distinct("action"),
     AuditLog.distinct("entity"),
   ]);
- 
+
   res.status(200).json({
     success: true,
     total,

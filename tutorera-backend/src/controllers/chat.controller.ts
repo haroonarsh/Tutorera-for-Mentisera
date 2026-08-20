@@ -68,18 +68,36 @@ export const getMyConversations = async (
 ): Promise<void> => {
   const userId = req.user?._id;
   const role = req.user?.role;
+  const { page = "1", limit = "20" } = req.query;
 
   const filter = role === "student"
     ? { student: userId }
     : { tutor: userId };
 
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await Conversation.countDocuments(filter);
+
   const conversations = await Conversation.find(filter)
     .populate("student", "name avatar")
     .populate("tutor", "name avatar")
     .populate("booking", "amount status schedule")
-    .sort("-lastMessageAt");
+    .sort("-lastMessageAt")
+    .skip(skip)
+    .limit(limitNum);
 
-  res.status(200).json({ success: true, conversations });
+  res.status(200).json({
+    success: true,
+    conversations,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
 };
 
 // @desc    Get messages for a conversation
@@ -91,6 +109,7 @@ export const getMessages = async (
 ): Promise<void> => {
   const { conversationId } = req.params;
   const userId = req.user?._id;
+  const { page = "1", limit = "50" } = req.query;
 
   // Verify user is part of conversation
   const conversation = await Conversation.findById(conversationId);
@@ -108,9 +127,21 @@ export const getMessages = async (
     return;
   }
 
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 50));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await Message.countDocuments({ conversation: conversationId });
+
+  // Fetch newest messages first for pagination, then reverse so the client
+  // still renders oldest-to-newest within the page (natural chat reading order).
   const messages = await Message.find({ conversation: conversationId })
     .populate("sender", "name avatar")
-    .sort("createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum);
+
+  messages.reverse();
 
   // Mark messages as read
   await Message.updateMany(
@@ -118,7 +149,16 @@ export const getMessages = async (
     { isRead: true }
   );
 
-  res.status(200).json({ success: true, messages });
+  res.status(200).json({
+    success: true,
+    messages,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
 };
 
 // @desc    Send a message

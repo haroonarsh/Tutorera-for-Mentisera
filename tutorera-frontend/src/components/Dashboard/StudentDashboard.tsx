@@ -477,6 +477,9 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [showModal, setShowModal]       = useState(false);
   const [favourites, setFavourites]     = useState<TutorProfile[]>([]);
   const [loadingF, setLoadingF]         = useState(false);
+  const [bookingsHasMore, setBookingsHasMore] = useState(false);
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
 
   const fetchFavourites = useCallback(async () => {
     setLoadingF(true);
@@ -506,9 +509,27 @@ const fetchRequests = useCallback(async () => {
     try {
       const res = await axiosInstance.get("/bookings");
       setBookings(res.data.bookings ?? []);
+      setBookingsHasMore(res.data.pagination ? res.data.pagination.page < res.data.pagination.pages : false);
+      setBookingsPage(1);
     } catch { setBookings([]); }
     finally { setLoadingB(false); }
   }, []);
+
+  const loadMoreBookings = async () => {
+    if (loadingMoreBookings) return;
+    setLoadingMoreBookings(true);
+    try {
+      const nextPage = bookingsPage + 1;
+      const res = await axiosInstance.get(`/bookings?page=${nextPage}`);
+      setBookings(prev => [...prev, ...(res.data.bookings ?? [])]);
+      setBookingsHasMore(res.data.pagination.page < res.data.pagination.pages);
+      setBookingsPage(nextPage);
+    } catch (err) {
+      console.error("Failed to load more bookings:", err);
+    } finally {
+      setLoadingMoreBookings(false);
+    }
+  };
 
   useEffect(() => { fetchRequests(); fetchBookings(); }, [fetchRequests, fetchBookings]);
 
@@ -672,7 +693,17 @@ const fetchRequests = useCallback(async () => {
                 <p className={s.emptyDesc}>Accept a tutor bid from your requests to create a booking.</p>
               </div>
             ) : (
-              bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)
+              <>
+                {bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)}
+                {bookingsHasMore && (
+                  <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                    <button onClick={loadMoreBookings} disabled={loadingMoreBookings}
+                      style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingMoreBookings ? 'not-allowed' : 'pointer' }}>
+                      {loadingMoreBookings ? "Loading..." : "Load More Bookings"}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         )}

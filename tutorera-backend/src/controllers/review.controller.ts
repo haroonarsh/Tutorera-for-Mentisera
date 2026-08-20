@@ -60,9 +60,28 @@ export const createReview = async (req: AuthRequest, res: Response): Promise<voi
 // @route   GET /api/reviews/:tutorId
 // @access  Public
 export const getTutorReviews = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { page = "1", limit = "10" } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await Review.countDocuments({ tutor: req.params.tutorId });
+
   const reviews = await Review.find({ tutor: req.params.tutorId })
     .populate("student", "name avatar")
-    .sort("-createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum);
 
-  res.status(200).json({ success: true, total: reviews.length, reviews });
+  res.status(200).json({
+    success: true,
+    total,
+    reviews,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
 };

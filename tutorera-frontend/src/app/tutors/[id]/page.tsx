@@ -24,6 +24,9 @@ export default function TutorDetailPage() {
   const { isFavourited, toggleFavourite, isStudent, loaded } = useFavourites();
   const [togglingFav, setTogglingFav] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewPagination, setReviewPagination] = useState({ pages: 1 });
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +42,7 @@ export default function TutorDetailPage() {
           api.get(`/tutors/${tutorData.user._id}/availability`),
         ]);
         setReviews(reviewRes.data.reviews);
+        setReviewPagination(reviewRes.data.pagination);
         setAvailabilitySlots(availRes.data.slots || []);
       } catch (err) {
         console.error(err);
@@ -54,6 +58,22 @@ export default function TutorDetailPage() {
     setTogglingFav(true);
     await toggleFavourite(tutor._id);
     setTogglingFav(false);
+  };
+
+  const handleLoadMoreReviews = async () => {
+    if (!tutor || loadingReviews) return;
+    setLoadingReviews(true);
+    try {
+      const nextPage = reviewPage + 1;
+      const res = await api.get(`/reviews/${tutor.user._id}?page=${nextPage}`);
+      setReviews(prev => [...prev, ...res.data.reviews]);
+      setReviewPagination(res.data.pagination);
+      setReviewPage(nextPage);
+    } catch (err) {
+      console.error("Failed to load more reviews:", err);
+    } finally {
+      setLoadingReviews(false);
+    }
   };
 
   if (loading) return (
@@ -316,6 +336,14 @@ export default function TutorDetailPage() {
                   <p style={{ color: C.gray500, fontSize: '0.9rem', lineHeight: '1.6' }}>{review.comment}</p>
                 </div>
               ))}
+              {reviewPagination.pages > reviewPage && (
+                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                  <button onClick={handleLoadMoreReviews} disabled={loadingReviews}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingReviews ? 'not-allowed' : 'pointer' }}>
+                    {loadingReviews ? "Loading..." : "Load More Reviews"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

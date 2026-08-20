@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../types";
 import Contact from "../models/Contact.model";
 import sendEmail from "../utils/sendEmail";
+import { escapeHtml } from "../utils/escapeHtml";
 
 // @desc    Submit contact form
 // @route   POST /api/contact
@@ -15,17 +16,17 @@ export const submitContact = async (req: Request, res: Response): Promise<void> 
   // Send email notification to admin
   await sendEmail({
     to: process.env.EMAIL_USER as string,
-    subject: `New Contact Message: ${subject}`,
+    subject: `New Contact Message: ${escapeHtml(subject)}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">New Contact Form Submission</h2>
         <hr />
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(phone) || "Not provided"}</p>
+        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
         <p><strong>Message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${message}</p>
+        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Contact System</p>
       </div>
@@ -38,11 +39,11 @@ export const submitContact = async (req: Request, res: Response): Promise<void> 
     subject: "We received your message — TUTORERA®",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">Thank you, ${name}!</h2>
+        <h2 style="color: #1a1a2e;">Thank you, ${escapeHtml(name)}!</h2>
         <p>We've received your message and will get back to you within 24 hours.</p>
         <hr />
         <p><strong>Your message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${message}</p>
+        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
       </div>
@@ -92,19 +93,19 @@ export const submitSupportRequest = async (req: AuthRequest, res: Response): Pro
   // Email to admin — includes booking context for quick lookup
   await sendEmail({
     to: process.env.EMAIL_USER as string,
-    subject: `🆘 Support Request${priority === "urgent" ? " — URGENT" : ""}: ${subject}`,
+    subject: `🆘 Support Request${priority === "urgent" ? " — URGENT" : ""}: ${escapeHtml(subject)}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">New In-Session Support Request</h2>
         ${priority === "urgent" ? `<p style="background:#fef2f2;color:#ef4444;padding:0.5rem 1rem;border-radius:0.5rem;font-weight:700;">⚠ Marked as URGENT</p>` : ""}
         <hr />
-        <p><strong>From:</strong> ${user?.name} (${user?.role})</p>
-        <p><strong>Email:</strong> ${user?.email}</p>
-        <p><strong>Phone:</strong> ${user?.phone || "Not provided"}</p>
-        <p><strong>Booking ID:</strong> ${bookingId || "Not linked"}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>From:</strong> ${escapeHtml(user?.name)} (${escapeHtml(user?.role)})</p>
+        <p><strong>Email:</strong> ${escapeHtml(user?.email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(user?.phone) || "Not provided"}</p>
+        <p><strong>Booking ID:</strong> ${escapeHtml(bookingId) || "Not linked"}</p>
+        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
         <p><strong>Message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${message}</p>
+        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Support System</p>
       </div>
@@ -117,12 +118,12 @@ export const submitSupportRequest = async (req: AuthRequest, res: Response): Pro
     subject: "We received your support request — TUTORERA®",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">Thanks, ${user?.name}!</h2>
+        <h2 style="color: #1a1a2e;">Thanks, ${escapeHtml(user?.name)}!</h2>
         <p>Our support team has received your request and will respond as soon as possible.</p>
         ${priority === "urgent" ? `<p style="color:#ef4444;font-weight:600;">Since this is marked urgent, we'll prioritize it.</p>` : ""}
         <hr />
         <p><strong>Your message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${message}</p>
+        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
       </div>

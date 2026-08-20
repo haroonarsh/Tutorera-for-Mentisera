@@ -39,12 +39,14 @@ export default function VerificationsPage() {
   const [filter, setFilter] = useState("pending");
   const [rejectReason, setRejectReason] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-  const fetchTutors = async () => {
+  const fetchTutors = async (page: number = 1) => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/verifications?status=${filter}`);
+      const res = await api.get(`/admin/verifications?status=${filter}&page=${page}&limit=20`);
       setTutors(res.data.tutors);
+      setPagination(res.data.pagination);
     } catch (err) {
       console.error(err);
     } finally {
@@ -52,7 +54,7 @@ export default function VerificationsPage() {
     }
   };
 
-  useEffect(() => { fetchTutors(); }, [filter]);
+  useEffect(() => { fetchTutors(1); }, [filter]);
 
   const handleApprove = async (id: string) => {
     setActionLoading(id);
@@ -327,6 +329,21 @@ export default function VerificationsPage() {
               )}
             </div>
           ))}
+        {!loading && pagination.pages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
+          <button onClick={() => fetchTutors(pagination.page - 1)} disabled={pagination.page <= 1}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page <= 1 ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
+            ← Previous
+          </button>
+          <span style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '0.85rem', color: C.gray500, fontWeight: '600' }}>
+            Page {pagination.page} of {pagination.pages}
+          </span>
+          <button onClick={() => fetchTutors(pagination.page + 1)} disabled={pagination.page >= pagination.pages}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page >= pagination.pages ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
+            Next →
+          </button>
+          </div>
+        )}
         </div>
       )}
     </div>

@@ -41,6 +41,9 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,11 +101,12 @@ export default function ChatPage() {
     api.get(`/chat/${conversationId}/messages`)
       .then(res => {
         setMessages(res.data.messages);
+        setHasMore(res.data.pagination.page < res.data.pagination.pages);
+        setCurrentPage(res.data.pagination.page);
         setTimeout(scrollToBottom, 100);
       })
       .catch(console.error);
 
-    // Get conversation details
     api.get("/chat/conversations")
       .then(res => {
         const conv = res.data.conversations.find((c: Conversation) => c._id === conversationId);
@@ -141,6 +145,22 @@ export default function ChatPage() {
       setNewMessage(content); // restore if failed
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleLoadOlder = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const res = await api.get(`/chat/${conversationId}/messages?page=${nextPage}`);
+      setMessages(prev => [...res.data.messages, ...prev]);
+      setHasMore(res.data.pagination.page < res.data.pagination.pages);
+      setCurrentPage(res.data.pagination.page);
+    } catch (err) {
+      console.error("Failed to load older messages:", err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -209,6 +229,14 @@ export default function ChatPage() {
 
       {/* Messages Area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+            <button onClick={handleLoadOlder} disabled={loadingMore}
+              style={{ padding: '0.5rem 1.25rem', backgroundColor: 'white', color: C.accent, border: `1px solid ${C.accent}`, borderRadius: '999px', fontSize: '0.8rem', fontWeight: '600', cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
+              {loadingMore ? "Loading..." : "Load older messages"}
+            </button>
+          </div>
+        )}
         {messages.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.75rem' }}>
             <div style={{ width: '60px', height: '60px', backgroundColor: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

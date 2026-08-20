@@ -409,29 +409,21 @@ export const upgradePlan = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  if (req.user?.role !== "admin") {
-    res.status(403).json({
-      success: false,
-      message: "Plan upgrades are processed manually after payment confirmation. Please transfer payment to NayaPay and email proof to billing@tutorera.pk",
-    });
-    return;
-  }
- 
   const { plan, userId } = req.body;
- 
+
   if (!["free", "standard", "premium"].includes(plan)) {
     res.status(400).json({ success: false, message: "Invalid plan" });
     return;
   }
- 
+
   const targetId = userId || req.user?._id;
- 
+
   const user = await User.findByIdAndUpdate(
     targetId,
     { plan },
     { new: true }
   );
- 
+
   if (!user) {
     res.status(404).json({ success: false, message: "User not found" });
     return;
@@ -443,7 +435,7 @@ export const upgradePlan = async (
   } catch (err) {
     console.error("Failed to send plan upgrade email:", err);
   }
- 
+
   res.status(200).json({
     success: true,
     message: `Plan updated to ${plan}`,

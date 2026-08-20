@@ -12,15 +12,34 @@ import User from "../models/User.model";
 export const getMyBookings = async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.user?._id;
   const role = req.user?.role;
+  const { page = "1", limit = "20" } = req.query;
 
   const filter = role === "student" ? { student: userId } : { tutor: userId };
+
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await Booking.countDocuments(filter);
 
   const bookings = await Booking.find(filter)
     .populate("student", "name avatar")
     .populate("tutor", "name avatar")
-    .sort("-createdAt");
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum);
 
-  res.status(200).json({ success: true, total: bookings.length, bookings });
+  res.status(200).json({
+    success: true,
+    total,
+    bookings,
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      limit: limitNum,
+    },
+  });
 };
 
 // @desc    Update booking status (student/tutor — limited, safe transitions only)

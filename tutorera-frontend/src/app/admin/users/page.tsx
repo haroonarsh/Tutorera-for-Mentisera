@@ -37,13 +37,36 @@ export default function UsersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState<string | null>(null);
   const [planDropdown, setPlanDropdown] = useState<string | null>(null); // userId with open dropdown
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-  useEffect(() => {
-    api.get("/admin/users")
-      .then(res => setUsers(res.data.users))
+  const fetchUsers = (page: number = 1, searchTerm: string = search, role: string = roleFilter) => {
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: "20" });
+    if (searchTerm.trim()) params.set("search", searchTerm.trim());
+    if (role !== "all") params.set("role", role);
+    api.get(`/admin/users?${params.toString()}`)
+      .then(res => {
+        setUsers(res.data.users);
+        setPagination({ page: res.data.page, pages: res.data.pages, total: res.data.total });
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchUsers(1); }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => fetchUsers(1, search, roleFilter), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Immediate refetch on role filter change
+  useEffect(() => {
+    fetchUsers(1, search, roleFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleFilter]);
 
   const handleToggleStatus = async (id: string) => {
     setActionLoading(id);
@@ -70,12 +93,12 @@ export default function UsersPage() {
     }
   };
 
-  const filtered = users.filter(u => {
-    const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter === "all" || u.role === roleFilter;
-    return matchSearch && matchRole;
-  });
+  // const filtered = users.filter(u => {
+  //   const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
+  //     u.email.toLowerCase().includes(search.toLowerCase());
+  //   const matchRole = roleFilter === "all" || u.role === roleFilter;
+  //   return matchSearch && matchRole;
+  // });
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -117,11 +140,11 @@ export default function UsersPage() {
             <div style={{ width: '32px', height: '32px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : users.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>No users found.</div>
         ) : (
-          filtered.map((user, idx) => (
-            <div key={user._id} style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+          users.map((user, idx) => (
+            <div key={user._id} style={{ borderBottom: idx < users.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
 
               {/* Desktop Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
@@ -234,6 +257,21 @@ export default function UsersPage() {
         )}
       </div>
 
+      {!loading && pagination.pages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
+          <button onClick={() => fetchUsers(pagination.page - 1, search, roleFilter)} disabled={pagination.page <= 1}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page <= 1 ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
+            ← Previous
+          </button>
+          <span style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '0.85rem', color: C.gray500, fontWeight: '600' }}>
+            Page {pagination.page} of {pagination.pages}
+          </span>
+          <button onClick={() => fetchUsers(pagination.page + 1, search, roleFilter)} disabled={pagination.page >= pagination.pages}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page >= pagination.pages ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
+            Next →
+          </button>
+        </div>
+      )}
       <style>{`
         @media (min-width: 769px) { .admin-mobile-card { display: none !important; } }
         @media (max-width: 768px) {
