@@ -16,4 +16,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Centralized 401 handling — if any request comes back unauthorized (expired token,
+// suspended account, etc.), clear local auth state and redirect to login. This prevents
+// the UI from silently staying in a "logged in" state after the backend has already
+// invalidated the session.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== "undefined" && error.response?.status === 401) {
+      const isAuthRoute = error.config?.url?.includes("/auth/login") || error.config?.url?.includes("/auth/register");
+      if (!isAuthRoute) {
+        localStorage.removeItem("token");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
