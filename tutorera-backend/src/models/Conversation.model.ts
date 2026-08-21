@@ -15,7 +15,7 @@ const conversationSchema = new Schema<IConversation>(
   {
     student: { type: Schema.Types.ObjectId, ref: "User", required: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
+    booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true, unique: true },
     lastMessage: { type: String, default: "" },
     lastMessageAt: { type: Date, default: Date.now },
     studentUnread: { type: Number, default: 0 },

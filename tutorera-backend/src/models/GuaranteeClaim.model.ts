@@ -14,7 +14,7 @@ export interface IGuaranteeClaim extends Document {
 const guaranteeClaimSchema = new Schema<IGuaranteeClaim>(
   {
     student: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
+    booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true, unique: true },
     tutor:   { type: Schema.Types.ObjectId, ref: "User", required: true },
     reason:  { type: String, required: true, trim: true },
     details: { type: String, default: "", trim: true },

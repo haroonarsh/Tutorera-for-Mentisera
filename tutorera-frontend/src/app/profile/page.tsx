@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
-import { useTutorGuard } from "@/hooks/useTutorGuard";
+import { useAppGuard } from "@/hooks/useAppGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -14,8 +14,8 @@ const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Lev
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
+  const guardStatus = useAppGuard();
   const router = useRouter();
-  const tutorStatus = useTutorGuard();
 
   const [activeTab, setActiveTab] = useState<"personal" | "tutor">("personal");
   const [saving, setSaving] = useState(false);
@@ -79,7 +79,7 @@ export default function ProfilePage() {
   }, [user, loading, router]);
 
     // ← ADD: block pending/rejected tutors + show spinner while checking
-  if (loading || !user || tutorStatus === "loading") return null;
+  if (guardStatus !== "ok") return null;
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

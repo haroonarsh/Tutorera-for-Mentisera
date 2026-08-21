@@ -2,13 +2,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import { useTutorGuard } from "@/hooks/useTutorGuard";
 import api from "@/lib/axios";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Download } from "lucide-react";
+import { useAppGuard } from "@/hooks/useAppGuard";
 
 const C = {
   primary: '#1a1a2e',
@@ -122,9 +122,9 @@ function EmptyState({ isTutor }: { isTutor: boolean }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function EarningsPage() {
   const { user }         = useAuth();
-  const tutorStatus      = useTutorGuard();
   const [data, setData]  = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const guardStatus = useAppGuard();
 
   useEffect(() => {
     api.get("/earnings")
@@ -133,7 +133,7 @@ export default function EarningsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (!user || tutorStatus === "loading") return null;
+  if (guardStatus !== "ok" || !user) return null;
 
   const handleDownloadPDF = async () => {
     try {

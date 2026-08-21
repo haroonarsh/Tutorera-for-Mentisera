@@ -26,4 +26,8 @@ const bidSchema = new Schema<IBid>(
   { timestamps: true }
 );
 
+// One bid per tutor per request — backs up the application-level check in placeBid,
+// so a race condition (two simultaneous bid requests) can't create duplicates.
+bidSchema.index({ request: 1, tutor: 1 }, { unique: true });
+
 export default mongoose.model<IBid>("Bid", bidSchema);

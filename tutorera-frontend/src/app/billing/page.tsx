@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { CheckCircle } from "lucide-react";
-import { useTutorGuard } from "@/hooks/useTutorGuard";
 import api from "@/lib/axios";
+import { useAppGuard } from "@/hooks/useAppGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 const PLATFORM_FEE = 23; // 20% + 3% GST
@@ -77,13 +77,14 @@ const PLAN_ORDER = ["free", "standard", "premium"];
 
 export default function BillingPage() {
   const { user } = useAuth();
-  const tutorStatus = useTutorGuard();
+  const guardStatus = useAppGuard();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(true);
   const [showPaymentInfo, setShowPaymentInfo] = useState<string | null>(null); // planKey being upgraded
   const paymentRef = useRef<HTMLDivElement>(null);
 
+  
   useEffect(() => {
     api.get("/auth/me/usage")
       .then(res => setUsage(res.data.usage))
@@ -91,8 +92,8 @@ export default function BillingPage() {
       .finally(() => setLoadingUsage(false));
   }, []);
 
-  if (!user || tutorStatus === "loading") return null;
-
+  if (guardStatus !== "ok" || !user) return null;
+  
   const currentPlan = usage?.plan || user?.plan || "free";
   const currentPlanIndex = PLAN_ORDER.indexOf(currentPlan);
 
@@ -164,7 +165,7 @@ export default function BillingPage() {
 
           {usagePercent >= 100 && (
             <p style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: '600', marginTop: '0.5rem' }}>
-              ⚠ You've reached your monthly limit. Upgrade your plan to continue.
+              ⚠ You&apos;ve reached your monthly limit. Upgrade your plan to continue.
             </p>
           )}
         </div>
@@ -173,7 +174,7 @@ export default function BillingPage() {
         {showPaymentInfo && (
           <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #86efac', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
             <p style={{ fontWeight: '700', color: '#15803d', marginBottom: '0.4rem' }}>
-              ✅ Great choice! Here's how to upgrade to {plans.find(p => p.planKey === showPaymentInfo)?.name}
+              ✅ Great choice! Here&apos;s how to upgrade to {plans.find(p => p.planKey === showPaymentInfo)?.name}
             </p>
             <p style={{ fontSize: '0.875rem', color: '#166534', lineHeight: 1.6 }}>
               Transfer{" "}

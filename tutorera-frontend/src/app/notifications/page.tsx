@@ -1,16 +1,14 @@
 "use client";
 import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { Bell } from "lucide-react";
-import { useTutorGuard } from "@/hooks/useTutorGuard";
+import { useAppGuard } from "@/hooks/useAppGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
 export default function NotificationsPage() {
-  const { user } = useAuth();
-  const tutorStatus = useTutorGuard(); 
+  const guardStatus = useAppGuard();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
   const [prefs, setPrefs] = useState({
     emailNotifications: true,
@@ -24,7 +22,7 @@ export default function NotificationsPage() {
   });
 
   // ← ADD: block pending/rejected tutors + show spinner while checking
-  if (!user || tutorStatus === "loading") return null;
+  if (guardStatus !== "ok") return null;
 
   const togglePref = (key: keyof typeof prefs) => {
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));

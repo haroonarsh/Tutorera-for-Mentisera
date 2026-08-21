@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageSquare, ArrowRight } from "lucide-react";
 import api from "@/lib/axios";
-import { useTutorGuard } from "@/hooks/useTutorGuard";
+import { useAppGuard } from "@/hooks/useAppGuard";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -22,7 +22,7 @@ interface Conversation {
 
 export default function ChatListPage() {
   const { user, loading } = useAuth();
-  const tutorStatus = useTutorGuard(); 
+  const guardStatus = useAppGuard();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -38,8 +38,7 @@ export default function ChatListPage() {
       .finally(() => setFetching(false));
   }, []);
 
-  // ← ADD: block pending/rejected tutors + show spinner while checking
-  if (!user || tutorStatus === "loading") return null;
+  if (guardStatus !== "ok") return null;
 
   if (loading || fetching) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
