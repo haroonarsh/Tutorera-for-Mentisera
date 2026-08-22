@@ -10,6 +10,7 @@ import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
 import AvailabilityManager from "./AvailabilityManager";
 import RatingModal from "./RatingModal";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = {
   primary: '#1a1a2e',
@@ -250,9 +251,10 @@ function DirectRequestCard({
     try {
       await axiosInstance.patch(`/requests/${request._id}/bids/${request.bid._id}/accept`);
       onActioned();
+      showSuccess("Direct booking accepted successfully.");
     } catch (err) {
       console.error("Failed to accept direct booking:", err);
-      alert("Failed to accept. Please try again.");
+      showError("Failed to accept. Please try again.");
     } finally {
       setActioning(null);
     }
@@ -264,9 +266,10 @@ function DirectRequestCard({
     try {
       await axiosInstance.patch(`/requests/${request._id}/bids/${request.bid._id}/reject`);
       onActioned();
+      showSuccess("Direct booking declined.");
     } catch (err) {
       console.error("Failed to reject direct booking:", err);
-      alert("Failed to decline. Please try again.");
+      showError("Failed to decline. Please try again.");
     } finally {
       setActioning(null);
     }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { UserCheck, UserX, Search } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -73,8 +74,9 @@ export default function UsersPage() {
     try {
       await api.patch(`/admin/users/${id}/status`);
       setUsers(prev => prev.map(u => u._id === id ? { ...u, isActive: !u.isActive } : u));
-    } catch {
-      alert("Action failed.");
+      showSuccess("User status updated");
+    } catch (err) {
+      showError(err, "Failed to update user status");
     } finally {
       setActionLoading(null);
     }
@@ -86,8 +88,9 @@ export default function UsersPage() {
     try {
       await api.patch(`/admin/users/${userId}/plan`, { plan });
       setUsers(prev => prev.map(u => u._id === userId ? { ...u, plan } : u));
-    } catch {
-      alert("Failed to update plan.");
+      showSuccess(`Plan updated to ${plan}`);
+    } catch (err) {
+      showError(err, "Failed to update plan");
     } finally {
       setPlanLoading(null);
     }

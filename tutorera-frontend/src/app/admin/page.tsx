@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, ShieldCheck, BookOpen, MessageSquare, CheckCircle, Clock, TrendingUp, Download, FileSpreadsheet, FileText } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -47,8 +48,9 @@ export default function AdminDashboard() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      showSuccess(`Report downloaded successfully as ${filename}`);
     } catch {
-      alert("Failed to generate report. Please try again.");
+      showError("Failed to generate report. Please try again.");
     } finally {
       setDownloading(null);
     }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -44,8 +45,9 @@ export default function PaymentsPage() {
         paymentNote: note[id] || "",
       });
       setBookings(prev => prev.map(b => b._id === id ? { ...b, paymentStatus } : b));
+      showSuccess("Payment status updated.");
     } catch {
-      alert("Update failed.");
+      showError("Update failed.");
     } finally {
       setUpdating(null);
     }
@@ -233,8 +235,9 @@ export default function PaymentsPage() {
                                     payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
                                   });
                                   setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, payoutStatus: 'paid' } : b));
+                                  showSuccess("Payout status updated.");
                                 } catch {
-                                  alert("Failed to update payout status.");
+                                  showError("Failed to update payout status.");
                                 } finally {
                                   setUpdating(null);
                                 }

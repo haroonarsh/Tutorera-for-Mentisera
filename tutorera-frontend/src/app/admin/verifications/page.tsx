@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Eye, EyeOff, Clock, Download } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -62,15 +63,16 @@ export default function VerificationsPage() {
       await api.patch(`/admin/verify/${id}`, { status: "approved" });
       setTutors(prev => prev.filter(t => t._id !== id));
       setExpanded(null);
-    } catch {
-      alert("Action failed.");
+      showSuccess("Tutor approved successfully");
+    } catch (err) {
+      showError(err, "Failed to approve tutor");
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleReject = async (id: string) => {
-    if (!rejectReason.trim()) { alert("Please provide a rejection reason."); return; }
+    if (!rejectReason.trim()) { showError("Please provide a rejection reason."); return; }
     setActionLoading(id);
     try {
       await api.patch(`/admin/verify/${id}`, { status: "rejected", reason: rejectReason });
@@ -78,8 +80,9 @@ export default function VerificationsPage() {
       setRejectingId(null);
       setRejectReason("");
       setExpanded(null);
-    } catch {
-      alert("Action failed.");
+      showSuccess("Tutor rejected");
+    } catch (err) {
+      showError(err, "Failed to reject tutor");
     } finally {
       setActionLoading(null);
     }
@@ -90,7 +93,7 @@ export default function VerificationsPage() {
       const res = await api.get(`/admin/tutors/${tutorId}/document/${field}`);
       window.open(res.data.url, "_blank");
     } catch {
-      alert("Failed to load document. It may not exist.");
+      showError("Failed to load document. It may not exist.");
     }
   };
 

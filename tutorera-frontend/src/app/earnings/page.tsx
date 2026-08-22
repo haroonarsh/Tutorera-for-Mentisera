@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Download } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = {
   primary: '#1a1a2e',
@@ -146,9 +147,10 @@ export default function EarningsPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      showSuccess("Report downloaded successfully.");
     } catch (err) {
       console.error("Failed to download report:", err);
-      alert("Failed to download report. Please try again.");
+      showError("Failed to download report. Please try again.");
     }
   };
 

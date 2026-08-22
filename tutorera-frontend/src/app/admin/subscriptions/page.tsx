@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = {
   primary: '#1a1a2e',
@@ -59,9 +60,10 @@ export default function SubscriptionsPage() {
     try {
       await api.patch(`/admin/users/${userId}/plan`, { plan: newPlan });
       fetchData();
+      showSuccess("Plan updated");
     } catch (err) {
       console.error(err);
-      alert("Failed to update plan. Please try again.");
+      showError("Failed to update plan. Please try again.");
     } finally {
       setUpdatingId(null);
     }

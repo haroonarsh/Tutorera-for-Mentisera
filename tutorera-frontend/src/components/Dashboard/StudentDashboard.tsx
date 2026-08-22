@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { Heart, Trash2 } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = {
   primary: '#1a1a2e',
@@ -97,9 +98,10 @@ function BookingCard({ booking, onClaimSubmitted }: {
       setClaimSubmitted(true);
       setShowClaimForm(false);
       onClaimSubmitted?.();
+      showSuccess("Claim submitted successfully. We'll review it within 24–48 hours.");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || "Failed to submit claim. Please try again.");
+      showError(e.response?.data?.message || "Failed to submit claim. Please try again.");
     } finally {
       setSubmittingClaim(false);
     }

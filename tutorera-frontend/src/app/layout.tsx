@@ -7,6 +7,7 @@ import ConditionalLayout from "@/components/ConditionalLayout";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import CookieBanner from "@/components/CookieBanner";
 import AIChatWidget from "@/components/AIChatWidget";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -90,6 +91,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <CookieBanner />
           </SocketProvider>
         </AuthProvider>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#1a1a2e',
+              color: 'white',
+              fontSize: '0.875rem',
+              borderRadius: '0.5rem',
+            },
+            success: {
+              iconTheme: { primary: '#16a34a', secondary: 'white' },
+            },
+            error: {
+              iconTheme: { primary: '#ef4444', secondary: 'white' },
+            },
+          }}
+        />
       </body>
     </html>
   );

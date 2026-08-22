@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -38,7 +39,8 @@ export default function AdminBlogsPage() {
 
   const handleSubmit = async () => {
     if (!form.title || !form.content || !form.excerpt) {
-      alert('Please fill title, excerpt and content'); return;
+      showError("Please fill title, excerpt and content");
+      return;
     }
     setSaving(true);
     try {
@@ -59,9 +61,10 @@ export default function AdminBlogsPage() {
       setEditBlog(null);
       setForm({ title: '', slug: '', excerpt: '', content: '', tags: '' });
       fetchBlogs();
+      showSuccess(editBlog ? 'Blog post updated successfully.' : 'Blog post created successfully.');
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Failed to save blog');
+      showError(e.response?.data?.message || 'Failed to save blog');
     } finally { setSaving(false); }
   };
 
@@ -70,7 +73,8 @@ export default function AdminBlogsPage() {
     try {
       await api.delete(`/blogs/${id}`);
       fetchBlogs();
-    } catch { alert('Failed to delete'); }
+      showSuccess('Blog post deleted successfully.');
+    } catch { showError('Failed to delete blog post.'); }
   };
 
   const handleEdit = (blog: Blog) => {

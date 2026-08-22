@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = {
   primary: '#1a1a2e',
@@ -81,8 +82,9 @@ export default function PayoutsPage() {
       );
       // Refresh stats
       fetchPayouts(filter);
+      showSuccess("Payout marked as paid.");
     } catch {
-      alert("Failed to update payout status.");
+      showError("Failed to update payout status.");
     } finally {
       setActionLoading(null);
     }

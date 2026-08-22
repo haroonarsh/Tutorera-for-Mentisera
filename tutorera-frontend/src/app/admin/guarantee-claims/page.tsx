@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Clock, Shield } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -45,7 +46,7 @@ export default function GuaranteeClaimsPage() {
       setClaims(prev => prev.map(c => c._id === id ? { ...c, ...res.data.claim } : c));
       setExpanded(null);
     } catch {
-      alert("Action failed.");
+      showError("Action failed.");
     } finally {
       setActionLoading(null);
     }

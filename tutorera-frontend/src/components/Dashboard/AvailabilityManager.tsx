@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import axiosInstance from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -51,10 +52,11 @@ export default function AvailabilityManager() {
     setSaving(true);
     try {
       await axiosInstance.post("/tutors/availability", { weeklySlots: slots });
+      showSuccess("Availability saved successfully.");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      alert("Failed to save. Please try again.");
+      showError("Failed to save. Please try again.");
     } finally {
       setSaving(false);
     }

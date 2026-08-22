@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { MessageSquare, AlertTriangle, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -53,8 +54,9 @@ export default function ContactsPage() {
       setContacts(prev =>
         prev.map(c => c._id === id ? { ...c, status: newStatus } : c)
       );
+      showSuccess("Status updated.");
     } catch {
-      alert("Failed to update status.");
+      showError("Failed to update status.");
     } finally {
       setStatusLoading(null);
     }
