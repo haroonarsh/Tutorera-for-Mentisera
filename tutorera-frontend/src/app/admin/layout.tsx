@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb' };
 
@@ -39,6 +39,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [sidebarOpen]);
+  
   const SidebarContent = () => (
     <>
       {/* Logo */}
@@ -88,11 +98,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Admin navigation menu"
+          >
             <div style={{ width: '240px', backgroundColor: C.primary, display: 'flex', flexDirection: 'column', height: '100vh' }}>
               <SidebarContent />
             </div>
-            <div style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setSidebarOpen(false)} />
+            <div
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden="true"
+            />
           </div>
         )}
 

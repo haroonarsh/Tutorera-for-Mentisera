@@ -15,3 +15,25 @@ body {
   color: #1a1a2e;
   font-family: "Inter", sans-serif;
 }
+
+/* Consistent, visible focus indicator for keyboard navigation. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Suppress outline on mouse click ONLY for buttons and links —
+  form fields keep their focus ring on click too, since that's
+   expected/useful for knowing you're actively editing a field. */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}

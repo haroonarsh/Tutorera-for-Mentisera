@@ -87,7 +87,7 @@ export default function ChatListPage() {
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '1.1rem', overflow: 'hidden' }}>
                         {otherUser?.avatar ? (
-                          <img src={otherUser.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={otherUser.avatar} alt={otherUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : otherUser?.name?.charAt(0)}
                       </div>
                       {unreadCount > 0 && (

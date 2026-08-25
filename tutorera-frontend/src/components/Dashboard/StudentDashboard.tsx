@@ -71,12 +71,14 @@ function BookingCard({ booking, onClaimSubmitted }: {
       router.push(`/chat/${res.data.conversation._id}`);
     } catch (err) {
       console.error("Failed to create conversation:", err);
+      showError("Failed to open chat. Please try again.");
     } finally {
       setCreatingChat(false);
     }
   };
 
   const handleRateSubmit = async (rating: number, comment: string) => {
+    try {
     await axiosInstance.post(`/reviews/${booking.tutor._id}`, {
       rating,
       comment,
@@ -84,6 +86,10 @@ function BookingCard({ booking, onClaimSubmitted }: {
     });
     setAlreadyRated(true);
     setShowRatingModal(false);
+    showSuccess("Thank you for your feedback!");
+    } catch (err) {
+      showError(err, "Failed to submit rating. Please try again.");
+    }
   };
 
   const handleClaimSubmit = async () => {

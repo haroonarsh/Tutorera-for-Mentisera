@@ -5,6 +5,7 @@ import { useState } from "react";
 import axiosInstance from "@/lib/axios";
 import { PostRequestPayload } from "@/types/dashboard";
 import styles from "./PostRequestModal.module.css";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const SUBJECTS = ["Mathematics", "Physics", "Chemistry", "Biology", "English",
   "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Accounting"];
@@ -26,6 +27,7 @@ export default function PostRequestModal({ onClose, onSuccess }: Props) {
   const [form, setForm]       = useState<PostRequestPayload>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const modalRef = useFocusTrap(true, onClose);
 
   function set(key: keyof PostRequestPayload, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -57,7 +59,7 @@ export default function PostRequestModal({ onClose, onSuccess }: Props) {
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Post a tuition request">
-      <div className={styles.modal}>
+      <div ref={modalRef} className={styles.modal}>
         {/* Header */}
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Post a Tuition Request</h2>

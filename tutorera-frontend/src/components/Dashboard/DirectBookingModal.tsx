@@ -5,6 +5,7 @@ import { useState } from "react";
 import axiosInstance from "@/lib/axios";
 import SlotPicker from "@/components/Tutors/SlotPicker";
 import styles from "./PostRequestModal.module.css";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 
@@ -47,6 +48,7 @@ export default function DirectBookingModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const modalRef = useFocusTrap(true, onClose);
 
   function set(key: keyof DirectBookingForm, value: string) {
     setForm(f => ({ ...f, [key]: value }));
@@ -84,7 +86,7 @@ export default function DirectBookingModal({
   if (submitted) {
     return (
       <div className={styles.overlay} role="dialog" aria-modal="true">
-        <div className={styles.modal} style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
+        <div ref={modalRef} className={styles.modal} style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
           <div style={{ width: 64, height: 64, backgroundColor: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <span style={{ fontSize: '1.75rem' }}>✅</span>
           </div>
@@ -99,8 +101,8 @@ export default function DirectBookingModal({
   }
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true">
-      <div className={styles.modal}>
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Book a session">
+      <div ref={modalRef} className={styles.modal}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Book {tutorName.split(' ')[0]}</h2>
           <button onClick={onClose} className={styles.closeBtn} aria-label="Close">×</button>

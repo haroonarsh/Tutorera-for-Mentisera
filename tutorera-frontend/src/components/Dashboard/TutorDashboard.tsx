@@ -47,14 +47,19 @@ function BookingCard({ booking }: { booking: DashBooking }) {
   const router = useRouter();
 
   const handleRateStudent = async (rating: number, comment: string) => {
-    await axiosInstance.post("/reviews/student-ratings", {
-      studentId: booking.student._id,
-      bookingId: booking._id,
-      rating,
-      comment,
-    });
-    setStudentRated(true);
-    setShowStudentRatingModal(false);
+    try {
+      await axiosInstance.post("/reviews/student-ratings", {
+        studentId: booking.student._id,
+        bookingId: booking._id,
+        rating,
+        comment,
+      });
+      setStudentRated(true);
+      setShowStudentRatingModal(false);
+      showSuccess("Rating submitted successfully");
+    } catch (err) {
+      showError(err, "Failed to submit rating. Please try again.");
+    }
   };
 
   const handleChatClick = async () => {
@@ -67,6 +72,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
     router.push(`/chat/${conversationId}`);
   } catch (err) {
     console.error("Failed to create conversation:", err);
+    showError("Failed to open chat. Please try again.");
   } finally {
     setCreatingChat(false);
   }

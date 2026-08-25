@@ -5,6 +5,7 @@ import { useState } from "react";
 import axiosInstance from "@/lib/axios";
 import { DashRequest } from "@/types/dashboard";
 import styles from "./PostRequestModal.module.css"; // reuse same modal styles
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface Props {
   request: DashRequest;
@@ -17,6 +18,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const modalRef = useFocusTrap(true, onClose);
 
   async function handleSubmit() {
     if (!amount || !message.trim()) {
@@ -43,7 +45,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Place a bid">
-      <div className={styles.modal}>
+      <div ref={modalRef} className={styles.modal}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Place a Bid</h2>
           <button onClick={onClose} className={styles.closeBtn} aria-label="Close">×</button>

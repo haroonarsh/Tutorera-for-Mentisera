@@ -1,6 +1,7 @@
 // app/tutors/[id]/page.tsx
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Star, MapPin, BookOpen, Clock, CheckCircle, MessageSquare, Play } from "lucide-react";
@@ -100,9 +101,15 @@ export default function TutorDetailPage() {
       <div style={{ backgroundColor: C.primary, padding: '3rem 1.5rem' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center' }}>
           {/* Avatar */}
-          <div style={{ width: '110px', height: '110px', borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, #1d4ed8)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: '800', color: 'white', flexShrink: 0, border: '4px solid rgba(255,255,255,0.2)' }}>
+          <div style={{ width: '110px', height: '110px', position: 'relative', overflow: 'hidden', borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, #1d4ed8)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: '800', color: 'white', flexShrink: 0, border: '4px solid rgba(255,255,255,0.2)' }}>
             {tutor.user?.avatar ? (
-              <img src={tutor.user?.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
+              <Image
+                src={tutor.user.avatar}
+                alt={tutor.user.name || "Tutor"}
+                fill
+                style={{ objectFit: 'cover', borderRadius: '50%' }}
+                priority
+              />
             ) : (tutor.user?.name?.charAt(0) || "T")}
           </div>
 

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
 import { MapPin, BookOpen, Clock, Send } from "lucide-react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const C = {
   primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb',
@@ -176,6 +177,7 @@ function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClo
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const modalRef = useFocusTrap(true, onClose);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,8 +195,8 @@ function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClo
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 100 }} onClick={onClose}>
-      <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 100 }} onClick={onClose} role="presentation">
+      <div ref={modalRef} style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px' }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Place a bid">
         <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>Place a Bid</h3>
         <p style={{ color: C.gray500, fontSize: '0.85rem', marginBottom: '1.5rem' }}>{request.subject} · {request.level}</p>
 

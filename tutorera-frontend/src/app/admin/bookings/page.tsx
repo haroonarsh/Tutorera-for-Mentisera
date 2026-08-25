@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -61,7 +62,7 @@ export default function BookingsPage() {
     await api.patch(`/admin/bookings/${bookingId}/status`, { status: newStatus });
     setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
   } catch {
-    alert("Failed to update status.");
+    showError("Failed to update status.");
   } finally {
     setUpdatingStatus(null);
   }

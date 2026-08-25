@@ -195,7 +195,7 @@ export default function ChatPage() {
         {/* Avatar */}
         <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
           {otherUser?.avatar ? (
-            <img src={otherUser.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={otherUser.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : otherUser?.name?.charAt(0) || "?"}
         </div>
 
@@ -254,7 +254,7 @@ export default function ChatPage() {
                 {!isMe && (
                   <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', flexShrink: 0, overflow: 'hidden' }}>
                     {msg.sender.avatar ? (
-                      <img src={msg.sender.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={msg.sender.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : msg.sender.name?.charAt(0)}
                   </div>
                 )}

@@ -4,6 +4,7 @@
 import { FiltersState, LEVELS, TEACHING_MODES, CITIES } from "@/types/tutor";
 import StarRating from "./StarRating";
 import styles from "./Filtersidebar.module.css";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface FilterSidebarProps {
   filters: FiltersState;
@@ -207,12 +208,14 @@ export function MobileFilterSidebar({
   onClose,
   ...rest
 }: MobileFilterSidebarProps) {
-  if (!isOpen) return null;
+  const modalRef = useFocusTrap(true, onClose);
+
+  if (!isOpen) return null; 
 
   return (
     <div className={styles.mobileOverlay} role="dialog" aria-modal="true" aria-label="Filters">
       <div className={styles.mobileBackdrop} onClick={onClose} />
-      <div className={styles.mobilePanel}>
+      <div ref={modalRef} className={styles.mobilePanel}>
         <div className={styles.mobilePanelHeader}>
           <button
             onClick={onClose}
