@@ -187,6 +187,12 @@
       "namedRegex": "^/browse\\-requests(?:/)?$"
     },
     {
+      "page": "/cancellation-policy",
+      "regex": "^/cancellation\\-policy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cancellation\\-policy(?:/)?$"
+    },
+    {
       "page": "/careers",
       "regex": "^/careers(?:/)?$",
       "routeKeys": {},

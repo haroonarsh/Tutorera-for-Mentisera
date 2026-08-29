@@ -7,6 +7,7 @@
   "/blog/[slug]/page": "/blog/[slug]",
   "/blog/page": "/blog",
   "/browse-requests/page": "/browse-requests",
+  "/cancellation-policy/page": "/cancellation-policy",
   "/careers/page": "/careers",
   "/chat/[conversationId]/page": "/chat/[conversationId]",
   "/chat/page": "/chat",

@@ -7,6 +7,7 @@
   "/blog/[slug]/page": "app/blog/[slug]/page.js",
   "/blog/page": "app/blog/page.js",
   "/browse-requests/page": "app/browse-requests/page.js",
+  "/cancellation-policy/page": "app/cancellation-policy/page.js",
   "/careers/page": "app/careers/page.js",
   "/chat/[conversationId]/page": "app/chat/[conversationId]/page.js",
   "/chat/page": "app/chat/page.js",

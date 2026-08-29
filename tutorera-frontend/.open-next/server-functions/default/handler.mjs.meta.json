@@ -3649,7 +3649,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js": {
-      "bytes": 778770,
+      "bytes": 665424,
       "imports": [
         {
           "path": "path",
@@ -3937,7 +3937,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js": {
-      "bytes": 607940,
+      "bytes": 607862,
       "imports": [
         {
           "path": "url",
@@ -4077,17 +4077,17 @@
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
         }
       ],
       "format": "cjs"
@@ -4114,13 +4114,18 @@
       ],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/1525.js": {
-      "bytes": 9663,
+    ".open-next/server-functions/default/.next/server/chunks/1069.js": {
+      "bytes": 417139,
+      "imports": [],
+      "format": "cjs"
+    },
+    ".open-next/server-functions/default/.next/server/chunks/2127.js": {
+      "bytes": 34193,
       "imports": [],
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/chunks/319.js": {
-      "bytes": 367482,
+      "bytes": 367258,
       "imports": [],
       "format": "cjs"
     },
@@ -4134,18 +4139,13 @@
       "imports": [],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/5564.js": {
-      "bytes": 398112,
-      "imports": [],
-      "format": "cjs"
-    },
-    ".open-next/server-functions/default/.next/server/chunks/6271.js": {
-      "bytes": 46149,
-      "imports": [],
-      "format": "cjs"
-    },
     ".open-next/server-functions/default/.next/server/chunks/8951.js": {
-      "bytes": 9409,
+      "bytes": 9442,
+      "imports": [],
+      "format": "cjs"
+    },
+    ".open-next/server-functions/default/.next/server/chunks/9203.js": {
+      "bytes": 9707,
       "imports": [],
       "format": "cjs"
     },
@@ -4153,9 +4153,14 @@
       "bytes": 1921,
       "imports": [
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/1525.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/1069.js",
           "kind": "require-call",
-          "original": "./chunks/1525.js"
+          "original": "./chunks/1069.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/chunks/2127.js",
+          "kind": "require-call",
+          "original": "./chunks/2127.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/319.js",
@@ -4173,25 +4178,20 @@
           "original": "./chunks/4424.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/5564.js",
-          "kind": "require-call",
-          "original": "./chunks/5564.js"
-        },
-        {
-          "path": ".open-next/server-functions/default/.next/server/chunks/6271.js",
-          "kind": "require-call",
-          "original": "./chunks/6271.js"
-        },
-        {
           "path": ".open-next/server-functions/default/.next/server/chunks/8951.js",
           "kind": "require-call",
           "original": "./chunks/8951.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/chunks/9203.js",
+          "kind": "require-call",
+          "original": "./chunks/9203.js"
         }
       ],
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/onboarding/student/complete/page.js": {
-      "bytes": 29038,
+      "bytes": 28895,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -4357,7 +4357,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/onboarding/tutor/complete/page.js": {
-      "bytes": 29796,
+      "bytes": 29653,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -4523,7 +4523,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/first-session-guarantee/page.js": {
-      "bytes": 33124,
+      "bytes": 32981,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -4689,7 +4689,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/guarantee-claims/page.js": {
-      "bytes": 33741,
+      "bytes": 33800,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -4855,7 +4855,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/chat/[conversationId]/page.js": {
-      "bytes": 33706,
+      "bytes": 34312,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -5021,7 +5021,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/student-ratings/page.js": {
-      "bytes": 29096,
+      "bytes": 28952,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -5186,8 +5186,174 @@
       ],
       "format": "cjs"
     },
+    ".open-next/server-functions/default/.next/server/app/cancellation-policy/page.js": {
+      "bytes": 25313,
+      "imports": [
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/router/utils/app-paths"
+        },
+        {
+          "path": "url",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/server/app-render/after-task-async-storage.external.js",
+          "kind": "require-call",
+          "original": "next/dist/server/app-render/after-task-async-storage.external.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js",
+          "kind": "require-call",
+          "original": "next/dist/compiled/next-server/app-page.runtime.prod.js"
+        },
+        {
+          "path": "assert",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/get-segment-param.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/router/utils/get-segment-param"
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/server/app-render/action-async-storage.external.js",
+          "kind": "require-call",
+          "original": "next/dist/server/app-render/action-async-storage.external.js"
+        },
+        {
+          "path": "os",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/is-bot.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/router/utils/is-bot"
+        },
+        {
+          "path": "stream",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "util",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "fs",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/server/app-render/work-async-storage.external.js",
+          "kind": "require-call",
+          "original": "next/dist/server/app-render/work-async-storage.external.js"
+        },
+        {
+          "path": "path",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "tls",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/server/app-render/dynamic-access-async-storage.external.js",
+          "kind": "require-call",
+          "original": "next/dist/server/app-render/dynamic-access-async-storage.external.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/interception-routes.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/router/utils/interception-routes"
+        },
+        {
+          "path": "crypto",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/server/app-render/work-unit-async-storage.external.js",
+          "kind": "require-call",
+          "original": "next/dist/server/app-render/work-unit-async-storage.external.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/invariant-error.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/invariant-error"
+        },
+        {
+          "path": "http2",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "zlib",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/size-limit.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/size-limit"
+        },
+        {
+          "path": "buffer",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "child_process",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "http",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "tty",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/no-fallback-error.external.js",
+          "kind": "require-call",
+          "original": "next/dist/shared/lib/no-fallback-error.external"
+        },
+        {
+          "path": "net",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "events",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/webpack-runtime.js",
+          "kind": "require-call",
+          "original": "../../webpack-runtime.js"
+        }
+      ],
+      "format": "cjs"
+    },
     ".open-next/server-functions/default/.next/server/app/admin/subscriptions/page.js": {
-      "bytes": 30684,
+      "bytes": 30767,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -5353,7 +5519,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/verifications/page.js": {
-      "bytes": 38815,
+      "bytes": 40647,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -5519,7 +5685,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/onboarding/student/page.js": {
-      "bytes": 37547,
+      "bytes": 37426,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -5685,7 +5851,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/complaint-process/page.js": {
-      "bytes": 27950,
+      "bytes": 27863,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -5851,7 +6017,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/help/for-parents/page.js": {
-      "bytes": 27680,
+      "bytes": 27595,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -6017,7 +6183,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/onboarding/tutor/page.js": {
-      "bytes": 49049,
+      "bytes": 48935,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -6183,7 +6349,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/audit-logs/page.js": {
-      "bytes": 36159,
+      "bytes": 36014,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -6349,7 +6515,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/broadcasts/page.js": {
-      "bytes": 35224,
+      "bytes": 35080,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -6515,7 +6681,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/browse-requests/page.js": {
-      "bytes": 34183,
+      "bytes": 34312,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -6681,7 +6847,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/forgot-password/page.js": {
-      "bytes": 31094,
+      "bytes": 30978,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -6847,7 +7013,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/help/for-tutors/page.js": {
-      "bytes": 27695,
+      "bytes": 27608,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -7013,7 +7179,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/analytics/page.js": {
-      "bytes": 37024,
+      "bytes": 36880,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -7179,7 +7345,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/referrals/page.js": {
-      "bytes": 29052,
+      "bytes": 28912,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -7345,7 +7511,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/become-a-tutor/page.js": {
-      "bytes": 38235,
+      "bytes": 38092,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -7511,7 +7677,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/bookings/page.js": {
-      "bytes": 31242,
+      "bytes": 31301,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -7677,7 +7843,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/contacts/page.js": {
-      "bytes": 33176,
+      "bytes": 34393,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -7843,7 +8009,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/payments/page.js": {
-      "bytes": 35274,
+      "bytes": 35402,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8009,7 +8175,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/_global-error/page.js": {
-      "bytes": 28384,
+      "bytes": 28383,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8095,7 +8261,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/notifications/page.js": {
-      "bytes": 30955,
+      "bytes": 30802,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8261,7 +8427,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/safety-policy/page.js": {
-      "bytes": 27593,
+      "bytes": 27508,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8427,7 +8593,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/payouts/page.js": {
-      "bytes": 34874,
+      "bytes": 34967,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8593,7 +8759,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js": {
-      "bytes": 170766,
+      "bytes": 170688,
       "imports": [
         {
           "path": "url",
@@ -8683,17 +8849,17 @@
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/server/app-render/after-task-async-storage.external.js",
@@ -8714,7 +8880,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js": {
-      "bytes": 68876,
+      "bytes": 68842,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8760,7 +8926,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/how-it-works/page.js": {
-      "bytes": 35115,
+      "bytes": 34972,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -8926,7 +9092,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/blog/[slug]/page.js": {
-      "bytes": 29825,
+      "bytes": 29707,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -9092,7 +9258,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/select-role/page.js": {
-      "bytes": 27221,
+      "bytes": 27104,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -9258,7 +9424,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/tutors/[id]/page.js": {
-      "bytes": 53229,
+      "bytes": 68472,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -9424,7 +9590,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/blogs/page.js": {
-      "bytes": 35243,
+      "bytes": 35438,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -9590,7 +9756,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/users/page.js": {
-      "bytes": 35266,
+      "bytes": 36520,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -9756,7 +9922,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/_not-found/page.js": {
-      "bytes": 23205,
+      "bytes": 23177,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -9922,7 +10088,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/disclaimer/page.js": {
-      "bytes": 24955,
+      "bytes": 24899,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -10088,7 +10254,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/dashboard/page.js": {
-      "bytes": 90850,
+      "bytes": 93434,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -10254,7 +10420,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/coverage/page.js": {
-      "bytes": 30913,
+      "bytes": 30770,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -10420,7 +10586,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/earnings/page.js": {
-      "bytes": 40313,
+      "bytes": 40434,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -10586,7 +10752,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/referral/page.js": {
-      "bytes": 34672,
+      "bytes": 34554,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -10752,7 +10918,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/register/page.js": {
-      "bytes": 33925,
+      "bytes": 33809,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -10918,7 +11084,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/settings/page.js": {
-      "bytes": 35479,
+      "bytes": 35351,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -11084,7 +11250,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/subjects/page.js": {
-      "bytes": 27806,
+      "bytes": 27690,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -11250,7 +11416,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/billing/page.js": {
-      "bytes": 39215,
+      "bytes": 39098,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -11416,7 +11582,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/careers/page.js": {
-      "bytes": 26984,
+      "bytes": 26899,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -11582,7 +11748,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/contact/page.js": {
-      "bytes": 33436,
+      "bytes": 33320,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -11748,7 +11914,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/pricing/page.js": {
-      "bytes": 33365,
+      "bytes": 33222,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -11914,7 +12080,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/privacy/page.js": {
-      "bytes": 25653,
+      "bytes": 25597,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -12080,7 +12246,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/profile/page.js": {
-      "bytes": 40849,
+      "bytes": 40722,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -12246,7 +12412,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/support/page.js": {
-      "bytes": 32360,
+      "bytes": 32246,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -12412,7 +12578,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/levels/page.js": {
-      "bytes": 30566,
+      "bytes": 30423,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -12578,7 +12744,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/tutors/page.js": {
-      "bytes": 47350,
+      "bytes": 47403,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -12744,7 +12910,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/login/page.js": {
-      "bytes": 30265,
+      "bytes": 30152,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -12910,7 +13076,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/terms/page.js": {
-      "bytes": 25793,
+      "bytes": 25737,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -13076,7 +13242,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/admin/page.js": {
-      "bytes": 33509,
+      "bytes": 33618,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -13242,7 +13408,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/about/page.js": {
-      "bytes": 34865,
+      "bytes": 34722,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -13408,7 +13574,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/blog/page.js": {
-      "bytes": 30282,
+      "bytes": 30166,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -13574,7 +13740,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/chat/page.js": {
-      "bytes": 29167,
+      "bytes": 29045,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -13740,7 +13906,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/help/page.js": {
-      "bytes": 32009,
+      "bytes": 31866,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -13906,7 +14072,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/app/page.js": {
-      "bytes": 54198,
+      "bytes": 53901,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/app-paths.js",
@@ -14072,7 +14238,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/require.js": {
-      "bytes": 20190,
+      "bytes": 18763,
       "imports": [
         {
           "path": "path",
@@ -14122,302 +14288,307 @@
         {
           "path": ".open-next/server-functions/default/.next/server/app/onboarding/student/complete/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\student\\complete\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\student\\complete\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/onboarding/tutor/complete/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\tutor\\complete\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\tutor\\complete\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/first-session-guarantee/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\first-session-guarantee\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\first-session-guarantee\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/guarantee-claims/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\guarantee-claims\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\guarantee-claims\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/chat/[conversationId]/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\chat\\[conversationId]\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\chat\\[conversationId]\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/student-ratings/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\student-ratings\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\student-ratings\\page.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/app/cancellation-policy/page.js",
+          "kind": "require-call",
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\cancellation-policy\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/subscriptions/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\subscriptions\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\subscriptions\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/verifications/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\verifications\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\verifications\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/onboarding/student/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\student\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\student\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/complaint-process/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\complaint-process\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\complaint-process\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/help/for-parents/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\help\\for-parents\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\help\\for-parents\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/onboarding/tutor/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\tutor\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\onboarding\\tutor\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/audit-logs/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\audit-logs\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\audit-logs\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/broadcasts/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\broadcasts\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\broadcasts\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/browse-requests/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\browse-requests\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\browse-requests\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/forgot-password/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\forgot-password\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\forgot-password\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/help/for-tutors/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\help\\for-tutors\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\help\\for-tutors\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/analytics/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\analytics\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\analytics\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/referrals/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\referrals\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\referrals\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/become-a-tutor/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\become-a-tutor\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\become-a-tutor\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/bookings/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\bookings\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\bookings\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/contacts/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\contacts\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\contacts\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/payments/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\payments\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\payments\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/_global-error/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\_global-error\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\_global-error\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/notifications/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\notifications\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\notifications\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/safety-policy/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\safety-policy\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\safety-policy\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/payouts/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\payouts\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\payouts\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\favicon.ico\\route.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\favicon.ico\\route.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/how-it-works/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\how-it-works\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\how-it-works\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/blog/[slug]/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\blog\\[slug]\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\blog\\[slug]\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/select-role/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\select-role\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\select-role\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/tutors/[id]/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\tutors\\[id]\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\tutors\\[id]\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/blogs/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\blogs\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\blogs\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/users/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\users\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\users\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/_not-found/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\_not-found\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\_not-found\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/disclaimer/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\disclaimer\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\disclaimer\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/dashboard/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\dashboard\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\dashboard\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/coverage/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\coverage\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\coverage\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/earnings/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\earnings\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\earnings\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/referral/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\referral\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\referral\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/register/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\register\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\register\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/settings/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\settings\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\settings\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/subjects/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\subjects\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\subjects\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/billing/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\billing\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\billing\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/careers/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\careers\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\careers\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/contact/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\contact\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\contact\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/pricing/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\pricing\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\pricing\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/privacy/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\privacy\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\privacy\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/profile/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\profile\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\profile\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/support/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\support\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\support\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/levels/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\levels\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\levels\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/tutors/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\tutors\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\tutors\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/login/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\login\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\login\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/terms/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\terms\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\terms\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/admin/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\admin\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/about/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\about\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\about\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/blog/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\blog\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\blog\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/chat/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\chat\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\chat\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/help/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\help\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\help\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/page.js",
           "kind": "require-call",
-          "original": "D:\\haroon-2\\Next.js Projects\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\page.js"
+          "original": "D:\\Tutorera for Mentisera\\tutorera-frontend\\.open-next\\server-functions\\default\\.next\\server\\app\\page.js"
         }
       ],
       "format": "cjs"
@@ -14940,7 +15111,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/pages.runtime.prod.js": {
-      "bytes": 121503,
+      "bytes": 121425,
       "imports": [
         {
           "path": "url",
@@ -15035,17 +15206,17 @@
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/node_modules/react/jsx-runtime.js",
@@ -15246,7 +15417,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/next-server.js": {
-      "bytes": 50343,
+      "bytes": 50265,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/server/node-environment.js",
@@ -15556,17 +15727,17 @@
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/composable-cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/composable-cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/cache.cjs",
           "kind": "require-call",
-          "original": "D:/haroon-2/Next.js Projects/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
+          "original": "D:/Tutorera for Mentisera/tutorera-frontend/.open-next/server-functions/default/cache.cjs"
         },
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/experimental/testmode/server.js",
@@ -15582,7 +15753,7 @@
       "format": "esm"
     },
     ".open-next/server-functions/default/index.mjs": {
-      "bytes": 116104,
+      "bytes": 117583,
       "imports": [
         {
           "path": "node:module",
@@ -15863,6 +16034,96 @@
         },
         {
           "path": "util",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "url",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "assert",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "os",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "stream",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "util",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "fs",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "path",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "tls",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "crypto",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "https",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "http2",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "zlib",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "buffer",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "child_process",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "http",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "tty",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "net",
+          "kind": "require-call",
+          "external": true
+        },
+        {
+          "path": "events",
           "kind": "require-call",
           "external": true
         },
@@ -21990,7 +22251,7 @@
           "bytesInOutput": 586
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js": {
-          "bytesInOutput": 707692
+          "bytesInOutput": 594247
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/app-render/action-async-storage-instance.js": {
           "bytesInOutput": 501
@@ -22058,11 +22319,14 @@
         ".open-next/server-functions/default/node_modules/next/dist/server/app-render/dynamic-access-async-storage.external.js": {
           "bytesInOutput": 516
         },
-        ".open-next/server-functions/default/.next/server/chunks/1525.js": {
-          "bytesInOutput": 9819
+        ".open-next/server-functions/default/.next/server/chunks/1069.js": {
+          "bytesInOutput": 431666
+        },
+        ".open-next/server-functions/default/.next/server/chunks/2127.js": {
+          "bytesInOutput": 34651
         },
         ".open-next/server-functions/default/.next/server/chunks/319.js": {
-          "bytesInOutput": 383456
+          "bytesInOutput": 383232
         },
         ".open-next/server-functions/default/.next/server/chunks/3445.js": {
           "bytesInOutput": 158835
@@ -22070,203 +22334,203 @@
         ".open-next/server-functions/default/.next/server/chunks/4424.js": {
           "bytesInOutput": 386245
         },
-        ".open-next/server-functions/default/.next/server/chunks/5564.js": {
-          "bytesInOutput": 411940
-        },
-        ".open-next/server-functions/default/.next/server/chunks/6271.js": {
-          "bytesInOutput": 46668
-        },
         ".open-next/server-functions/default/.next/server/chunks/8951.js": {
-          "bytesInOutput": 9611
+          "bytesInOutput": 9644
+        },
+        ".open-next/server-functions/default/.next/server/chunks/9203.js": {
+          "bytesInOutput": 9864
         },
         ".open-next/server-functions/default/.next/server/webpack-runtime.js": {
           "bytesInOutput": 1962
         },
         ".open-next/server-functions/default/.next/server/app/onboarding/student/complete/page.js": {
-          "bytesInOutput": 29150
+          "bytesInOutput": 29007
         },
         ".open-next/server-functions/default/.next/server/app/onboarding/tutor/complete/page.js": {
-          "bytesInOutput": 29914
+          "bytesInOutput": 29771
         },
         ".open-next/server-functions/default/.next/server/app/first-session-guarantee/page.js": {
-          "bytesInOutput": 33289
+          "bytesInOutput": 33146
         },
         ".open-next/server-functions/default/.next/server/app/admin/guarantee-claims/page.js": {
-          "bytesInOutput": 33883
+          "bytesInOutput": 33955
         },
         ".open-next/server-functions/default/.next/server/app/chat/[conversationId]/page.js": {
-          "bytesInOutput": 33831
+          "bytesInOutput": 34447
         },
         ".open-next/server-functions/default/.next/server/app/admin/student-ratings/page.js": {
-          "bytesInOutput": 29157
+          "bytesInOutput": 29013
+        },
+        ".open-next/server-functions/default/.next/server/app/cancellation-policy/page.js": {
+          "bytesInOutput": 25313
         },
         ".open-next/server-functions/default/.next/server/app/admin/subscriptions/page.js": {
-          "bytesInOutput": 30786
+          "bytesInOutput": 30882
         },
         ".open-next/server-functions/default/.next/server/app/admin/verifications/page.js": {
-          "bytesInOutput": 39008
+          "bytesInOutput": 40883
         },
         ".open-next/server-functions/default/.next/server/app/onboarding/student/page.js": {
-          "bytesInOutput": 37706
+          "bytesInOutput": 37586
         },
         ".open-next/server-functions/default/.next/server/app/complaint-process/page.js": {
-          "bytesInOutput": 28008
+          "bytesInOutput": 27921
         },
         ".open-next/server-functions/default/.next/server/app/help/for-parents/page.js": {
-          "bytesInOutput": 27750
+          "bytesInOutput": 27665
         },
         ".open-next/server-functions/default/.next/server/app/onboarding/tutor/page.js": {
-          "bytesInOutput": 49337
+          "bytesInOutput": 49223
         },
         ".open-next/server-functions/default/.next/server/app/admin/audit-logs/page.js": {
-          "bytesInOutput": 36341
+          "bytesInOutput": 36196
         },
         ".open-next/server-functions/default/.next/server/app/admin/broadcasts/page.js": {
-          "bytesInOutput": 35353
+          "bytesInOutput": 35209
         },
         ".open-next/server-functions/default/.next/server/app/browse-requests/page.js": {
-          "bytesInOutput": 34321
+          "bytesInOutput": 34467
         },
         ".open-next/server-functions/default/.next/server/app/forgot-password/page.js": {
-          "bytesInOutput": 31181
+          "bytesInOutput": 31065
         },
         ".open-next/server-functions/default/.next/server/app/help/for-tutors/page.js": {
-          "bytesInOutput": 27764
+          "bytesInOutput": 27677
         },
         ".open-next/server-functions/default/.next/server/app/admin/analytics/page.js": {
-          "bytesInOutput": 37162
+          "bytesInOutput": 37018
         },
         ".open-next/server-functions/default/.next/server/app/admin/referrals/page.js": {
-          "bytesInOutput": 29126
+          "bytesInOutput": 28986
         },
         ".open-next/server-functions/default/.next/server/app/become-a-tutor/page.js": {
-          "bytesInOutput": 38415
+          "bytesInOutput": 38272
         },
         ".open-next/server-functions/default/.next/server/app/admin/bookings/page.js": {
-          "bytesInOutput": 31333
+          "bytesInOutput": 31405
         },
         ".open-next/server-functions/default/.next/server/app/admin/contacts/page.js": {
-          "bytesInOutput": 33308
+          "bytesInOutput": 34551
         },
         ".open-next/server-functions/default/.next/server/app/admin/payments/page.js": {
-          "bytesInOutput": 35435
+          "bytesInOutput": 35576
         },
         ".open-next/server-functions/default/.next/server/app/_global-error/page.js": {
-          "bytesInOutput": 28400
+          "bytesInOutput": 28399
         },
         ".open-next/server-functions/default/.next/server/app/notifications/page.js": {
-          "bytesInOutput": 31032
+          "bytesInOutput": 30879
         },
         ".open-next/server-functions/default/.next/server/app/safety-policy/page.js": {
-          "bytesInOutput": 27646
+          "bytesInOutput": 27561
         },
         ".open-next/server-functions/default/.next/server/app/admin/payouts/page.js": {
-          "bytesInOutput": 34990
+          "bytesInOutput": 35096
         },
         ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js": {
           "bytesInOutput": 181194
         },
         ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js": {
-          "bytesInOutput": 69435
+          "bytesInOutput": 69401
         },
         ".open-next/server-functions/default/.next/server/app/how-it-works/page.js": {
-          "bytesInOutput": 35255
+          "bytesInOutput": 35112
         },
         ".open-next/server-functions/default/.next/server/app/blog/[slug]/page.js": {
-          "bytesInOutput": 29898
+          "bytesInOutput": 29780
         },
         ".open-next/server-functions/default/.next/server/app/select-role/page.js": {
-          "bytesInOutput": 27263
+          "bytesInOutput": 27146
         },
         ".open-next/server-functions/default/.next/server/app/tutors/[id]/page.js": {
-          "bytesInOutput": 53738
+          "bytesInOutput": 69653
         },
         ".open-next/server-functions/default/.next/server/app/admin/blogs/page.js": {
-          "bytesInOutput": 35354
+          "bytesInOutput": 35562
         },
         ".open-next/server-functions/default/.next/server/app/admin/users/page.js": {
-          "bytesInOutput": 35431
+          "bytesInOutput": 36725
         },
         ".open-next/server-functions/default/.next/server/app/_not-found/page.js": {
-          "bytesInOutput": 23174
+          "bytesInOutput": 23146
         },
         ".open-next/server-functions/default/.next/server/app/disclaimer/page.js": {
-          "bytesInOutput": 24940
+          "bytesInOutput": 24884
         },
         ".open-next/server-functions/default/.next/server/app/dashboard/page.js": {
-          "bytesInOutput": 91889
+          "bytesInOutput": 94586
         },
         ".open-next/server-functions/default/.next/server/app/coverage/page.js": {
-          "bytesInOutput": 31032
+          "bytesInOutput": 30889
         },
         ".open-next/server-functions/default/.next/server/app/earnings/page.js": {
-          "bytesInOutput": 40473
+          "bytesInOutput": 40607
         },
         ".open-next/server-functions/default/.next/server/app/referral/page.js": {
-          "bytesInOutput": 34738
+          "bytesInOutput": 34620
         },
         ".open-next/server-functions/default/.next/server/app/register/page.js": {
-          "bytesInOutput": 34051
+          "bytesInOutput": 33935
         },
         ".open-next/server-functions/default/.next/server/app/settings/page.js": {
-          "bytesInOutput": 35598
+          "bytesInOutput": 35468
         },
         ".open-next/server-functions/default/.next/server/app/subjects/page.js": {
-          "bytesInOutput": 27838
+          "bytesInOutput": 27722
         },
         ".open-next/server-functions/default/.next/server/app/billing/page.js": {
-          "bytesInOutput": 39381
+          "bytesInOutput": 39264
         },
         ".open-next/server-functions/default/.next/server/app/careers/page.js": {
-          "bytesInOutput": 27024
+          "bytesInOutput": 26939
         },
         ".open-next/server-functions/default/.next/server/app/contact/page.js": {
-          "bytesInOutput": 33545
+          "bytesInOutput": 33429
         },
         ".open-next/server-functions/default/.next/server/app/pricing/page.js": {
-          "bytesInOutput": 33484
+          "bytesInOutput": 33341
         },
         ".open-next/server-functions/default/.next/server/app/privacy/page.js": {
-          "bytesInOutput": 25639
+          "bytesInOutput": 25583
         },
         ".open-next/server-functions/default/.next/server/app/profile/page.js": {
-          "bytesInOutput": 41053
+          "bytesInOutput": 40924
         },
         ".open-next/server-functions/default/.next/server/app/support/page.js": {
-          "bytesInOutput": 32435
+          "bytesInOutput": 32321
         },
         ".open-next/server-functions/default/.next/server/app/levels/page.js": {
-          "bytesInOutput": 30711
+          "bytesInOutput": 30568
         },
         ".open-next/server-functions/default/.next/server/app/tutors/page.js": {
-          "bytesInOutput": 47830
+          "bytesInOutput": 47897
         },
         ".open-next/server-functions/default/.next/server/app/login/page.js": {
-          "bytesInOutput": 30362
+          "bytesInOutput": 30249
         },
         ".open-next/server-functions/default/.next/server/app/terms/page.js": {
-          "bytesInOutput": 25777
+          "bytesInOutput": 25721
         },
         ".open-next/server-functions/default/.next/server/app/admin/page.js": {
-          "bytesInOutput": 33641
+          "bytesInOutput": 33764
         },
         ".open-next/server-functions/default/.next/server/app/about/page.js": {
-          "bytesInOutput": 35005
+          "bytesInOutput": 34862
         },
         ".open-next/server-functions/default/.next/server/app/blog/page.js": {
-          "bytesInOutput": 30347
+          "bytesInOutput": 30231
         },
         ".open-next/server-functions/default/.next/server/app/chat/page.js": {
-          "bytesInOutput": 29244
+          "bytesInOutput": 29123
         },
         ".open-next/server-functions/default/.next/server/app/help/page.js": {
-          "bytesInOutput": 32136
+          "bytesInOutput": 31993
         },
         ".open-next/server-functions/default/.next/server/app/page.js": {
-          "bytesInOutput": 54520
+          "bytesInOutput": 54223
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/require.js": {
-          "bytesInOutput": 8401
+          "bytesInOutput": 8502
         },
         ".open-next/server-functions/default/node_modules/next/dist/lib/wait.js": {
           "bytesInOutput": 341
@@ -22413,10 +22677,10 @@
           "bytesInOutput": 5072
         },
         ".open-next/server-functions/default/index.mjs": {
-          "bytesInOutput": 85920
+          "bytesInOutput": 87249
         }
       },
-      "bytes": 6386301
+      "bytes": 6326819
     }
   }
 }

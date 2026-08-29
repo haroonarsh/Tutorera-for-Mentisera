@@ -107,14 +107,12 @@ app.use(cookieParser());
 // or validation that only checks the "expected" shape.
 app.use(hpp());
 
-// General rate limit across all API routes (both versioned and legacy paths)
+// General rate limit across all API routes
 app.use("/api/v1", generalLimiter);
-// app.use("/api", generalLimiter);
 
-// API versioning: routes are mounted under both /api/v1 (the versioned path
-// going forward) and the original /api (kept as an alias so no existing
-// frontend call breaks). New frontend work should target /api/v1; once the
-// frontend is fully migrated, the bare /api mount can be removed.
+// API versioning: all routes are mounted under /api/v1. The frontend has
+// been fully migrated and confirmed working in production as of this
+// change — the legacy bare /api alias has been removed.
 const apiRouter = express.Router();
 apiRouter.use("/auth", authRoutes);
 apiRouter.use("/tutors", tutorRoutes);
@@ -134,7 +132,6 @@ apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/earnings", earningsRoutes);
 
 app.use("/api/v1", apiRouter);
-// app.use("/api", apiRouter); // legacy alias — remove once frontend fully migrates to /api/v1
 
 // Health check
 app.get("/", (req, res) => {
