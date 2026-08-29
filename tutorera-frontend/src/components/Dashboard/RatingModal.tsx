@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface Props {
   title: string;
@@ -25,6 +26,8 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const containerRef = useFocusTrap(true, onClose);
+
   const handleSubmit = async () => {
     if (rating === 0) { setError("Please select a star rating."); return; }
     if (comment.trim().length < 10) { setError("Please write at least 10 characters."); return; }
@@ -40,15 +43,20 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-      <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rating-modal-title"
+        style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a1a2e', margin: '0 0 4px' }}>{title}</h2>
+            <h2 id="rating-modal-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a1a2e', margin: '0 0 4px' }}>{title}</h2>
             <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{subtitle}</p>
           </div>
-          <button onClick={onClose}
+          <button onClick={onClose} aria-label="Close"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.25rem', lineHeight: 1, padding: '0 0 0 1rem' }}>
             ×
           </button>
@@ -69,6 +77,7 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
                 onClick={() => setRating(star)}
                 onMouseEnter={() => setHovered(star)}
                 onMouseLeave={() => setHovered(0)}
+                aria-label={`${star} star${star > 1 ? "s" : ""} - ${REASONS[star]}`}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', fontSize: '2rem', lineHeight: 1, transition: 'transform 0.1s', transform: hovered >= star || rating >= star ? 'scale(1.15)' : 'scale(1)' }}>
                 <span style={{ color: (hovered || rating) >= star ? '#f59e0b' : '#e5e7eb' }}>★</span>
               </button>

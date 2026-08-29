@@ -5,8 +5,14 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import http from "http";
 import helmet from "helmet";
+import hpp from "hpp";
+import mongoose from "mongoose";
+import pinoHttp from "pino-http";
+import logger from "./config/logger";
 import connectDB from "./config/db";
+import { validateEnv } from "./config/env";
 import errorHandler from "./middlewares/errorHandler";
+import requestId from "./middlewares/requestId";
 import { initSocket } from "./utils/socket";
 import { generalLimiter } from "./middlewares/rateLimiters";
 
@@ -29,6 +35,11 @@ import earningsRoutes from "./routes/earnings.routes";
 
 dotenv.config();
 
+// Validate required environment variables before anything else boots.
+// If this fails, the process exits immediately (see config/env.ts) instead
+// of starting in a broken state and failing confusingly later.
+validateEnv();
+
 const app = express();
 const httpServer = http.createServer(app);
 
@@ -40,6 +51,26 @@ app.set("io", io);
 
 // Connect DB
 connectDB();
+
+// Attach a unique ID to every request first, before any other middleware —
+// so even errors thrown by later middleware (CORS rejection, rate limiting)
+// can still be traced back to a specific request.
+app.use(requestId);
+
+// Structured HTTP request/response logging — one line per request, tagged
+// with the same requestId set above, replacing the need for ad-hoc
+// console.log calls scattered across controllers just to see traffic.
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req) => (req as any).id,
+    customLogLevel: (req, res, err) => {
+      if (err || res.statusCode >= 500) return "error";
+      if (res.statusCode >= 400) return "warn";
+      return "info";
+    },
+  })
+);
 
 // Security headers
 app.use(helmet());
@@ -67,29 +98,43 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "100kb" })); // explicit — this app sends small JSON payloads; file uploads go through Multer, not JSON bodies
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
 
-// General rate limit across all API routes
-app.use("/api", generalLimiter);
+// Prevent HTTP Parameter Pollution — e.g. ?role=student&role=admin resolving
+// to an array where code expects a single string, which can bypass filters
+// or validation that only checks the "expected" shape.
+app.use(hpp());
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/tutors", tutorRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/requests", requestRoutes);
-app.use("/api/bookings", bookingRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/blogs", blogRoutes);
-app.use("/api/contact", contactRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/guarantee", guaranteeRoutes);
-app.use("/api/referral", referralRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/earnings", earningsRoutes);
+// General rate limit across all API routes (both versioned and legacy paths)
+app.use("/api/v1", generalLimiter);
+// app.use("/api", generalLimiter);
+
+// API versioning: routes are mounted under both /api/v1 (the versioned path
+// going forward) and the original /api (kept as an alias so no existing
+// frontend call breaks). New frontend work should target /api/v1; once the
+// frontend is fully migrated, the bare /api mount can be removed.
+const apiRouter = express.Router();
+apiRouter.use("/auth", authRoutes);
+apiRouter.use("/tutors", tutorRoutes);
+apiRouter.use("/students", studentRoutes);
+apiRouter.use("/requests", requestRoutes);
+apiRouter.use("/bookings", bookingRoutes);
+apiRouter.use("/reviews", reviewRoutes);
+apiRouter.use("/blogs", blogRoutes);
+apiRouter.use("/contact", contactRoutes);
+apiRouter.use("/upload", uploadRoutes);
+apiRouter.use("/admin", adminRoutes);
+apiRouter.use("/notifications", notificationRoutes);
+apiRouter.use("/chat", chatRoutes);
+apiRouter.use("/guarantee", guaranteeRoutes);
+apiRouter.use("/referral", referralRoutes);
+apiRouter.use("/ai", aiRoutes);
+apiRouter.use("/earnings", earningsRoutes);
+
+app.use("/api/v1", apiRouter);
+// app.use("/api", apiRouter); // legacy alias — remove once frontend fully migrates to /api/v1
 
 // Health check
 app.get("/", (req, res) => {
@@ -100,6 +145,58 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
+const server = httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+// On SIGTERM (sent by Render/most hosts when redeploying or scaling down) or
+// SIGINT (Ctrl+C locally), stop accepting new connections, let in-flight
+// requests finish, close the Socket.io server and the MongoDB connection,
+// then exit. Without this, a deploy can kill the process mid-request,
+// dropping active bookings/chat messages, and leave the DB connection in an
+// unclean state.
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+  // Stop accepting new HTTP connections; wait for in-flight requests to finish.
+  server.close(async (err) => {
+    if (err) {
+      console.error("Error while closing HTTP server:", err);
+    } else {
+      console.log("✅ HTTP server closed");
+    }
+
+    // Close all active Socket.io connections.
+    io.close(() => {
+      console.log("✅ Socket.io server closed");
+    });
+
+    // Close the MongoDB connection.
+    try {
+      await mongoose.connection.close();
+      console.log("✅ MongoDB connection closed");
+    } catch (dbErr) {
+      console.error("Error while closing MongoDB connection:", dbErr);
+    }
+
+    process.exit(err ? 1 : 0);
+  });
+
+  // Safety net: if something hangs (a stuck connection, a slow query), force
+  // exit after 10 seconds rather than letting the host kill -9 us mid-cleanup.
+  setTimeout(() => {
+    console.error("⚠️ Graceful shutdown timed out, forcing exit");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));

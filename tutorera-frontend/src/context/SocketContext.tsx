@@ -50,13 +50,17 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     // Connect socket
     const token2 = localStorage.getItem("token");
-    const newSocket = io(
-      process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000",
-      {
-        auth: { token: token2 },
-        transports: ["websocket"],
-      }
-    );
+
+    // Derive the Socket.io server URL from the API URL by stripping the
+    // /api/... suffix entirely (not just "/api"), so this keeps working
+    // whether NEXT_PUBLIC_API_URL is ".../api" or the versioned ".../api/v1".
+    const socketBaseUrl =
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "http://localhost:5000";
+
+    const newSocket = io(socketBaseUrl, {
+      auth: { token: token2 },
+      transports: ["websocket"],
+    });
 
     newSocket.on("connect", () => {
       console.log("Socket connected");

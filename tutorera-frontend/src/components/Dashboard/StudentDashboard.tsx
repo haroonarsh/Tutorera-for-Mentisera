@@ -506,7 +506,7 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
 const fetchRequests = useCallback(async () => {
   setLoadingR(true);
   try {
-    const res = await axiosInstance.get("/requests/my"); // ← was /api/requests
+    const res = await axiosInstance.get("/requests/my"); // ← was /api/v1/requests
     setRequests(res.data.requests ?? []);                    // ← same, works fine
   } catch { setRequests([]); }
   finally { setLoadingR(false); }

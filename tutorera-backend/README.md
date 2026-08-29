@@ -41,23 +41,23 @@ npm run dev
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | /api/auth/register | Register user |
-| POST | /api/auth/login | Login user |
-| GET | /api/auth/me | Get current user |
-| GET | /api/tutors | Get all tutors |
-| GET | /api/tutors/:id | Get tutor by ID |
-| POST | /api/tutors/profile | Create/update profile |
-| POST | /api/tutors/onboarding/step | Save onboarding step |
-| GET | /api/admin/verifications | Get pending tutors |
-| PATCH | /api/admin/verify/:id | Approve/reject tutor |
-| GET | /api/admin/users | Get all users |
-| POST | /api/requests | Create tuition request |
-| POST | /api/requests/:id/bids | Place bid |
-| GET | /api/bookings | Get my bookings |
-| POST | /api/reviews/:tutorId | Create review |
-| GET | /api/blogs | Get all blogs |
-| POST | /api/contact | Submit contact form |
-| POST | /api/upload/avatar | Upload avatar |
+| POST | /api/v1/auth/register | Register user |
+| POST | /api/v1/auth/login | Login user |
+| GET | /api/v1/auth/me | Get current user |
+| GET | /api/v1/tutors | Get all tutors |
+| GET | /api/v1/tutors/:id | Get tutor by ID |
+| POST | /api/v1/tutors/profile | Create/update profile |
+| POST | /api/v1/tutors/onboarding/step | Save onboarding step |
+| GET | /api/v1/admin/verifications | Get pending tutors |
+| PATCH | /api/v1/admin/verify/:id | Approve/reject tutor |
+| GET | /api/v1/admin/users | Get all users |
+| POST | /api/v1/requests | Create tuition request |
+| POST | /api/v1/requests/:id/bids | Place bid |
+| GET | /api/v1/bookings | Get my bookings |
+| POST | /api/v1/reviews/:tutorId | Create review |
+| GET | /api/v1/blogs | Get all blogs |
+| POST | /api/v1/contact | Submit contact form |
+| POST | /api/v1/upload/avatar | Upload avatar |
 
 ## Project Structure
 \```

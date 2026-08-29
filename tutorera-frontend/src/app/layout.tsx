@@ -4,9 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
-import WhatsAppButton from "@/components/WhatsAppButton";
-import CookieBanner from "@/components/CookieBanner";
-import AIChatWidget from "@/components/AIChatWidget";
+import LazyWidgets from "@/components/LazyWidgets";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -86,9 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ConditionalLayout>
               {children}
             </ConditionalLayout>
-            <WhatsAppButton />
-            <AIChatWidget />
-            <CookieBanner />
+            <LazyWidgets />
           </SocketProvider>
         </AuthProvider>
         <Toaster

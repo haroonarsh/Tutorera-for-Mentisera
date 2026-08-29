@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import logger from "../config/logger";
 
 const errorHandler = (
   err: Error & { statusCode?: number },
@@ -9,8 +10,18 @@ const errorHandler = (
   const statusCode = err.statusCode || 500;
 
   // Always log the full error server-side, including stack trace, for debugging.
-  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} — ${err.message}`);
-  console.error(err.stack);
+  // requestId ties this line to every other log line from the same request
+  // (see middlewares/requestId.ts) so a single grep shows the full story.
+  logger.error(
+    {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      statusCode,
+      err,
+    },
+    err.message
+  );
 
   // Only trust err.message when the error was deliberately thrown with a known
   // statusCode (i.e. our own code intentionally raised it, like a 400/403/404
