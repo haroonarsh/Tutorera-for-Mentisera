@@ -79,7 +79,7 @@ export default function PricingPage() {
             {/* Fee Breakdown */}
             <div style={{ backgroundColor: '#fffbeb', borderRadius: '1rem', padding: '2.5rem', border: '1px solid #fde68a' }}>
               <h3 style={{ fontWeight: '800', color: C.primary, fontSize: '1.2rem', marginBottom: '0.5rem' }}>Fee Breakdown</h3>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>How the 28.75% is calculated</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>How the 23% total fee is calculated</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                 {[
                   { label: "Platform Fee", value: "20%", color: '#d97706' },

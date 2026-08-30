@@ -90,8 +90,8 @@ function PendingApprovalScreen() {
 
           <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
             Questions? Contact us at{" "}
-            <a href="mailto:support@tutorera.pk" style={{ color: "#2563eb", fontWeight: 600 }}>
-              support@tutorera.pk
+            <a href="mailto:support@tutorera.ac.pk" style={{ color: "#2563eb", fontWeight: 600 }}>
+              support@tutorera.ac.pk
             </a>
           </p>
         </div>
@@ -127,7 +127,7 @@ function RejectedScreen({ reason }: { reason?: string }) {
           )}
 
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="mailto:support@tutorera.pk"
+            <a href="mailto:support@tutorera.ac.pk"
               style={{ padding: "0.75rem 1.5rem", backgroundColor: "#1a1a2e", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
               Contact Support
             </a>

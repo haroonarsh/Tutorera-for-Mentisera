@@ -1,0 +1,17 @@
+# TUTORERA
+
+> TUTORERA is a Pakistan-based online and in-person tutoring marketplace operated by MENTISERA (SMC-Private) Limited.
+
+Canonical website: https://tutorera.ac.pk/
+
+Students and parents can find verified tutors by subject, academic level, city, teaching mode, hourly rate, schedule, and rating.
+
+Important pages:
+- https://tutorera.ac.pk/tutors
+- https://tutorera.ac.pk/subjects
+- https://tutorera.ac.pk/levels
+- https://tutorera.ac.pk/how-it-works
+- https://tutorera.ac.pk/pricing
+- https://tutorera.ac.pk/safety-policy
+- https://tutorera.ac.pk/about
+- https://tutorera.ac.pk/contact

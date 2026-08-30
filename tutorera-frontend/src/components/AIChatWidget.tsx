@@ -84,7 +84,7 @@ export default function AIChatWidget() {
     } catch {
       setMessages(prev => [...prev, {
         role: "assistant",
-        text: "Sorry, I'm having trouble responding right now. Please try again or contact us at support@tutorera.pk",
+        text: "Sorry, I'm having trouble responding right now. Please try again or contact us at support@tutorera.ac.pk",
       }]);
     } finally {
       setLoading(false);

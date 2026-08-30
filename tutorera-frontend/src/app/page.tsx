@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Find Tutors in Pakistan | TUTORERA®",
   description: "Pakistan's modern tutoring marketplace. Search verified tutors by subject, level, city, and budget. Safe, clear, and structured.",
+  alternates: { canonical: "/" },
 };
 
 const C = {

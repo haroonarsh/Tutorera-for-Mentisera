@@ -62,7 +62,7 @@ export default function HowItWorksPage() {
               { step: "2", title: "Submit Verification", desc: "Upload your CNIC and degree certificate. Our team reviews and approves within 24-48 hours." },
               { step: "3", title: "Browse Requests", desc: "Browse open tuition requests from students. Filter by subject, level, city, and budget." },
               { step: "4", title: "Place Bids", desc: "Place a bid with your rate and a message. Students will review and accept the best bid." },
-              { step: "5", title: "Teach & Earn", desc: "Once a bid is accepted, start teaching. Platform fee of 28.75% applies on each booking." },
+              { step: "5", title: "Teach & Earn", desc: "Once a bid is accepted, start teaching. A total fee of 23% (20% platform fee plus 3% GST) applies on each booking." },
             ].map(item => (
               <div key={item.step} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <div style={{ width: '44px', height: '44px', backgroundColor: '#16a34a', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1rem', flexShrink: 0 }}>

@@ -13,7 +13,7 @@ export default function ComplaintProcessPage() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2.5rem' }}>
             {[
-              { step: "1", title: "Submit Your Complaint", desc: "Use our Contact form or email support@tutorera.pk with full details of your complaint including booking ID if applicable." },
+              { step: "1", title: "Submit Your Complaint", desc: "Use our Contact form or email support@tutorera.ac.pk with full details of your complaint including booking ID if applicable." },
               { step: "2", title: "Acknowledgement", desc: "We will acknowledge your complaint within 24 hours and assign it a reference number." },
               { step: "3", title: "Investigation", desc: "Our team will investigate within 3-5 business days, reviewing chat history, booking records, and both parties' statements." },
               { step: "4", title: "Resolution", desc: "We will communicate the outcome and any actions taken. This may include refunds, warnings, or account suspension." },
