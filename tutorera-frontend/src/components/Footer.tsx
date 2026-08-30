@@ -81,6 +81,7 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {[
                 { label: "Find a Tutor", href: "/tutors" },
+                { label: "Tutors by City", href: "/locations" },
                 { label: "Subjects", href: "/subjects" },
                 { label: "Levels", href: "/levels" },
                 { label: "Pricing", href: "/pricing" },

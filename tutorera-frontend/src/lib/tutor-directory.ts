@@ -22,6 +22,9 @@ export const LEVELS = {
   "o-level": "O-Level", "a-level": "A-Level", university: "University",
 } as const;
 
+export const PRIMARY_CITY_SLUGS = ["lahore", "karachi", "islamabad", "rawalpindi", "faisalabad"] as const;
+export const LOCAL_SUBJECT_SLUGS = ["mathematics", "physics", "chemistry", "biology", "english", "computer-science", "mdcat", "ielts"] as const;
+
 export type DirectoryKind = "subject" | "city" | "level";
 
 export interface TutorDirectoryResponse {
