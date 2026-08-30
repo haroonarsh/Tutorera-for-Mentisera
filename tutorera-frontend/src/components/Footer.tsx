@@ -61,6 +61,7 @@ export default function Footer() {
                 { label: "Careers", href: "/careers" },
                 { label: "Contact Us", href: "/contact" },
                 { label: "Help Center", href: "/help" },
+                { label: "Verification Standards", href: "/tutor-verification-standards" },
               ].map(({ label, href }) => (
                 <li key={label}>
                   <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}
@@ -126,6 +127,9 @@ export default function Footer() {
                 { label: "Privacy Policy", href: "/privacy" },
                 { label: "Disclaimer", href: "/disclaimer" },
                 { label: "Safety Policy", href: "/safety-policy" },
+                { label: "Review Policy", href: "/review-policy" },
+                { label: "Editorial Policy", href: "/editorial-policy" },
+                { label: "Academic Standards", href: "/academic-standards" },
                 { label: "Complaint Process", href: "/complaint-process" },
                 { label: "Cancellation Policy", href: "/cancellation-policy" },
               ].map(({ label, href }) => (

@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "About TUTORERA®",
   description: "TUTORERA® is Pakistan's trusted tutoring marketplace, operated by MENTISERA (SMC-Private) Limited.",
+  alternates: { canonical: "/about" },
 };
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
@@ -60,25 +61,6 @@ export default function AboutPage() {
             <p>For decades, finding a tutor in Pakistan meant relying on word-of-mouth, Facebook groups, or random agents — with no way to verify credentials, compare options, or ensure safety.</p>
             <p>TUTORERA® was built to change that. We created a structured marketplace where students and parents can search for tutors by subject, level, location, and budget — and where every tutor on the platform has been manually verified.</p>
             <p>We are operated by <strong style={{ color: C.primary }}>MENTISERA (SMC-Private) Limited</strong>, an education-focused technology company committed to building transparent, platform-based learning solutions for Pakistan.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section style={{ padding: '4rem 1.5rem', backgroundColor: C.primary }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '2rem', textAlign: 'center' }}>
-            {[
-              { value: "500+", label: "Verified Tutors" },
-              { value: "50+", label: "Subjects Covered" },
-              { value: "10+", label: "Cities Covered" },
-              { value: "1000+", label: "Students Helped" },
-            ].map(stat => (
-              <div key={stat.label}>
-                <p style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', marginBottom: '0.4rem' }}>{stat.value}</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{stat.label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>

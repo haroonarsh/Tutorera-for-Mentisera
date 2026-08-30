@@ -1,0 +1,9 @@
+import type { Metadata } from "next";
+import TrustArticle from "@/components/TrustArticle";
+export const metadata: Metadata = { title: "Tutor Verification Standards", description: "How TUTORERA reviews tutor identity, education, and in-person safety documents before approval.", alternates: { canonical: "/tutor-verification-standards" } };
+export default function Page() { return <TrustArticle title="Tutor Verification Standards" path="/tutor-verification-standards" intro="TUTORERA reviews required identity and academic documents before a tutor profile can appear as approved in the public marketplace." sections={[
+  { heading: "Information tutors submit", body: "The onboarding process collects the tutor's name, contact details, city, teaching experience, subjects, levels, education, rate, teaching mode, availability, and profile introduction.", items: ["CNIC front and back", "Academic qualification and supporting degree document", "Police clearance certificate for tutors offering in-person lessons", "Optional introduction video"] },
+  { heading: "Manual review and status", body: "Submitted profiles enter a pending queue. An administrator can review the profile and protected documents, then approve or reject the application. Only profiles with approved verification status are returned by the public tutor directory." },
+  { heading: "What the verified badge means", body: "A verified badge means the submitted profile and required documents passed TUTORERA's platform review. It is not a guarantee of teaching outcomes, future conduct, or the continuing validity of every external document." },
+  { heading: "Ongoing responsibility", body: "Tutors must keep their information accurate. TUTORERA may reject, suspend, or remove a profile when information is incomplete, misleading, or inconsistent with platform rules." },
+]} />; }
