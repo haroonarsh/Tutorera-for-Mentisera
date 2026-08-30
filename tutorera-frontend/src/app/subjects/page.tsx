@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import { slugify } from "@/lib/tutor-directory";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -65,7 +66,7 @@ export default function SubjectsPage() {
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   {cat.subjects.map(subject => (
-                    <Link key={subject} href={`/tutors?subject=${subject}`}
+                    <Link key={subject} href={`/tutors/subject/${slugify(subject.replace(" Language", ""))}`}
                       style={{ backgroundColor: C.gray50, color: C.primary, fontSize: '0.875rem', padding: '0.4rem 0.875rem', borderRadius: '999px', textDecoration: 'none', fontWeight: '500', border: '1px solid #e5e7eb', transition: 'all 0.2s' }}
                       onMouseEnter={e => { e.currentTarget.style.backgroundColor = cat.color; e.currentTarget.style.color = cat.textColor; }}
                       onMouseLeave={e => { e.currentTarget.style.backgroundColor = C.gray50; e.currentTarget.style.color = C.primary; }}>

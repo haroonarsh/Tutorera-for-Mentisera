@@ -11,6 +11,10 @@ export function proxy(request: NextRequest) {
     destination.port = "";
     return NextResponse.redirect(destination, 301);
   }
+
+  if (request.nextUrl.pathname.startsWith("/admin") && !request.cookies.get("token")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
   return NextResponse.next();
 }
 
