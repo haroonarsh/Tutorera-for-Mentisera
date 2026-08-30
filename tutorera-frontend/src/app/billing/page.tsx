@@ -5,9 +5,10 @@ import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
+import { TOTAL_FEE_PERCENT } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
-const PLATFORM_FEE = 23; // 20% + 3% GST
+const PLATFORM_FEE = TOTAL_FEE_PERCENT;
 
 interface Usage {
   plan: string;

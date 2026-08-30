@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Tutors by Academic Level", description: "Find verified tutors for Primary, Middle, Matric, Intermediate, O-Level, A-Level, and university students in Pakistan.", alternates: { canonical: "/levels" } };
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 

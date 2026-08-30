@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
+import { TOTAL_FEE_PERCENT } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -20,7 +21,7 @@ interface Booking {
   createdAt: string;
 }
 
-const PLATFORM_FEE_PERCENT = 23; // 20% + 3% GST
+const PLATFORM_FEE_PERCENT = TOTAL_FEE_PERCENT;
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);

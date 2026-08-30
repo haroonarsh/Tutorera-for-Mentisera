@@ -7,7 +7,7 @@ import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
-import { TOTAL_FEE_PERCENT } from "../config/constants";
+import { GST_PERCENT, PLATFORM_FEE_PERCENT, TOTAL_FEE_PERCENT } from "../config/constants";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import Request from "../models/Request.model";
@@ -859,8 +859,6 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   ]);
 
   // ── Derived calculations ──────────────────────────────────────
-  const PLATFORM_FEE_PERCENT = 20;
-  const GST_PERCENT = 15;
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
   const platformFeeTotal = Math.round(totalRevenue * (PLATFORM_FEE_PERCENT / 100));
   const gstTotal = Math.round(platformFeeTotal * (GST_PERCENT / 100));

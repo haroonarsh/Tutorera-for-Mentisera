@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
+import { TOTAL_FEE_PERCENT } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
 // Platform fee: 20% base + 15% GST on that fee = 3% GST = 23% total
-const PLATFORM_FEE_PERCENT = 23;
+const PLATFORM_FEE_PERCENT = TOTAL_FEE_PERCENT;
 
 interface Booking {
   _id: string;

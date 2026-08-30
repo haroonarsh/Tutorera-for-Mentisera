@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { MessageSquare, BookOpen, Users, Shield } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Help Center", description: "Answers about finding tutors, tutor verification, bookings, payments, safety, cancellations, and support on TUTORERA.", alternates: { canonical: "/help" } };
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -15,8 +18,10 @@ const faqs = [
 ];
 
 export default function HelpPage() {
+  const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((faq) => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } })) };
   return (
     <div style={{ backgroundColor: 'white' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <section style={{ backgroundColor: C.primary, padding: '5rem 1.5rem', textAlign: 'center' }}>
         <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '800', color: 'white', marginBottom: '1rem' }}>Help Center</h1>
         <p style={{ color: '#9ca3af', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto' }}>

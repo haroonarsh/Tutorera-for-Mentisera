@@ -26,6 +26,7 @@ export const PRIMARY_CITY_SLUGS = ["lahore", "karachi", "islamabad", "rawalpindi
 export const LOCAL_SUBJECT_SLUGS = ["mathematics", "physics", "chemistry", "biology", "english", "computer-science", "mdcat", "ielts"] as const;
 
 export type DirectoryKind = "subject" | "city" | "level";
+export type TutorSearchFilters = Partial<Record<DirectoryKind | "search" | "teachingMode" | "minPrice" | "maxPrice" | "minRating", string>>;
 
 export interface TutorDirectoryResponse {
   tutors: TutorProfile[];
@@ -36,7 +37,7 @@ export interface TutorDirectoryResponse {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
 
-export async function fetchTutors(filters: Partial<Record<DirectoryKind, string>> = {}, limit = 24): Promise<TutorDirectoryResponse> {
+export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24): Promise<TutorDirectoryResponse> {
   const params = new URLSearchParams({ limit: String(limit), page: "1" });
   Object.entries(filters).forEach(([key, value]) => value && params.set(key, value));
 
