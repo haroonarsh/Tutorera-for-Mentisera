@@ -62,7 +62,7 @@ export default function ChatPage() {
     if (!user) return;
     const token = localStorage.getItem("token");
     const newSocket = io(
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "http://localhost:5000",
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "https://tutorera-backend.onrender.com",
       { auth: { token }, transports: ["websocket"] }
     );
 
