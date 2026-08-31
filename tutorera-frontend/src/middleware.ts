@@ -24,5 +24,6 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-export const runtime = "edge";
+// OpenNext's Cloudflare build currently requires the legacy runtime identifier.
+export const runtime = "experimental-edge";
 export const config = { matcher: "/((?!_next/static|_next/image|favicon.ico).*)" };
