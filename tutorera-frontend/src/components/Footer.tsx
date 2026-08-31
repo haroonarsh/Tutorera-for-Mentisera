@@ -1,170 +1,137 @@
 import Link from "next/link";
-import { BookOpen  } from "lucide-react";
-import { RiTwitterLine } from "react-icons/ri";
+import { BookOpen, Mail, MapPin, ShieldCheck } from "lucide-react";
 import { FiFacebook } from "react-icons/fi";
+import { RiTwitterLine } from "react-icons/ri";
 import { SiInstagram } from "react-icons/si";
 import { SlSocialLinkedin } from "react-icons/sl";
+import s from "./Footer.module.css";
 
-const COLORS = {
-  primary: '#1a1a2e',
-  secondary: '#16213e',
-  highlight: '#e94560',
-  accent: '#2563eb',
-};
+const footerColumns = [
+  {
+    title: "Marketplace",
+    links: [
+      { label: "Find tutors", href: "/tutors" },
+      { label: "Post a tuition request", href: "/dashboard?tab=requests" },
+      { label: "How tutor offers work", href: "/how-tutor-offers-work" },
+      { label: "Browse open requests", href: "/browse-requests" },
+      { label: "Pricing", href: "/pricing" },
+    ],
+  },
+  {
+    title: "Students & parents",
+    links: [
+      { label: "Tutors by city", href: "/locations" },
+      { label: "Subjects", href: "/subjects" },
+      { label: "Levels", href: "/levels" },
+      { label: "Parent guide", href: "/help/for-parents" },
+      { label: "First-session guarantee", href: "/first-session-guarantee" },
+    ],
+  },
+  {
+    title: "Tutors",
+    links: [
+      { label: "Become a tutor", href: "/become-a-tutor" },
+      { label: "Tutor guide", href: "/help/for-tutors" },
+      { label: "Earnings", href: "/earnings" },
+      { label: "Verification standards", href: "/tutor-verification-standards" },
+      { label: "Tutor screening policy", href: "/tutor-screening-policy" },
+    ],
+  },
+  {
+    title: "Trust & safety",
+    links: [
+      { label: "Safety policy", href: "/safety-policy" },
+      { label: "Review policy", href: "/review-policy" },
+      { label: "Complaint process", href: "/complaint-process" },
+      { label: "Cancellation policy", href: "/cancellation-policy" },
+      { label: "Academic standards", href: "/academic-standards" },
+    ],
+  },
+  {
+    title: "Company & research",
+    links: [
+      { label: "About", href: "/about" },
+      { label: "Coverage", href: "/coverage" },
+      { label: "Blog", href: "/blog" },
+      { label: "Tutoring rates research", href: "/research/pakistan-tutoring-rates" },
+      { label: "Research methodology", href: "/research-methodology" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Terms", href: "/terms" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Disclaimer", href: "/disclaimer" },
+      { label: "Editorial policy", href: "/editorial-policy" },
+      { label: "Content review policy", href: "/content-review-policy" },
+      { label: "Governance", href: "/governance" },
+    ],
+  },
+];
+
+const socialLinks = [
+  { label: "Twitter / X", icon: RiTwitterLine, href: "https://twitter.com/mentiserapk" },
+  { label: "Facebook", icon: FiFacebook, href: "https://facebook.com/mentiserapk" },
+  { label: "Instagram", icon: SiInstagram, href: "https://instagram.com/mentiserapk" },
+  { label: "LinkedIn", icon: SlSocialLinkedin, href: "https://linkedin.com/company/mentiserapk" },
+];
 
 export default function Footer() {
   return (
-    <footer style={{ backgroundColor: COLORS.primary, color: 'white', paddingTop: '4rem', paddingBottom: '2rem' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
-
-        {/* Top Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2.5rem', marginBottom: '3rem' }}>
-
-          {/* Brand */}
-          <div style={{ gridColumn: 'span 1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <BookOpen size={24} color={COLORS.accent} />
-              <span style={{ fontSize: '1.2rem', fontWeight: '800' }}>
-                TUTORERA<span style={{ color: COLORS.highlight }}>®</span>
-              </span>
-            </div>
-            <p style={{ color: '#9ca3af', fontSize: '0.875rem', lineHeight: '1.7', marginBottom: '1.5rem' }}>
-              Pakistan's trusted digital tutoring platform. Connecting students with verified tutors for a safe and effective learning experience.
+    <footer className={s.footer}>
+      <div className={s.container}>
+        <div className={s.top}>
+          <div className={s.brand}>
+            <Link href="/" className={s.logo} aria-label="TUTORERA home">
+              <BookOpen size={26} aria-hidden="true" />
+              <span>TUTORERA<em>®</em></span>
+            </Link>
+            <p>
+              Pakistan&apos;s structured tutoring marketplace for student-led requests, transparent tutor offers, safer comparison, and documented bookings.
             </p>
-            {/* Social Icons */}
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              {[
-                { icon: <RiTwitterLine size={18} />, href: "https://twitter.com/mentiserapk" },
-                { icon: <FiFacebook size={18} />, href: "https://facebook.com/mentiserapk" },
-                { icon: <SiInstagram size={18} />, href: "https://instagram.com/mentiserapk" },
-                { icon: <SlSocialLinkedin size={18} />, href: "https://linkedin.com/company/mentiserapk" },
-              ].map(({ icon, href }, i) => (
-                <a key={i} href={href} target="_blank" rel="noopener noreferrer"
-                  style={{ width: '36px', height: '36px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', textDecoration: 'none', transition: 'background 0.2s' }}
-                  // onMouseEnter={e => (e.currentTarget.style.backgroundColor = COLORS.highlight)}
-                  // onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
-                  >
-                  {icon}
-                </a>
-              ))}
+            <div className={s.contactList} aria-label="Contact information">
+              <span><MapPin size={16} aria-hidden="true" /> Pakistan-wide online and selected city coverage</span>
+              <Link href="/contact"><Mail size={16} aria-hidden="true" /> Contact support</Link>
+              <Link href="/safety-policy"><ShieldCheck size={16} aria-hidden="true" /> Safety and trust center</Link>
+            </div>
+            <div className={s.socials} aria-label="Social links">
+              {socialLinks.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" aria-label={item.label}>
+                    <Icon size={18} aria-hidden="true" />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
-          {/* Company */}
-          <div>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: '1.2rem' }}>Company</h3>
-            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {[
-                { label: "About TUTORERA®", href: "/about" },
-                { label: "Blog", href: "/blog" },
-                { label: "How TUTORERA® Works", href: "/how-it-works" },
-                { label: "Tutor Offers", href: "/how-tutor-offers-work" },
-                { label: "Careers", href: "/careers" },
-                { label: "Contact Us", href: "/contact" },
-                { label: "Help Center", href: "/help" },
-                { label: "Verification Standards", href: "/tutor-verification-standards" },
-                { label: "Screening Policy", href: "/tutor-screening-policy" },
-                { label: "Tutoring Rates Research", href: "/research/pakistan-tutoring-rates" },
-                { label: "Research Methodology", href: "/research-methodology" },
-              ].map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}
-                    // onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-                    // onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
-                    >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* For Students */}
-          <div>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: '1.2rem' }}>For Students</h3>
-            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {[
-                { label: "Find a Tutor", href: "/tutors" },
-                { label: "Tutors by City", href: "/locations" },
-                { label: "Subjects", href: "/subjects" },
-                { label: "Levels", href: "/levels" },
-                { label: "Pricing", href: "/pricing" },
-                { label: "Parent Guide", href: "/help/for-parents" },
-              ].map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}
-                    // onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-                    // onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
-                    >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* For Tutors */}
-          <div>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: '1.2rem' }}>For Tutors</h3>
-            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {[
-                { label: "Become a Tutor", href: "/become-a-tutor" },
-                { label: "Tutor Guide", href: "/help/for-tutors" },
-              ].map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}
-                    // onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-                    // onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
-                    >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: '1.2rem' }}>Legal</h3>
-            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {[
-                { label: "Terms & Conditions", href: "/terms" },
-                { label: "Privacy Policy", href: "/privacy" },
-                { label: "Disclaimer", href: "/disclaimer" },
-                { label: "Safety Policy", href: "/safety-policy" },
-                { label: "Review Policy", href: "/review-policy" },
-                { label: "Editorial Policy", href: "/editorial-policy" },
-                { label: "Content Review Policy", href: "/content-review-policy" },
-                { label: "Ownership & Governance", href: "/governance" },
-                { label: "Academic Standards", href: "/academic-standards" },
-                { label: "Complaint Process", href: "/complaint-process" },
-                { label: "Cancellation Policy", href: "/cancellation-policy" },
-              ].map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}
-                    // onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-                    // onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
-                    >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <nav className={s.columns} aria-label="Footer navigation">
+            {footerColumns.map((column) => (
+              <section key={column.title} aria-labelledby={`footer-${column.title.replace(/\s|&/g, "-").toLowerCase()}`}>
+                <h2 id={`footer-${column.title.replace(/\s|&/g, "-").toLowerCase()}`}>{column.title}</h2>
+                <ul>
+                  {column.links.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href}>{link.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </nav>
         </div>
 
-        {/* Bottom Bar */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', textAlign: 'center' }}>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.7' }}>
+        <div className={s.bottom}>
+          <p>
             TUTORERA® is operated by{" "}
-            <a href="https://www.mentisera.pk" style={{ color: COLORS.accent, textDecoration: 'none' }}>
+            <a href="https://www.mentisera.pk" target="_blank" rel="noopener noreferrer">
               MENTISERA (SMC-Private) Limited
             </a>
-            , an education-focused organization committed to building transparent, platform-based learning solutions for Pakistan.
+            .
           </p>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            © 2026 TUTORERA® Pakistan. All rights reserved.
-          </p>
+          <p>© 2026 TUTORERA® Pakistan. All rights reserved.</p>
         </div>
       </div>
     </footer>

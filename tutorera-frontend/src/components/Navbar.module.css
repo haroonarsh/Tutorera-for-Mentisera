@@ -1,0 +1,525 @@
+.header {
+  --ink: #111827;
+  --muted: #667085;
+  --line: #e6ebf2;
+  --accent: #2563eb;
+  --accent-soft: #eff6ff;
+  --danger: #e94560;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  border-bottom: 1px solid rgba(230, 235, 242, 0.95);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.nav {
+  width: min(1280px, calc(100% - 32px));
+  min-height: 72px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.logo {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.22rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.logo svg,
+.logo em,
+.journeyCard svg,
+.megaLink strong {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.desktopNav,
+.desktopActions,
+.megaColumns,
+.notificationHead,
+.mobileActions {
+  display: flex;
+  align-items: center;
+}
+
+.desktopNav {
+  gap: 0.15rem;
+}
+
+.desktopActions {
+  gap: 0.45rem;
+}
+
+.megaWrap,
+.notifications,
+.accountMenu {
+  position: relative;
+}
+
+.navButton,
+.quickLink,
+.loginLink,
+.signupLink,
+.iconButton,
+.accountButton {
+  min-height: 44px;
+  border-radius: 999px;
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+
+.navButton,
+.quickLink,
+.loginLink,
+.accountButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 750;
+  text-decoration: none;
+  padding: 0 0.82rem;
+}
+
+.quickLink,
+.iconButton {
+  background: #f7f9fc;
+}
+
+.signupLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 1.05rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #1747bf);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+  font-size: 0.92rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.loginLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.82rem;
+  color: var(--ink);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.iconButton {
+  position: relative;
+  display: grid;
+  width: 44px;
+  place-items: center;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--danger);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.megaPanel,
+.notificationPanel,
+.accountLinks {
+  position: absolute;
+  top: calc(100% + 12px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.16);
+  animation: menuIn 180ms var(--ease-out) both;
+}
+
+.megaPanel {
+  left: 50%;
+  width: min(860px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: 0.85fr 1.4fr;
+  gap: 1rem;
+  padding: 1rem;
+  transform-origin: top center;
+  translate: -50% 0;
+}
+
+.megaFeature {
+  padding: 1.2rem;
+  border-radius: 20px;
+  color: #fff;
+  background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.4), transparent 12rem), linear-gradient(135deg, #111827, #172554);
+}
+
+.megaFeature p {
+  margin: 0.8rem 0 0.35rem;
+  color: #bfdbfe;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.megaFeature h2 {
+  margin: 0 0 1rem;
+  font-size: 1.45rem;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.megaFeature a {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem;
+  border-radius: 16px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+}
+
+.megaFeature span,
+.megaLink span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.megaFeature span {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.megaColumns {
+  align-items: stretch;
+  gap: 0.7rem;
+}
+
+.megaColumns section {
+  flex: 1;
+  padding: 0.35rem;
+}
+
+.megaColumns h3 {
+  margin: 0.3rem 0 0.55rem;
+  color: #475467;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.megaLink {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
+}
+
+.notificationPanel {
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  overflow: hidden;
+}
+
+.notificationHead {
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.notificationHead button,
+.notificationItem,
+.accountLinks button,
+.mobileActions button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.notificationHead button {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.notificationList {
+  max-height: 380px;
+  overflow: auto;
+}
+
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.notificationItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.notificationItem strong,
+.notificationItem em {
+  display: block;
+}
+
+.notificationItem em {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.unread {
+  background: var(--accent-soft);
+}
+
+.panelFooterLink {
+  display: block;
+  padding: 0.85rem 1rem;
+  color: var(--accent);
+  font-weight: 850;
+  text-align: center;
+  text-decoration: none;
+}
+
+.accountMenu:hover .accountLinks,
+.accountMenu:focus-within .accountLinks {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.accountButton {
+  padding: 0.25rem 0.75rem 0.25rem 0.3rem;
+  border: 1px solid var(--line);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.accountLinks {
+  right: 0;
+  min-width: 210px;
+  padding: 0.45rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px) scale(0.98);
+}
+
+.accountLinks a,
+.accountLinks button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.72rem 0.8rem;
+  border-radius: 14px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-align: left;
+  text-decoration: none;
+}
+
+.accountLinks button {
+  color: #dc2626;
+}
+
+.mobileToggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #f7f9fc;
+  color: var(--ink);
+}
+
+.mobilePanel {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .navButton:hover,
+  .quickLink:hover,
+  .loginLink:hover,
+  .iconButton:hover,
+  .accountButton:hover {
+    background: #f2f4f7;
+  }
+
+  .signupLink:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(37, 99, 235, 0.25);
+  }
+
+  .megaLink:hover,
+  .notificationItem:hover,
+  .accountLinks a:hover,
+  .accountLinks button:hover,
+  .panelFooterLink:hover {
+    background: #f7f9fc;
+  }
+
+  .megaLink:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.navButton:active,
+.quickLink:active,
+.loginLink:active,
+.signupLink:active,
+.iconButton:active,
+.accountButton:active,
+.mobileToggle:active {
+  transform: scale(0.97);
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1060px) {
+  .desktopNav,
+  .desktopActions {
+    display: none;
+  }
+
+  .mobileToggle {
+    display: grid;
+  }
+
+  .mobilePanel {
+    display: grid;
+    gap: 0.75rem;
+    width: min(1280px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 0 0 1rem;
+  }
+
+  .mobileGroup,
+  .mobileActions {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .mobileGroup summary {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    color: var(--ink);
+    cursor: pointer;
+    font-weight: 850;
+  }
+
+  .mobileGroup a,
+  .mobileActions a,
+  .mobileActions button {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0.68rem 1rem;
+    color: var(--muted);
+    text-decoration: none;
+    border-top: 1px solid #f2f4f7;
+  }
+
+  .mobileActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .megaPanel,
+  .notificationPanel {
+    animation: none;
+  }
+
+  .navButton,
+  .quickLink,
+  .loginLink,
+  .signupLink,
+  .iconButton,
+  .accountButton,
+  .megaLink {
+    transition: background-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .navButton:active,
+  .quickLink:active,
+  .loginLink:active,
+  .signupLink:active,
+  .iconButton:active,
+  .accountButton:active,
+  .mobileToggle:active,
+  .signupLink:hover,
+  .megaLink:hover {
+    transform: none;
+  }
+}

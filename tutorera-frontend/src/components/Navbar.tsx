@@ -1,399 +1,275 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, ChevronDown, BookOpen, User, LogOut, LayoutDashboard, MessageSquare } from "lucide-react";
+import { Bell, BookOpen, BriefcaseBusiness, ChevronDown, GraduationCap, LayoutDashboard, LogOut, Menu, MessageSquare, Search, ShieldCheck, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
-import { Bell } from "lucide-react";
+import s from "./Navbar.module.css";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  highlight: '#e94560',
-};
+type MegaKey = "students" | "tutors" | "resources" | null;
 
-const subjectsMenu = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "View All Subjects"];
-const levelsMenu = ["Primary School", "Middle School", "Matriculation", "O-Levels", "Intermediate / FSc", "A-Levels", "University Level", "Test Preparation", "View All Levels"];
-const coverageMenu = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Online (Pakistan-wide)", "View All Cities"];
+const megaMenus = [
+  {
+    key: "students" as MegaKey,
+    label: "For students",
+    eyebrow: "Find learning support",
+    title: "Start with your need, then compare tutor offers.",
+    icon: GraduationCap,
+    featured: { label: "Post a tuition request", href: "/dashboard?tab=requests", desc: "Set subject, schedule, mode, and proposed rate." },
+    groups: [
+      { title: "Discover tutors", links: [
+        { label: "Browse tutors", href: "/tutors", desc: "Search verified tutor profiles." },
+        { label: "Tutors by city", href: "/locations", desc: "Explore coverage across Pakistan." },
+        { label: "Subjects", href: "/subjects", desc: "Maths, sciences, languages, skills." },
+        { label: "Levels", href: "/levels", desc: "Matric, FSc, O/A-Level, university." },
+      ] },
+      { title: "Choose safely", links: [
+        { label: "How offers work", href: "/how-tutor-offers-work", desc: "Understand offers, counters, and booking." },
+        { label: "Parent guide", href: "/help/for-parents", desc: "Practical help for families." },
+        { label: "First-session guarantee", href: "/first-session-guarantee", desc: "Know what happens after booking." },
+        { label: "Pricing", href: "/pricing", desc: "Platform pricing and fee clarity." },
+      ] },
+    ],
+  },
+  {
+    key: "tutors" as MegaKey,
+    label: "For tutors",
+    eyebrow: "Grow professionally",
+    title: "Find real requests and send relevant tutor offers.",
+    icon: BriefcaseBusiness,
+    featured: { label: "Become a tutor", href: "/become-a-tutor", desc: "Create your profile and start receiving demand." },
+    groups: [
+      { title: "Tutor marketplace", links: [
+        { label: "Browse open requests", href: "/browse-requests", desc: "See student demand and send offers." },
+        { label: "Tutor guide", href: "/help/for-tutors", desc: "How to work well on TUTORERA." },
+        { label: "Earnings", href: "/earnings", desc: "Understand tutor earning flow." },
+        { label: "Verification standards", href: "/tutor-verification-standards", desc: "Build credibility with verification." },
+      ] },
+      { title: "Quality expectations", links: [
+        { label: "Tutor screening policy", href: "/tutor-screening-policy", desc: "How profiles are reviewed." },
+        { label: "Academic standards", href: "/academic-standards", desc: "Teaching and conduct standards." },
+        { label: "Safety policy", href: "/safety-policy", desc: "Platform safety expectations." },
+        { label: "Review policy", href: "/review-policy", desc: "How reviews should be used." },
+      ] },
+    ],
+  },
+  {
+    key: "resources" as MegaKey,
+    label: "Resources",
+    eyebrow: "Learn and verify",
+    title: "Policies, research, and help pages in one place.",
+    icon: ShieldCheck,
+    featured: { label: "Help center", href: "/help", desc: "Find answers for students, parents, and tutors." },
+    groups: [
+      { title: "Guides and research", links: [
+        { label: "Blog", href: "/blog", desc: "Practical education guides." },
+        { label: "Pakistan tutoring rates", href: "/research/pakistan-tutoring-rates", desc: "Original tutoring-rate research." },
+        { label: "Research methodology", href: "/research-methodology", desc: "How research pages are produced." },
+        { label: "How it works", href: "/how-it-works", desc: "Platform overview." },
+      ] },
+      { title: "Company and trust", links: [
+        { label: "About", href: "/about", desc: "TUTORERA and MENTISERA." },
+        { label: "Coverage", href: "/coverage", desc: "Where TUTORERA operates." },
+        { label: "Contact", href: "/contact", desc: "Reach the support team." },
+        { label: "Complaint process", href: "/complaint-process", desc: "Report and escalation route." },
+      ] },
+    ],
+  },
+];
 
-type DropdownKey = "subjects" | "levels" | "coverage" | "user" | null;
+const quickLinks = [
+  { label: "Find tutors", href: "/tutors", icon: Search },
+  { label: "Post request", href: "/dashboard?tab=requests", icon: MessageSquare },
+];
+
+function notificationIcon(type: string) {
+  if (type === "verification") return "🛡️";
+  if (type === "bid") return "📬";
+  if (type === "booking") return "📅";
+  if (type === "payment") return "💰";
+  return "🔔";
+}
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<DropdownKey>(null);
-  const [mobileExpanded, setMobileExpanded] = useState<DropdownKey>(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
+  const [activeMega, setActiveMega] = useState<MegaKey>(null);
   const [showNotifications, setShowNotifications] = useState(false);
-  const navRef = useRef<HTMLDivElement>(null);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
   const { user, logout } = useAuth();
   const router = useRouter();
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setActiveDropdown(null);
+    const onPointerDown = (event: MouseEvent) => {
+      if (!navRef.current?.contains(event.target as Node)) {
+        setActiveMega(null);
         setShowNotifications(false);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveMega(null);
+        setShowNotifications(false);
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
+
+  const closeMenus = () => {
+    setActiveMega(null);
+    setShowNotifications(false);
+    setIsOpen(false);
+  };
 
   const handleLogout = async () => {
     await logout();
-    setActiveDropdown(null);
+    closeMenus();
     router.push("/");
   };
 
-  const dropdowns = [
-    { key: "subjects" as DropdownKey, label: "Subjects", items: subjectsMenu },
-    { key: "levels" as DropdownKey, label: "Levels", items: levelsMenu },
-    { key: "coverage" as DropdownKey, label: "Coverage", items: coverageMenu },
-  ];
-
   return (
-    <nav ref={navRef} style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '68px' }}>
+    <header ref={navRef} className={s.header}>
+      <nav className={s.nav} aria-label="Main navigation">
+        <Link href="/" className={s.logo} onClick={closeMenus} aria-label="TUTORERA home">
+          <BookOpen size={26} aria-hidden="true" />
+          <span>TUTORERA<em>®</em></span>
+        </Link>
 
-          {/* Logo */}
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-            <BookOpen size={26} color={C.accent} />
-            <span style={{ fontSize: '1.25rem', fontWeight: '800', color: C.primary }}>
-              TUTORERA<span style={{ color: C.highlight }}>®</span>
-            </span>
-          </Link>
-
-          {/* Desktop Nav Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="hidden-mobile">
-            <Link href="/" style={{ padding: '0.5rem 0.75rem', color: C.primary, textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500', borderRadius: '0.4rem' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              Home
-            </Link>
-            <Link href="/tutors" style={{ padding: '0.5rem 0.75rem', color: C.primary, textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500', borderRadius: '0.4rem' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              Find a Tutor
-            </Link>
-            <Link href="/become-a-tutor"
-              style={{ padding: '0.5rem 0.75rem', color: C.primary, textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500', borderRadius: '0.4rem' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              Become a Tutor
-            </Link>
-
-            {dropdowns.map(({ key, label, items }) => (
-              <div key={key as string} style={{ position: 'relative' }}>
-                <button onClick={() => setActiveDropdown(activeDropdown === key ? null : key)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 0.75rem', color: C.primary, background: activeDropdown === key ? '#f3f4f6' : 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', borderRadius: '0.4rem' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                  onMouseLeave={e => { if (activeDropdown !== key) e.currentTarget.style.backgroundColor = 'transparent'; }}>
-                  {label}
-                  <ChevronDown size={14} style={{ transform: activeDropdown === key ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+        <div className={s.desktopNav}>
+          {megaMenus.map((menu) => {
+            const Icon = menu.icon;
+            const open = activeMega === menu.key;
+            return (
+              <div key={menu.key} className={s.megaWrap}>
+                <button type="button" className={s.navButton} aria-expanded={open} aria-controls={`${menu.key}-mega-menu`} onClick={() => { setActiveMega(open ? null : menu.key); setShowNotifications(false); }}>
+                  {menu.label}
+                  <ChevronDown size={15} aria-hidden="true" />
                 </button>
-                {activeDropdown === key && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', minWidth: '200px', zIndex: 100, overflow: 'hidden' }}>
-                    {items.map((item, idx) => (
-                      <Link key={item} href={`/${key}`} onClick={() => setActiveDropdown(null)}
-                        style={{ display: 'block', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: idx === items.length - 1 ? C.accent : C.primary, fontWeight: idx === items.length - 1 ? '600' : '400', borderTop: idx === items.length - 1 ? '1px solid #e5e7eb' : 'none' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                        {item}
+                {open && (
+                  <div id={`${menu.key}-mega-menu`} className={s.megaPanel}>
+                    <div className={s.megaFeature}>
+                      <Icon size={28} aria-hidden="true" />
+                      <p>{menu.eyebrow}</p>
+                      <h2>{menu.title}</h2>
+                      <Link href={menu.featured.href} onClick={closeMenus}>
+                        <strong>{menu.featured.label}</strong>
+                        <span>{menu.featured.desc}</span>
                       </Link>
-                    ))}
+                    </div>
+                    <div className={s.megaColumns}>
+                      {menu.groups.map((group) => (
+                        <section key={group.title} aria-labelledby={`${menu.key}-${group.title.replace(/\s+/g, "-")}`}>
+                          <h3 id={`${menu.key}-${group.title.replace(/\s+/g, "-")}`}>{group.title}</h3>
+                          {group.links.map((link) => (
+                            <Link key={link.href} href={link.href} onClick={closeMenus} className={s.megaLink}>
+                              <strong>{link.label}</strong>
+                              <span>{link.desc}</span>
+                            </Link>
+                          ))}
+                        </section>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          {/* Auth Area */}
-<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="hidden-mobile">
-  {user ? (
-    <>
-      {/* Notification Bell */}
-      <div style={{ position: 'relative' }}>
-        <button
-          onClick={() => {
-            setShowNotifications(!showNotifications);
-            setActiveDropdown(null);
-          }}
-          style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.5rem', color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-          <Bell size={20} />
-          {unreadCount > 0 && (
-            <span style={{ position: 'absolute', top: '4px', right: '4px', width: '16px', height: '16px', backgroundColor: '#e94560', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '800', color: 'white' }}>
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
+        <div className={s.desktopActions}>
+          {quickLinks.map((item) => {
+            const Icon = item.icon;
+            return <Link key={item.href} href={item.href} className={s.quickLink}><Icon size={16} aria-hidden="true" />{item.label}</Link>;
+          })}
+          {user ? (
+            <>
+              <div className={s.notifications}>
+                <button type="button" className={s.iconButton} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} aria-expanded={showNotifications} onClick={() => { setShowNotifications(!showNotifications); setActiveMega(null); }}>
+                  <Bell size={20} aria-hidden="true" />
+                  {unreadCount > 0 && <span className={s.badge}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
+                </button>
+                {showNotifications && (
+                  <div className={s.notificationPanel} role="dialog" aria-label="Notifications">
+                    <div className={s.notificationHead}>
+                      <strong>Notifications</strong>
+                      {unreadCount > 0 && <button type="button" onClick={markAllAsRead}>Mark all read</button>}
+                    </div>
+                    <div className={s.notificationList}>
+                      {notifications.length === 0 ? (
+                        <p className={s.emptyState}>No notifications yet</p>
+                      ) : notifications.slice(0, 8).map((notif) => (
+                        <button key={notif._id} type="button" className={notif.isRead ? s.notificationItem : `${s.notificationItem} ${s.unread}`} onClick={() => { markAsRead(notif._id); closeMenus(); if (notif.link) router.push(notif.link); }}>
+                          <span aria-hidden="true">{notificationIcon(notif.type)}</span>
+                          <span><strong>{notif.title}</strong><em>{notif.message}</em></span>
+                        </button>
+                      ))}
+                    </div>
+                    <Link href="/notifications" onClick={closeMenus} className={s.panelFooterLink}>View all notifications</Link>
+                  </div>
+                )}
+              </div>
+              <div className={s.accountMenu}>
+                <button type="button" className={s.accountButton} aria-label="Account menu">
+                  <span className={s.avatar}>{user.avatar ? <Image src={user.avatar} alt="" width={32} height={32} /> : user.name.charAt(0).toUpperCase()}</span>
+                  <span>{user.name.split(" ")[0]}</span>
+                </button>
+                <div className={s.accountLinks}>
+                  <Link href={user.role === "admin" ? "/admin" : "/dashboard"} onClick={closeMenus}><LayoutDashboard size={16} /> Dashboard</Link>
+                  <Link href="/profile" onClick={closeMenus}><User size={16} /> Profile</Link>
+                  {user.role !== "admin" && <Link href="/chat" onClick={closeMenus}><MessageSquare size={16} /> Messages</Link>}
+                  <button type="button" onClick={handleLogout}><LogOut size={16} /> Logout</button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className={s.loginLink}>Log in</Link>
+              <Link href="/register" className={s.signupLink}>Sign up</Link>
+            </>
           )}
-        </button>
+        </div>
 
-        {/* Notification Dropdown */}
-        {showNotifications && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.875rem', boxShadow: '0 10px 25px rgba(0,0,0,0.12)', width: '320px', zIndex: 100, overflow: 'hidden' }}>
-            <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem' }}>
-                Notifications {unreadCount > 0 && <span style={{ color: '#e94560' }}>({unreadCount})</span>}
-              </p>
-              {unreadCount > 0 && (
-                <button onClick={markAllAsRead}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: '0.75rem', fontWeight: '600' }}>
-                  Mark all read
-                </button>
-              )}
-            </div>
-            <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
-              {notifications.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <Bell size={28} color="#d1d5db" style={{ margin: '0 auto 0.5rem' }} />
-                  <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No notifications yet</p>
-                </div>
-              ) : notifications.map(notif => (
-                <div key={notif._id}
-                  onClick={() => { markAsRead(notif._id); setShowNotifications(false); if (notif.link) window.location.href = notif.link; }}
-                  style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = notif.isRead ? 'white' : '#f0f7ff')}>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                    <div style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: notif.type === 'verification' ? '#f0fdf4' : notif.type === 'bid' ? '#eff6ff' : notif.type === 'booking' ? '#fdf4ff' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.9rem' }}>
-                      {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.82rem', marginBottom: '0.2rem' }}>{notif.title}</p>
-                      <p style={{ color: '#6b7280', fontSize: '0.78rem', lineHeight: '1.4' }}>{notif.message}</p>
-                      <p style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                        {new Date(notif.createdAt).toLocaleDateString("en-PK", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                    {!notif.isRead && (
-                      <div style={{ width: '8px', height: '8px', backgroundColor: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: '4px' }} />
-                    )}
-                  </div>
-                </div>
+        <button type="button" className={s.mobileToggle} aria-label={isOpen ? "Close menu" : "Open menu"} aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
+        </button>
+      </nav>
+
+      {isOpen && (
+        <div className={s.mobilePanel}>
+          {megaMenus.map((menu) => (
+            <details key={menu.key} className={s.mobileGroup}>
+              <summary>{menu.label}</summary>
+              <Link href={menu.featured.href} onClick={closeMenus}>{menu.featured.label}</Link>
+              {menu.groups.flatMap((group) => group.links).map((link) => (
+                <Link key={link.href} href={link.href} onClick={closeMenus}>{link.label}</Link>
               ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* User Dropdown */}
-      <div style={{ position: 'relative' }}>
-        <button onClick={() => { setActiveDropdown(activeDropdown === 'user' ? null : 'user'); setShowNotifications(false); }}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '2rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-          <div style={{ width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden' }}>
-            {user.avatar ? (
-              <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : user.name.charAt(0).toUpperCase()}
-          </div>
-          {user.name.split(' ')[0]}
-          <ChevronDown size={14} />
-        </button>
-
-                {activeDropdown === 'user' && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', minWidth: '180px', zIndex: 100, overflow: 'hidden' }}>
-                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
-                      <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary }}>{user.name}</p>
-                      <p style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'capitalize' }}>{user.role}</p>
-                    </div>
-                    {user.role === "admin" && (
-                      <Link href="/admin" onClick={() => setActiveDropdown(null)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: '#7c3aed', fontWeight: '600', backgroundColor: '#f5f3ff' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#ede9fe')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#f5f3ff')}>
-                      ⚙️ Admin Panel
-                      </Link>
-                    )}
-                    {user.role !== "admin" && (
-                      <Link href="/dashboard" onClick={() => setActiveDropdown(null)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: C.primary }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                        <LayoutDashboard size={15} /> Dashboard
-                    </Link>
-                    )}
-                    <Link href="/profile" onClick={() => setActiveDropdown(null)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: C.primary }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                      <User size={15} /> Profile
-                    </Link>
-                    {user.role !== "admin" && (
-                      <Link href="/chat" onClick={() => setActiveDropdown(null)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: C.primary }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                      <MessageSquare size={15} /> Messages
-                      </Link>
-                    )}
-                    {user.role !== "admin" && (
-                      <Link href="/referral" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: C.primary }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                        🎁 Refer & Earn
-                      </Link>
-                    )}
-                    <button onClick={handleLogout}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.875rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', width: '100%', borderTop: '1px solid #f3f4f6' }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                      <LogOut size={15} /> Logout
-                    </button>
-                  </div>
-                )}
-              </div>
+            </details>
+          ))}
+          <div className={s.mobileActions}>
+            {user ? (
+              <>
+                <Link href={user.role === "admin" ? "/admin" : "/dashboard"} onClick={closeMenus}>Dashboard</Link>
+                <Link href="/notifications" onClick={closeMenus}>Notifications {unreadCount > 0 ? `(${unreadCount})` : ""}</Link>
+                <button type="button" onClick={handleLogout}>Logout</button>
               </>
             ) : (
               <>
-                <Link href="/login" style={{ padding: '0.5rem 1rem', color: C.primary, textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500', borderRadius: '0.4rem' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                  Log in
-                </Link>
-                <Link href="/register" style={{ padding: '0.5rem 1.25rem', backgroundColor: C.accent, color: 'white', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '600', borderRadius: '0.5rem' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = C.accent)}>
-                  Sign Up
-                </Link>
+                <Link href="/login" onClick={closeMenus}>Log in</Link>
+                <Link href="/register" onClick={closeMenus}>Sign up</Link>
               </>
             )}
           </div>
-
-          {/* Mobile Toggle */}
-          <button onClick={() => setIsOpen(!isOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, display: 'none' }} className="show-mobile">
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div style={{ backgroundColor: 'white', borderTop: '1px solid #e5e7eb', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-
-    {/* Mobile Notification Banner */}
-    {user && (
-      <div style={{ backgroundColor: '#f0f7ff', borderRadius: '0.75rem', padding: '0.875rem 1rem', marginBottom: '0.75rem', border: '1px solid #bfdbfe' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: notifications.filter(n => !n.isRead).length > 0 ? '0.75rem' : '0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Bell size={16} color={C.accent} />
-            <span style={{ fontWeight: '700', color: C.primary, fontSize: '0.875rem' }}>
-              Notifications
-            </span>
-            {unreadCount > 0 && (
-              <span style={{ backgroundColor: '#e94560', color: 'white', fontSize: '0.65rem', fontWeight: '800', padding: '0.1rem 0.4rem', borderRadius: '999px' }}>
-                {unreadCount}
-              </span>
-            )}
-          </div>
-          {unreadCount > 0 && (
-            <button onClick={markAllAsRead}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: '0.75rem', fontWeight: '600' }}>
-              Mark all read
-            </button>
-          )}
-        </div>
-
-        {/* Show last 3 notifications on mobile */}
-        {notifications.length === 0 ? (
-          <p style={{ color: '#9ca3af', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem 0' }}>No notifications yet</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-            {notifications.slice(0, 5).map(notif => (
-              <div key={notif._id}
-                onClick={() => { markAsRead(notif._id); setIsOpen(false); if (notif.link) window.location.href = notif.link; }}
-                style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', padding: '0.5rem', borderRadius: '0.5rem', backgroundColor: notif.isRead ? 'transparent' : 'white', cursor: 'pointer' }}>
-                <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>
-                  {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
-                </span>
-                <div>
-                  <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>{notif.title}</p>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280', lineHeight: '1.3' }}>{notif.message}</p>
-                </div>
-                {!notif.isRead && (
-                  <div style={{ width: '7px', height: '7px', backgroundColor: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: '4px' }} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )}
-          <Link href="/" onClick={() => setIsOpen(false)} style={{ padding: '0.7rem 0', color: C.primary, textDecoration: 'none', fontSize: '0.95rem', fontWeight: '500', borderBottom: '1px solid #f3f4f6' }}>Home</Link>
-          <Link href="/tutors" onClick={() => setIsOpen(false)} style={{ padding: '0.7rem 0', color: C.primary, textDecoration: 'none', fontSize: '0.95rem', fontWeight: '500', borderBottom: '1px solid #f3f4f6' }}>Find a Tutor</Link>
-          <Link href="/become-a-tutor" onClick={() => setIsOpen(false)}
-            style={{ padding: '0.7rem 0', color: C.primary, textDecoration: 'none', fontSize: '0.95rem', fontWeight: '500', borderBottom: '1px solid #f3f4f6' }}>
-            Become a Tutor
-          </Link>
-          {dropdowns.map(({ key, label, items }) => (
-            <div key={key as string}>
-              <button onClick={() => setMobileExpanded(mobileExpanded === key ? null : key)}
-                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 0', color: C.primary, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500', borderBottom: '1px solid #f3f4f6' }}>
-                {label}
-                <ChevronDown size={14} style={{ transform: mobileExpanded === key ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-              </button>
-              {mobileExpanded === key && (
-                <div style={{ paddingLeft: '1rem', paddingBottom: '0.5rem' }}>
-                  {items.map((item) => (
-                    <Link key={item} href={`/${key}`} onClick={() => setIsOpen(false)} style={{ display: 'block', padding: '0.4rem 0', color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem' }}>{item}</Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-          {user ? (
-            <>
-           {user.role !== "admin" && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem' }}>
-              <Link href="/dashboard" onClick={() => setIsOpen(false)}
-                style={{ padding: '0.7rem', textAlign: 'center', border: `1px solid ${C.accent}`, color: C.accent, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
-                Dashboard
-              </Link>
-              <Link href="/profile" onClick={() => setIsOpen(false)}
-                style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #e5e7eb', color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
-                My Profile
-              </Link>
-              <Link href="/chat" onClick={() => setActiveDropdown(null)}
-                style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #e5e7eb', color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
-                Messages
-              </Link>
-              <Link href="/referral" style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #e5e7eb', color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
-                🎁 Refer & Earn
-              </Link>
-              <button onClick={handleLogout}
-                style={{ padding: '0.7rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>
-                Logout
-              </button>
-            </div>
-          )}
-
-          {user.role === "admin" && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem' }}>
-              <Link href="/admin" onClick={() => setIsOpen(false)}
-                  style={{ padding: '0.7rem', textAlign: 'center', border: '1px solid #7c3aed', color: '#7c3aed', textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
-                ⚙️ Admin Panel
-              </Link>
-              <button onClick={handleLogout}
-                style={{ padding: '0.7rem', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>
-                Logout
-              </button>
-            </div>
-          )}
-          </>
-          ) : (
-            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.75rem' }}>
-              <Link href="/login" onClick={() => setIsOpen(false)} style={{ flex: 1, textAlign: 'center', padding: '0.7rem', border: `1px solid ${C.primary}`, color: C.primary, textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>Log in</Link>
-              <Link href="/register" onClick={() => setIsOpen(false)} style={{ flex: 1, textAlign: 'center', padding: '0.7rem', backgroundColor: C.accent, color: 'white', textDecoration: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Sign Up</Link>
-            </div>
-          )}
         </div>
       )}
-
-      <style>{`
-        @media (max-width: 768px) { .hidden-mobile { display: none !important; } .show-mobile { display: block !important; } }
-        @media (min-width: 769px) { .show-mobile { display: none !important; } }
-      `}</style>
-    </nav>
+    </header>
   );
 }
