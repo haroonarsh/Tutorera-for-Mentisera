@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { BookOpen, CheckCircle, Clock, MapPin, Star } from "lucide-react";
 import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
 import { fetchTutor } from "@/lib/tutor-directory";
@@ -29,7 +30,7 @@ export default async function TutorProfilePage({ params }: Props) {
   const { reviews, slots } = await extras(tutor.user._id);
   return <main style={{ background: "#f9fafb", minHeight: "100vh", color: "#1a1a2e" }}>
     <header style={{ background: "#1a1a2e", padding: "3rem 1.5rem" }}><div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
-      <div style={{ width: 104, height: 104, borderRadius: "50%", overflow: "hidden", display: "grid", placeItems: "center", background: "#2563eb", color: "white", fontSize: "2.4rem", fontWeight: 800 }}>{tutor.user?.avatar ? <img src={tutor.user.avatar} alt={`${name}, tutor in ${city}`} width="104" height="104" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : name.charAt(0)}</div>
+      <div style={{ width: 104, height: 104, borderRadius: "50%", overflow: "hidden", display: "grid", placeItems: "center", background: "#2563eb", color: "white", fontSize: "2.4rem", fontWeight: 800 }}>{tutor.user?.avatar ? <Image src={tutor.user.avatar} alt={`${name}, tutor in ${city}`} width={104} height={104} sizes="104px" priority style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : name.charAt(0)}</div>
       <div><div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap" }}><h1 style={{ color: "white", fontSize: "2rem" }}>{name}</h1>{tutor.isVerified && <span style={{ color: "#86efac", display: "flex", gap: ".3rem", alignItems: "center" }}><CheckCircle size={17} /> Verified tutor</span>}</div>
       <p style={{ color: "#cbd5e1", marginTop: ".5rem" }}>{tutor.subjects?.join(" • ")}</p><p style={{ color: "#9ca3af", marginTop: ".45rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}><span><MapPin size={14} style={{ display: "inline" }} /> {city}</span><span><Star size={14} style={{ display: "inline" }} /> {tutor.averageRating?.toFixed(1) || "New"} ({tutor.totalReviews || 0} reviews)</span></p></div>
     </div></header>

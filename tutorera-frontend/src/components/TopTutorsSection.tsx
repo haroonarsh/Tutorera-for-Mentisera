@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Star, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
 
@@ -75,7 +76,7 @@ export default function TopTutorsSection() {
                 {/* Card Header */}
                 <div style={{ height: '160px', background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   {tutor.user?.avatar ? (
-                    <img src={tutor.user.avatar} alt={tutor.user.name}
+                    <Image src={tutor.user.avatar} alt={tutor.user.name} width={80} height={80} sizes="80px"
                       style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)' }} />
                   ) : (
                     <div style={{ width: '80px', height: '80px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem', fontWeight: '800', border: '3px solid rgba(255,255,255,0.3)' }}>

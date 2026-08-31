@@ -1,6 +1,7 @@
 // components/tutors/TutorCard.tsx
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { Heart } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import StarRating from "./StarRating";
@@ -81,9 +82,12 @@ export default function TutorCard({ tutor }: TutorCardProps) {
       <div className={styles.topRow}>
         <div className={styles.avatarWrap}>
           {tutor.user.avatar ? (
-            <img
+            <Image
               src={tutor.user.avatar}
               alt={`${tutor.user.name}'s avatar`}
+              width={64}
+              height={64}
+              sizes="64px"
               className={styles.avatarImg}
             />
           ) : (
