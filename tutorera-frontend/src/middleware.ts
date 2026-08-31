@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CANONICAL_HOST = "tutorera.ac.pk";
 const LEGACY_HOSTS = new Set(["tutorera.mentisera.pk", "tutorera-frontend.vercel.app"]);
-const PRIVATE_PATHS = ["/admin", "/billing", "/chat", "/dashboard", "/earnings", "/forgot-password", "/login", "/notifications", "/onboarding", "/profile", "/referral", "/register", "/select-role", "/settings"];
+const PRIVATE_PATHS = ["/admin", "/billing", "/chat", "/dashboard", "/earnings", "/forgot-password", "/login", "/notifications", "/offers", "/onboarding", "/profile", "/referral", "/register", "/select-role", "/settings"];
 
 export function middleware(request: NextRequest) {
   if (LEGACY_HOSTS.has(request.nextUrl.hostname.toLowerCase())) {

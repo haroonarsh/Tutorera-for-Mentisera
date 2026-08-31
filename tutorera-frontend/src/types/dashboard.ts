@@ -7,10 +7,17 @@ export interface DashRequest {
   level: string;
   description: string;
   budget: number;
+  maximumBudget?: number;
+  pricingUnit: "hour" | "session" | "month" | "course";
+  allowCounterOffers: boolean;
+  classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string; learningObjectives?: string;
+  area?: string; travelRadiusKm?: number; tutorGenderPreference?: "male" | "female" | "none";
+  minimumQualification?: string; minimumExperience?: number; preferredLanguage?: string; preferredTutorRating?: number;
+  preferredDays?: string[]; preferredStartTime?: string; sessionDurationMinutes?: number; sessionsPerWeek?: number; expectedStartDate?: string;
   teachingMode: string;
   city: string;
   schedule: string;
-  status: "open" | "closed" | "cancelled";
+  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "offer_accepted" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   createdAt: string;
 }
 
@@ -19,8 +26,13 @@ export interface DashBid {
   request: string;
   tutor: { _id: string; name: string; city: string; avatar: string };
   amount: number;
+  initialStudentRate: number;
+  pricingUnit: "hour" | "session" | "month" | "course";
+  availability?: string;
+  expiresAt: string;
+  matchScore?: number;
   message: string;
-  status: "pending" | "accepted" | "rejected";
+  status: "pending" | "submitted" | "viewed" | "countered" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
   createdAt: string;
 }
 
@@ -68,6 +80,11 @@ export interface PostRequestPayload {
   teachingMode: string;
   city: string;
   schedule: string;
+  maximumBudget: string; pricingUnit: "hour" | "session" | "month" | "course"; allowCounterOffers: boolean;
+  classGrade: string; curriculum: string; examType: string; studentLevel: string; learningObjectives: string;
+  area: string; travelRadiusKm: string; tutorGenderPreference: "male" | "female" | "none";
+  minimumQualification: string; minimumExperience: string; preferredLanguage: string; preferredTutorRating: string;
+  preferredDays: string[]; preferredStartTime: string; sessionDurationMinutes: string; sessionsPerWeek: string; expectedStartDate: string;
 }
 
 export interface PlaceBidPayload {

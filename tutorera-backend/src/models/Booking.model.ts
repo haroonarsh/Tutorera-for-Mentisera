@@ -6,6 +6,16 @@ export interface IBooking extends Document {
   request: Types.ObjectId;
   bid: Types.ObjectId;
   amount: number;
+  finalAgreedRate: number;
+  pricingUnit: "hour" | "session" | "month" | "course";
+  sessionCount: number;
+  subtotal: number;
+  studentFee: number;
+  tutorFee: number;
+  tax: number;
+  studentTotal: number;
+  tutorNet: number;
+  feeConfig: Record<string, unknown>;
   platformFee: number;
   tutorPayout: number;
   schedule: string;
@@ -27,6 +37,12 @@ const bookingSchema = new Schema<IBooking>(
     request: { type: Schema.Types.ObjectId, ref: "Request" },
     bid: { type: Schema.Types.ObjectId, ref: "Bid" },
     amount: { type: Number, required: true },
+    finalAgreedRate: { type: Number, required: true },
+    pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },
+    sessionCount: { type: Number, default: 1, min: 1 },
+    subtotal: { type: Number, required: true }, studentFee: { type: Number, default: 0 }, tutorFee: { type: Number, default: 0 },
+    tax: { type: Number, default: 0 }, studentTotal: { type: Number, required: true }, tutorNet: { type: Number, required: true },
+    feeConfig: { type: Schema.Types.Mixed, required: true },
     platformFee: { type: Number, default: 0 },
     tutorPayout: { type: Number, default: 0 },
     schedule: { type: String, required: true },

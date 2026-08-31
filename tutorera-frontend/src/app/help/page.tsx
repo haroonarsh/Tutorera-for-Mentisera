@@ -10,7 +10,7 @@ const faqs = [
   { q: "How do I find a tutor?", a: "Go to 'Find a Tutor', use filters to search by subject, level, city, and budget, then view tutor profiles and post a request." },
   { q: "How do I become a tutor?", a: "Click 'Become a Tutor', create an account, complete the 5-step onboarding, and submit your documents for verification." },
   { q: "How long does tutor verification take?", a: "Our team reviews applications within 24-48 hours. You'll receive an email notification once approved." },
-  { q: "How do payments work?", a: "After accepting a bid, transfer the payment to TUTORERA®'s bank account. Admin confirms receipt and activates your booking." },
+  { q: "How do payments work?", a: "After accepting a tutor offer and agreed rate, review the booking summary and transfer payment to TUTORERA®'s account. Admin confirms receipt and activates the booking." },
   { q: "What is the platform fee?", a: "23% total: a 20% platform fee plus 3% GST (15% of the platform fee). This applies to both student bookings and tutor earnings." },
   { q: "Can I contact a tutor directly?", a: "All communication happens through TUTORERA® chat to ensure safety and quality. Contact details are kept private." },
   { q: "How do I cancel a booking?", a: "Go to your dashboard, find the booking, and click Cancel. Please review our Cancellation Policy for refund details." },

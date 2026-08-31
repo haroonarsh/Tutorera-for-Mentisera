@@ -14,7 +14,7 @@ export default function TermsPage() {
             { title: "2. Platform Use", content: "TUTORERA® is a marketplace connecting students with tutors. We do not directly provide tutoring services. All tutoring relationships are between the student and tutor." },
             { title: "3. User Accounts", content: "You are responsible for maintaining the confidentiality of your account credentials. You must provide accurate information during registration." },
             { title: "4. Tutor Verification", content: "All tutors must submit valid CNIC and educational credentials. TUTORERA® reserves the right to reject or remove any tutor profile." },
-            { title: "5. Payments", content: "All payments are processed through TUTORERA®. A total fee of 23% (20% platform fee plus 3% GST) applies to all transactions." },
+            { title: "5. Payments", content: "All payments are processed through TUTORERA®. Students currently pay the agreed tutoring amount with no marketplace service fee. Tutors pay a 20% marketplace fee after earning through a paid booking, plus applicable tax calculated on that fee. Every booking stores the fee configuration disclosed at acceptance." },
             { title: "6. Contact Information", content: "Sharing personal contact details (phone, WhatsApp, email) in chat is prohibited to ensure platform safety and quality." },
             { title: "7. Termination", content: "TUTORERA® reserves the right to suspend or terminate any account that violates these terms." },
             { title: "8. Contact Us", content: "For questions about these terms, email us at support@tutorera.ac.pk" },

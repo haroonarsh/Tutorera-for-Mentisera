@@ -18,6 +18,7 @@ const C = { primary: '#1a1a2e', accent: '#2563eb' };
 const navItems = [
   { href: "/admin",                  label: "Dashboard",        icon: <LayoutDashboard size={18} /> },
   { href: "/admin/analytics",        label: "Analytics",        icon: <BarChart2 size={18} /> },
+  { href: "/admin/marketplace",      label: "Marketplace",      icon: <ClipboardList size={18} /> },
   { href: "/admin/subscriptions",    label: "Subscriptions",    icon: <Layers size={18} /> },
   { href: "/admin/audit-logs",       label: "Audit Logs",       icon: <ClipboardList size={18} /> },
   { href: "/admin/broadcasts",       label: "Broadcasts",       icon: <Radio size={18} /> },

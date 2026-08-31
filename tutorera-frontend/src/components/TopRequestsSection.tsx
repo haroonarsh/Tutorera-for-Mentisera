@@ -96,7 +96,7 @@ export default function TopRequestsSection() {
             style={{ border: `1.5px solid ${C.primary}`, color: C.primary, backgroundColor: 'transparent', padding: '0.75rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer' }}
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = C.primary; e.currentTarget.style.color = 'white'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.primary; }}>
-            See All Requests & Start Bidding
+            See Matching Requests & Send Offers
           </button>
         </div>
       </div>

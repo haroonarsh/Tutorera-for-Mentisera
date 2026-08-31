@@ -13,7 +13,7 @@ ABOUT TUTORERA®:
 
 HOW IT WORKS:
 - Students post tuition requests describing what they need
-- Verified tutors place bids on those requests
+- Verified tutors accept the proposed budget or send offers on those requests
 - Students review bids and accept the best one
 - A booking is created automatically
 - Students can also book tutors directly from their profile using the "Book Now" button
@@ -42,7 +42,7 @@ PAYMENTS:
 - NayaPay ID: mentisera@nayapay
 - Account Title: MENTISERA (SMC-PRIVATE) LIMITED
 - IBAN: PK27NAYA7556428306882526
-- After payment, send proof to billing@tutorera.pk
+- After payment, send proof to billing@tutorera.ac.pk
 - Payment confirmed within 24 hours
 
 REFERRAL PROGRAM:

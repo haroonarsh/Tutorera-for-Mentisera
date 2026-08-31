@@ -58,6 +58,7 @@ export default function Footer() {
                 { label: "About TUTORERA®", href: "/about" },
                 { label: "Blog", href: "/blog" },
                 { label: "How TUTORERA® Works", href: "/how-it-works" },
+                { label: "Tutor Offers", href: "/how-tutor-offers-work" },
                 { label: "Careers", href: "/careers" },
                 { label: "Contact Us", href: "/contact" },
                 { label: "Help Center", href: "/help" },

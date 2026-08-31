@@ -186,7 +186,7 @@ export default function BillingPage() {
                 {billing === "yearly" ? "/year" : "/month"}
               </strong>{" "}
               to the NayaPay account below, then email your payment proof to{" "}
-              <strong>billing@tutorera.pk</strong> with your registered email. Your plan will be activated within 24 hours.
+              <strong>billing@tutorera.ac.pk</strong> with your registered email. Your plan will be activated within 24 hours.
             </p>
             <button onClick={() => setShowPaymentInfo(null)}
               style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#166534', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
@@ -337,7 +337,7 @@ export default function BillingPage() {
           <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#a16207', fontSize: '0.875rem' }}>
             <li>Click "Upgrade to Standard" or "Upgrade to Premium" above</li>
             <li>Transfer the plan amount to the NayaPay account below</li>
-            <li>Email your payment proof to <strong>billing@tutorera.pk</strong> with your registered email</li>
+            <li>Email your payment proof to <strong>billing@tutorera.ac.pk</strong> with your registered email</li>
             <li>Your plan will be activated within 24 hours</li>
           </ol>
         </div>
@@ -370,7 +370,7 @@ export default function BillingPage() {
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.875rem 1rem' }}>
             <p style={{ fontSize: '0.8rem', color: '#b91c1c', fontWeight: 600, margin: '0 0 0.25rem' }}>⚠ Important</p>
             <p style={{ fontSize: '0.8rem', color: '#ef4444', margin: 0, lineHeight: 1.6 }}>
-              After sending payment, email your proof to <strong>billing@tutorera.pk</strong> with your registered email and the plan name. Payments are verified within 24 hours.
+              After sending payment, email your proof to <strong>billing@tutorera.ac.pk</strong> with your registered email and the plan name. Payments are verified within 24 hours.
             </p>
           </div>
         </div>

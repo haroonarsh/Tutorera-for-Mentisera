@@ -29,8 +29,8 @@ export default function HowItWorksPage() {
             {[
               { step: "1", icon: <Search size={24} color={C.accent} />, title: "Search", desc: "Search tutors by subject, level, city, budget, and teaching mode. Use filters to narrow down to exactly what you need." },
               { step: "2", icon: <UserCheck size={24} color={C.accent} />, title: "Compare", desc: "Review tutor profiles including qualifications, experience, reviews, availability, and hourly rate." },
-              { step: "3", icon: <MessageSquare size={24} color={C.accent} />, title: "Post a Request", desc: "Post a tuition request with your requirements. Verified tutors will bid on it with their rates." },
-              { step: "4", icon: <CreditCard size={24} color={C.accent} />, title: "Book & Pay", desc: "Accept a bid to create a booking. Transfer payment to TUTORERA®'s bank account to confirm." },
+              { step: "3", icon: <MessageSquare size={24} color={C.accent} />, title: "Post a Request", desc: "Post your requirements and proposed budget. Verified tutors can accept it or send another offer." },
+              { step: "4", icon: <CreditCard size={24} color={C.accent} />, title: "Compare, Agree & Pay", desc: "Compare tutor offers, negotiate if needed, accept an agreed rate, and complete payment." },
               { step: "5", icon: <Star size={24} color={C.accent} />, title: "Learn & Review", desc: "Attend sessions and leave a review after completion to help other students." },
             ].map((item, idx) => (
               <div key={item.step} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
@@ -62,8 +62,8 @@ export default function HowItWorksPage() {
               { step: "1", title: "Create Account", desc: "Sign up as a tutor and complete your 5-step onboarding including personal info, qualifications, and teaching preferences." },
               { step: "2", title: "Submit Verification", desc: "Upload your CNIC and degree certificate. Our team reviews and approves within 24-48 hours." },
               { step: "3", title: "Browse Requests", desc: "Browse open tuition requests from students. Filter by subject, level, city, and budget." },
-              { step: "4", title: "Place Bids", desc: "Place a bid with your rate and a message. Students will review and accept the best bid." },
-              { step: "5", title: "Teach & Earn", desc: `Once a bid is accepted, start teaching. A total fee of ${TOTAL_FEE_PERCENT}% (${PLATFORM_FEE_PERCENT}% platform fee plus ${GST_EFFECTIVE_PERCENT}% GST) applies on each booking.` },
+              { step: "4", title: "Send Offers", desc: "Accept the proposed budget or send a transparent counter-offer with your availability and message." },
+              { step: "5", title: "Teach & Earn", desc: `Once an offer is accepted and paid, start teaching. Tutors pay ${PLATFORM_FEE_PERCENT}% plus ${GST_EFFECTIVE_PERCENT}% effective tax on that fee.` },
             ].map(item => (
               <div key={item.step} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <div style={{ width: '44px', height: '44px', backgroundColor: '#16a34a', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1rem', flexShrink: 0 }}>

@@ -35,9 +35,9 @@ export default function PricingPage() {
                 {[
                   "Browse all verified tutors",
                   "Post unlimited tuition requests",
-                  "Receive bids from tutors",
+                  "Receive and compare tutor offers",
                   "Real-time chat with tutors",
-                  `${PLATFORM_FEE_PERCENT}% service fee per booking`,
+                  "No student marketplace fee currently",
                 ].map((item, i) => (
                   <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: C.gray500 }}>
                     <CheckCircle size={16} color={i < 4 ? "#16a34a" : "#d97706"} style={{ flexShrink: 0 }} />
@@ -62,9 +62,9 @@ export default function PricingPage() {
                 {[
                   "Create verified tutor profile",
                   "Browse student requests",
-                  "Place bids on requests",
+                  "Accept budgets or send offers",
                   "Real-time chat with students",
-                  `${PLATFORM_FEE_PERCENT}% platform fee per session`,
+                  `Pay only when you earn: ${PLATFORM_FEE_PERCENT}% fee plus applicable tax`,
                 ].map((item, i) => (
                   <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#9ca3af' }}>
                     <CheckCircle size={16} color={i < 4 ? "#86efac" : "#fde68a"} style={{ flexShrink: 0 }} />
@@ -96,10 +96,11 @@ export default function PricingPage() {
               <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #fde68a' }}>
                 <p style={{ fontSize: '0.8rem', color: '#92400e', fontWeight: '600', marginBottom: '0.3rem' }}>Example</p>
                 <p style={{ fontSize: '0.8rem', color: '#a16207', lineHeight: '1.6' }}>
-                  Tutor charges Rs. 2,000/hr<br />
-                  Student pays: Rs. 2,575<br />
-                  Tutor receives: Rs. 1,425<br />
-                  Platform earns: Rs. 1,150
+                  Agreed rate: PKR 2,000/hour<br />
+                  Student pays: PKR 2,000<br />
+                  Tutor platform fee: PKR 400<br />
+                  Tax on fee: PKR 60<br />
+                  Estimated tutor earnings: PKR 1,540
                 </p>
               </div>
             </div>
@@ -116,7 +117,7 @@ export default function PricingPage() {
             <p style={{ fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>🏦 How Payments Work</p>
             <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[
-                "Student accepts a tutor's bid",
+                "Student accepts a tutor offer and agreed rate",
                 "Student transfers payment to TUTORERA®'s bank account",
                 "Admin confirms payment receipt",
                 "Booking is activated and sessions begin",

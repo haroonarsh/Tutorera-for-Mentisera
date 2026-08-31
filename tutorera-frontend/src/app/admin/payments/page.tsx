@@ -115,8 +115,8 @@ export default function PaymentsPage() {
 
       {/* Fee info banner */}
       <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: '#166534' }}>
-        💡 <strong>Platform fee: 20% + 15% GST = 23% total.</strong> Applied to both student charge and tutor payout.
-        Example: Tutor charges Rs. 1,000 → Student pays Rs. 1,230 → Tutor receives Rs. 770.
+        💡 <strong>Tutor fee: 20% plus 15% tax on that fee (23% effective tutor deduction).</strong> Students currently pay the agreed amount without a marketplace fee.
+        Example: agreed PKR 1,000 → student pays PKR 1,000 → estimated tutor net PKR 770.
       </div>
 
       {/* Tabs */}
