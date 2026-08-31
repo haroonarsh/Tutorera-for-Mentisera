@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "tutorera-frontend.vercel.app" }],
+      "destination": "https://tutorera.ac.pk/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "tutorera.mentisera.pk" }],
+      "destination": "https://tutorera.ac.pk/$1",
+      "permanent": true
+    }
+  ]
+}
