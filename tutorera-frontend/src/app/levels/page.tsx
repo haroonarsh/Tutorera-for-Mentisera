@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Tutors by Academic Level", description: "Find verified tutors for Primary, Middle, Matric, Intermediate, O-Level, A-Level, and university students in Pakistan.", alternates: { canonical: "/levels" } };
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
@@ -13,6 +16,15 @@ const levels = [
   { name: "University Level", grades: "Bachelor's / Master's", age: "Ages 18+", desc: "University-level tutoring for engineering, medicine, business, CS, and more.", color: "#f0fdf4", textColor: "#16a34a" },
   { name: "Test Preparation", grades: "Entry Tests", age: "All Ages", desc: "MDCAT, ECAT, NTS, IELTS, SAT, and other competitive exam preparation.", color: "#fffbeb", textColor: "#d97706" },
 ];
+
+function tutorHref(levelName: string) {
+  const slugs: Record<string, string> = {
+    "Primary School": "primary", "Middle School": "middle", Matriculation: "matric",
+    "O-Levels": "o-level", "Intermediate / FSc": "intermediate", "A-Levels": "a-level",
+    "University Level": "university",
+  };
+  return levelName === "Test Preparation" ? "/tutors/subject/mdcat" : `/tutors/level/${slugs[levelName]}`;
+}
 
 export default function LevelsPage() {
   return (
@@ -41,7 +53,7 @@ export default function LevelsPage() {
                   </div>
                 </div>
                 <p style={{ color: C.gray500, fontSize: '0.875rem', lineHeight: '1.6', marginBottom: '1.25rem' }}>{level.desc}</p>
-                <Link href={`/tutors?level=${level.name}`}
+                <Link href={tutorHref(level.name)}
                   style={{ display: 'inline-block', backgroundColor: level.color, color: level.textColor, fontSize: '0.8rem', fontWeight: '700', padding: '0.4rem 1rem', borderRadius: '999px', textDecoration: 'none' }}>
                   Find Tutors →
                 </Link>

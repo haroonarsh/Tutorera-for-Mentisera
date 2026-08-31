@@ -12,7 +12,7 @@ export const bookingConfirmedEmail = (studentName: string, tutorName: string, am
       </div>
       <p style="color: #374151;">Please complete payment via NayaPay to:</p>
       <p style="color: #374151; font-weight: 600;">NayaPay ID: mentisera@nayapay</p>
-      <p style="color: #6b7280; font-size: 13px;">After payment, email proof to billing@tutorera.pk to confirm your session.</p>
+      <p style="color: #6b7280; font-size: 13px;">After payment, email proof to billing@tutorera.ac.pk to confirm your session.</p>
     </div>
   `,
 });
@@ -23,7 +23,7 @@ export const bidAcceptedEmail = (tutorName: string, studentName: string, amount:
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <h2 style="color: #1a1a2e;">Bid Accepted ✅</h2>
       <p style="color: #374151;">Hi ${escapeHtml(tutorName)},</p>
-      <p style="color: #374151;"><strong>${escapeHtml(studentName)}</strong> has accepted your bid! A booking has been created.</p>
+      <p style="color: #374151;"><strong>${escapeHtml(studentName)}</strong> has accepted your tutor offer. A booking has been created.</p>
       <div style="background: #f0fdf4; border-radius: 8px; padding: 16px; margin: 20px 0;">
         <p style="color: #1a1a2e; margin: 0; font-weight: 700;">Session Amount: Rs. ${escapeHtml(amount.toLocaleString())}</p>
       </div>
@@ -117,7 +117,7 @@ export const newBidEmail = (studentName: string, amount: number) => ({
   html: `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
       <h2 style="color: #1a1a2e;">New Bid Received 📬</h2>
-      <p style="color: #374151;">Hi ${escapeHtml(studentName)}, a tutor has placed a bid of <strong>Rs. ${amount.toLocaleString()}</strong> on your tuition request.</p>
+      <p style="color: #374151;">Hi ${escapeHtml(studentName)}, a verified tutor sent an offer of <strong>PKR ${amount.toLocaleString()}</strong> on your tuition request.</p>
       <p style="color: #6b7280; font-size: 13px;">Log in to your dashboard to review and respond.</p>
     </div>
   `,
@@ -158,7 +158,7 @@ export const directBookingAcceptedEmail = (
       <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 20px 0;">
         <p style="color: #1a1a2e; margin: 0 0 8px; font-weight: 700;">Payment Required</p>
         <p style="color: #374151; margin: 0; font-size: 14px;">
-          Please send Rs. ${escapeHtml(paymentInfo.amount.toLocaleString())} to NayaPay ID: <strong>mentisera@nayapay</strong> and email proof to <strong>billing@tutorera.pk</strong>.
+          Please send PKR ${escapeHtml(paymentInfo.amount.toLocaleString())} to NayaPay ID: <strong>mentisera@nayapay</strong> and email proof to <strong>billing@tutorera.ac.pk</strong>.
         </p>
       </div>
       ` : ""}

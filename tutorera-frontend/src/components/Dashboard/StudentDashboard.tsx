@@ -187,7 +187,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
             💳 Payment Required
           </p>
           <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-            Please send your session payment to TUTORERA®'s NayaPay account and email proof to <strong>billing@tutorera.pk</strong>.
+            Please send your session payment to TUTORERA®'s NayaPay account and email proof to <strong>billing@tutorera.ac.pk</strong>.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {[
@@ -345,8 +345,8 @@ function RequestCard({
     setExpanded(true);
     setBidsLoading(true);
     try {
-      const res = await axiosInstance.get(`/requests/${request._id}/bids`);
-      setBids(res.data.bids ?? []);
+      const res = await axiosInstance.get(`/offers/request/${request._id}`);
+      setBids((res.data.offers ?? []).sort((a: DashBid, b: DashBid) => (b.matchScore || 0) - (a.matchScore || 0)));
     } catch {
       setBids([]);
     } finally {
@@ -357,13 +357,25 @@ function RequestCard({
   async function acceptBid(bidId: string) {
     setAccepting(bidId);
     try {
-      await axiosInstance.patch(`/requests/${request._id}/bids/${bidId}/accept`);
+      await axiosInstance.post(`/offers/${bidId}/accept`);
       onBidAccepted();
     } catch (err) {
       console.error("Failed to accept bid:", err);
     } finally {
       setAccepting(null);
     }
+  }
+
+  async function counterOffer(offer: DashBid) {
+    const value = window.prompt(`Tutor offered PKR ${offer.amount.toLocaleString()}. Enter your counter offer:`);
+    if (!value || Number(value) <= 0) return;
+    try { await axiosInstance.post(`/offers/${offer._id}/counter`, { amount: Number(value), message: "Student counter offer" }); setBids([]); await loadBids(); }
+    catch (err) { showError(err, "Unable to send counter offer."); }
+  }
+
+  async function declineOffer(id: string) {
+    try { await axiosInstance.post(`/offers/${id}/decline`); setBids(current => current.map(item => item._id === id ? { ...item, status: "rejected" } : item)); }
+    catch (err) { showError(err, "Unable to decline offer."); }
   }
 
   return (
@@ -396,7 +408,7 @@ function RequestCard({
       </div>
 
       {/* Expand bids — only for open requests */}
-      {request.status === "open" && (
+      {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
         <>
           <button
           onClick={loadBids}
@@ -409,17 +421,17 @@ function RequestCard({
            >
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>
-            {expanded ? "Hide Bids" : "View Bids"}
+            {expanded ? "Hide Tutor Offers" : "View Tutor Offers"}
           </button>
 
           {expanded && (
             <div className={s.bidsSection}>
-              <p className={s.bidsSectionTitle}>Tutor Bids</p>
+              <p className={s.bidsSectionTitle}>Tutor Offers · Best Match First</p>
               {bidsLoading ? (
                 <div className={s.spinner} />
               ) : bids.length === 0 ? (
                 <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>
-                  No bids yet. Tutors will bid on your request soon.
+                  No offers yet. Matching verified tutors can respond soon.
                 </p>
               ) : (
                 bids.map((bid) => (
@@ -431,7 +443,7 @@ function RequestCard({
                     </div>
                     <div className={s.bidBody}>
                       <p className={s.bidTutorName}>{bid.tutor.name}</p>
-                      <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/hr</p>
+                      <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/{bid.pricingUnit || "hour"}{bid.matchScore ? ` · ${bid.matchScore}% Match` : ""}</p>
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
                         <Link href={`/tutors/${bid.tutor._id}`} className={s.btnOutline}
@@ -440,16 +452,18 @@ function RequestCard({
                             borderRadius: 8, color: "#374151", fontWeight: 500 }}>
                           View Profile
                         </Link>
-                        {bid.status === "pending" && (
+                        {["pending", "submitted", "viewed", "countered"].includes(bid.status) && (<>
                           <button
                             onClick={() => acceptBid(bid._id)}
                             disabled={accepting === bid._id}
                             className={s.btnSuccess}
                           >
-                            {accepting === bid._id ? "Accepting…" : "✓ Accept Bid"}
+                            {accepting === bid._id ? "Accepting…" : "Accept Offer"}
                           </button>
-                        )}
-                        {bid.status !== "pending" && (
+                          {request.allowCounterOffers && <button onClick={() => counterOffer(bid)} className={s.btnOutline}>Counter Offer</button>}
+                          <button onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
+                        </>)}
+                        {!(["pending", "submitted", "viewed", "countered"].includes(bid.status)) && (
                           <span className={`${s.badge} ${bid.status === "accepted" ? s.badgeAccepted : s.badgeCancelled}`}>
                             {bid.status}
                           </span>
@@ -669,7 +683,7 @@ const fetchRequests = useCallback(async () => {
               <div className={s.empty}>
                 <div className={s.emptyIcon}>📋</div>
                 <p className={s.emptyTitle}>No requests yet</p>
-                <p className={s.emptyDesc}>Post your first tuition request and receive bids from tutors.</p>
+                <p className={s.emptyDesc}>Post your first tuition request and receive offers from verified tutors.</p>
                 <button onClick={() => setShowModal(true)} className={s.btnPrimary}>
                   Post a Request
                 </button>
@@ -698,7 +712,7 @@ const fetchRequests = useCallback(async () => {
               <div className={s.empty}>
                 <div className={s.emptyIcon}>📅</div>
                 <p className={s.emptyTitle}>No bookings yet</p>
-                <p className={s.emptyDesc}>Accept a tutor bid from your requests to create a booking.</p>
+                <p className={s.emptyDesc}>Accept a tutor offer from your requests to create a booking.</p>
               </div>
             ) : (
               <>

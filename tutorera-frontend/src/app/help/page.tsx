@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { MessageSquare, BookOpen, Users, Shield } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Help Center", description: "Answers about finding tutors, tutor verification, bookings, payments, safety, cancellations, and support on TUTORERA.", alternates: { canonical: "/help" } };
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -7,16 +10,18 @@ const faqs = [
   { q: "How do I find a tutor?", a: "Go to 'Find a Tutor', use filters to search by subject, level, city, and budget, then view tutor profiles and post a request." },
   { q: "How do I become a tutor?", a: "Click 'Become a Tutor', create an account, complete the 5-step onboarding, and submit your documents for verification." },
   { q: "How long does tutor verification take?", a: "Our team reviews applications within 24-48 hours. You'll receive an email notification once approved." },
-  { q: "How do payments work?", a: "After accepting a bid, transfer the payment to TUTORERA®'s bank account. Admin confirms receipt and activates your booking." },
-  { q: "What is the platform fee?", a: "28.75% total (25% platform fee + 3.75% GST). This applies to both student bookings and tutor earnings." },
+  { q: "How do payments work?", a: "After accepting a tutor offer and agreed rate, review the booking summary and transfer payment to TUTORERA®'s account. Admin confirms receipt and activates the booking." },
+  { q: "What is the platform fee?", a: "23% total: a 20% platform fee plus 3% GST (15% of the platform fee). This applies to both student bookings and tutor earnings." },
   { q: "Can I contact a tutor directly?", a: "All communication happens through TUTORERA® chat to ensure safety and quality. Contact details are kept private." },
   { q: "How do I cancel a booking?", a: "Go to your dashboard, find the booking, and click Cancel. Please review our Cancellation Policy for refund details." },
   { q: "What if I'm not satisfied with a tutor?", a: "You can leave a review after the session and contact our support team. We take all complaints seriously." },
 ];
 
 export default function HelpPage() {
+  const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((faq) => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } })) };
   return (
     <div style={{ backgroundColor: 'white' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <section style={{ backgroundColor: C.primary, padding: '5rem 1.5rem', textAlign: 'center' }}>
         <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '800', color: 'white', marginBottom: '1rem' }}>Help Center</h1>
         <p style={{ color: '#9ca3af', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto' }}>

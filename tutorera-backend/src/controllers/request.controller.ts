@@ -7,7 +7,10 @@ import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
-import { TOTAL_FEE_PERCENT } from "../config/constants";
+import { calculateMarketplaceFees } from "../config/constants";
+import OfferNegotiation from "../models/OfferNegotiation.model";
+import { containsContactInfo } from "../utils/contentFilter";
+import { logAudit } from "../utils/logAudit";
 import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
 import sendEmail from "../utils/sendEmail";
@@ -66,6 +69,15 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     $inc: { requestsThisMonth: 1 },
   });
 
+  // Notify a bounded set of relevant approved tutors, never the entire marketplace.
+  const TutorProfile = (await import("../models/TutorProfile.model")).default;
+  const matchFilter: Record<string, unknown> = { verificationStatus: "approved", subjects: request.subject, levels: request.level };
+  if (request.teachingMode !== "online") matchFilter.$or = [{ teachingMode: "both", city: request.city }, { teachingMode: request.teachingMode, city: request.city }];
+  else matchFilter.teachingMode = { $in: ["online", "both"] };
+  const matchingTutors = await TutorProfile.find(matchFilter).select("user").limit(25).lean();
+  await Promise.all(matchingTutors.map(profile => sendNotification(req.app.get("io"), profile.user.toString(), { title: "Matching Tuition Request", message: `${request.subject} · ${request.level} · proposed PKR ${request.budget.toLocaleString()}/${request.pricingUnit}`, type: "bid", link: "/dashboard?tab=browse" })));
+  await logAudit({ action: "tuition_request_published", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { subject: request.subject, level: request.level, teachingMode: request.teachingMode, notifiedTutors: matchingTutors.length } });
+
   res.status(201).json({ success: true, message: "Request created", request });
 };
 
@@ -88,7 +100,7 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
 
   const { subject, level, city, page = "1", limit = "10" } = req.query;
-  const filter: Record<string, unknown> = { status: "open", isDirect: { $ne: true } };
+  const filter: Record<string, unknown> = { status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } };
 
   if (subject) filter.subject = new RegExp(subject as string, "i");
   if (level) filter.level = level;
@@ -141,10 +153,17 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     res.status(403).json({
       success: false,
       code: "TUTOR_NOT_APPROVED",
-      message: "Your profile must be approved before you can place bids.",
+      message: "Your profile must be approved before you can send offers.",
     });
     return;
   }
+  const requested = await Request.findById(req.params.id).select("subject level teachingMode city status budget pricingUnit allowCounterOffers");
+  if (!requested || !["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) { res.status(400).json({ success: false, message: "Request is not accepting offers" }); return; }
+  const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
+  const levelMatches = tutorProfile.levels.includes(requested.level as any);
+  const modeMatches = tutorProfile.teachingMode === "both" || requested.teachingMode === "both" || tutorProfile.teachingMode === requested.teachingMode;
+  const locationMatches = requested.teachingMode === "online" || tutorProfile.teachingMode === "online" || !requested.city || tutorProfile.city.toLowerCase() === requested.city.toLowerCase();
+  if (!subjectMatches || !levelMatches || !modeMatches || !locationMatches) { res.status(403).json({ success: false, code: "OFFER_NOT_RELEVANT", message: "This request does not match your approved subject, level, mode, or city." }); return; }
 
   // ── Enforce bid limit ──
   const user = await User.findById(req.user?._id);
@@ -173,9 +192,9 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
-  const request = await Request.findById(req.params.id);
-  if (!request || request.status !== "open") {
-    res.status(400).json({ success: false, message: "Request not available for bidding" });
+  const request = requested;
+  if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
+    res.status(400).json({ success: false, message: "Request is not accepting offers" });
     return;
   }
 
@@ -188,7 +207,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   // Check if tutor already bid
   const existingBid = await Bid.findOne({ request: req.params.id, tutor: req.user?._id });
   if (existingBid) {
-    res.status(400).json({ success: false, message: "You already placed a bid on this request" });
+    res.status(400).json({ success: false, message: "You already sent an offer for this request" });
     return;
   }
 
@@ -197,7 +216,15 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     tutor: req.user?._id,
     amount: req.body.amount,
     message: req.body.message,
+    availability: req.body.availability,
+    initialStudentRate: request.budget,
+    pricingUnit: request.pricingUnit,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   });
+
+  await OfferNegotiation.create({ offer: bid._id, senderUser: req.user?._id, senderRole: "tutor", amount: bid.amount, message: bid.message, sequenceNumber: 1, expiresAt: bid.expiresAt, flaggedForModeration: containsContactInfo(bid.message) });
+  await logAudit({ action: "offer_created", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: bid.id, metadata: { requestId: request.id, amount: bid.amount, pricingUnit: bid.pricingUnit, flaggedForModeration: containsContactInfo(bid.message) } });
+  await Request.updateOne({ _id: request._id, status: { $in: ["open", "published"] } }, { status: "receiving_offers" });
 
   await incrementBidCount(req.user?._id?.toString() || "");
 
@@ -205,7 +232,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   const io = req.app.get("io");
   await sendNotification(io, request.student.toString(), {
     title: "📬 New Bid Received",
-    message: `A tutor has placed a bid of Rs. ${req.body.amount} on your tuition request.`,
+    message: `A verified tutor sent an offer of PKR ${req.body.amount} on your tuition request.`,
     type: "bid",
     link: "/dashboard",
   });
@@ -220,7 +247,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     console.error("Failed to send new bid email:", err);
   }
 
-  res.status(201).json({ success: true, message: "Bid placed successfully", bid });
+  res.status(201).json({ success: true, message: "Offer sent successfully", bid });
 };
 
 // @desc    Get all bids for a request
@@ -262,7 +289,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     await session.withTransaction(async () => {
       const request = await Request.findById(new Types.ObjectId(req.params.id as string)).session(session);
 
-      if (!request || request.status !== "open") {
+      if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
         throw { statusCode: 400, message: "Request not available" };
       }
 
@@ -286,7 +313,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
       // Atomic conditional update — only succeeds if request is still "open".
       // This is what prevents two concurrent accept calls from both proceeding.
       const closedRequest = await Request.findOneAndUpdate(
-        { _id: request._id, status: "open" },
+        { _id: request._id, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
         { status: "closed" },
         { new: true, session }
       );
@@ -312,8 +339,8 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
         tutor: bid.tutor,
       }).session(session);
 
-      const platformFee = Math.round(bid.amount * TOTAL_FEE_PERCENT / 100);
-      const tutorPayout = bid.amount - platformFee;
+      if (bid.expiresAt && bid.expiresAt.getTime() <= Date.now()) throw { statusCode: 410, message: "This offer has expired." };
+      const fees = calculateMarketplaceFees(bid.amount);
 
       // Auto-create booking
       const bookingArr = await Booking.create([{
@@ -322,13 +349,18 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
         request: request._id,
         bid: bid._id,
         amount: bid.amount,
-        platformFee,
-        tutorPayout,
+        finalAgreedRate: bid.amount,
+        pricingUnit: bid.pricingUnit || "hour",
+        sessionCount: 1,
+        ...fees,
+        platformFee: fees.tutorFee + fees.tax,
+        tutorPayout: fees.tutorNet,
         schedule: request.schedule,
         teachingMode: request.teachingMode,
         isFirstSession: existingBookingsCount === 0,
       }], { session });
       const booking = bookingArr[0];
+      await OfferNegotiation.updateMany({ offer: bid._id, status: "active" }, { status: "accepted" }, { session });
 
       // Lock the slot if it's a direct booking with a slot
       if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
@@ -379,7 +411,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
       await sendNotification(io, payload.requestStudent, {
         title: "📅 Booking Confirmed — Payment Required",
-        message: `Your booking has been created! Please send Rs. ${payload.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.pk.`,
+        message: `Your booking has been created! Please send PKR ${payload.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.ac.pk.`,
         type: "booking",
         link: "/dashboard",
       });
@@ -480,6 +512,9 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     request: request._id,
     tutor: tutorId,
     amount: tutorProfile.hourlyRate,
+    initialStudentRate: tutorProfile.hourlyRate,
+    pricingUnit: "hour",
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     message: "Direct booking request",
     isDirect: true,
   });
@@ -592,7 +627,7 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
 // @route   GET /api/requests/public/preview
 // @access  Public
 export const getPublicRequestsPreview = async (req: ExpressRequest, res: Response): Promise<void> => {
-  const requests = await Request.find({ status: "open", isDirect: { $ne: true } })
+  const requests = await Request.find({ status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } })
     .populate("student", "name city")
     .sort("-createdAt")
     .limit(3)

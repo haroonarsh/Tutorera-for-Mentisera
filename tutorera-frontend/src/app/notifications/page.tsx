@@ -56,7 +56,7 @@ export default function NotificationsPage() {
               <Bell size={18} color={C.accent} />
               <div>
                 <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem' }}>Enable push notifications</p>
-                <p style={{ color: C.gray500, fontSize: '0.75rem' }}>Get notified instantly about bookings, bids, and messages.</p>
+                <p style={{ color: C.gray500, fontSize: '0.75rem' }}>Get notified instantly about bookings, tutor offers, and messages.</p>
               </div>
             </div>
             <button onClick={() => {
@@ -73,7 +73,7 @@ export default function NotificationsPage() {
               { key: 'emailNotifications', label: 'Email notifications' },
               { key: 'pushNotifications', label: 'Push notifications' },
               { key: 'bookingUpdates', label: 'Booking updates' },
-              { key: 'bidNotifications', label: 'Bid notifications' },
+              { key: 'bidNotifications', label: 'Tutor offer notifications' },
               { key: 'chatMessages', label: 'Chat messages' },
               { key: 'paymentUpdates', label: 'Payment updates' },
               { key: 'securityAlerts', label: 'Security and system alerts' },

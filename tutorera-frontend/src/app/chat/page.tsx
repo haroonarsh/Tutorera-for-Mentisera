@@ -63,8 +63,8 @@ export default function ChatListPage() {
             <h3 style={{ color: C.primary, fontWeight: '700', marginBottom: '0.5rem' }}>No conversations yet</h3>
             <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
               {user?.role === "student"
-                ? "Accept a tutor's bid to start chatting."
-                : "Wait for a student to accept your bid."}
+                ? "Accept a tutor offer to start booking chat."
+                : "Wait for a student to accept your offer."}
             </p>
             <Link href="/dashboard"
               style={{ display: 'inline-block', backgroundColor: C.accent, color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem' }}>

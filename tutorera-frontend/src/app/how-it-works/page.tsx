@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search, UserCheck, MessageSquare, Star, Shield, CreditCard } from "lucide-react";
+import { GST_EFFECTIVE_PERCENT, GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT, TOTAL_FEE_PERCENT } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -28,8 +29,8 @@ export default function HowItWorksPage() {
             {[
               { step: "1", icon: <Search size={24} color={C.accent} />, title: "Search", desc: "Search tutors by subject, level, city, budget, and teaching mode. Use filters to narrow down to exactly what you need." },
               { step: "2", icon: <UserCheck size={24} color={C.accent} />, title: "Compare", desc: "Review tutor profiles including qualifications, experience, reviews, availability, and hourly rate." },
-              { step: "3", icon: <MessageSquare size={24} color={C.accent} />, title: "Post a Request", desc: "Post a tuition request with your requirements. Verified tutors will bid on it with their rates." },
-              { step: "4", icon: <CreditCard size={24} color={C.accent} />, title: "Book & Pay", desc: "Accept a bid to create a booking. Transfer payment to TUTORERA®'s bank account to confirm." },
+              { step: "3", icon: <MessageSquare size={24} color={C.accent} />, title: "Post a Request", desc: "Post your requirements and proposed budget. Verified tutors can accept it or send another offer." },
+              { step: "4", icon: <CreditCard size={24} color={C.accent} />, title: "Compare, Agree & Pay", desc: "Compare tutor offers, negotiate if needed, accept an agreed rate, and complete payment." },
               { step: "5", icon: <Star size={24} color={C.accent} />, title: "Learn & Review", desc: "Attend sessions and leave a review after completion to help other students." },
             ].map((item, idx) => (
               <div key={item.step} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
@@ -61,8 +62,8 @@ export default function HowItWorksPage() {
               { step: "1", title: "Create Account", desc: "Sign up as a tutor and complete your 5-step onboarding including personal info, qualifications, and teaching preferences." },
               { step: "2", title: "Submit Verification", desc: "Upload your CNIC and degree certificate. Our team reviews and approves within 24-48 hours." },
               { step: "3", title: "Browse Requests", desc: "Browse open tuition requests from students. Filter by subject, level, city, and budget." },
-              { step: "4", title: "Place Bids", desc: "Place a bid with your rate and a message. Students will review and accept the best bid." },
-              { step: "5", title: "Teach & Earn", desc: "Once a bid is accepted, start teaching. Platform fee of 28.75% applies on each booking." },
+              { step: "4", title: "Send Offers", desc: "Accept the proposed budget or send a transparent counter-offer with your availability and message." },
+              { step: "5", title: "Teach & Earn", desc: `Once an offer is accepted and paid, start teaching. Tutors pay ${PLATFORM_FEE_PERCENT}% plus ${GST_EFFECTIVE_PERCENT}% effective tax on that fee.` },
             ].map(item => (
               <div key={item.step} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <div style={{ width: '44px', height: '44px', backgroundColor: '#16a34a', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1rem', flexShrink: 0 }}>
@@ -85,9 +86,9 @@ export default function HowItWorksPage() {
           <p style={{ color: C.gray500, marginBottom: '2rem' }}>Simple and transparent pricing.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
             {[
-                { label: "Platform Fee", value: "20%", color: '#d97706', textColor: C.accent, desc: "TUTORERA® charges a 20% fee on each booking to cover operational costs and platform maintenance." },
-                { label: "GST (15% of 20%)", value: "3%", color: '#d97706', textColor: 'white', desc: "As per Pakistani tax regulations, a 15% GST is applied on the platform fee." },
-                { label: "Total", value: "23%", color: '#92400e', bold: true, textColor: 'white', desc: "The total fee deducted from tutor earnings is 23% (20% platform fee + 3% GST)." },
+                { label: "Platform Fee", value: `${PLATFORM_FEE_PERCENT}%`, color: '#d97706', textColor: C.accent, desc: `TUTORERA® charges a ${PLATFORM_FEE_PERCENT}% fee on each booking to cover operational costs and platform maintenance.` },
+                { label: `GST (${GST_ON_PLATFORM_FEE_PERCENT}% of ${PLATFORM_FEE_PERCENT}%)`, value: `${GST_EFFECTIVE_PERCENT}%`, color: '#d97706', textColor: 'white', desc: `As per Pakistani tax regulations, ${GST_ON_PLATFORM_FEE_PERCENT}% GST is applied on the platform fee.` },
+                { label: "Total", value: `${TOTAL_FEE_PERCENT}%`, color: '#92400e', bold: true, textColor: 'white', desc: `The total fee deducted from tutor earnings is ${TOTAL_FEE_PERCENT}% (${PLATFORM_FEE_PERCENT}% platform fee + ${GST_EFFECTIVE_PERCENT}% GST).` },
             ].map(item => (
               <div key={item.label} style={{ backgroundColor: item.color, borderRadius: '1rem', padding: '2rem', textAlign: 'center' }}>
                 <p style={{ fontSize: '2.5rem', fontWeight: '800', color: item.textColor, marginBottom: '0.5rem' }}>{item.value}</p>

@@ -104,6 +104,7 @@ export const getAllTutors = async (
   res: Response
 ): Promise<void> => {
   const {
+    search,
     subject,
     level,
     city,
@@ -120,6 +121,11 @@ export const getAllTutors = async (
   const filter: Record<string, unknown> = {
     verificationStatus: "approved",
   };
+
+  if (search) {
+    const pattern = new RegExp(search as string, "i");
+    filter.$or = [{ fullName: pattern }, { subjects: pattern }, { bio: pattern }, { city: pattern }];
+  }
 
   if (subject) {
     filter.subjects = { $in: [new RegExp(subject as string, "i")] };

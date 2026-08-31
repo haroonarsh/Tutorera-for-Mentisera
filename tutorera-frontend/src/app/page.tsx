@@ -8,7 +8,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Find Tutors in Pakistan | TUTORERA®",
-  description: "Pakistan's modern tutoring marketplace. Search verified tutors by subject, level, city, and budget. Safe, clear, and structured.",
+  description: "Post a tuition request, propose your budget, receive offers from verified tutors, compare profiles, negotiate a rate, and book with confidence.",
+  alternates: { canonical: "/" },
 };
 
 const C = {
@@ -33,7 +34,7 @@ export default function Home() {
       <section style={{ backgroundColor: 'white', padding: '5rem 1.5rem 4rem', textAlign: 'center' }}>
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <h1 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 4rem)', fontWeight: '800', color: C.primary, lineHeight: '1.15', marginBottom: '1.25rem', letterSpacing: '-0.02em' }}>
-            Find the Right Tutor. Learn with Confidence.
+            Find the Right Tutor at the Right Rate
           </h1>
           <p style={{ fontSize: '1.15rem', fontWeight: '600', color: C.accent, marginBottom: '1.25rem', letterSpacing: '0.01em' }}>
             TUTORS. Trusted. Transparent.
@@ -45,11 +46,11 @@ export default function Home() {
           </p>
           <p style={{ color: C.gray400, marginBottom: '2.5rem', fontSize: '0.9rem' }}>No agents. No guesswork.</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/tutors" style={{ backgroundColor: C.accent, color: 'white', padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
-              Find a Tutor
+            <Link href="/dashboard" style={{ backgroundColor: C.accent, color: 'white', padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
+              Post a Tuition Request
             </Link>
-            <Link href="/become-a-tutor" style={{ backgroundColor: 'white', color: C.primary, border: `1.5px solid #d1d5db`, padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
-              Become a Tutor
+            <Link href="/tutors" style={{ backgroundColor: 'white', color: C.primary, border: `1.5px solid #d1d5db`, padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
+              Browse Tutors
             </Link>
           </div>
         </div>
@@ -86,14 +87,16 @@ export default function Home() {
       <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>
-            Book the Best Tutors at your convenience.
+            How Tutor Offers Work
           </h2>
           <p style={{ color: C.gray500, marginBottom: '3.5rem', fontSize: '1rem' }}>Simple. Clear. Reliable.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1.5rem' }}>
             {[
               { step: "1", title: "Search", desc: "Tell us what you need—subject, level, schedule, budget." },
-              { step: "2", title: "Compare", desc: "Review tutor profiles and choose what fits best." },
-              { step: "3", title: "Learn", desc: "Book one-to-one sessions and start learning." },
+              { step: "2", title: "Receive Tutor Offers", desc: "Verified tutors accept your rate or make an offer." },
+              { step: "3", title: "Compare & Negotiate", desc: "Compare quality, fit, availability and pricing." },
+              { step: "4", title: "Choose Your Tutor", desc: "Accept the tutor and rate that suit you." },
+              { step: "5", title: "Learn With Confidence", desc: "Complete payment and begin tutoring." },
             ].map((item) => (
               <div key={item.step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '60px', height: '60px', backgroundColor: C.primary, color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: '800' }}>

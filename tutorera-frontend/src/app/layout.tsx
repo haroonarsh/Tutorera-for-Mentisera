@@ -6,6 +6,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import LazyWidgets from "@/components/LazyWidgets";
 import { Toaster } from "react-hot-toast";
+import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,8 +30,14 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "MENTISERA (SMC-Private) Limited" }],
   creator: "MENTISERA",
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
+  },
   publisher: "TUTORERA®",
-  metadataBase: new URL("https://tutorera.ac.pk"),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     type: "website",
     locale: "en_PK",
@@ -63,11 +70,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
 };
 export const viewport: Viewport = {
   themeColor: "#1a1a2e",
@@ -76,8 +78,15 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const structuredData = [
+    { "@context": "https://schema.org", "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "TUTORERA", legalName: "MENTISERA (SMC-Private) Limited", url: SITE_URL, logo: `${SITE_URL}/og-image.png`, areaServed: { "@type": "Country", name: "Pakistan" } },
+    { "@context": "https://schema.org", "@type": "WebSite", "@id": `${SITE_URL}/#website`, url: SITE_URL, name: "TUTORERA", publisher: { "@id": `${SITE_URL}/#organization` }, potentialAction: { "@type": "SearchAction", target: `${SITE_URL}/tutors?search={search_term_string}`, "query-input": "required name=search_term_string" } },
+  ];
   return (
     <html lang="en">
+      <head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <SocketProvider>

@@ -1,147 +1,32 @@
-// components/dashboard/PostRequestModal.tsx
 "use client";
-
 import { useState } from "react";
-import axiosInstance from "@/lib/axios";
+import api from "@/lib/axios";
 import { PostRequestPayload } from "@/types/dashboard";
 import styles from "./PostRequestModal.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
-const SUBJECTS = ["Mathematics", "Physics", "Chemistry", "Biology", "English",
-  "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Accounting"];
-const LEVELS   = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University"];
-const CITIES   = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar",
-  "Quetta", "Faisalabad", "Multan", "Sialkot", "Gujranwala"];
+const SUBJECTS = ["Mathematics","Physics","Chemistry","Biology","English","Urdu","Computer Science","Islamiyat","Pakistan Studies","Economics","Accounting","MDCAT","ECAT","IELTS"];
+const LEVELS = ["Primary","Middle","Matric","Intermediate","O-Level","A-Level","University","Other"];
+const CITIES = ["Islamabad","Rawalpindi","Lahore","Karachi","Peshawar","Quetta","Faisalabad","Multan","Sialkot","Gujranwala"];
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const EMPTY: PostRequestPayload = { subject:"",level:"",description:"",budget:"",teachingMode:"",city:"",schedule:"",maximumBudget:"",pricingUnit:"hour",allowCounterOffers:true,classGrade:"",curriculum:"",examType:"",studentLevel:"",learningObjectives:"",area:"",travelRadiusKm:"",tutorGenderPreference:"none",minimumQualification:"",minimumExperience:"",preferredLanguage:"",preferredTutorRating:"",preferredDays:[],preferredStartTime:"",sessionDurationMinutes:"60",sessionsPerWeek:"",expectedStartDate:"" };
+type Props = { onClose:()=>void; onSuccess:()=>void };
 
-const EMPTY: PostRequestPayload = {
-  subject: "", level: "", description: "",
-  budget: "", teachingMode: "", city: "", schedule: "",
-};
-
-interface Props {
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-export default function PostRequestModal({ onClose, onSuccess }: Props) {
-  const [form, setForm]       = useState<PostRequestPayload>(EMPTY);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-  const modalRef = useFocusTrap(true, onClose);
-
-  function set(key: keyof PostRequestPayload, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function handleSubmit() {
-    const { subject, level, description, budget, teachingMode, city, schedule } = form;
-    if (!subject || !level || !description || !budget || !teachingMode || !city || !schedule) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      await axiosInstance.post("/requests", {
-        ...form,
-        budget: Number(budget),
-      });
-      onSuccess();
-      onClose();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      setError(msg || "Failed to post request. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Post a tuition request">
-      <div ref={modalRef} className={styles.modal}>
-        {/* Header */}
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>Post a Tuition Request</h2>
-          <button onClick={onClose} className={styles.closeBtn} aria-label="Close">×</button>
-        </div>
-
-        {/* Body */}
-        <div className={styles.modalBody}>
-          {error && <div className={styles.error}>{error}</div>}
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="req-subject">Subject *</label>
-              <select id="req-subject" aria-label="Subject" className={styles.select}
-                value={form.subject} onChange={(e) => set("subject", e.target.value)}>
-                <option value="">Select subject</option>
-                {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="req-level">Level *</label>
-              <select id="req-level" aria-label="Level" className={styles.select}
-                value={form.level} onChange={(e) => set("level", e.target.value)}>
-                <option value="">Select level</option>
-                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="req-desc">Description *</label>
-            <textarea id="req-desc" className={styles.textarea}
-              placeholder="Describe what you need help with, your current level, exam dates, etc."
-              rows={3} value={form.description}
-              onChange={(e) => set("description", e.target.value)} />
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="req-budget">Budget (PKR/hr) *</label>
-              <input id="req-budget" type="number" className={styles.input}
-                placeholder="e.g. 1500" value={form.budget}
-                onChange={(e) => set("budget", e.target.value)} min={0} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="req-mode">Teaching Mode *</label>
-              <select id="req-mode" aria-label="Teaching Mode" className={styles.select}
-                value={form.teachingMode} onChange={(e) => set("teachingMode", e.target.value)}>
-                <option value="">Select mode</option>
-                <option value="online">Online</option>
-                <option value="in-person">In-Person</option>
-                <option value="both">Both</option>
-              </select>
-            </div>
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="req-city">City *</label>
-              <select id="req-city" aria-label="City" className={styles.select}
-                value={form.city} onChange={(e) => set("city", e.target.value)}>
-                <option value="">Select city</option>
-                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="req-schedule">Preferred Schedule *</label>
-              <input id="req-schedule" type="text" className={styles.input}
-                placeholder="e.g. Weekdays 6PM – 8PM"
-                value={form.schedule} onChange={(e) => set("schedule", e.target.value)} />
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className={styles.modalFooter}>
-          <button onClick={onClose} className={styles.cancelBtn}>Cancel</button>
-          <button onClick={handleSubmit} disabled={loading} className={styles.submitBtn}>
-            {loading ? "Posting…" : "Post Request"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+export default function PostRequestModal({onClose,onSuccess}:Props){
+ const [form,setForm]=useState(EMPTY); const [loading,setLoading]=useState(false); const [error,setError]=useState(""); const modalRef=useFocusTrap(true,onClose);
+ const set=<K extends keyof PostRequestPayload>(key:K,value:PostRequestPayload[K])=>setForm(f=>({...f,[key]:value}));
+ const field=(label:string,key:keyof PostRequestPayload,placeholder="")=><div className={styles.field}><label className={styles.label}>{label}</label><input className={styles.input} value={String(form[key] ?? "")} placeholder={placeholder} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))}/></div>;
+ async function submit(){ if(!form.subject||!form.level||!form.description||!form.budget||!form.teachingMode||!form.schedule){setError("Complete all required fields.");return} if(form.maximumBudget&&Number(form.maximumBudget)<Number(form.budget)){setError("Maximum budget cannot be below your proposed budget.");return} setLoading(true);setError(""); try{ const numeric=["maximumBudget","travelRadiusKm","minimumExperience","preferredTutorRating","sessionDurationMinutes","sessionsPerWeek"] as const; const payload:Record<string,unknown>={...form,budget:Number(form.budget),expectedStartDate:form.expectedStartDate?new Date(form.expectedStartDate).toISOString():undefined}; numeric.forEach(k=>payload[k]=form[k]?Number(form[k]):undefined); if(form.teachingMode==="online"){payload.city=undefined;payload.area=undefined;payload.travelRadiusKm=undefined} await api.post("/requests",payload);onSuccess();onClose()}catch(e:unknown){setError((e as {response?:{data?:{message?:string}}}).response?.data?.message||"Unable to publish request.")}finally{setLoading(false)} }
+ return <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Post a tuition request"><div ref={modalRef} className={styles.modal} style={{maxWidth:760,maxHeight:"92vh",overflowY:"auto"}}>
+  <div className={styles.modalHeader}><div><h2 className={styles.modalTitle}>Post a Tuition Request</h2><p style={{color:"#64748b",fontSize:13,marginTop:4}}>Tell verified tutors what you need and what you want to pay.</p></div><button onClick={onClose} className={styles.closeBtn} aria-label="Close">×</button></div>
+  <div className={styles.modalBody}>{error&&<div className={styles.error}>{error}</div>}
+   <h3>Learning requirements</h3><div className={styles.row}><div className={styles.field}><label className={styles.label}>Subject *</label><select className={styles.select} value={form.subject} onChange={e=>set("subject",e.target.value)}><option value="">Select</option>{SUBJECTS.map(x=><option key={x}>{x}</option>)}</select></div><div className={styles.field}><label className={styles.label}>Academic level *</label><select className={styles.select} value={form.level} onChange={e=>set("level",e.target.value)}><option value="">Select</option>{LEVELS.map(x=><option key={x}>{x}</option>)}</select></div></div>
+   <div className={styles.row}>{field("Class / grade","classGrade","e.g. Grade 9")}{field("Curriculum / board","curriculum","e.g. Cambridge")}</div><div className={styles.row}>{field("Exam type","examType","e.g. O Level")}{field("Current student level","studentLevel","e.g. Needs algebra support")}</div>
+   <div className={styles.field}><label className={styles.label}>Learning objectives *</label><textarea className={styles.textarea} rows={3} value={form.description} onChange={e=>set("description",e.target.value)} placeholder="Topics, goals, current challenges, and examination dates"/></div>
+   <h3>Mode and approximate location</h3><div className={styles.row}><div className={styles.field}><label className={styles.label}>Teaching mode *</label><select className={styles.select} value={form.teachingMode} onChange={e=>set("teachingMode",e.target.value)}><option value="">Select</option><option value="online">Online</option><option value="in-person">In-person</option><option value="both">Either</option></select></div>{form.teachingMode!=="online"&&<div className={styles.field}><label className={styles.label}>City *</label><select className={styles.select} value={form.city} onChange={e=>set("city",e.target.value)}><option value="">Select</option>{CITIES.map(x=><option key={x}>{x}</option>)}</select></div>}</div>{form.teachingMode!=="online"&&<div className={styles.row}>{field("Area / locality (never exact address)","area","e.g. DHA Phase 5")}{field("Preferred travel radius (km)","travelRadiusKm","e.g. 8")}</div>}
+   <h3>Tutor preferences <small style={{fontWeight:400}}>(optional)</small></h3><div className={styles.row}><div className={styles.field}><label className={styles.label}>Tutor gender</label><select className={styles.select} value={form.tutorGenderPreference} onChange={e=>set("tutorGenderPreference",e.target.value as typeof form.tutorGenderPreference)}><option value="none">No preference</option><option value="female">Female</option><option value="male">Male</option></select></div>{field("Minimum qualification","minimumQualification","e.g. BS Mathematics")}</div><div className={styles.row}>{field("Minimum experience (years)","minimumExperience","e.g. 3")}{field("Preferred language","preferredLanguage","e.g. English and Urdu")}</div>
+   <h3>Schedule</h3><div className={styles.field}><label className={styles.label}>Preferred days</label><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{DAYS.map(d=><label key={d} style={{fontSize:13}}><input type="checkbox" checked={form.preferredDays.includes(d)} onChange={e=>set("preferredDays",e.target.checked?[...form.preferredDays,d]:form.preferredDays.filter(x=>x!==d))}/> {d.slice(0,3)}</label>)}</div></div><div className={styles.row}>{field("Preferred start time","preferredStartTime","e.g. 17:00")}{field("Session duration (minutes)","sessionDurationMinutes")}</div><div className={styles.row}>{field("Sessions per week","sessionsPerWeek","e.g. 3")}{field("Expected start date","expectedStartDate","YYYY-MM-DD")}</div><div className={styles.field}><label className={styles.label}>Schedule summary *</label><input className={styles.input} value={form.schedule} onChange={e=>set("schedule",e.target.value)} placeholder="e.g. Mon, Wed, Fri after 5 PM"/></div>
+   <section style={{background:"#eff6ff",border:"1px solid #bfdbfe",padding:16,borderRadius:12}}><h3>Your Proposed Budget</h3><p style={{fontSize:13,color:"#475569",margin:"6px 0 14px"}}>Set a rate that works for you. Tutors may accept it or suggest another rate.</p><div className={styles.row}>{field("Preferred rate (PKR) *","budget","e.g. 2000")}<div className={styles.field}><label className={styles.label}>Pricing unit</label><select className={styles.select} value={form.pricingUnit} onChange={e=>set("pricingUnit",e.target.value as typeof form.pricingUnit)}><option value="hour">Per hour</option><option value="session">Per session</option><option value="month">Per month</option><option value="course">Full course</option></select></div></div>{field("Maximum budget (private, optional)","maximumBudget","Never shown to tutors")}<label style={{fontSize:14}}><input type="checkbox" checked={form.allowCounterOffers} onChange={e=>set("allowCounterOffers",e.target.checked)}/> Allow tutors to send counter-offers</label></section>
+  </div><div className={styles.modalFooter}><button onClick={onClose} className={styles.cancelBtn}>Cancel</button><button onClick={submit} disabled={loading} className={styles.submitBtn}>{loading?"Publishing…":"Publish Request"}</button></div>
+ </div></div>
 }

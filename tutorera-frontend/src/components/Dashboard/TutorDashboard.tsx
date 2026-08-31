@@ -210,7 +210,7 @@ function OpenRequestCard({
             <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
             </svg>
-            Budget: PKR {request.budget.toLocaleString()}/hr
+            Student proposed: PKR {request.budget.toLocaleString()}/{request.pricingUnit || "hour"}
           </span>
           <span className={s.infoChip}>{request.teachingMode}</span>
           <span className={s.infoChip}>{request.schedule}</span>
@@ -221,7 +221,7 @@ function OpenRequestCard({
             onClick={() => setShowBidModal(true)}
             className={s.btnPrimary}
           >
-            Place Bid
+            Send Offer
           </button>
           <span className={s.infoChip} style={{ alignSelf: "center" }}>
             Student: {request.student.name}
@@ -661,7 +661,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
               <div className={s.empty}>
                 <div className={s.emptyIcon}>📅</div>
                 <p className={s.emptyTitle}>No bookings yet</p>
-                <p className={s.emptyDesc}>Browse open requests and place bids to get your first booking.</p>
+                <p className={s.emptyDesc}>Browse matching requests and send offers to get your first booking.</p>
                 <button onClick={() => setTab("browse")} className={s.btnPrimary}>Browse Requests</button>
               </div>
             ) : (
@@ -718,7 +718,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
                 color: "#059669", borderRadius: 10, padding: "12px 16px", fontSize: 13,
                 fontWeight: 500, marginBottom: 16,
               }}>
-                ✓ Bid placed successfully! The student will review it shortly.
+                ✓ Offer sent successfully. The student will review it shortly.
               </div>
             )}
 

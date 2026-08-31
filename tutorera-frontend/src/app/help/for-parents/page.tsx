@@ -12,8 +12,8 @@ export default function ForParentsPage() {
           {[
             { title: "Step 1 — Create an Account", desc: "Sign up as a student and complete your 3-step onboarding with your personal info, current level, and subject preferences." },
             { title: "Step 2 — Browse Tutors", desc: "Use our search and filter to find tutors by subject, level, city, budget, and teaching mode." },
-            { title: "Step 3 — Post a Request", desc: "Post a tuition request describing what you need. Verified tutors will place bids with their rates." },
-            { title: "Step 4 — Accept a Bid", desc: "Review bids and accept the best one. A booking will be created automatically." },
+            { title: "Step 3 — Post a Request", desc: "Describe what you need and propose a budget. Verified tutors can accept it or send another offer." },
+            { title: "Step 4 — Compare & Agree", desc: "Compare tutor offers, negotiate if needed, and accept the tutor and rate that suit you." },
             { title: "Step 5 — Pay & Start Learning", desc: "Transfer payment to TUTORERA®'s bank account. Once confirmed, your sessions begin." },
           ].map(item => (
             <div key={item.title} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>

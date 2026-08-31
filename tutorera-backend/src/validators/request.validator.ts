@@ -6,14 +6,24 @@ export const createRequestSchema = z.object({
     level: z.enum(["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"]),
     description: z.string().min(10, "Description must be at least 10 characters").max(1000),
     budget: z.number().positive("Budget must be a positive number"),
+    maximumBudget: z.number().positive().optional(),
+    pricingUnit: z.enum(["hour", "session", "month", "course"]).default("hour"),
+    allowCounterOffers: z.boolean().default(true),
+    classGrade: z.string().max(100).optional(), curriculum: z.string().max(100).optional(), examType: z.string().max(100).optional(), studentLevel: z.string().max(100).optional(),
+    learningObjectives: z.string().max(1000).optional(), area: z.string().max(100).optional(), travelRadiusKm: z.number().min(0).max(100).optional(),
+    tutorGenderPreference: z.enum(["male", "female", "none"]).default("none"), minimumQualification: z.string().max(150).optional(),
+    minimumExperience: z.number().min(0).max(50).optional(), preferredLanguage: z.string().max(50).optional(), preferredTutorRating: z.number().min(0).max(5).optional(),
+    preferredDays: z.array(z.string().max(20)).max(7).optional(), preferredStartTime: z.string().max(20).optional(), sessionDurationMinutes: z.number().min(15).max(480).optional(),
+    sessionsPerWeek: z.number().min(1).max(14).optional(), expectedStartDate: z.string().datetime().optional(),
     teachingMode: z.enum(["online", "in-person", "both"]),
     city: z.string().max(100).optional(),
     schedule: z.string().min(1, "Schedule is required").max(200),
     });
 
     export const placeBidSchema = z.object({
-    amount: z.number().positive("Bid amount must be a positive number"),
-    message: z.string().max(500, "Message must be under 500 characters").optional(),
+    amount: z.number().positive("Offer amount must be a positive number"),
+    message: z.string().max(500, "Message must be under 500 characters").default("I am available for this tuition request."),
+    availability: z.string().max(300).optional(),
     });
 
 export const createDirectBookingRequestSchema = z.object({
@@ -31,6 +41,7 @@ export const createDirectBookingRequestSchema = z.object({
 
 export type CreateRequestInput = z.infer<typeof createRequestSchema>;
 export type PlaceBidInput = z.infer<typeof placeBidSchema>;
+export const counterOfferSchema = z.object({ amount: z.number().positive(), message: z.string().max(500).optional() });
 export type CreateDirectBookingRequestInput = z.infer<typeof createDirectBookingRequestSchema>;
 
 export const validate =

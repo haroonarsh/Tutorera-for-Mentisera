@@ -46,7 +46,7 @@ export default function ContactPage() {
         {/* Info Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {[
-            { icon: <Mail size={22} color={C.accent} />, title: "Email Us", value: "support@tutorera.pk", sub: "We reply within 24 hours" },
+            { icon: <Mail size={22} color={C.accent} />, title: "Email Us", value: "support@tutorera.ac.pk", sub: "We reply within 24 hours" },
             { icon: <Phone size={22} color={C.accent} />, title: "Call / WhatsApp", value: "+92 334 888 0859", sub: "Mon–Sat, 9am–6pm PKT" },
             { icon: <MapPin size={22} color={C.accent} />, title: "Location", value: "Islamabad, Pakistan", sub: "Available across Pakistan online" },
           ].map(item => (

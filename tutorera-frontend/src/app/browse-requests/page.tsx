@@ -71,7 +71,7 @@ export default function BrowseRequestsPage() {
             Browse Student Requests
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1rem' }}>
-            Find students looking for tutors and place your bid.
+            Find relevant tuition requests and send students a transparent offer.
           </p>
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function BrowseRequestsPage() {
                   <span style={{ fontSize: '0.8rem', color: C.gray500 }}>By {r.student?.name}</span>
                   <button onClick={() => setBidModalRequest(r)}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accent, color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    <Send size={13} /> Place Bid
+                    <Send size={13} /> Send Offer
                   </button>
                 </div>
               </div>
@@ -188,7 +188,7 @@ function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClo
       onSuccess();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to place bid. Please try again.");
+      setError(error.response?.data?.message || "Failed to send offer. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -196,8 +196,8 @@ function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClo
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 100 }} onClick={onClose} role="presentation">
-      <div ref={modalRef} style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px' }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Place a bid">
-        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>Place a Bid</h3>
+      <div ref={modalRef} style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px' }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Send an offer">
+        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>Send Tutor Offer</h3>
         <p style={{ color: C.gray500, fontSize: '0.85rem', marginBottom: '1.5rem' }}>{request.subject} · {request.level}</p>
 
         {error && (
@@ -208,7 +208,7 @@ function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClo
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Your Bid Amount (Rs.)</label>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Your Offer (PKR)</label>
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} required min={1}
               style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }} />
           </div>
@@ -224,7 +224,7 @@ function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClo
             </button>
             <button type="submit" disabled={loading}
               style={{ flex: 1, padding: '0.75rem', backgroundColor: loading ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: '700', fontSize: '0.9rem', cursor: loading ? 'not-allowed' : 'pointer' }}>
-              {loading ? "Placing..." : "Place Bid"}
+              {loading ? "Sending..." : "Send Offer"}
             </button>
           </div>
         </form>

@@ -58,9 +58,14 @@ export default function Footer() {
                 { label: "About TUTORERA®", href: "/about" },
                 { label: "Blog", href: "/blog" },
                 { label: "How TUTORERA® Works", href: "/how-it-works" },
+                { label: "Tutor Offers", href: "/how-tutor-offers-work" },
                 { label: "Careers", href: "/careers" },
                 { label: "Contact Us", href: "/contact" },
                 { label: "Help Center", href: "/help" },
+                { label: "Verification Standards", href: "/tutor-verification-standards" },
+                { label: "Screening Policy", href: "/tutor-screening-policy" },
+                { label: "Tutoring Rates Research", href: "/research/pakistan-tutoring-rates" },
+                { label: "Research Methodology", href: "/research-methodology" },
               ].map(({ label, href }) => (
                 <li key={label}>
                   <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}
@@ -80,6 +85,7 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {[
                 { label: "Find a Tutor", href: "/tutors" },
+                { label: "Tutors by City", href: "/locations" },
                 { label: "Subjects", href: "/subjects" },
                 { label: "Levels", href: "/levels" },
                 { label: "Pricing", href: "/pricing" },
@@ -126,6 +132,11 @@ export default function Footer() {
                 { label: "Privacy Policy", href: "/privacy" },
                 { label: "Disclaimer", href: "/disclaimer" },
                 { label: "Safety Policy", href: "/safety-policy" },
+                { label: "Review Policy", href: "/review-policy" },
+                { label: "Editorial Policy", href: "/editorial-policy" },
+                { label: "Content Review Policy", href: "/content-review-policy" },
+                { label: "Ownership & Governance", href: "/governance" },
+                { label: "Academic Standards", href: "/academic-standards" },
                 { label: "Complaint Process", href: "/complaint-process" },
                 { label: "Cancellation Policy", href: "/cancellation-policy" },
               ].map(({ label, href }) => (
