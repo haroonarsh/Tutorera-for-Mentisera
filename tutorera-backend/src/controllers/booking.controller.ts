@@ -5,6 +5,8 @@ import { creditReferrerOnFirstBooking } from "../controllers/referral.controller
 import sendEmail from "../utils/sendEmail";
 import { bookingCancelledEmail } from "../utils/emailTemplates";
 import User from "../models/User.model";
+import { logAudit } from "../utils/logAudit";
+import { sendNotification } from "../utils/socket";
 
 // @desc    Get my bookings
 // @route   GET /api/bookings
@@ -25,6 +27,7 @@ export const getMyBookings = async (req: AuthRequest, res: Response): Promise<vo
   const bookings = await Booking.find(filter)
     .populate("student", "name avatar")
     .populate("tutor", "name avatar")
+    .populate("request", "subject level status")
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum);
@@ -93,6 +96,9 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   }
 
   await booking.save();
+  await logAudit({ action: status === "cancelled" ? "booking_cancelled" : "booking_started", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Booking", targetId: booking.id, metadata: { status, cancelReason } });
+  const recipient = booking.student.toString() === userId?.toString() ? booking.tutor.toString() : booking.student.toString();
+  await sendNotification(req.app.get("io"), recipient, { title: status === "cancelled" ? "Booking Cancelled" : "Booking Started", message: status === "cancelled" ? "The booking was cancelled. Review the cancellation policy or contact support if needed." : "Your tutoring booking is now in progress.", type: "booking", link: "/dashboard" });
 
   if (status === "cancelled") {
     try {

@@ -29,7 +29,7 @@ import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
-import { getMarketplaceAnalytics } from "../controllers/marketplaceAdmin.controller";
+import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffers, listMarketplaceRequests } from "../controllers/marketplaceAdmin.controller";
 
 const router = Router();
 
@@ -38,6 +38,9 @@ router.use(protect, authorize("admin"));
 router.get("/stats", getDashboardStats);
 router.get("/analytics", getAnalytics);
 router.get("/marketplace-analytics", getMarketplaceAnalytics);
+router.get("/marketplace/requests", listMarketplaceRequests);
+router.get("/marketplace/offers", listMarketplaceOffers);
+router.get("/marketplace/offers/:id", getMarketplaceOfferDetail);
 router.get("/verifications", getPendingVerifications);
 router.get("/payouts", getPayouts);
 router.get("/audit-logs", getAuditLogs);

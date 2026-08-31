@@ -117,6 +117,17 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
     .skip(skip)
     .limit(limitNum);
 
+  if (req.user?.role === "tutor") {
+    const requestsWithOffer = await Promise.all(
+      requests.map(async (request) => {
+        const bid = await Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount status expiresAt pricingUnit createdAt").lean();
+        return { ...request.toObject(), bid };
+      })
+    );
+    res.status(200).json({ success: true, total, page: pageNum, requests: requestsWithOffer });
+    return;
+  }
+
   res.status(200).json({ success: true, total, page: pageNum, requests });
 };
 
@@ -157,13 +168,14 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     });
     return;
   }
-  const requested = await Request.findById(req.params.id).select("subject level teachingMode city status budget pricingUnit allowCounterOffers");
+  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city status budget pricingUnit allowCounterOffers isDirect targetTutor");
   if (!requested || !["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) { res.status(400).json({ success: false, message: "Request is not accepting offers" }); return; }
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
   const levelMatches = tutorProfile.levels.includes(requested.level as any);
   const modeMatches = tutorProfile.teachingMode === "both" || requested.teachingMode === "both" || tutorProfile.teachingMode === requested.teachingMode;
   const locationMatches = requested.teachingMode === "online" || tutorProfile.teachingMode === "online" || !requested.city || tutorProfile.city.toLowerCase() === requested.city.toLowerCase();
   if (!subjectMatches || !levelMatches || !modeMatches || !locationMatches) { res.status(403).json({ success: false, code: "OFFER_NOT_RELEVANT", message: "This request does not match your approved subject, level, mode, or city." }); return; }
+  if (!requested.allowCounterOffers && req.body.amount !== requested.budget) { res.status(409).json({ success: false, code: "COUNTERS_DISABLED", message: `This request only accepts the proposed rate of PKR ${requested.budget.toLocaleString()}.` }); return; }
 
   // ── Enforce bid limit ──
   const user = await User.findById(req.user?._id);
@@ -187,7 +199,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     res.status(403).json({
       success: false,
       code: "BID_LIMIT_REACHED",
-      message: `You've used all ${bidLimit} bids included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to place more bids.`,
+      message: `You've used all ${bidLimit} offers included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to send more offers.`,
     });
     return;
   }
@@ -211,6 +223,16 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const offersToday = await Bid.countDocuments({ tutor: req.user?._id, createdAt: { $gte: dayStart } });
+  if (offersToday >= 25) { res.status(429).json({ success: false, code: "DAILY_OFFER_LIMIT", message: "You have reached today's offer limit. Try again tomorrow." }); return; }
+  const normalizedMessage = String(req.body.message || "").trim().toLowerCase();
+  if (normalizedMessage) {
+    const recent = await Bid.find({ tutor: req.user?._id, createdAt: { $gte: dayStart } }).select("message").lean();
+    if (recent.filter(item => item.message.trim().toLowerCase() === normalizedMessage).length >= 5) { res.status(429).json({ success: false, code: "DUPLICATE_OFFER_CONTENT", message: "Please personalize your offer for this student instead of repeating the same message." }); return; }
+  }
+
+  const moderationReasons = [containsContactInfo(req.body.message || "") ? "external_contact" : "", req.body.amount < request.budget * 0.35 || req.body.amount > request.budget * 3 ? "unusual_price" : ""].filter(Boolean);
   const bid = await Bid.create({
     request: new Types.ObjectId(req.params.id as string),
     tutor: req.user?._id,
@@ -220,6 +242,8 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     initialStudentRate: request.budget,
     pricingUnit: request.pricingUnit,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    flaggedForModeration: moderationReasons.length > 0,
+    moderationReasons,
   });
 
   await OfferNegotiation.create({ offer: bid._id, senderUser: req.user?._id, senderRole: "tutor", amount: bid.amount, message: bid.message, sequenceNumber: 1, expiresAt: bid.expiresAt, flaggedForModeration: containsContactInfo(bid.message) });
@@ -231,7 +255,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   // Notify student
   const io = req.app.get("io");
   await sendNotification(io, request.student.toString(), {
-    title: "📬 New Bid Received",
+    title: "📬 New Tutor Offer",
     message: `A verified tutor sent an offer of PKR ${req.body.amount} on your tuition request.`,
     type: "bid",
     link: "/dashboard",
@@ -403,8 +427,8 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
       const io = req.app.get("io");
 
       await sendNotification(io, payload.bidTutor, {
-        title: "✅ Bid Accepted!",
-        message: "Your bid has been accepted! A booking has been created.",
+        title: "✅ Offer Accepted!",
+        message: "Your offer has been accepted! A booking has been created.",
         type: "booking",
         link: "/dashboard",
       });
@@ -445,7 +469,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
       res.status(200).json({
         success: true,
-        message: "Bid accepted. Booking created successfully.",
+        message: "Offer accepted. Booking created successfully.",
         booking: responseBooking,
       });
     }
@@ -524,7 +548,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     title: "📩 New Direct Booking Request",
     message: `${req.user?.name} wants to book a session with you for ${subject}.`,
     type: "booking",
-    link: "/dashboard?tab=requests",
+    link: "/dashboard?tab=browse",
   });
 
    try {
@@ -620,7 +644,7 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
     }
   }
 
-  res.status(200).json({ success: true, message: "Bid rejected", bid });
+  res.status(200).json({ success: true, message: "Offer declined", bid });
 };
 
 // @desc    Get a preview of open requests for public homepage (no auth required)

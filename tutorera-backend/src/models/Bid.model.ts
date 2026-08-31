@@ -10,6 +10,11 @@ export interface IBid extends Document {
   availability?: string;
   expiresAt: Date;
   viewedAt?: Date;
+  renewedAt?: Date;
+  renewalCount: number;
+  flaggedForModeration: boolean;
+  moderationReasons: string[];
+  expiryReminderSentAt?: Date;
   status: "pending" | "submitted" | "viewed" | "countered" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
   isDirect: boolean;
   createdAt: Date;
@@ -25,6 +30,11 @@ const bidSchema = new Schema<IBid>(
     availability: { type: String, trim: true, maxlength: 300 },
     expiresAt: { type: Date, required: true },
     viewedAt: { type: Date },
+    renewedAt: { type: Date },
+    renewalCount: { type: Number, default: 0, min: 0 },
+    flaggedForModeration: { type: Boolean, default: false },
+    moderationReasons: [{ type: String }],
+    expiryReminderSentAt: { type: Date },
     message: { type: String, required: true, trim: true },
     status: {
       type: String,
@@ -40,5 +50,6 @@ const bidSchema = new Schema<IBid>(
 // so a race condition (two simultaneous bid requests) can't create duplicates.
 bidSchema.index({ request: 1, tutor: 1 }, { unique: true });
 bidSchema.index({ expiresAt: 1, status: 1 });
+bidSchema.index({ tutor: 1, createdAt: -1 });
 
 export default mongoose.model<IBid>("Bid", bidSchema);

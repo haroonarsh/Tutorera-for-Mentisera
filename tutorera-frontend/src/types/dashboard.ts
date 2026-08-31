@@ -19,6 +19,7 @@ export interface DashRequest {
   schedule: string;
   status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "offer_accepted" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   createdAt: string;
+  bid?: Pick<DashBid, "_id" | "amount" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
 }
 
 export interface DashBid {
@@ -31,6 +32,13 @@ export interface DashBid {
   availability?: string;
   expiresAt: string;
   matchScore?: number;
+  matchScoreBreakdown?: Record<string, number>;
+  completedSessions?: number;
+  responseRate?: number;
+  responseSeconds?: number;
+  counterCounts?: { student: number; tutor: number };
+  latestSenderRole?: "student" | "tutor";
+  profile?: { education?: { degree: string; institution: string }[]; experience?: number; subjects?: string[]; teachingMode?: string; averageRating?: number; totalReviews?: number; isVerified?: boolean; verificationStatus?: string };
   message: string;
   status: "pending" | "submitted" | "viewed" | "countered" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
   createdAt: string;
@@ -40,9 +48,10 @@ export interface DashBooking {
   _id: string;
   student: { _id: string; name: string; avatar: string };
   tutor:   { _id: string; name: string; avatar: string };
-  request: string;
+  request: string | { _id: string; subject: string; level: string; status: string };
   bid: string;
   amount: number;
+  finalAgreedRate?: number; pricingUnit?: "hour" | "session" | "month" | "course"; sessionCount?: number; subtotal?: number; studentFee?: number; tutorFee?: number; tax?: number; studentTotal?: number; tutorNet?: number;
   schedule: string;
   teachingMode: string;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";

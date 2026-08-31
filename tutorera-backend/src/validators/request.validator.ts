@@ -42,6 +42,7 @@ export const createDirectBookingRequestSchema = z.object({
 export type CreateRequestInput = z.infer<typeof createRequestSchema>;
 export type PlaceBidInput = z.infer<typeof placeBidSchema>;
 export const counterOfferSchema = z.object({ amount: z.number().positive(), message: z.string().max(500).optional() });
+export const renewOfferSchema = z.object({ amount: z.number().positive(), message: z.string().max(500).optional(), availability: z.string().max(300).optional() });
 export type CreateDirectBookingRequestInput = z.infer<typeof createDirectBookingRequestSchema>;
 
 export const validate =

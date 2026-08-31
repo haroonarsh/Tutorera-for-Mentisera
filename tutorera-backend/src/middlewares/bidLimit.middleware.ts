@@ -39,7 +39,7 @@ export const checkBidLimit = async (
   if (bidsUsed >= planConfig.bidsPerMonth) {
     res.status(403).json({
       success: false,
-      message: `You have reached your bid limit of ${planConfig.bidsPerMonth} bids/month on the ${plan} plan. Upgrade to place more bids.`,
+      message: `You have reached your offer limit of ${planConfig.bidsPerMonth} offers/month on the ${plan} plan. Upgrade to send more offers.`,
       upgradeRequired: true,
       currentPlan: plan,
       bidsUsed,

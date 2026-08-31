@@ -18,10 +18,10 @@ export const bookingConfirmedEmail = (studentName: string, tutorName: string, am
 });
 
 export const bidAcceptedEmail = (tutorName: string, studentName: string, amount: number) => ({
-  subject: "TUTORERA® — Your Bid Was Accepted!",
+  subject: "TUTORERA® — Your Offer Was Accepted!",
   html: `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-      <h2 style="color: #1a1a2e;">Bid Accepted ✅</h2>
+      <h2 style="color: #1a1a2e;">Offer Accepted ✅</h2>
       <p style="color: #374151;">Hi ${escapeHtml(tutorName)},</p>
       <p style="color: #374151;"><strong>${escapeHtml(studentName)}</strong> has accepted your tutor offer. A booking has been created.</p>
       <div style="background: #f0fdf4; border-radius: 8px; padding: 16px; margin: 20px 0;">
@@ -113,10 +113,10 @@ export const bookingCancelledEmail = (name: string, otherPartyName: string, subj
 });
 
 export const newBidEmail = (studentName: string, amount: number) => ({
-  subject: "TUTORERA® — New Bid Received",
+  subject: "TUTORERA® — New Offer Received",
   html: `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-      <h2 style="color: #1a1a2e;">New Bid Received 📬</h2>
+      <h2 style="color: #1a1a2e;">New Offer Received 📬</h2>
       <p style="color: #374151;">Hi ${escapeHtml(studentName)}, a verified tutor sent an offer of <strong>PKR ${amount.toLocaleString()}</strong> on your tuition request.</p>
       <p style="color: #6b7280; font-size: 13px;">Log in to your dashboard to review and respond.</p>
     </div>

@@ -207,6 +207,8 @@ function BookingCard({ booking, onClaimSubmitted }: {
         </div>
       )}
 
+      <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {(booking.subtotal||booking.amount).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {(booking.studentTotal||booking.amount).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
+
       {/* Claim submitted confirmation */}
       {claimSubmitted && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
@@ -266,7 +268,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
       )}
 
       <div className={s.infoRow}>
-        <span className={s.infoChip}>PKR {booking.amount.toLocaleString()}/hr</span>
+        <span className={s.infoChip}>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</span>
         <span className={s.infoChip}>{booking.schedule}</span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
@@ -339,14 +341,19 @@ function RequestCard({
   const [bids, setBids] = useState<DashBid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [offerSort, setOfferSort] = useState("best_match");
+  const [countering, setCountering] = useState<DashBid | null>(null);
+  const [counterAmount, setCounterAmount] = useState("");
+  const [counterMessage, setCounterMessage] = useState("");
 
-  async function loadBids() {
-    if (bids.length > 0) { setExpanded(!expanded); return; }
+  async function loadBids(force = false, sort = offerSort) {
+    if (!force && bids.length > 0) { setExpanded(!expanded); return; }
     setExpanded(true);
     setBidsLoading(true);
     try {
-      const res = await axiosInstance.get(`/offers/request/${request._id}`);
-      setBids((res.data.offers ?? []).sort((a: DashBid, b: DashBid) => (b.matchScore || 0) - (a.matchScore || 0)));
+      const res = await axiosInstance.get(`/offers/request/${request._id}`, { params: { sort } });
+      setBids(res.data.offers ?? []);
+      await Promise.all((res.data.offers ?? []).filter((o: DashBid) => o.status === "submitted").map((o: DashBid) => axiosInstance.post(`/offers/${o._id}/view`).catch(() => undefined)));
     } catch {
       setBids([]);
     } finally {
@@ -366,12 +373,15 @@ function RequestCard({
     }
   }
 
-  async function counterOffer(offer: DashBid) {
-    const value = window.prompt(`Tutor offered PKR ${offer.amount.toLocaleString()}. Enter your counter offer:`);
-    if (!value || Number(value) <= 0) return;
-    try { await axiosInstance.post(`/offers/${offer._id}/counter`, { amount: Number(value), message: "Student counter offer" }); setBids([]); await loadBids(); }
+  async function counterOffer() {
+    if (!countering || Number(counterAmount) <= 0) return;
+    try { await axiosInstance.post(`/offers/${countering._id}/counter`, { amount: Number(counterAmount), message: counterMessage }); setCountering(null); setCounterAmount(""); setCounterMessage(""); await loadBids(true); }
     catch (err) { showError(err, "Unable to send counter offer."); }
   }
+
+  const counterLimitText = countering
+    ? `${Math.max(0, 3 - (countering.counterCounts?.student ?? 0))} counter-offers remaining for you.${(countering.counterCounts?.student ?? 0) >= 2 ? " This is your final counter-offer." : ""}`
+    : "";
 
   async function declineOffer(id: string) {
     try { await axiosInstance.post(`/offers/${id}/decline`); setBids(current => current.map(item => item._id === id ? { ...item, status: "rejected" } : item)); }
@@ -407,11 +417,11 @@ function RequestCard({
         <span className={s.infoChip}>{request.schedule}</span>
       </div>
 
-      {/* Expand bids — only for open requests */}
-      {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
+      {/* Expand tutor offers for active and accepted-payment request states */}
+      {["open", "published", "receiving_offers", "negotiating", "offer_accepted", "awaiting_payment", "booked", "closed"].includes(request.status) && (
         <>
           <button
-          onClick={loadBids}
+          onClick={() => loadBids()}
             className={s.expandBtn}
             >
           <svg
@@ -426,7 +436,7 @@ function RequestCard({
 
           {expanded && (
             <div className={s.bidsSection}>
-              <p className={s.bidsSectionTitle}>Tutor Offers · Best Match First</p>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><p className={s.bidsSectionTitle}>Tutor Offers ({bids.length})</p><label style={{fontSize:12}}>Sort by <select value={offerSort} onChange={e=>{setOfferSort(e.target.value);loadBids(true,e.target.value)}}><option value="best_match">Best Match</option><option value="lowest_rate">Lowest Rate</option><option value="highest_rated">Highest Rated</option><option value="most_experienced">Most Experienced</option><option value="fastest_response">Fastest Response</option><option value="most_sessions">Most Sessions Completed</option></select></label></div>
               {bidsLoading ? (
                 <div className={s.spinner} />
               ) : bids.length === 0 ? (
@@ -444,6 +454,10 @@ function RequestCard({
                     <div className={s.bidBody}>
                       <p className={s.bidTutorName}>{bid.tutor.name}</p>
                       <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/{bid.pricingUnit || "hour"}{bid.matchScore ? ` · ${bid.matchScore}% Match` : ""}</p>
+                      <p className={s.bidMessage}>{bid.profile?.isVerified ? "✓ Fully Verified · " : ""}{bid.profile?.averageRating?.toFixed(1) || "New"} rating ({bid.profile?.totalReviews || 0} reviews) · {bid.profile?.experience || 0} years · {bid.completedSessions || 0} completed · {bid.responseRate || 0}% response</p>
+                      {!!bid.profile?.education?.length && <p className={s.bidMessage}>{bid.profile.education[0].degree} · {bid.profile.subjects?.join(", ")}</p>}
+                      {bid.availability && <p className={s.bidMessage}>Availability: {bid.availability}</p>}
+                      {bid.matchScoreBreakdown && <p className={s.bidMessage}>Match breakdown: {Object.entries(bid.matchScoreBreakdown).filter(([, value]) => value > 0).map(([key, value]) => `${key.replace(/([A-Z])/g, " $1").toLowerCase()} +${value}`).join(" · ") || "insufficient matching evidence"}</p>}
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
                         <Link href={`/tutors/${bid.tutor._id}`} className={s.btnOutline}
@@ -460,8 +474,10 @@ function RequestCard({
                           >
                             {accepting === bid._id ? "Accepting…" : "Accept Offer"}
                           </button>
-                          {request.allowCounterOffers && <button onClick={() => counterOffer(bid)} className={s.btnOutline}>Counter Offer</button>}
+                          {request.allowCounterOffers && bid.latestSenderRole !== "student" && (bid.counterCounts?.student ?? 0) < 3 && <button onClick={() => {setCountering(bid);setCounterAmount(String(bid.amount))}} className={s.btnOutline}>Counter Offer</button>}
+                          <Link href="/chat" className={s.btnOutline}>Message</Link>
                           <button onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
+                          <Link href={`/support?topic=report-tutor&offer=${bid._id}`} className={s.btnOutline}>Report</Link>
                         </>)}
                         {!(["pending", "submitted", "viewed", "countered"].includes(bid.status)) && (
                           <span className={`${s.badge} ${bid.status === "accepted" ? s.badgeAccepted : s.badgeCancelled}`}>
@@ -477,6 +493,7 @@ function RequestCard({
           )}
         </>
       )}
+      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#eff6ff"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
     </div>
   );
 }
@@ -665,6 +682,11 @@ const fetchRequests = useCallback(async () => {
         >
           ❤️ Saved Tutors {favourites.length > 0 && `(${favourites.length})`}
         </button>
+        <Link href="/offers" className={s.tab}>Tutor Offers & Negotiations</Link>
+        <Link href="/chat" className={s.tab}>Messages</Link>
+        <Link href="/billing" className={s.tab}>Payments</Link>
+        <Link href="/notifications" className={s.tab}>Notifications</Link>
+        <Link href="/settings" className={s.tab}>Settings</Link>
         </nav>
 
         {/* Tab: My Requests */}

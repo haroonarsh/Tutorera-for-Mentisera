@@ -5,6 +5,8 @@ import connectDB from "./config/db";
 import { validateEnv } from "./config/env";
 import { initSocket } from "./utils/socket";
 import app from "./app";
+import logger from "./config/logger";
+import { processOfferExpirations } from "./utils/offerExpiry";
 
 dotenv.config();
 
@@ -28,6 +30,9 @@ const PORT = process.env.PORT || 5000;
 const server = httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+const offerExpiryTimer = setInterval(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Offer expiry processing failed")), 15 * 60 * 1000);
+offerExpiryTimer.unref();
+setTimeout(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
@@ -43,6 +48,7 @@ let isShuttingDown = false;
 async function gracefulShutdown(signal: string) {
   if (isShuttingDown) return;
   isShuttingDown = true;
+  clearInterval(offerExpiryTimer);
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 

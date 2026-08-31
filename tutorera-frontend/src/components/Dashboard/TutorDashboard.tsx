@@ -149,7 +149,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          PKR {booking.amount.toLocaleString()}/hr
+          PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"} · Net PKR {(booking.tutorNet||booking.amount).toLocaleString()}
         </span>
         <span className={s.infoChip}>
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -159,6 +159,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         </span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
+      <details style={{marginTop:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {(booking.subtotal||booking.amount).toLocaleString()}</b></span><span>Tutor fee: <b>PKR {(booking.tutorFee||0).toLocaleString()}</b></span><span>Tax: <b>PKR {(booking.tax||0).toLocaleString()}</b></span><span>Tutor net: <b>PKR {(booking.tutorNet||booking.amount).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>
 
@@ -217,12 +218,18 @@ function OpenRequestCard({
         </div>
 
         <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-          <button
-            onClick={() => setShowBidModal(true)}
-            className={s.btnPrimary}
-          >
-            Send Offer
-          </button>
+          {request.bid ? (
+            <Link href="/offers" className={s.btnOutline} style={{ textDecoration: "none" }}>
+              Offer sent: PKR {request.bid.amount.toLocaleString()}/{request.bid.pricingUnit || "hour"} · {request.bid.status.replaceAll("_", " ")}
+            </Link>
+          ) : (
+            <button
+              onClick={() => setShowBidModal(true)}
+              className={s.btnPrimary}
+            >
+              Send Offer
+            </button>
+          )}
           <span className={s.infoChip} style={{ alignSelf: "center" }}>
             Student: {request.student.name}
           </span>
@@ -647,6 +654,11 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     </svg>
     My Profile
   </button>
+  <Link href="/offers" className={s.tab}>My Offers & Negotiations</Link>
+  <Link href="/chat" className={s.tab}>Messages</Link>
+  <Link href="/earnings" className={s.tab}>Earnings</Link>
+  <Link href="/notifications" className={s.tab}>Notifications</Link>
+  <Link href="/settings" className={s.tab}>Settings</Link>
 </nav>
 
         {/* Tab: My Bookings */}
@@ -734,6 +746,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
               requests.map((r) => (
                 <OpenRequestCard key={r._id} request={r} onBidPlaced={() => {
                   setBidSuccess(true);
+                  fetchRequests();
                   setTimeout(() => setBidSuccess(false), 5000);
                 }} />
               ))

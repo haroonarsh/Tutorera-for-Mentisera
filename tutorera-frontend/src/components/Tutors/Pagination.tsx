@@ -12,7 +12,7 @@ function buildPageList(current: number, total: number): (number | "...")[] {
 
   const half = 2;
   let start = Math.max(1, current - half);
-  let end = Math.min(total, start + 4);
+  const end = Math.min(total, start + 4);
   if (end - start < 4) start = Math.max(1, end - 4);
 
   const pages: (number | "...")[] = [];

@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { protect, authorize } from "../middlewares/auth.middleware";
-import { validate, counterOfferSchema } from "../validators/request.validator";
-import { acceptOffer, counterOffer, declineOffer, getMyOffers, getOfferHistory, getRequestOffers } from "../controllers/offer.controller";
+import { validate, counterOfferSchema, renewOfferSchema } from "../validators/request.validator";
+import { acceptOffer, counterOffer, declineOffer, getMyOffers, getOfferHistory, getRequestOffers, markOfferViewed, renewOffer } from "../controllers/offer.controller";
 const router = Router();
 router.get("/request/:requestId", protect, authorize("student"), getRequestOffers);
 router.get("/my", protect, getMyOffers);
 router.get("/:id/history", protect, getOfferHistory);
+router.post("/:id/view", protect, authorize("student"), markOfferViewed);
+router.post("/:id/renew", protect, authorize("tutor"), validate(renewOfferSchema), renewOffer);
 router.post("/:id/counter", protect, validate(counterOfferSchema), counterOffer);
 router.post("/:id/accept", protect, acceptOffer);
 router.post("/:id/decline", protect, declineOffer);
