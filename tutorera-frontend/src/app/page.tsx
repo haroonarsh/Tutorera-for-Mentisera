@@ -1,288 +1,283 @@
-
-import api from "@/lib/axios";
 import Link from "next/link";
-import { Search, Shield, MapPin, BookOpen, Users, Star, CheckCircle, XCircle } from "lucide-react";
+import type { CSSProperties } from "react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BookOpen,
+  CheckCircle,
+  Clock,
+  HandCoins,
+  MessageSquare,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  Users,
+} from "lucide-react";
 import TopTutorsSection from "@/components/TopTutorsSection";
 import TopRequestsSection from "@/components/TopRequestsSection";
 import type { Metadata } from "next";
+import s from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Find Tutors in Pakistan | TUTORERA®",
-  description: "Post a tuition request, propose your budget, receive offers from verified tutors, compare profiles, negotiate a rate, and book with confidence.",
+  title: "Find Tutors in Pakistan | Student-Led Tutor Offers | TUTORERA®",
+  description:
+    "Post a tuition request, set your preferred rate, receive tutor offers, compare verified profiles, negotiate safely, and book tutors across Pakistan.",
   alternates: { canonical: "/" },
 };
 
-const C = {
-  primary: '#1a1a2e',
-  secondary: '#16213e',
-  accent: '#2563eb',
-  accentLight: '#eff6ff',
-  accentDark: '#1d4ed8',
-  highlight: '#3b82f6',
-  gray50: '#f9fafb',
-  gray100: '#f3f4f6',
-  gray400: '#9ca3af',
-  gray500: '#6b7280',
-  gray700: '#374151',
-};
+const trustStats = [
+  { value: "0%", label: "student marketplace fee" },
+  { value: "24h", label: "standard offer expiry" },
+  { value: "100pt", label: "transparent match score" },
+];
+
+const marketplaceSteps = [
+  { icon: Search, title: "Post what you need", desc: "Share subject, class level, learning goals, location, schedule, mode, and your proposed rate." },
+  { icon: HandCoins, title: "Tutors send offers", desc: "Tutors can accept your rate or submit a counter-offer when your request allows negotiation." },
+  { icon: SlidersHorizontal, title: "Compare with context", desc: "Review rate, match score, verification, qualifications, reviews, experience, response rate, and availability." },
+  { icon: ShieldCheck, title: "Accept and book", desc: "Choose the tutor and agreed rate, then continue through the structured booking and payment flow." },
+];
+
+const benefits = [
+  { icon: Users, title: "For parents and students", desc: "Define your need, compare tutor offers side-by-side, and keep decisions documented." },
+  { icon: BookOpen, title: "For serious tutors", desc: "Find real student demand, submit relevant offers, show verified strengths, and build a professional tutoring presence." },
+  { icon: ShieldCheck, title: "For safer tuition", desc: "Marketplace actions, reporting, disputes, offer expiry, and audit history keep the process clearer for both sides." },
+];
+
+const comparisonRows = [
+  ["Pricing", "Usually fixed by agent or tutor", "Student proposes rate; tutor accepts or counters"],
+  ["Choice", "One or two informal referrals", "Multiple comparable tutor offers"],
+  ["Trust", "Hard to verify claims", "Profiles, verification, reviews, and reporting"],
+  ["Decision", "Phone calls and scattered messages", "Structured request, offer, negotiation, and booking flow"],
+];
+
+const popularJourneys = [
+  { href: "/tutors", label: "Browse verified tutors", icon: Users },
+  { href: "/dashboard?tab=requests", label: "Post a tuition request", icon: MessageSquare },
+  { href: "/browse-requests", label: "Tutor: view open requests", icon: Clock },
+  { href: "/how-tutor-offers-work", label: "Learn how offers work", icon: Sparkles },
+];
+
+const blogPosts = [
+  { title: "How to Find a Trusted Tutor in Pakistan", desc: "A practical guide for parents who want structure, safety, and better tutor-fit decisions.", slug: "how-to-find-a-trusted-tutor-in-pakistan" },
+  { title: "Online Tutoring vs. Home Tuition", desc: "Compare mode, cost, flexibility, and accountability before choosing your learning setup.", slug: "online-vs-home-tuition-in-pakistan" },
+  { title: "What to Check Before Hiring a Tutor", desc: "A parent-friendly checklist for qualifications, communication, availability, and trial expectations.", slug: "what-to-look-for-before-hiring-a-tutor-pakistan" },
+];
 
 export default function Home() {
   return (
-    <div style={{ backgroundColor: 'white', color: C.primary }}>
-
-      {/* ── HERO ── */}
-      <section style={{ backgroundColor: 'white', padding: '5rem 1.5rem 4rem', textAlign: 'center' }}>
-        <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 4rem)', fontWeight: '800', color: C.primary, lineHeight: '1.15', marginBottom: '1.25rem', letterSpacing: '-0.02em' }}>
-            Find the Right Tutor at the Right Rate
-          </h1>
-          <p style={{ fontSize: '1.15rem', fontWeight: '600', color: C.accent, marginBottom: '1.25rem', letterSpacing: '0.01em' }}>
-            TUTORS. Trusted. Transparent.
-          </p>
-          <p style={{ fontSize: '1rem', color: C.gray500, maxWidth: '640px', margin: '0 auto 0.75rem', lineHeight: '1.75' }}>
-            Pakistan&apos;s modern tutoring marketplace where parents and students{" "}
-            <strong style={{ color: C.primary }}>search, compare, and book tutors</strong>{" "}
-            for one-to-one learning—by subject, level, budget, and schedule.
-          </p>
-          <p style={{ color: C.gray400, marginBottom: '2.5rem', fontSize: '0.9rem' }}>No agents. No guesswork.</p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/dashboard" style={{ backgroundColor: C.accent, color: 'white', padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
-              Post a Tuition Request
-            </Link>
-            <Link href="/tutors" style={{ backgroundColor: 'white', color: C.primary, border: `1.5px solid #d1d5db`, padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
-              Browse Tutors
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── WHY TUTORERA ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Why TUTORERA®?</h2>
-            <p style={{ color: C.gray500, fontSize: '1.05rem' }}>Because choosing a tutor shouldn&apos;t feel risky.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.5rem' }}>
-            {[
-              { icon: <Search size={28} color={C.accent} />, title: "Search with Clarity", desc: "Search by subject, class, budget & timing." },
-              { icon: <BookOpen size={28} color={C.accent} />, title: "Personalized Learning", desc: "One-to-one sessions tailored to your child's needs." },
-              { icon: <Shield size={28} color={C.accent} />, title: "Clear & Safe Experience", desc: "A secure, monitored platform designed for parents who want clarity." },
-              { icon: <MapPin size={28} color={C.accent} />, title: "Built for Pakistan", desc: "Designed for Pakistan's education systems and curricula." },
-            ].map((item) => (
-              <div key={item.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', textAlign: 'center', border: '1px solid #f3f4f6' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>{item.icon}</div>
-                <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', marginBottom: '0.5rem' }}>{item.title}</h3>
-                <p style={{ color: C.gray500, fontSize: '0.875rem', lineHeight: '1.6' }}>{item.desc}</p>
+    <main className={s.page}>
+      <section className={s.hero} aria-labelledby="home-hero-title">
+        <div className={s.heroGlow} aria-hidden="true" />
+        <div className={s.container}>
+          <div className={s.heroGrid}>
+            <div className={s.heroCopy}>
+              <p className={s.eyebrow}>
+                <BadgeCheck size={18} aria-hidden="true" />
+                Pakistan&apos;s student-led tutoring marketplace
+              </p>
+              <h1 id="home-hero-title" className={s.heroTitle}>
+                Post your learning need. Compare tutor offers. Book with confidence.
+              </h1>
+              <p className={s.heroText}>
+                TUTORERA® helps students and parents move beyond guesswork: set a proposed rate, receive relevant tutor offers, compare transparent fit signals, negotiate when needed, and keep the booking journey structured.
+              </p>
+              <div className={s.heroActions} aria-label="Primary actions">
+                <Link className={s.primaryCta} href="/dashboard?tab=requests">
+                  Post a Tuition Request <ArrowRight size={18} aria-hidden="true" />
+                </Link>
+                <Link className={s.secondaryCta} href="/tutors">Browse Tutors</Link>
               </div>
-            ))}
-          </div>
-          <p style={{ textAlign: 'center', color: C.gray400, marginTop: '2rem', fontSize: '0.875rem' }}>
-            TUTORERA® replaces informal tuition with a clear, modern marketplace.
-          </p>
-        </div>
-      </section>
+              <div className={s.trustRow} aria-label="Marketplace highlights">
+                {trustStats.map((stat) => (
+                  <div key={stat.label} className={s.trustPill}>
+                    <strong>{stat.value}</strong>
+                    <span>{stat.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-      {/* ── HOW IT WORKS ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>
-            How Tutor Offers Work
-          </h2>
-          <p style={{ color: C.gray500, marginBottom: '3.5rem', fontSize: '1rem' }}>Simple. Clear. Reliable.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1.5rem' }}>
-            {[
-              { step: "1", title: "Search", desc: "Tell us what you need—subject, level, schedule, budget." },
-              { step: "2", title: "Receive Tutor Offers", desc: "Verified tutors accept your rate or make an offer." },
-              { step: "3", title: "Compare & Negotiate", desc: "Compare quality, fit, availability and pricing." },
-              { step: "4", title: "Choose Your Tutor", desc: "Accept the tutor and rate that suit you." },
-              { step: "5", title: "Learn With Confidence", desc: "Complete payment and begin tutoring." },
-            ].map((item) => (
-              <div key={item.step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '60px', height: '60px', backgroundColor: C.primary, color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: '800' }}>
-                  {item.step}
+            <div className={s.heroPanel} aria-label="Tutor offer comparison preview">
+              <div className={s.panelHeader}>
+                <span>Live request</span>
+                <strong>Mathematics · O-Level</strong>
+              </div>
+              <div className={s.requestCard}>
+                <div>
+                  <p className={s.mutedLabel}>Student proposed rate</p>
+                  <strong>PKR 1,500/hour</strong>
                 </div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary }}>{item.title}</h3>
-                <p style={{ color: C.gray500, fontSize: '0.875rem', lineHeight: '1.6' }}>{item.desc}</p>
+                <span className={s.statusBadge}>Receiving offers</span>
+              </div>
+              <div className={s.offerStack}>
+                {[
+                  ["92% match", "Verified tutor", "PKR 1,500/hour"],
+                  ["86% match", "8 years exp.", "PKR 1,800/hour"],
+                  ["78% match", "Fast response", "PKR 1,300/hour"],
+                ].map(([match, detail, price]) => (
+                  <div key={detail} className={s.offerPreview}>
+                    <div className={s.avatarDot} aria-hidden="true" />
+                    <div>
+                      <strong>{match}</strong>
+                      <span>{detail}</span>
+                    </div>
+                    <em>{price}</em>
+                  </div>
+                ))}
+              </div>
+              <div className={s.panelFooter}>
+                <CheckCircle size={17} aria-hidden="true" />
+                Compare rate, verification, reviews, availability, and response speed.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={s.journeyBand} aria-labelledby="journey-title">
+        <div className={s.container}>
+          <div className={s.sectionHeader}>
+            <p className={s.eyebrow}>Two discovery paths</p>
+            <h2 id="journey-title">Choose your route into the marketplace</h2>
+            <p>Students can browse tutors or post a request. Tutors can browse real demand and send thoughtful offers.</p>
+          </div>
+          <div className={s.journeyGrid}>
+            {popularJourneys.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} className={s.journeyCard} href={item.href}>
+                  <Icon size={22} aria-hidden="true" />
+                  <span>{item.label}</span>
+                  <ArrowRight size={18} aria-hidden="true" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className={s.section} aria-labelledby="how-title">
+        <div className={s.container}>
+          <div className={s.sectionHeader}>
+            <p className={s.eyebrow}>Updated business model</p>
+            <h2 id="how-title">How tutor offers work</h2>
+            <p>A clearer marketplace loop: student demand first, tutor offers second, transparent comparison before commitment.</p>
+          </div>
+          <div className={s.stepsGrid}>
+            {marketplaceSteps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <article key={step.title} className={s.stepCard} style={{ "--delay": `${index * 55}ms` } as CSSProperties}>
+                  <span className={s.stepNumber}>0{index + 1}</span>
+                  <div className={s.iconBox}><Icon size={24} aria-hidden="true" /></div>
+                  <h3>{step.title}</h3>
+                  <p>{step.desc}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className={s.softSection} aria-labelledby="trust-title">
+        <div className={s.container}>
+          <div className={s.splitGrid}>
+            <div>
+              <p className={s.eyebrow}>Trust, fit, and fairness</p>
+              <h2 id="trust-title">Designed for decisions parents can actually understand</h2>
+              <p className={s.lead}>
+                A low price alone is not a good tutor decision. TUTORERA® brings pricing, availability, reviews, verification, qualifications, teaching mode, and match score into one view.
+              </p>
+              <Link className={s.textLink} href="/how-tutor-offers-work">
+                See the offer workflow <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className={s.benefitGrid}>
+              {benefits.map((benefit) => {
+                const Icon = benefit.icon;
+                return (
+                  <article key={benefit.title} className={s.benefitCard}>
+                    <Icon size={24} aria-hidden="true" />
+                    <h3>{benefit.title}</h3>
+                    <p>{benefit.desc}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={s.section} aria-labelledby="compare-title">
+        <div className={s.containerNarrow}>
+          <div className={s.sectionHeader}>
+            <p className={s.eyebrow}>Why it feels different</p>
+            <h2 id="compare-title">A smarter alternative to informal tuition hunting</h2>
+          </div>
+          <div className={s.comparisonTable} role="table" aria-label="Traditional tuition compared with TUTORERA">
+            <div className={s.tableHead} role="row">
+              <span role="columnheader">Area</span>
+              <span role="columnheader">Traditional</span>
+              <span role="columnheader">TUTORERA®</span>
+            </div>
+            {comparisonRows.map(([area, oldWay, tutoreraWay]) => (
+              <div key={area} className={s.tableRow} role="row">
+                <strong role="cell">{area}</strong>
+                <span role="cell">{oldWay}</span>
+                <span role="cell">{tutoreraWay}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── FOR WHO ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, textAlign: 'center', marginBottom: '3rem' }}>
-            Built for the Entire Learning Community
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
-            {[
-              { icon: <BookOpen size={26} color={C.accent} />, title: "For Students", items: ["Matric / FSc / ICS", "O-Level & A-Level", "Entry Tests", "Languages & Skills"] },
-              { icon: <Users size={26} color={C.accent} />, title: "For Parents", items: ["Who want trusted tutors", "Who want clarity & structure", "Who want peace of mind"] },
-              { icon: <Star size={26} color={C.accent} />, title: "For Tutors", items: ["Who want serious students", "Who want flexible schedules", "Who want a professional platform"] },
-            ].map((card) => (
-              <div key={card.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s', }}
-              >
-                <div style={{ marginBottom: '1rem' }}>{card.icon}</div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1.25rem' }}>{card.title}</h3>
-                <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {card.items.map((item) => (
-                    <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: C.gray500, fontSize: '0.875rem' }}>
-                      <CheckCircle size={15} color={C.accent} style={{ flexShrink: 0 }} />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── COMPARISON ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
-        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, textAlign: 'center', marginBottom: '3rem' }}>
-            A Smarter Model for Tutoring
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            {/* Traditional */}
-            <div style={{ border: '1.5px solid #e5e7eb', borderRadius: '0.875rem', padding: '2rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.gray400, marginBottom: '1.5rem' }}>Traditional Tuition</h3>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {["Agents & references", "Informal arrangements", "Unclear expectations"].map((item) => (
-                  <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: C.gray400, fontSize: '0.875rem' }}>
-                    <XCircle size={17} color="#d1d5db" style={{ flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* TUTORERA */}
-            <div style={{ border: `1.5px solid ${C.accent}`, backgroundColor: C.accentLight, borderRadius: '0.875rem', padding: '2rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1.5rem' }}>TUTORERA®</h3>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {["Marketplace choice", "Structured flow", "Transparent decisions"].map((item) => (
-                  <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: C.primary, fontSize: '0.875rem', fontWeight: '500' }}>
-                    <CheckCircle size={17} color={C.accent} style={{ flexShrink: 0 }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <p style={{ textAlign: 'center', color: C.gray400, marginTop: '2rem', fontSize: '0.875rem', fontStyle: 'italic' }}>
-            This is tutoring—rebuilt for today.
-          </p>
-        </div>
-      </section>
-
-      {/* ── TOP TUTORS ── */}
       <TopTutorsSection />
-
-      {/* ── TOP REQUESTS ── */}
       <TopRequestsSection />
 
-      {/* ── BLOG ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
-       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-         <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Insights From Our Blog</h2>
-         <p style={{ color: C.gray500 }}>Expert advice for parents, students, and educators in Pakistan.</p>
-        </div>
-         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {[
-           {
-             title: "How to Find a Trusted Tutor in Pakistan",
-            desc: "Feeling overwhelmed finding a tutor? This guide breaks down the process into simple, safe steps.",
-           slug: "how-to-find-a-trusted-tutor-in-pakistan",
-            color: "linear-gradient(135deg, #1a1a2e, #2563eb)"
-         },
-        {
-            title: "Online Tutoring vs. Traditional Home Tuition",
-          desc: "Online tuition is exploding in Pakistan, but is it better than traditional home tuition?",
-          slug: "online-vs-home-tuition-in-pakistan",
-          color: "linear-gradient(135deg, #2563eb, #7c3aed)"
-        },
-        {
-          title: "What Parents Should Look for Before Hiring a Tutor",
-          desc: "Don't hire a tutor blindly. This checklist covers 5 critical areas every parent must consider.",
-          slug: "what-to-look-for-before-hiring-a-tutor-pakistan",
-          color: "linear-gradient(135deg, #0f3460, #2563eb)"
-        },
-          ].map((post) => (
-        <div key={post.slug} style={{ backgroundColor: '#f9fafb', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-          <div style={{ height: '180px', background: post.color, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-            <h3 style={{ color: 'white', fontWeight: '700', fontSize: '1rem', textAlign: 'center', lineHeight: '1.5' }}>{post.title}</h3>
+      <section className={s.softSection} aria-labelledby="blog-title">
+        <div className={s.container}>
+          <div className={s.sectionHeader}>
+            <p className={s.eyebrow}>Expert guidance</p>
+            <h2 id="blog-title">Helpful reading before you choose</h2>
+            <p>Clear, practical guides for Pakistani parents, students, and tutors.</p>
           </div>
-          <div style={{ padding: '1.5rem' }}>
-            <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.6' }}>{post.desc}</p>
-            <Link href={`/blog/${post.slug}`} style={{ color: C.accent, fontWeight: '600', fontSize: '0.875rem', textDecoration: 'none' }}>
-              Read More →
-            </Link>
-          </div>
-           </div>
-         ))}
-        </div>
-          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-         <Link href="/blog" style={{ border: `1.5px solid ${C.primary}`, color: C.primary, padding: '0.75rem 2rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
-         Visit Our Blog
-         </Link>
-         </div>
-         </div>
-      </section>
-
-      {/* ── BECOME TUTOR CTA ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.primary, color: 'white', textAlign: 'center' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '1rem' }}>
-            Teach Smarter with TUTORERA®
-          </h2>
-          <p style={{ color: C.gray400, marginBottom: '2rem', fontSize: '1rem' }}>Reach students across Pakistan without chasing leads.</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
-            {["Teach on your schedule", "Focus on teaching, not marketing", "Work through a structured platform", "Build a professional tutoring presence"].map((item) => (
-              <span key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: C.gray400, fontSize: '0.875rem' }}>
-                <CheckCircle size={15} color={C.highlight} /> {item}
-              </span>
+          <div className={s.blogGrid}>
+            {blogPosts.map((post) => (
+              <article key={post.slug} className={s.blogCard}>
+                <div className={s.blogArt} aria-hidden="true"><Star size={28} /></div>
+                <div className={s.blogBody}>
+                  <h3>{post.title}</h3>
+                  <p>{post.desc}</p>
+                  <Link className={s.textLink} href={`/blog/${post.slug}`}>
+                    Read guide <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                </div>
+              </article>
             ))}
           </div>
-          <Link href="/register?role=tutor" style={{ backgroundColor: C.accent, color: 'white', padding: '0.9rem 2.5rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' }}>
-            Join as a Tutor
-          </Link>
         </div>
       </section>
 
-      {/* ── FINAL CTA ── */}
-      <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white', textAlign: 'center' }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.75rem' }}>
-            Start Learning the Right Way
-          </h2>
-          <p style={{ color: C.gray500, marginBottom: '2.5rem' }}>The right tutor can change outcomes.</p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '3rem' }}>
-            <Link href="/tutors" style={{ backgroundColor: C.accent, color: 'white', padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
-              Find a Tutor
-            </Link>
-            <Link href="/register?role=tutor" style={{ border: `1.5px solid ${C.primary}`, color: C.primary, padding: '0.85rem 2rem', borderRadius: '0.5rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
-              Become a Tutor
-            </Link>
-          </div>
-          <div style={{ backgroundColor: C.gray50, borderRadius: '1rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Need a Tailored Solution?</h3>
-            <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>Our support team is available to guide you to the perfect tutor.</p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link href="/contact" style={{ backgroundColor: C.primary, color: 'white', padding: '0.7rem 1.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
-                Contact Support
+      <section className={s.ctaSection} aria-labelledby="final-cta-title">
+        <div className={s.container}>
+          <div className={s.ctaCard}>
+            <div>
+              <p className={s.eyebrow}>Ready when you are</p>
+              <h2 id="final-cta-title">Start with the need, not the noise.</h2>
+              <p>Post a request in minutes, or browse tutors directly if you already know what you want.</p>
+            </div>
+            <div className={s.ctaActions}>
+              <Link className={s.primaryCta} href="/dashboard?tab=requests">
+                Post Request <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <a href="https://wa.me/923348880859" style={{ backgroundColor: '#16a34a', color: 'white', padding: '0.7rem 1.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}>
-                Chat on WhatsApp
-              </a>
+              <Link className={s.secondaryCtaDark} href="/register?role=tutor">Join as Tutor</Link>
             </div>
           </div>
         </div>
       </section>
-
-    </div>
+    </main>
   );
 }
