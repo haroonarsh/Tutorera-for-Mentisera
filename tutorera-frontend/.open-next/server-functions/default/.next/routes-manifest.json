@@ -14,7 +14,18 @@
       "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
     }
   ],
-  "headers": [],
+  "headers": [
+    {
+      "source": "/(favicon.ico|icon.svg|apple-icon.png|og-image.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ],
+      "regex": "^(?:/(favicon.ico|icon.svg|apple-icon.png|og-image.png))(?:/)?$"
+    }
+  ],
   "onMatchHeaders": [],
   "rewrites": {
     "beforeFiles": [],
@@ -37,6 +48,39 @@
         "nxtPconversationId": "nxtPconversationId"
       },
       "namedRegex": "^/chat/(?<nxtPconversationId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/tutors/city/[slug]",
+      "regex": "^/tutors/city/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/tutors/city/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/tutors/city/[slug]/[subject]",
+      "regex": "^/tutors/city/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPsubject": "nxtPsubject"
+      },
+      "namedRegex": "^/tutors/city/(?<nxtPslug>[^/]+?)/(?<nxtPsubject>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/tutors/level/[slug]",
+      "regex": "^/tutors/level/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/tutors/level/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/tutors/subject/[slug]",
+      "regex": "^/tutors/subject/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/tutors/subject/(?<nxtPslug>[^/]+?)(?:/)?$"
     },
     {
       "page": "/tutors/[id]",
@@ -71,6 +115,12 @@
       "regex": "^/about(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/about(?:/)?$"
+    },
+    {
+      "page": "/academic-standards",
+      "regex": "^/academic\\-standards(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/academic\\-standards(?:/)?$"
     },
     {
       "page": "/admin",
@@ -163,6 +213,12 @@
       "namedRegex": "^/admin/verifications(?:/)?$"
     },
     {
+      "page": "/apple-icon.png",
+      "regex": "^/apple\\-icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apple\\-icon\\.png(?:/)?$"
+    },
+    {
       "page": "/become-a-tutor",
       "regex": "^/become\\-a\\-tutor(?:/)?$",
       "routeKeys": {},
@@ -241,6 +297,12 @@
       "namedRegex": "^/earnings(?:/)?$"
     },
     {
+      "page": "/editorial-policy",
+      "regex": "^/editorial\\-policy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/editorial\\-policy(?:/)?$"
+    },
+    {
       "page": "/favicon.ico",
       "regex": "^/favicon\\.ico(?:/)?$",
       "routeKeys": {},
@@ -283,16 +345,34 @@
       "namedRegex": "^/how\\-it\\-works(?:/)?$"
     },
     {
+      "page": "/icon.svg",
+      "regex": "^/icon\\.svg(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon\\.svg(?:/)?$"
+    },
+    {
       "page": "/levels",
       "regex": "^/levels(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/levels(?:/)?$"
     },
     {
+      "page": "/locations",
+      "regex": "^/locations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/locations(?:/)?$"
+    },
+    {
       "page": "/login",
       "regex": "^/login(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/manifest.webmanifest",
+      "regex": "^/manifest\\.webmanifest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manifest\\.webmanifest(?:/)?$"
     },
     {
       "page": "/notifications",
@@ -355,6 +435,24 @@
       "namedRegex": "^/register(?:/)?$"
     },
     {
+      "page": "/research/pakistan-tutoring-rates",
+      "regex": "^/research/pakistan\\-tutoring\\-rates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/research/pakistan\\-tutoring\\-rates(?:/)?$"
+    },
+    {
+      "page": "/review-policy",
+      "regex": "^/review\\-policy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/review\\-policy(?:/)?$"
+    },
+    {
+      "page": "/robots.txt",
+      "regex": "^/robots\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/robots\\.txt(?:/)?$"
+    },
+    {
       "page": "/safety-policy",
       "regex": "^/safety\\-policy(?:/)?$",
       "routeKeys": {},
@@ -373,6 +471,12 @@
       "namedRegex": "^/settings(?:/)?$"
     },
     {
+      "page": "/sitemap.xml",
+      "regex": "^/sitemap\\.xml(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sitemap\\.xml(?:/)?$"
+    },
+    {
       "page": "/subjects",
       "regex": "^/subjects(?:/)?$",
       "routeKeys": {},
@@ -389,6 +493,12 @@
       "regex": "^/terms(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/terms(?:/)?$"
+    },
+    {
+      "page": "/tutor-verification-standards",
+      "regex": "^/tutor\\-verification\\-standards(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tutor\\-verification\\-standards(?:/)?$"
     },
     {
       "page": "/tutors",

@@ -7,6 +7,9 @@ const routes = [
   "help", "help/for-parents", "help/for-tutors", "how-it-works", "levels", "locations", "pricing",
   "safety-policy", "subjects", "tutors", "terms", "privacy", "complaint-process", "cancellation-policy",
   "tutor-verification-standards", "review-policy", "editorial-policy", "academic-standards",
+  "content-review-policy", "research-methodology", "tutor-screening-policy", "governance",
+  "blog/how-to-find-a-trusted-tutor-in-pakistan", "blog/online-vs-home-tuition-in-pakistan",
+  "blog/what-to-look-for-before-hiring-a-tutor-pakistan",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

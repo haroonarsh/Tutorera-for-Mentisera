@@ -67,6 +67,10 @@
         {
           "protocol": "https",
           "hostname": "res.cloudinary.com"
+        },
+        {
+          "protocol": "https",
+          "hostname": "lh3.googleusercontent.com"
         }
       ],
       "qualities": [
@@ -110,7 +114,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "D:\\Tutorera for Mentisera\\tutorera-frontend",
+    "outputFileTracingRoot": "E:\\Tutorera-for-Mentisera\\tutorera-frontend",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -172,7 +176,7 @@
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 3,
+      "cpus": 11,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -310,11 +314,11 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.ts",
     "turbopack": {
-      "root": "D:\\Tutorera for Mentisera\\tutorera-frontend"
+      "root": "E:\\Tutorera-for-Mentisera\\tutorera-frontend"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "D:\\Tutorera for Mentisera\\tutorera-frontend",
+  "appDir": "E:\\Tutorera-for-Mentisera\\tutorera-frontend",
   "relativeAppDir": "",
   "files": [
     ".next\\routes-manifest.json",
