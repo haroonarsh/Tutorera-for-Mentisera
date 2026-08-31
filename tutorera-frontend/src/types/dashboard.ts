@@ -31,6 +31,7 @@ export interface DashBid {
   pricingUnit: "hour" | "session" | "month" | "course";
   availability?: string;
   expiresAt: string;
+  sequenceNumber?: number;
   matchScore?: number;
   matchScoreBreakdown?: Record<string, number>;
   completedSessions?: number;

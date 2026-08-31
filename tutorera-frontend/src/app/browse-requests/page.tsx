@@ -2,7 +2,9 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
 import { MapPin, BookOpen, Clock, Send } from "lucide-react";
-import { useFocusTrap } from "@/hooks/useFocusTrap";
+import Link from "next/link";
+import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
+import { DashRequest } from "@/types/dashboard";
 
 const C = {
   primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb',
@@ -15,11 +17,14 @@ interface RequestItem {
   level: string;
   description: string;
   budget: number;
+  pricingUnit?: "hour" | "session" | "month" | "course";
+  allowCounterOffers: boolean;
   teachingMode: string;
   city?: string;
   schedule: string;
   createdAt: string;
   student: { name: string; city?: string; avatar?: string };
+  bid?: { _id: string; amount: number; status: string; expiresAt: string; pricingUnit?: "hour" | "session" | "month" | "course"; createdAt: string } | null;
 }
 
 const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
@@ -50,16 +55,14 @@ export default function BrowseRequestsPage() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject, level, city]);
 
   useEffect(() => {
     const timer = setTimeout(() => { setPage(1); fetchRequests(1); }, 400);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subject, level, city]);
+  }, [subject, level, city, fetchRequests]);
 
-  useEffect(() => { fetchRequests(page); /* eslint-disable-next-line */ }, [page]);
+  useEffect(() => { fetchRequests(page); }, [page, fetchRequests]);
 
   return (
     <div style={{ backgroundColor: C.gray50, minHeight: '100vh' }}>
@@ -137,10 +140,16 @@ export default function BrowseRequestsPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
                   <span style={{ fontSize: '0.8rem', color: C.gray500 }}>By {r.student?.name}</span>
-                  <button onClick={() => setBidModalRequest(r)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accent, color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    <Send size={13} /> Send Offer
-                  </button>
+                  {r.bid ? (
+                    <Link href="/offers" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accentLight, color: C.accent, padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontWeight: '600', fontSize: '0.8rem', textDecoration: 'none' }}>
+                      Offer sent · {r.bid.status.replaceAll("_", " ")}
+                    </Link>
+                  ) : (
+                    <button onClick={() => setBidModalRequest(r)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: C.accent, color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' }}>
+                      <Send size={13} /> Send Offer
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -162,73 +171,12 @@ export default function BrowseRequestsPage() {
 
       {/* Bid Modal */}
       {bidModalRequest && (
-        <BidModal
-          request={bidModalRequest}
+        <PlaceBidModal
+          request={bidModalRequest as DashRequest}
           onClose={() => setBidModalRequest(null)}
           onSuccess={() => { setBidModalRequest(null); fetchRequests(page); }}
         />
       )}
-    </div>
-  );
-}
-
-function BidModal({ request, onClose, onSuccess }: { request: RequestItem; onClose: () => void; onSuccess: () => void }) {
-  const [amount, setAmount] = useState(String(request.budget || ""));
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const modalRef = useFocusTrap(true, onClose);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await api.post(`/requests/${request._id}/bids`, { amount: Number(amount), message });
-      onSuccess();
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to send offer. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 100 }} onClick={onClose} role="presentation">
-      <div ref={modalRef} style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px' }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Send an offer">
-        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>Send Tutor Offer</h3>
-        <p style={{ color: C.gray500, fontSize: '0.85rem', marginBottom: '1.5rem' }}>{request.subject} · {request.level}</p>
-
-        {error && (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: C.error, fontSize: '0.85rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Your Offer (PKR)</label>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} required min={1}
-              style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Message to Student</label>
-            <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="Briefly introduce yourself and your approach..."
-              style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, resize: 'vertical', fontFamily: 'inherit' }} />
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button type="button" onClick={onClose}
-              style={{ flex: 1, padding: '0.75rem', backgroundColor: 'white', color: C.gray500, border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}>
-              Cancel
-            </button>
-            <button type="submit" disabled={loading}
-              style={{ flex: 1, padding: '0.75rem', backgroundColor: loading ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: '700', fontSize: '0.9rem', cursor: loading ? 'not-allowed' : 'pointer' }}>
-              {loading ? "Sending..." : "Send Offer"}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

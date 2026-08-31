@@ -55,7 +55,7 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     if (!isStudent && !isTutor) throw { statusCode: 403, message: "Not authorized." };
     if (!request.allowCounterOffers) throw { statusCode: 409, message: "Counter-offers are disabled for this request." };
     role = isStudent ? "student" : "tutor";
-    const [roleCount, last] = await Promise.all([OfferNegotiation.countDocuments({ offer: offer._id, senderRole: role }).session(session), OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").session(session)]);
+    const [roleCount, last] = await Promise.all([OfferNegotiation.countDocuments({ offer: offer._id, senderRole: role, sequenceNumber: { $gt: 1 } }).session(session), OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").session(session)]);
     if (roleCount >= 3) throw { statusCode: 409, message: "The maximum of three counter-offers for your side has been reached." };
     if (last?.senderRole === role) throw { statusCode: 409, message: "Wait for the other party to respond." };
     await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "superseded" }, { session });
@@ -63,7 +63,7 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
     offer.amount = req.body.amount; offer.status = "countered"; offer.expiresAt = expiresAt; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save({ session });
     request.status = "negotiating"; await request.save({ session }); savedOffer = offer; recipient = isStudent ? offer.tutor.toString() : request.student.toString(); finalCounterOffer = roleCount === 2;
-  }); } catch (error: any) { res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
+  }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
   await sendNotification(req.app.get("io"), recipient, { title: "Counter Offer Received", message: `${role === "student" ? "The student" : "The tutor"} proposed PKR ${req.body.amount.toLocaleString()}/${savedOffer.pricingUnit}.`, type: "bid", link: "/offers" });
   await offerEmail(recipient, "Counter Offer Received", `${role === "student" ? "The student" : "The tutor"} proposed PKR ${req.body.amount.toLocaleString()} per ${savedOffer.pricingUnit}.`);
   await logAudit({ action: "offer_countered", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: savedOffer.id, metadata: { amount: req.body.amount, role, sequenceNumber: negotiation.sequenceNumber, flaggedForModeration: negotiation.flaggedForModeration } });
@@ -140,7 +140,7 @@ export const getRequestOffers = async (req: AuthRequest, res: Response): Promise
       TutorProfile.findOne({ user: tutorId }).select("education experience subjects levels teachingMode city availability averageRating totalReviews isVerified verificationStatus").lean(),
       Booking.countDocuments({ tutor: tutorId, status: "completed" }),
       Bid.aggregate([{ $match: { tutor: tutorId } }, { $group: { _id: null, total: { $sum: 1 }, responded: { $sum: { $cond: [{ $in: ["$status", ["viewed", "countered", "accepted", "rejected", "not_selected"]] }, 1, 0] } }, averageResponseMs: { $avg: { $subtract: ["$createdAt", "$createdAt"] } } } }]),
-      OfferNegotiation.aggregate([{ $match: { offer: offer._id } }, { $group: { _id: "$senderRole", count: { $sum: 1 } } }]),
+      OfferNegotiation.aggregate([{ $match: { offer: offer._id, sequenceNumber: { $gt: 1 } } }, { $group: { _id: "$senderRole", count: { $sum: 1 } } }]),
       OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").lean(),
     ]);
     const responseRate = offerStats[0]?.total ? Math.round(offerStats[0].responded / offerStats[0].total * 100) : 0;

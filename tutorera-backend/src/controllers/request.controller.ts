@@ -320,10 +320,11 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
       const bid = await Bid.findOne({
         _id: new Types.ObjectId(req.params.bidId as string),
         request: new Types.ObjectId(req.params.id as string),
+        status: { $in: ["pending", "submitted", "viewed", "countered"] },
       }).session(session);
 
       if (!bid) {
-        throw { statusCode: 404, message: "Bid not found or does not belong to this request" };
+        throw { statusCode: 404, message: "Offer not found or does not belong to this request" };
       }
 
       // Authorization: either the student who owns the request, OR the tutor on a direct request accepting their own bid
@@ -331,7 +332,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
       const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
 
       if (!isOwner && !isDirectTutorAccept) {
-        throw { statusCode: 403, message: "Not authorized to accept this bid" };
+        throw { statusCode: 403, message: "Not authorized to accept this offer" };
       }
 
       // Atomic conditional update — only succeeds if request is still "open".
@@ -353,7 +354,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
       // Reject all other bids
       await Bid.updateMany(
         { request: request._id, _id: { $ne: bid._id } },
-        { status: "rejected" },
+        { status: "not_selected" },
         { session }
       );
 
@@ -464,7 +465,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
           }
         }
       } catch (err) {
-        console.error("Failed to send booking/bid emails:", err);
+        console.error("Failed to send booking/offer emails:", err);
       }
 
       res.status(200).json({
@@ -475,7 +476,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     }
   } catch (err: any) {
     const statusCode = err?.statusCode || 500;
-    const message = err?.message || "Failed to accept bid. Please try again.";
+    const message = err?.message || "Failed to accept offer. Please try again.";
     res.status(statusCode).json({ success: false, message });
   } finally {
     await session.endSession();
@@ -606,7 +607,12 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
     request: req.params.id,
   });
   if (!bid) {
-    res.status(404).json({ success: false, message: "Bid not found or does not belong to this request" });
+    res.status(404).json({ success: false, message: "Offer not found or does not belong to this request" });
+    return;
+  }
+
+  if (["accepted", "rejected", "withdrawn", "expired", "not_selected"].includes(bid.status)) {
+    res.status(409).json({ success: false, message: "This offer can no longer be changed." });
     return;
   }
 
@@ -614,7 +620,7 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
   const isTargetTutorDecline = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
 
   if (!isOwner && !isTargetTutorDecline) {
-    res.status(403).json({ success: false, message: "Not authorized to reject this bid" });
+    res.status(403).json({ success: false, message: "Not authorized to reject this offer" });
     return;
   }
 

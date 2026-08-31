@@ -463,6 +463,13 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   const [bookingsPage, setBookingsPage] = useState(1);
   const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
 
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "bookings" || requestedTab === "browse" || requestedTab === "profile") {
+      setTab(requestedTab);
+    }
+  }, []);
+
   const fetchBookings = useCallback(async () => {
     setLoadingB(true);
     try {

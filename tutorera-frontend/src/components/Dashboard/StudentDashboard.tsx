@@ -8,7 +8,7 @@ import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
 import PostRequestModal from "./PostRequestModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
-import { Heart, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
@@ -520,6 +520,13 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
 
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "requests" || requestedTab === "bookings" || requestedTab === "favourites") {
+      setTab(requestedTab);
+    }
+  }, []);
+
   const fetchFavourites = useCallback(async () => {
     setLoadingF(true);
     try {
@@ -576,7 +583,6 @@ const fetchRequests = useCallback(async () => {
   const upcomingCount = bookings.filter((b) => b.status === "upcoming").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
 
-  const isTab = (t: Tab): boolean => tab === t;
   return (
     <>
       {/* Header */}

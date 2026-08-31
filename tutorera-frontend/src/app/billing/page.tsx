@@ -32,13 +32,13 @@ const plans = [
     priceNum: 0,
     desc: "For tutors just getting started.",
     features: [
-      "3 bids per month (tutors)",
+      "3 offers per month (tutors)",
       "2 tuition requests/month (students)",
       "Basic tutor profile",
       "Real-time chat",
       "Email support",
     ],
-    locked: ["More than 3 bids", "Priority listing", "Featured badge"],
+    locked: ["More than 3 offers", "Priority listing", "Featured badge"],
   },
   {
     planKey: "standard",
@@ -47,13 +47,13 @@ const plans = [
     priceNum: 500,
     desc: "For active tutors building their client base.",
     features: [
-      "10 bids per month (tutors)",
+      "10 offers per month (tutors)",
       "10 tuition requests/month (students)",
       "Standard tutor profile",
       "Real-time chat",
       "Priority support",
     ],
-    locked: ["Unlimited bids", "Featured badge"],
+    locked: ["Unlimited offers", "Featured badge"],
   },
   {
     planKey: "premium",
@@ -63,7 +63,7 @@ const plans = [
     desc: "For serious tutors who want maximum reach.",
     popular: true,
     features: [
-      "Unlimited bids (tutors)",
+      "Unlimited offers (tutors)",
       "Unlimited requests (students)",
       "Featured tutor profile",
       "Priority in search results",
@@ -113,7 +113,7 @@ export default function BillingPage() {
   const requestLimit = usage?.requestLimit ?? 2;
 
   const usageLabel = user.role === "tutor"
-    ? `${usedBids} / ${bidLimit === -1 ? "∞" : bidLimit} bids used this month`
+    ? `${usedBids} / ${bidLimit === -1 ? "∞" : bidLimit} offers used this month`
     : `${usedRequests} / ${requestLimit === -1 ? "∞" : requestLimit} requests used this month`;
 
   const usagePercent = user.role === "tutor"
