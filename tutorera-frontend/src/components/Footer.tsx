@@ -62,6 +62,7 @@ export default function Footer() {
                 { label: "Contact Us", href: "/contact" },
                 { label: "Help Center", href: "/help" },
                 { label: "Verification Standards", href: "/tutor-verification-standards" },
+                { label: "Tutoring Rates Research", href: "/research/pakistan-tutoring-rates" },
               ].map(({ label, href }) => (
                 <li key={label}>
                   <Link href={href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.875rem' }}

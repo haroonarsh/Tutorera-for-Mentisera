@@ -29,5 +29,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const { total } = await fetchTutors({ city, subject }, 1);
     return total > 0 ? { url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.85 } : null;
   })));
-  return [...staticPages, ...directories, ...localResults.filter((page): page is NonNullable<typeof page> => page !== null), ...profiles];
+  const research: MetadataRoute.Sitemap = tutors.length >= 10 ? [{ url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 }] : [];
+  return [...staticPages, ...directories, ...localResults.filter((page): page is NonNullable<typeof page> => page !== null), ...research, ...profiles];
 }

@@ -1,0 +1,22 @@
+import type { Metadata } from "next";
+import { fetchTutors } from "@/lib/tutor-directory";
+
+const path = "/research/pakistan-tutoring-rates";
+export async function generateMetadata(): Promise<Metadata> {
+  const { total } = await fetchTutors({}, 500);
+  return { title: "Pakistan Tutoring Rates and Marketplace Data", description: "An automatically updated summary of advertised hourly tutoring rates by subject and city from approved public TUTORERA profiles.", alternates: { canonical: path }, robots: total >= 10 ? { index: true, follow: true } : { index: false, follow: true } };
+}
+
+function median(values: number[]) { const sorted = [...values].sort((a, b) => a - b); const middle = Math.floor(sorted.length / 2); return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2); }
+function groups(tutors: Awaited<ReturnType<typeof fetchTutors>>["tutors"], field: "city" | "subjects") {
+  const map = new Map<string, number[]>();
+  tutors.forEach((tutor) => { const values = field === "subjects" ? tutor.subjects : [tutor.city]; values?.forEach((value) => { if (!value || !tutor.hourlyRate) return; map.set(value, [...(map.get(value) || []), tutor.hourlyRate]); }); });
+  return [...map.entries()].filter(([, rates]) => rates.length >= 2).map(([name, rates]) => ({ name, count: rates.length, median: median(rates), minimum: Math.min(...rates), maximum: Math.max(...rates) })).sort((a, b) => b.count - a.count).slice(0, 15);
+}
+
+export default async function ResearchPage() {
+  const { tutors, total } = await fetchTutors({}, 500); const cities = groups(tutors, "city"); const subjects = groups(tutors, "subjects");
+  const schema = { "@context": "https://schema.org", "@type": "Dataset", name: "TUTORERA Pakistan Tutoring Rates", description: "Aggregated advertised hourly rates from approved public tutor profiles.", url: `https://tutorera.ac.pk${path}`, creator: { "@id": "https://tutorera.ac.pk/#organization" }, temporalCoverage: "2026", spatialCoverage: "Pakistan", variableMeasured: ["Advertised hourly rate", "City", "Subject"] };
+  const table = (rows: typeof cities) => <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}><thead><tr>{["Category", "Profiles", "Median rate", "Observed range"].map((heading) => <th key={heading} style={{ textAlign: "left", padding: ".8rem", borderBottom: "2px solid #e5e7eb" }}>{heading}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.name}><td style={{ padding: ".8rem", borderBottom: "1px solid #e5e7eb" }}>{row.name}</td><td style={{ padding: ".8rem", borderBottom: "1px solid #e5e7eb" }}>{row.count}</td><td style={{ padding: ".8rem", borderBottom: "1px solid #e5e7eb" }}>PKR {row.median.toLocaleString()}/hr</td><td style={{ padding: ".8rem", borderBottom: "1px solid #e5e7eb" }}>PKR {row.minimum.toLocaleString()}–{row.maximum.toLocaleString()}</td></tr>)}</tbody></table></div>;
+  return <main style={{ background: "white", color: "#1a1a2e" }}><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} /><header style={{ background: "#1a1a2e", color: "white", padding: "4.5rem 1.5rem", textAlign: "center" }}><h1 style={{ fontSize: "clamp(2rem,4vw,3rem)", marginBottom: "1rem" }}>Pakistan Tutoring Rates</h1><p style={{ color: "#cbd5e1", maxWidth: 760, margin: "0 auto", lineHeight: 1.7 }}>A transparent snapshot of advertised hourly rates from {total} approved public tutor profiles on TUTORERA.</p></header><div style={{ maxWidth: 950, margin: "0 auto", padding: "3.5rem 1.5rem 5rem" }}><section style={{ marginBottom: "3rem" }}><h2 style={{ marginBottom: ".75rem" }}>Methodology</h2><p style={{ color: "#4b5563", lineHeight: 1.8 }}>This page aggregates current self-published hourly rates from approved public tutor profiles. It reports a category only when at least two matching profiles contain a positive rate. Values are descriptive marketplace listings—not completed-transaction prices, quotes, or a promise of availability. The median reduces the effect of unusually high or low rates. Data refreshes periodically as profiles change.</p></section><section style={{ marginBottom: "3rem" }}><h2 style={{ marginBottom: "1rem" }}>Advertised rates by city</h2>{cities.length ? table(cities) : <p>Insufficient city-level sample size.</p>}</section><section><h2 style={{ marginBottom: "1rem" }}>Advertised rates by subject</h2>{subjects.length ? table(subjects) : <p>Insufficient subject-level sample size.</p>}</section></div></main>;
+}
