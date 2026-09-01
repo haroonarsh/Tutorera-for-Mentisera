@@ -657,11 +657,26 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
 // @route   GET /api/requests/public/preview
 // @access  Public
 export const getPublicRequestsPreview = async (req: ExpressRequest, res: Response): Promise<void> => {
-  const requests = await Request.find({ status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } })
-    .populate("student", "name city")
-    .sort("-createdAt")
-    .limit(3)
-    .select("subject level budget teachingMode city schedule createdAt student");
+  const { page = "1", limit = "12" } = req.query;
+  const filter: Record<string, unknown> = { status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } };
 
-  res.status(200).json({ success: true, requests });
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 12));
+  const skip = (pageNum - 1) * limitNum;
+
+  const total = await Request.countDocuments(filter);
+  const requests = await Request.find(filter)
+    .populate("student", "name city avatar")
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum)
+    .select("subject level budget pricingUnit teachingMode city schedule createdAt student");
+
+  res.status(200).json({
+    success: true,
+    total,
+    page: pageNum,
+    totalPages: Math.ceil(total / limitNum),
+    requests,
+  });
 };
