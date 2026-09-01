@@ -57,6 +57,7 @@ const popularJourneys = [
   { href: "/tutors", label: "Browse verified tutors", icon: Users },
   { href: "/dashboard?tab=requests", label: "Post a tuition request", icon: MessageSquare },
   { href: "/browse-requests", label: "Tutor: view open requests", icon: Clock },
+  { href: "/student-journey", label: "See student journey", icon: ShieldCheck },
   { href: "/how-tutor-offers-work", label: "Learn how offers work", icon: Sparkles },
 ];
 
@@ -86,9 +87,10 @@ export default function Home() {
               </p>
               <div className={s.heroActions} aria-label="Primary actions">
                 <Link className={s.primaryCta} href="/dashboard?tab=requests">
-                  Post a Tuition Request <ArrowRight size={18} aria-hidden="true" />
+                  Post Your Requirement <ArrowRight size={18} aria-hidden="true" />
                 </Link>
                 <Link className={s.secondaryCta} href="/tutors">Browse Tutors</Link>
+                <Link className={s.secondaryCta} href="/register?role=tutor">Become a Tutor</Link>
               </div>
               <div className={s.trustRow} aria-label="Marketplace highlights">
                 {trustStats.map((stat) => (
@@ -140,9 +142,9 @@ export default function Home() {
       <section className={s.journeyBand} aria-labelledby="journey-title">
         <div className={s.container}>
           <div className={s.sectionHeader}>
-            <p className={s.eyebrow}>Two discovery paths</p>
-            <h2 id="journey-title">Choose your route into the marketplace</h2>
-            <p>Students can browse tutors or post a request. Tutors can browse real demand and send thoughtful offers.</p>
+            <p className={s.eyebrow}>Student-led reverse marketplace</p>
+            <h2 id="journey-title">You Set the Need. Tutors Make Offers. You Choose.</h2>
+            <p>Tell us what you want to learn, when you need tutoring, and your preferred budget. Qualified tutors can respond with their offers. Compare tutor profiles, experience, ratings, availability and PKR pricing, then choose the tutor who works best for you.</p>
           </div>
           <div className={s.journeyGrid}>
             {popularJourneys.map((item) => {

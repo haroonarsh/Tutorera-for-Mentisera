@@ -14,6 +14,7 @@ const footerColumns = [
       { label: "Find tutors", href: "/tutors" },
       { label: "Post a tuition request", href: "/dashboard?tab=requests" },
       { label: "How tutor offers work", href: "/how-tutor-offers-work" },
+      { label: "Student Journey", href: "/student-journey" },
       { label: "Business Model", href: "/business-model" },
       { label: "Services", href: "/services" },
       { label: "Browse open requests", href: "/browse-requests" },

@@ -28,6 +28,7 @@ const megaMenus = [
       ] },
       { title: "Choose safely", links: [
         { label: "How offers work", href: "/how-tutor-offers-work", desc: "Understand offers, counters, and booking." },
+        { label: "Student journey", href: "/student-journey", desc: "See request, offer, payment, and lesson flow." },
         { label: "Services", href: "/services", desc: "Review tutoring services and PKR pricing." },
         { label: "Parent guide", href: "/help/for-parents", desc: "Practical help for families." },
         { label: "First-session guarantee", href: "/first-session-guarantee", desc: "Know what happens after booking." },
@@ -70,6 +71,7 @@ const megaMenus = [
         { label: "Pakistan tutoring rates", href: "/research/pakistan-tutoring-rates", desc: "Original tutoring-rate research." },
         { label: "Research methodology", href: "/research-methodology", desc: "How research pages are produced." },
         { label: "How it works", href: "/how-it-works", desc: "Platform overview." },
+        { label: "Student journey", href: "/student-journey", desc: "Customer path from request to tutoring." },
         { label: "How payments work", href: "/payment-process", desc: "Checkout, PKR totals, and verification." },
       ] },
       { title: "Company and trust", links: [
