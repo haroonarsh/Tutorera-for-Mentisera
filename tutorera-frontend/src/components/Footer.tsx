@@ -8,62 +8,36 @@ import s from "./Footer.module.css";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 
 const footerColumns = [
-  {
-    title: "Find learning support",
-    links: [
-      { label: "Find tutors", href: "/tutors" },
-      { label: "Post a tuition request", href: "/dashboard?tab=requests" },
-      { label: "Services", href: "/services" },
-      { label: "Subjects", href: "/subjects" },
-      { label: "Levels", href: "/levels" },
-      { label: "Tutors by city", href: "/locations" },
-    ],
-  },
-  {
-    title: "How it works",
-    links: [
-      { label: "Student journey", href: "/student-journey" },
-      { label: "Tutor offers", href: "/how-tutor-offers-work" },
-      { label: "Payments", href: "/payment-process" },
-      { label: "Pricing", href: "/pricing" },
-      { label: "First-session guarantee", href: "/first-session-guarantee" },
-      { label: "Parent guide", href: "/help/for-parents" },
-    ],
-  },
-  {
-    title: "For tutors",
-    links: [
-      { label: "Become a tutor", href: "/become-a-tutor" },
-      { label: "Browse open requests", href: "/browse-requests" },
-      { label: "Tutor guide", href: "/help/for-tutors" },
-      { label: "Earnings", href: "/earnings" },
-      { label: "Verification standards", href: "/tutor-verification-standards" },
-      { label: "Safety policy", href: "/safety-policy" },
-    ],
-  },
-  {
-    title: "Company & support",
-    links: [
-      { label: "About", href: "/about" },
-      { label: "Contact", href: "/contact" },
-      { label: "Help center", href: "/help" },
-      { label: "Coverage", href: "/coverage" },
-      { label: "Built by Haroon Arshad", href: "/developer" },
-      { label: "Blog", href: "/blog" },
-      { label: "Complaint process", href: "/complaint-process" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Terms", href: "/terms" },
-      { label: "Privacy", href: "/privacy" },
-      { label: "Refund policy", href: "/refund-policy" },
-      { label: "Cancellation policy", href: "/cancellation-policy" },
-      { label: "Review policy", href: "/review-policy" },
-      { label: "Disclaimer", href: "/disclaimer" },
-    ],
-  },
+  { title: "Company", links: [
+    { label: "About", href: "/about" },
+    { label: "How It Works", href: "/how-it-works" },
+    { label: "Business Model", href: "/business-model" },
+    { label: "Contact", href: "/contact" },
+    { label: "Ownership & Governance", href: "/governance" },
+    { label: "Built by Haroon Arshad", href: "/developer" },
+  ] },
+  { title: "Students", links: [
+    { label: "Find a Tutor", href: "/tutors" },
+    { label: "Post Tuition Requirement", href: "/dashboard?tab=requests" },
+    { label: "Subjects", href: "/subjects" },
+    { label: "Services", href: "/services" },
+    { label: "Levels", href: "/levels" },
+    { label: "Pricing", href: "/pricing" },
+  ] },
+  { title: "Payments", links: [
+    { label: "How Payments Work", href: "/payment-process" },
+    { label: "Payment Gateway Information", href: "/payment-gateway-information" },
+    { label: "Refund Policy", href: "/refund-policy" },
+    { label: "Cancellation Policy", href: "/cancellation-policy" },
+  ] },
+  { title: "Legal", links: [
+    { label: "Terms & Conditions", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Refund Policy", href: "/refund-policy" },
+    { label: "Cancellation Policy", href: "/cancellation-policy" },
+    { label: "Complaint & Dispute Resolution", href: "/complaint-process" },
+    { label: "Disclaimer", href: "/disclaimer" },
+  ] },
 ];
 
 const socialLinks = [
@@ -84,15 +58,15 @@ export default function Footer() {
               <span>TUTORERA<em>®</em></span>
             </Link>
             <p>
-              TUTORERA by MENTISERA is Pakistan&apos;s structured tutoring marketplace for student-led requests, transparent tutor offers, safer comparison, and documented bookings.
+              TUTORERA® by MENTISERA is Pakistan&apos;s student-led digital tutoring marketplace connecting students and parents with qualified tutors for online and in-person educational support.
             </p>
             <div className={s.contactList} aria-label="Contact information">
-              <strong>{LEGAL_OPERATOR}</strong>
-              <span><MapPin size={16} aria-hidden="true" /> {BUSINESS_ADDRESS}</span>
+              <strong>Operated by: {LEGAL_OPERATOR}</strong>
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
               <a href="https://wa.me/923348880859"><ShieldCheck size={16} aria-hidden="true" /> Phone / WhatsApp: {SUPPORT_PHONE}</a>
+              <span><MapPin size={16} aria-hidden="true" /> Business Address: {BUSINESS_ADDRESS}</span>
+              <Link href="/"><BookOpen size={16} aria-hidden="true" /> Website: https://tutorera.ac.pk/</Link>
               <Link href="/contact"><Mail size={16} aria-hidden="true" /> Contact support</Link>
-              <Link href="/safety-policy"><ShieldCheck size={16} aria-hidden="true" /> Safety and trust center</Link>
             </div>
             <div className={s.socials} aria-label="Social links">
               {socialLinks.map((item) => {
@@ -123,14 +97,8 @@ export default function Footer() {
         </div>
 
         <div className={s.bottom}>
-          <p>
-            TUTORERA by MENTISERA is operated by{" "}
-            <a href="https://www.mentisera.pk" target="_blank" rel="noopener noreferrer">
-              {LEGAL_OPERATOR}
-            </a>
-            .
-          </p>
-          <p>© 2026 TUTORERA® Pakistan. All rights reserved.</p>
+          <p>TUTORERA® is a digital tutoring marketplace operated by {LEGAL_OPERATOR}.</p>
+          <p>© 2026 {LEGAL_OPERATOR}. TUTORERA®. All rights reserved.</p>
         </div>
       </div>
     </footer>

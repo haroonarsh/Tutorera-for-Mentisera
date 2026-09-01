@@ -5,6 +5,9 @@ export const submitContactSchema = z.object({
     name: z.string().min(2, "Name is required").max(100),
     email: z.string().email("Invalid email address"),
     phone: z.string().max(20).optional(),
+    userType: z.enum(["student", "parent", "tutor", "other"]).optional(),
+    bookingReference: z.string().max(100).optional(),
+    transactionReference: z.string().max(100).optional(),
     subject: z.string().min(2, "Subject is required").max(150),
     message: z.string().min(5, "Message is required").max(2000),
 });

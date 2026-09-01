@@ -4,6 +4,9 @@ export interface IContact extends Document {
   name: string;
   email: string;
   phone?: string;
+  userType?: "student" | "parent" | "tutor" | "other";
+  bookingReference?: string;
+  transactionReference?: string;
   subject: string;
   message: string;
   isRead: boolean;
@@ -23,6 +26,9 @@ const contactSchema = new Schema<IContact>(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     phone: { type: String, trim: true },
+    userType: { type: String, enum: ["student", "parent", "tutor", "other"], default: undefined },
+    bookingReference: { type: String, trim: true, default: "" },
+    transactionReference: { type: String, trim: true, default: "" },
     subject: { type: String, required: true, trim: true },
     message: { type: String, required: true, trim: true, minlength: 10 },
     isRead: { type: Boolean, default: false },

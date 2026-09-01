@@ -8,10 +8,10 @@ import { escapeHtml } from "../utils/escapeHtml";
 // @route   POST /api/contact
 // @access  Public
 export const submitContact = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, phone, subject, message } = req.body;
+  const { name, email, phone, userType, bookingReference, transactionReference, subject, message } = req.body;
 
   // Save to DB
-  const contact = await Contact.create({ name, email, phone, subject, message });
+  const contact = await Contact.create({ name, email, phone, userType, bookingReference, transactionReference, subject, message });
 
   // Send email notification to admin
   await sendEmail({
@@ -24,6 +24,9 @@ export const submitContact = async (req: Request, res: Response): Promise<void> 
         <p><strong>Name:</strong> ${escapeHtml(name)}</p>
         <p><strong>Email:</strong> ${escapeHtml(email)}</p>
         <p><strong>Phone:</strong> ${escapeHtml(phone) || "Not provided"}</p>
+        <p><strong>User Type:</strong> ${escapeHtml(userType) || "Not provided"}</p>
+        <p><strong>Booking Reference:</strong> ${escapeHtml(bookingReference) || "Not provided"}</p>
+        <p><strong>Transaction Reference:</strong> ${escapeHtml(transactionReference) || "Not provided"}</p>
         <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
         <p><strong>Message:</strong></p>
         <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
