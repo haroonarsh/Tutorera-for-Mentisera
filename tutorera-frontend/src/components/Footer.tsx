@@ -14,7 +14,7 @@ const footerColumns = [
     { label: "Business Model", href: "/business-model" },
     { label: "Contact", href: "/contact" },
     { label: "Ownership & Governance", href: "/governance" },
-    { label: "Built by Haroon Arshad", href: "/developer" },
+    { label: "Team", href: "/team" },
   ] },
   { title: "Students", links: [
     { label: "Find a Tutor", href: "/tutors" },

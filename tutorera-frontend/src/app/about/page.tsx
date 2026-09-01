@@ -51,6 +51,11 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+          <div style={{ marginTop: '2rem' }}>
+            <Link href="/team" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', backgroundColor: C.accent, color: 'white', padding: '0.85rem 1.5rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none' }}>
+              Meet the Team
+            </Link>
+          </div>
         </div>
       </section>
 
