@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle, XCircle } from "lucide-react";
-import { GST_EFFECTIVE_PERCENT, GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT, TOTAL_FEE_PERCENT } from "@/lib/site";
+import { GST_EFFECTIVE_PERCENT, GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT, SUPPORT_EMAIL, TOTAL_FEE_PERCENT } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -112,14 +112,15 @@ export default function PricingPage() {
       <section style={{ padding: '4rem 1.5rem', backgroundColor: 'white' }}>
         <div style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: C.primary, marginBottom: '1rem' }}>Payment Method</h2>
-          <p style={{ color: C.gray500, marginBottom: '2rem' }}>We currently accept manual bank transfers.</p>
+          <p style={{ color: C.gray500, marginBottom: '2rem' }}>All customer-facing prices are displayed in PKR before checkout.</p>
           <div style={{ backgroundColor: C.gray50, borderRadius: '1rem', padding: '2rem', border: '1px solid #e5e7eb', textAlign: 'left' }}>
             <p style={{ fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>🏦 How Payments Work</p>
             <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[
                 "Student accepts a tutor offer and agreed rate",
-                "Student transfers payment to TUTORERA®'s bank account",
-                "Admin confirms payment receipt",
+                "Student reviews the final payable PKR amount",
+                "Student clicks Pay Securely and proceeds through the available authorized payment method",
+                "TUTORERA verifies payment server-side before marking the booking as paid",
                 "Booking is activated and sessions begin",
                 "After session completion, tutor's share is transferred",
               ].map((step, i) => (
@@ -127,7 +128,7 @@ export default function PricingPage() {
               ))}
             </ol>
             <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '1.25rem' }}>
-              Online payment via SwitchNow coming soon.
+              Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. For payment support, contact {SUPPORT_EMAIL}.
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CheckCircle, Star, Users, Clock, Shield, BookOpen, ArrowRight } from "lucide-react";
+import { formatPKR } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -47,7 +48,7 @@ export default function BecomeTutorPage() {
               { icon: <Shield size={26} color={C.accent} />, title: "Verified & Trusted Badge", desc: "Get a verified badge after credential review. Stand out from unverified tutors and build trust with parents." },
               { icon: <Star size={26} color={C.accent} />, title: "Build Your Reputation", desc: "Collect reviews from students after each session. A strong profile attracts more bookings automatically." },
               { icon: <BookOpen size={26} color={C.accent} />, title: "Professional Platform", desc: "No WhatsApp groups or informal arrangements. A clean, professional system handles everything for you." },
-              { icon: <ArrowRight size={26} color={C.accent} />, title: "Grow Your Income", desc: "Set your own hourly rate. Top tutors on TUTORERA® earn Rs. 5,000–15,000 per day from multiple students." },
+              { icon: <ArrowRight size={26} color={C.accent} />, title: "Grow Your Income", desc: `Set your own hourly rate. Active tutors can earn ${formatPKR(5000)}–${formatPKR(15000)} per day from multiple students.` },
             ].map(item => (
               <div key={item.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
                 <div style={{ width: '48px', height: '48px', backgroundColor: C.accentLight, borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
@@ -137,7 +138,7 @@ export default function BecomeTutorPage() {
             {[
               { q: "Is it free to join as a tutor?", a: "Yes, creating a tutor profile on TUTORERA® is completely free. We only charge a small platform fee on successful bookings." },
               { q: "How long does verification take?", a: "Our team reviews tutor applications within 24–48 hours. You'll receive an email notification once approved." },
-              { q: "Can I set my own hourly rate?", a: "Absolutely. You set your own price. We recommend Rs. 1,500–5,000/hour depending on your level and subject." },
+              { q: "Can I set my own hourly rate?", a: `Absolutely. You set your own price. We recommend ${formatPKR(1500)}–${formatPKR(5000)} per hour depending on your level and subject.` },
               { q: "Do I need to be in a specific city?", a: "No. TUTORERA® supports online tutoring across all of Pakistan. You can also offer in-person sessions in your city." },
             ].map(item => (
               <div key={item.q} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>

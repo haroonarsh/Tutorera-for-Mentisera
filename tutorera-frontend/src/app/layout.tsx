@@ -6,7 +6,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import LazyWidgets from "@/components/LazyWidgets";
 import { Toaster } from "react-hot-toast";
-import { SITE_URL } from "@/lib/site";
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -79,8 +79,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const structuredData = [
-    { "@context": "https://schema.org", "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "TUTORERA", legalName: "MENTISERA (SMC-Private) Limited", url: SITE_URL, logo: `${SITE_URL}/og-image.png`, areaServed: { "@type": "Country", name: "Pakistan" } },
-    { "@context": "https://schema.org", "@type": "WebSite", "@id": `${SITE_URL}/#website`, url: SITE_URL, name: "TUTORERA", publisher: { "@id": `${SITE_URL}/#organization` }, potentialAction: { "@type": "SearchAction", target: `${SITE_URL}/tutors?search={search_term_string}`, "query-input": "required name=search_term_string" } },
+    { "@context": "https://schema.org", "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: PLATFORM_NAME, legalName: LEGAL_OPERATOR, url: SITE_URL, logo: `${SITE_URL}/og-image.png`, email: SUPPORT_EMAIL, telephone: SUPPORT_PHONE, address: { "@type": "PostalAddress", streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town", addressLocality: "Islamabad", addressRegion: "Islamabad Capital Territory", addressCountry: "PK" }, description: BUSINESS_ADDRESS, areaServed: { "@type": "Country", name: "Pakistan" } },
+    { "@context": "https://schema.org", "@type": "WebSite", "@id": `${SITE_URL}/#website`, url: SITE_URL, name: PLATFORM_NAME, publisher: { "@id": `${SITE_URL}/#organization` }, potentialAction: { "@type": "SearchAction", target: `${SITE_URL}/tutors?search={search_term_string}`, "query-input": "required name=search_term_string" } },
   ];
   return (
     <html lang="en">

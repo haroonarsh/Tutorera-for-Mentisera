@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
 export interface TrustSection { heading: string; body: string; items?: string[]; }
 interface Props { title: string; intro: string; path: string; sections: TrustSection[]; updated?: string; }
@@ -31,7 +31,7 @@ export default function TrustArticle({ title, intro, path, sections, updated = "
           </section>
         ))}
         <aside style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "1.25rem" }}>
-          <strong>Questions or concerns?</strong>{" "}<Link href="/contact" style={{ color: "#2563eb" }}>Contact TUTORERA support</Link> at support@tutorera.ac.pk.
+          <strong>Questions or concerns?</strong>{" "}<Link href="/contact" style={{ color: "#2563eb" }}>Contact TUTORERA support</Link> at {SUPPORT_EMAIL}.
         </aside>
       </article>
     </main>

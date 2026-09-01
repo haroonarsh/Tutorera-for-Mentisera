@@ -37,13 +37,14 @@ export default function AIChatWidget() {
 
   useEffect(() => {
     if (open && !hasGreeted) {
+      const firstName = user?.name?.split(" ")[0] || "there";
       setMessages([{
         role: "assistant",
-        text: `Hi ${user?.name.split(" ")[0]}! 👋 I'm TUTORERA®'s AI assistant. I can help you with questions about our platform — bookings, payments, tutors, policies, and more. What would you like to know?`,
+        text: `Hi ${firstName}! 👋 I'm TUTORERA's AI assistant. I can help you with questions about our platform — bookings, payments, tutors, policies, and more. What would you like to know?`,
       }]);
       setHasGreeted(true);
     }
-  }, [open]);
+  }, [hasGreeted, open, user?.name]);
 
   useEffect(() => {
     setMessages([]);
@@ -84,7 +85,7 @@ export default function AIChatWidget() {
     } catch {
       setMessages(prev => [...prev, {
         role: "assistant",
-        text: "Sorry, I'm having trouble responding right now. Please try again or contact us at support@tutorera.ac.pk",
+        text: "Sorry, I'm having trouble responding right now. Please try again or contact us at hello@mentisera.pk",
       }]);
     } finally {
       setLoading(false);

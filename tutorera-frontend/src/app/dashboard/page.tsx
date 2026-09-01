@@ -7,6 +7,7 @@ import StudentDashboard from "@/components/Dashboard/StudentDashboard";
 import TutorDashboard from "@/components/Dashboard/TutorDashboard";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import api from "@/lib/axios";
+import { SUPPORT_EMAIL } from "@/lib/site";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
@@ -90,8 +91,8 @@ function PendingApprovalScreen() {
 
           <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
             Questions? Contact us at{" "}
-            <a href="mailto:support@tutorera.ac.pk" style={{ color: "#2563eb", fontWeight: 600 }}>
-              support@tutorera.ac.pk
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "#2563eb", fontWeight: 600 }}>
+              {SUPPORT_EMAIL}
             </a>
           </p>
         </div>
@@ -127,7 +128,7 @@ function RejectedScreen({ reason }: { reason?: string }) {
           )}
 
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="mailto:support@tutorera.ac.pk"
+            <a href={`mailto:${SUPPORT_EMAIL}`}
               style={{ padding: "0.75rem 1.5rem", backgroundColor: "#1a1a2e", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
               Contact Support
             </a>

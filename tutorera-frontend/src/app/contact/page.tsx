@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -46,9 +47,9 @@ export default function ContactPage() {
         {/* Info Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {[
-            { icon: <Mail size={22} color={C.accent} />, title: "Email Us", value: "support@tutorera.ac.pk", sub: "We reply within 24 hours" },
-            { icon: <Phone size={22} color={C.accent} />, title: "Call / WhatsApp", value: "+92 334 888 0859", sub: "Mon–Sat, 9am–6pm PKT" },
-            { icon: <MapPin size={22} color={C.accent} />, title: "Location", value: "Islamabad, Pakistan", sub: "Available across Pakistan online" },
+            { icon: <Mail size={22} color={C.accent} />, title: "Email Us", value: SUPPORT_EMAIL, sub: "We reply within 24 hours" },
+            { icon: <Phone size={22} color={C.accent} />, title: "Call / WhatsApp", value: SUPPORT_PHONE, sub: "Mon-Sat, 9am-6pm PKT" },
+            { icon: <MapPin size={22} color={C.accent} />, title: LEGAL_OPERATOR, value: BUSINESS_ADDRESS, sub: "Registered business address" },
           ].map(item => (
             <div key={item.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ width: '44px', height: '44px', backgroundColor: C.accentLight, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

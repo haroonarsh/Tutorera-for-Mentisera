@@ -2,11 +2,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { useSocket } from "@/context/SocketContext";
 import { Send, ArrowLeft, Shield, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { io, Socket } from "socket.io-client";
+import { formatPKR } from "@/lib/site";
 
 const C = {
   primary: '#1a1a2e',
@@ -214,7 +214,7 @@ export default function ChatPage() {
         {conversation?.booking && (
           <div style={{ backgroundColor: C.gray50, border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '0.4rem 0.75rem', textAlign: 'right' }}>
             <p style={{ fontSize: '0.75rem', color: C.gray500 }}>Booking</p>
-            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>Rs. {(conversation.booking).amount?.toLocaleString()}</p>
+            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>{formatPKR(Number(conversation.booking.amount || 0))}</p>
           </div>
         )}
       </div>

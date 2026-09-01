@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { BookOpen, Users, Shield, Target, Heart, Award } from "lucide-react";
+import { BookOpen, Users, Shield, Target, Heart } from "lucide-react";
 import type { Metadata } from "next";
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About TUTORERA®",
@@ -60,7 +61,9 @@ export default function AboutPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', color: C.gray500, fontSize: '1rem', lineHeight: '1.8' }}>
             <p>For decades, finding a tutor in Pakistan meant relying on word-of-mouth, Facebook groups, or random agents — with no way to verify credentials, compare options, or ensure safety.</p>
             <p>TUTORERA® was built to change that. We created a structured marketplace where students and parents can search for tutors by subject, level, location, and budget — and where every tutor on the platform has been manually verified.</p>
-            <p>We are operated by <strong style={{ color: C.primary }}>MENTISERA (SMC-Private) Limited</strong>, an education-focused technology company committed to building transparent, platform-based learning solutions for Pakistan.</p>
+            <p>We are operated by <strong style={{ color: C.primary }}>{LEGAL_OPERATOR}</strong>, an education-focused technology company committed to building transparent, platform-based learning solutions for Pakistan.</p>
+            <p><strong style={{ color: C.primary }}>Business address:</strong> {BUSINESS_ADDRESS}</p>
+            <p><strong style={{ color: C.primary }}>Official email:</strong> <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> · <strong style={{ color: C.primary }}>Phone / WhatsApp:</strong> {SUPPORT_PHONE}</p>
           </div>
         </div>
       </section>

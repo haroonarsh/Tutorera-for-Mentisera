@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, BookOpen, Clock } from "lucide-react";
 import api from "@/lib/axios";
-import { useAuth } from "@/context/AuthContext";
+import { formatPKR } from "@/lib/site";
 
 const C = {
   primary: '#1a1a2e',
@@ -28,7 +27,6 @@ interface RequestPreview {
 export default function TopRequestsSection() {
   const [requests, setRequests] = useState<RequestPreview[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -74,7 +72,7 @@ export default function TopRequestsSection() {
                     <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>{r.subject}</h3>
                     <span style={{ fontSize: '0.75rem', fontWeight: '600', color: C.accent, backgroundColor: C.accentLight, padding: '0.15rem 0.6rem', borderRadius: '999px' }}>{r.level}</span>
                   </div>
-                  <span style={{ fontSize: '0.95rem', fontWeight: '700', color: C.primary }}>Rs. {r.budget?.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: '700', color: C.primary }}>{formatPKR(r.budget || 0)}</span>
                 </div>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.78rem', color: C.gray500 }}>

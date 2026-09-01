@@ -12,6 +12,7 @@ import { Trash2 } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
+import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 
 const C = {
   primary: '#1a1a2e',
@@ -180,20 +181,22 @@ function BookingCard({ booking, onClaimSubmitted }: {
         )}
       </div>
 
-      {/* ── NayaPay Payment Instructions — only when payment is pending ── */}
+      {/* ── Secure checkout instructions — only when payment is pending ── */}
       {booking.paymentStatus === "pending" && booking.status !== "cancelled" && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
           <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534', marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             💳 Payment Required
           </p>
           <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-            Please send your session payment to TUTORERA®'s NayaPay account and email proof to <strong>billing@tutorera.ac.pk</strong>.
+            Review the final PKR amount below. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. TUTORERA verifies payment server-side before marking a booking paid.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {[
-              { label: "NayaPay ID",     value: "mentisera@nayapay" },
-              { label: "Account Title",  value: "MENTISERA (SMC-PRIVATE) LIMITED" },
-              { label: "IBAN",           value: "PK27NAYA7556428306882526" },
+              { label: "Tutor Session", value: formatPKR(booking.subtotal || booking.amount) },
+              { label: "Student Marketplace Fee", value: formatPKR(booking.studentFee || 0) },
+              { label: "Tax", value: formatPKR(0) },
+              { label: "Total Payable", value: formatPKR(booking.studentTotal || booking.amount) },
+              { label: "Currency", value: "PKR — Pakistani Rupees" },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>
                 <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>{item.label}</span>
@@ -202,7 +205,8 @@ function BookingCard({ booking, onClaimSubmitted }: {
             ))}
           </div>
           <p style={{ fontSize: '0.7rem', color: '#15803d', margin: 0 }}>
-            Amount: <strong>Rs. {booking.amount.toLocaleString()}</strong> · Payment confirmed within 24 hrs
+            <button type="button" disabled style={{ border: 0, borderRadius: 999, padding: "0.55rem 1rem", background: "#86efac", color: "#14532d", fontWeight: 800, cursor: "not-allowed" }}>Pay Securely</button>{" "}
+            I agree to TUTORERA&apos;s <Link href="/terms">Terms & Conditions</Link>, <Link href="/refund-policy">Refund Policy</Link> and <Link href="/cancellation-policy">Cancellation Policy</Link>. Payment support: <strong>{SUPPORT_EMAIL}</strong>
           </p>
         </div>
       )}
@@ -310,7 +314,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
           <Avatar name={tutor.user.name} avatar={tutor.user.avatar} />
           <div>
             <p className={s.personName}>{tutor.user.name}</p>
-            <p className={s.personSub}>{tutor.city} · Rs. {tutor.hourlyRate.toLocaleString()}/hr</p>
+            <p className={s.personSub}>{tutor.city} · {formatPKR(tutor.hourlyRate, "hour")}</p>
           </div>
         </Link>
         <button onClick={handleRemove} disabled={removing}

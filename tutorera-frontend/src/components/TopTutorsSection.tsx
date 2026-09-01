@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Star, MapPin, BookOpen } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 import api from "@/lib/axios";
+import { formatPKR } from "@/lib/site";
 
 const C = {
   primary: '#1a1a2e',
@@ -137,7 +138,7 @@ export default function TopTutorsSection() {
                       )}
                     </div>
                     <span style={{ fontWeight: '700', color: C.primary, fontSize: '0.875rem' }}>
-                      Rs. {tutor.hourlyRate?.toLocaleString()}/hr
+                      {formatPKR(tutor.hourlyRate || 0, "hour")}
                     </span>
                   </div>
 

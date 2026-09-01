@@ -28,6 +28,7 @@ const megaMenus = [
       ] },
       { title: "Choose safely", links: [
         { label: "How offers work", href: "/how-tutor-offers-work", desc: "Understand offers, counters, and booking." },
+        { label: "Services", href: "/services", desc: "Review tutoring services and PKR pricing." },
         { label: "Parent guide", href: "/help/for-parents", desc: "Practical help for families." },
         { label: "First-session guarantee", href: "/first-session-guarantee", desc: "Know what happens after booking." },
         { label: "Pricing", href: "/pricing", desc: "Platform pricing and fee clarity." },
@@ -69,9 +70,12 @@ const megaMenus = [
         { label: "Pakistan tutoring rates", href: "/research/pakistan-tutoring-rates", desc: "Original tutoring-rate research." },
         { label: "Research methodology", href: "/research-methodology", desc: "How research pages are produced." },
         { label: "How it works", href: "/how-it-works", desc: "Platform overview." },
+        { label: "How payments work", href: "/payment-process", desc: "Checkout, PKR totals, and verification." },
       ] },
       { title: "Company and trust", links: [
         { label: "About", href: "/about", desc: "TUTORERA and MENTISERA." },
+        { label: "Business model", href: "/business-model", desc: "Marketplace role and operations." },
+        { label: "Payment gateway information", href: "/payment-gateway-information", desc: "Merchant-review information." },
         { label: "Coverage", href: "/coverage", desc: "Where TUTORERA operates." },
         { label: "Contact", href: "/contact", desc: "Reach the support team." },
         { label: "Complaint process", href: "/complaint-process", desc: "Report and escalation route." },

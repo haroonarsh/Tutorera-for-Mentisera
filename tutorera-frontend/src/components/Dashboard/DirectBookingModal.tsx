@@ -6,6 +6,7 @@ import axiosInstance from "@/lib/axios";
 import SlotPicker from "@/components/Tutors/SlotPicker";
 import styles from "./PostRequestModal.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { formatPKR } from "@/lib/site";
 
 const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 
@@ -114,7 +115,7 @@ export default function DirectBookingModal({
           {/* Rate */}
           <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>Tutor's Rate</span>
-            <span style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: 800 }}>Rs. {hourlyRate.toLocaleString()}/hr</span>
+            <span style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: 800 }}>{formatPKR(hourlyRate, "hour")}</span>
           </div>
 
           {/* Subject + Level */}
