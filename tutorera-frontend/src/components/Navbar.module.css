@@ -1,9 +1,9 @@
 .header {
-  --ink: #111827;
-  --muted: #667085;
-  --line: #e6ebf2;
-  --accent: #2563eb;
-  --accent-soft: #eff6ff;
+  --ink: var(--color-heading);
+  --muted: var(--color-muted);
+  --line: var(--color-border);
+  --accent: var(--color-digital-blue);
+  --accent-soft: var(--color-soft-blue);
   --danger: #e94560;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   position: sticky;
@@ -28,15 +28,38 @@
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.7rem;
   color: var(--ink);
   text-decoration: none;
-  font-size: 1.22rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
 }
 
-.logo svg,
+.logoImage {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.logoText {
+  display: grid;
+  gap: 0.03rem;
+  line-height: 1;
+}
+
+.logoText strong {
+  color: var(--color-heading);
+  font-size: 1.05rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.logoText small {
+  color: var(--color-muted);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .logo em,
 .journeyCard svg,
 .megaLink strong {
@@ -106,8 +129,8 @@
   align-items: center;
   padding: 0 1.05rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), #1747bf);
-  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+  background: linear-gradient(135deg, var(--color-royal-blue), var(--color-digital-blue) 55%, var(--color-cyan));
+  box-shadow: 0 12px 26px rgba(1, 110, 248, 0.22);
   font-size: 0.92rem;
   font-weight: 850;
   text-decoration: none;
@@ -184,7 +207,7 @@
   padding: 1.2rem;
   border-radius: 20px;
   color: #fff;
-  background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.4), transparent 12rem), linear-gradient(135deg, #111827, #172554);
+  background: radial-gradient(circle at top right, rgba(8, 191, 252, 0.35), transparent 12rem), linear-gradient(135deg, var(--color-navy), var(--color-royal-blue) 55%, var(--color-purple));
 }
 
 .megaFeature p {
@@ -413,7 +436,7 @@
 
   .signupLink:hover {
     transform: translateY(-1px);
-    box-shadow: 0 16px 32px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 16px 32px rgba(1, 110, 248, 0.25);
   }
 
   .megaLink:hover,
@@ -451,6 +474,15 @@
 }
 
 @media (max-width: 1060px) {
+  .logoImage {
+    width: 40px;
+    height: 40px;
+  }
+
+  .logoText small {
+    display: none;
+  }
+
   .desktopNav,
   .desktopActions {
     display: none;

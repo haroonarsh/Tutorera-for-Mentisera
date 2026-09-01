@@ -2,16 +2,19 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TUTORERA – Pakistan's Tutoring Marketplace",
+    name: "TUTORERA",
     short_name: "TUTORERA",
-    description: "Find verified online and in-person tutors across Pakistan.",
+    description: "Post your requirement, compare tutor offers, and book online or in-person tutoring in Pakistan.",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#1a1a2e",
+    background_color: "#F7F9FC",
+    theme_color: "#0329B2",
     icons: [
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/apple-icon.png", sizes: "180x180", type: "image/png", purpose: "any" },
+      { src: "/tutorera-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/tutorera-icon-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/tutorera-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/tutorera-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/tutorera-icon-180.png", sizes: "180x180", type: "image/png", purpose: "any" },
     ],
   };
 }

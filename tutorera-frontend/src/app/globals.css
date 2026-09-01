@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+:root {
+  --color-navy: #021550;
+  --color-royal-blue: #0329b2;
+  --color-digital-blue: #016ef8;
+  --color-cyan: #08bffc;
+  --color-purple: #7c1bea;
+  --color-magenta: #c81b7f;
+  --color-orange: #f9691a;
+  --color-gold: #fcb208;
+  --color-background: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-soft-blue: #f1f6ff;
+  --color-border: #e2e8f0;
+  --color-muted: #64748b;
+  --color-body: #334155;
+  --color-heading: #021550;
+  --color-dark: #010b2c;
+  --shadow-card: 0 8px 30px rgba(2, 21, 80, 0.08);
+  --shadow-card-hover: 0 12px 40px rgba(2, 21, 80, 0.12);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -11,8 +37,8 @@ html {
 }
 
 body {
-  background-color: #ffffff;
-  color: #1a1a2e;
+  background-color: var(--color-background);
+  color: var(--color-body);
   font-family: "Inter", sans-serif;
 }
 
@@ -26,7 +52,7 @@ textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* Suppress outline on mouse click ONLY for buttons and links —

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, BriefcaseBusiness, ChevronDown, GraduationCap, LayoutDashboard, LogOut, Menu, MessageSquare, Search, ShieldCheck, User, X } from "lucide-react";
+import { Bell, BriefcaseBusiness, ChevronDown, GraduationCap, LayoutDashboard, LogOut, Menu, MessageSquare, Search, ShieldCheck, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import s from "./Navbar.module.css";
@@ -78,7 +78,6 @@ const megaMenus = [
         { label: "About", href: "/about", desc: "TUTORERA and MENTISERA." },
         { label: "Team", href: "/team", desc: "Meet leadership and product team." },
         { label: "Business model", href: "/business-model", desc: "Student-led marketplace model." },
-        { label: "Payment gateway information", href: "/payment-gateway-information", desc: "Payment use case and merchant details." },
         { label: "Coverage", href: "/coverage", desc: "Where TUTORERA operates." },
         { label: "Contact", href: "/contact", desc: "Reach the support team." },
         { label: "Complaint process", href: "/complaint-process", desc: "Report and escalation route." },
@@ -147,8 +146,11 @@ export default function Navbar() {
     <header ref={navRef} className={s.header}>
       <nav className={s.nav} aria-label="Main navigation">
         <Link href="/" className={s.logo} onClick={closeMenus} aria-label="TUTORERA home">
-          <BookOpen size={26} aria-hidden="true" />
-          <span>TUTORERA<em>®</em></span>
+          <Image src="/tutorera-icon-192.png" alt="" width={44} height={44} priority className={s.logoImage} />
+          <span className={s.logoText}>
+            <strong>TUTORERA<em>®</em></strong>
+            <small>by MENTISERA</small>
+          </span>
         </Link>
 
         <div className={s.desktopNav}>

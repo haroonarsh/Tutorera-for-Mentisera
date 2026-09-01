@@ -21,9 +21,9 @@ import type { Metadata } from "next";
 import s from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Find Tutors in Pakistan | Student-Led Tutor Offers | TUTORERA®",
+  title: "TUTORERA | Find Tutors & Compare Tutor Offers in Pakistan",
   description:
-    "Post a tuition request, set your preferred rate, receive tutor offers, compare verified profiles, negotiate safely, and book tutors across Pakistan.",
+    "TUTORERA by MENTISERA connects students with tutors through a student-led tutoring marketplace. Post your requirement, receive tutor offers, compare PKR rates and choose your tutor.",
   alternates: { canonical: "/" },
 };
 
@@ -77,13 +77,13 @@ export default function Home() {
             <div className={s.heroCopy}>
               <p className={s.eyebrow}>
                 <BadgeCheck size={18} aria-hidden="true" />
-                Pakistan&apos;s student-led tutoring marketplace
+                TUTORERA by MENTISERA
               </p>
               <h1 id="home-hero-title" className={s.heroTitle}>
-                Post your learning need. Compare tutor offers. Book with confidence.
+                A New Era of Tutoring
               </h1>
               <p className={s.heroText}>
-                TUTORERA® helps students and parents move beyond guesswork: set a proposed rate, receive relevant tutor offers, compare transparent fit signals, negotiate when needed, and keep the booking journey structured.
+                You Set the Need. Tutors Make Offers. You Choose. Tell us what you want to learn, your preferred schedule, learning mode, and budget. Qualified tutors respond with offers, then you compare rates, experience, qualifications and availability before choosing.
               </p>
               <div className={s.heroActions} aria-label="Primary actions">
                 <Link className={s.primaryCta} href="/dashboard?tab=requests">

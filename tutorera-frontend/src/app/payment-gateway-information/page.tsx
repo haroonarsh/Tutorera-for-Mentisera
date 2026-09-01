@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Payment Gateway & Merchant Information",
   description: "Payment use case and merchant information for TUTORERA by MENTISERA.",
   alternates: { canonical: "/payment-gateway-information" },
+  robots: { index: false, follow: false },
 };
 
 const journey = ["Post Requirement","Receive Offers","Select Tutor","Accept Rate","Create Booking","Review PKR Amount","Checkout","Secure Payment","Payment Verification","Booking Confirmation","Tutoring Delivery"];

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { BookOpen, Mail, MapPin, ShieldCheck } from "lucide-react";
 import { FiFacebook } from "react-icons/fi";
 import { RiTwitterLine } from "react-icons/ri";
@@ -26,7 +27,6 @@ const footerColumns = [
   ] },
   { title: "Payments", links: [
     { label: "How Payments Work", href: "/payment-process" },
-    { label: "Payment Gateway Information", href: "/payment-gateway-information" },
     { label: "Refund Policy", href: "/refund-policy" },
     { label: "Cancellation Policy", href: "/cancellation-policy" },
   ] },
@@ -54,8 +54,11 @@ export default function Footer() {
         <div className={s.top}>
           <div className={s.brand}>
             <Link href="/" className={s.logo} aria-label="TUTORERA home">
-              <BookOpen size={26} aria-hidden="true" />
-              <span>TUTORERA<em>®</em></span>
+              <Image src="/tutorera-icon-192.png" alt="" width={54} height={54} className={s.logoImage} />
+              <span>
+                <strong>TUTORERA<em>®</em></strong>
+                <small>by MENTISERA</small>
+              </span>
             </Link>
             <p>
               TUTORERA® by MENTISERA is Pakistan&apos;s student-led digital tutoring marketplace connecting students and parents with qualified tutors for online and in-person educational support.
