@@ -54,8 +54,40 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Story */}
+      {/* Marketplace model */}
       <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.75rem' }}>Our Marketplace Model</h2>
+            <p style={{ color: C.gray500, fontSize: '1rem', lineHeight: 1.75, maxWidth: 760, margin: '0 auto' }}>
+              TUTORERA by MENTISERA is a student-led tutoring marketplace. Students or parents post a requirement, may state a preferred budget in PKR, receive tutor offers, compare profiles and prices, and choose the tutor who best fits their needs.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            {[
+              "Student posts requirement",
+              "Tutors submit offers",
+              "Student compares fit and price",
+              "Final PKR rate is agreed",
+              "Booking is created",
+              "Payment follows the confirmed booking",
+              "Tutor delivers the session",
+              "Student can review or request support",
+            ].map((step, index) => (
+              <div key={step} style={{ backgroundColor: C.gray50, border: '1px solid #e5e7eb', borderRadius: '0.875rem', padding: '1.25rem' }}>
+                <p style={{ color: C.accent, fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem' }}>STEP {String(index + 1).padStart(2, "0")}</p>
+                <p style={{ color: C.primary, fontWeight: 750, lineHeight: 1.5 }}>{step}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '1.5rem', textAlign: 'center' }}>
+            TUTORERA facilitates marketplace technology, request posting, tutor matching, offer comparison, booking management, payment facilitation, records, support, refunds/disputes, and platform governance. Tutors provide the actual tutoring service.
+          </p>
+        </div>
+      </section>
+
+      {/* Story */}
+      <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '1.5rem', textAlign: 'center' }}>Our Story</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', color: C.gray500, fontSize: '1rem', lineHeight: '1.8' }}>

@@ -9,58 +9,47 @@ import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "
 
 const footerColumns = [
   {
-    title: "Marketplace",
+    title: "Find learning support",
     links: [
       { label: "Find tutors", href: "/tutors" },
       { label: "Post a tuition request", href: "/dashboard?tab=requests" },
-      { label: "How tutor offers work", href: "/how-tutor-offers-work" },
-      { label: "Student Journey", href: "/student-journey" },
-      { label: "Business Model", href: "/business-model" },
       { label: "Services", href: "/services" },
-      { label: "Browse open requests", href: "/browse-requests" },
-      { label: "Pricing", href: "/pricing" },
-      { label: "How Payments Work", href: "/payment-process" },
-    ],
-  },
-  {
-    title: "Students & parents",
-    links: [
-      { label: "Tutors by city", href: "/locations" },
       { label: "Subjects", href: "/subjects" },
       { label: "Levels", href: "/levels" },
-      { label: "Parent guide", href: "/help/for-parents" },
-      { label: "First-session guarantee", href: "/first-session-guarantee" },
+      { label: "Tutors by city", href: "/locations" },
     ],
   },
   {
-    title: "Tutors",
+    title: "How it works",
+    links: [
+      { label: "Student journey", href: "/student-journey" },
+      { label: "Tutor offers", href: "/how-tutor-offers-work" },
+      { label: "Payments", href: "/payment-process" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "First-session guarantee", href: "/first-session-guarantee" },
+      { label: "Parent guide", href: "/help/for-parents" },
+    ],
+  },
+  {
+    title: "For tutors",
     links: [
       { label: "Become a tutor", href: "/become-a-tutor" },
+      { label: "Browse open requests", href: "/browse-requests" },
       { label: "Tutor guide", href: "/help/for-tutors" },
       { label: "Earnings", href: "/earnings" },
       { label: "Verification standards", href: "/tutor-verification-standards" },
-      { label: "Tutor screening policy", href: "/tutor-screening-policy" },
     ],
   },
   {
-    title: "Trust & safety",
-    links: [
-      { label: "Safety policy", href: "/safety-policy" },
-      { label: "Review policy", href: "/review-policy" },
-      { label: "Complaint process", href: "/complaint-process" },
-      { label: "Refund policy", href: "/refund-policy" },
-      { label: "Cancellation policy", href: "/cancellation-policy" },
-      { label: "Academic standards", href: "/academic-standards" },
-    ],
-  },
-  {
-    title: "Company & research",
+    title: "Company & support",
     links: [
       { label: "About", href: "/about" },
+      { label: "Contact", href: "/contact" },
+      { label: "Help center", href: "/help" },
       { label: "Coverage", href: "/coverage" },
       { label: "Blog", href: "/blog" },
-      { label: "Tutoring rates research", href: "/research/pakistan-tutoring-rates" },
-      { label: "Research methodology", href: "/research-methodology" },
+      { label: "Safety policy", href: "/safety-policy" },
+      { label: "Complaint process", href: "/complaint-process" },
     ],
   },
   {
@@ -68,10 +57,10 @@ const footerColumns = [
     links: [
       { label: "Terms", href: "/terms" },
       { label: "Privacy", href: "/privacy" },
+      { label: "Refund policy", href: "/refund-policy" },
+      { label: "Cancellation policy", href: "/cancellation-policy" },
+      { label: "Review policy", href: "/review-policy" },
       { label: "Disclaimer", href: "/disclaimer" },
-      { label: "Editorial policy", href: "/editorial-policy" },
-      { label: "Content review policy", href: "/content-review-policy" },
-      { label: "Governance", href: "/governance" },
     ],
   },
 ];
