@@ -52,9 +52,10 @@ const footerColumns = [
     links: [
       { label: "About", href: "/about" },
       { label: "Coverage", href: "/coverage" },
+      { label: "Built by Haroon Arshad", href: "/developer" },
       { label: "Blog", href: "/blog" },
       { label: "Tutoring rates research", href: "/research/pakistan-tutoring-rates" },
-      { label: "Research methodology", href: "/research-methodology" },
+      { label: "Research methodology", href: "/research-methodology" }, 
     ],
   },
   {

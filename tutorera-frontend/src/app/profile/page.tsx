@@ -9,7 +9,7 @@ import { useAppGuard } from "@/hooks/useAppGuard";
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
 const cities = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad", "Other"];
-const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Other"];
+const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
 const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 
 export default function ProfilePage() {
