@@ -61,7 +61,6 @@ export default function Footer() {
               TUTORERA® by MENTISERA is Pakistan&apos;s student-led digital tutoring marketplace connecting students and parents with qualified tutors for online and in-person educational support.
             </p>
             <div className={s.contactList} aria-label="Contact information">
-              <strong>Operated by: {LEGAL_OPERATOR}</strong>
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
               <a href="https://wa.me/923348880859"><ShieldCheck size={16} aria-hidden="true" /> Phone / WhatsApp: {SUPPORT_PHONE}</a>
               <span><MapPin size={16} aria-hidden="true" /> Business Address: {BUSINESS_ADDRESS}</span>
