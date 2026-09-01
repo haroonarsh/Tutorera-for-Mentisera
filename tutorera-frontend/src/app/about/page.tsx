@@ -86,7 +86,10 @@ export default function AboutPage() {
             ))}
           </div>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '1.5rem', textAlign: 'center' }}>
-            TUTORERA facilitates marketplace technology, request posting, tutor matching, offer comparison, booking management, payment facilitation, records, support, refunds/disputes, and platform governance. Tutors provide the actual tutoring service.
+            TUTORERA provides marketplace technology, student request posting, tutor matching, tutor offer comparison, price confirmation, booking management, scheduling, communication, payment facilitation, transaction records, session management, tutor reviews, customer support, refund and dispute administration, and platform governance. Tutors provide the actual tutoring service as independent providers.
+          </p>
+          <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '0.5rem', textAlign: 'center' }}>
+            TUTORERA is not affiliated with, endorsed by, or certified by inDrive or any ride-hailing marketplace. The similarity is limited to the general reverse-marketplace idea where customers post demand and providers respond with offers.
           </p>
         </div>
       </section>

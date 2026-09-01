@@ -147,10 +147,15 @@ export default function Home() {
             <p>Tell us what you want to learn, when you need tutoring, and your preferred budget. Qualified tutors can respond with their offers. Compare tutor profiles, experience, ratings, availability and PKR pricing, then choose the tutor who works best for you.</p>
           </div>
           <div className={s.journeyGrid}>
-            {popularJourneys.map((item) => {
+            {popularJourneys.map((item, index) => {
               const Icon = item.icon;
               return (
-                <Link key={item.href} className={s.journeyCard} href={item.href}>
+                <Link
+                  key={item.href}
+                  className={`${s.journeyCard} ${s.revealItem}`}
+                  style={{ "--delay": `${index * 75}ms` } as CSSProperties}
+                  href={item.href}
+                >
                   <Icon size={22} aria-hidden="true" />
                   <span>{item.label}</span>
                   <ArrowRight size={18} aria-hidden="true" />
@@ -161,10 +166,12 @@ export default function Home() {
         </div>
       </section>
 
+      <TopRequestsSection />
+
       <section className={s.section} aria-labelledby="how-title">
         <div className={s.container}>
           <div className={s.sectionHeader}>
-            <p className={s.eyebrow}>Updated business model</p>
+            <p className={s.eyebrow}>Reverse-auction marketplace</p>
             <h2 id="how-title">How tutor offers work</h2>
             <p>A clearer marketplace loop: student demand first, tutor offers second, transparent comparison before commitment.</p>
           </div>
@@ -172,7 +179,7 @@ export default function Home() {
             {marketplaceSteps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <article key={step.title} className={s.stepCard} style={{ "--delay": `${index * 55}ms` } as CSSProperties}>
+                <article key={step.title} className={`${s.stepCard} ${s.revealItem}`} style={{ "--delay": `${index * 55}ms` } as CSSProperties}>
                   <span className={s.stepNumber}>0{index + 1}</span>
                   <div className={s.iconBox}><Icon size={24} aria-hidden="true" /></div>
                   <h3>{step.title}</h3>
@@ -198,10 +205,10 @@ export default function Home() {
               </Link>
             </div>
             <div className={s.benefitGrid}>
-              {benefits.map((benefit) => {
+              {benefits.map((benefit, index) => {
                 const Icon = benefit.icon;
                 return (
-                  <article key={benefit.title} className={s.benefitCard}>
+                  <article key={benefit.title} className={`${s.benefitCard} ${s.revealItem}`} style={{ "--delay": `${index * 75}ms` } as CSSProperties}>
                     <Icon size={24} aria-hidden="true" />
                     <h3>{benefit.title}</h3>
                     <p>{benefit.desc}</p>
@@ -225,8 +232,8 @@ export default function Home() {
               <span role="columnheader">Traditional</span>
               <span role="columnheader">TUTORERA®</span>
             </div>
-            {comparisonRows.map(([area, oldWay, tutoreraWay]) => (
-              <div key={area} className={s.tableRow} role="row">
+            {comparisonRows.map(([area, oldWay, tutoreraWay], index) => (
+              <div key={area} className={`${s.tableRow} ${s.revealItem}`} style={{ "--delay": `${index * 75}ms` } as CSSProperties} role="row">
                 <strong role="cell">{area}</strong>
                 <span role="cell">{oldWay}</span>
                 <span role="cell">{tutoreraWay}</span>
@@ -237,7 +244,6 @@ export default function Home() {
       </section>
 
       <TopTutorsSection />
-      <TopRequestsSection />
 
       <section className={s.softSection} aria-labelledby="blog-title">
         <div className={s.container}>
@@ -247,8 +253,8 @@ export default function Home() {
             <p>Clear, practical guides for Pakistani parents, students, and tutors.</p>
           </div>
           <div className={s.blogGrid}>
-            {blogPosts.map((post) => (
-              <article key={post.slug} className={s.blogCard}>
+            {blogPosts.map((post, index) => (
+                <article key={post.slug} className={`${s.blogCard} ${s.revealItem}`} style={{ "--delay": `${index * 75}ms` } as CSSProperties}>
                 <div className={s.blogArt} aria-hidden="true"><Star size={28} /></div>
                 <div className={s.blogBody}>
                   <h3>{post.title}</h3>

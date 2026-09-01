@@ -15,12 +15,12 @@ const steps = [
   ["Compare", "The student compares rate, qualifications, experience, ratings, availability, teaching mode, and tutor profile."],
   ["Select Tutor", "The student accepts one tutor's offer."],
   ["Final Price Locked", "The accepted offer becomes the final booking price."],
-  ["Booking Summary", "The checkout summary displays tutor, subject, agreed rate, sessions, subtotal, platform fee, tax, and total payable in PKR."],
+  ["Booking Summary", "The checkout summary displays tutor, subject, agreed rate, sessions, subtotal, any student-side fee if configured, tax if applicable to the student amount, and total payable in PKR. Under the current model, the student marketplace fee is 0%."],
   ["Checkout", "Customer clicks Pay Securely."],
   ["Gateway Transaction", "The payment gateway processes the transaction after merchant activation."],
   ["Payment Verification", "TUTORERA receives and verifies the transaction result server-side."],
   ["Booking Confirmation", "Payment status becomes paid and booking status becomes confirmed."],
-  ["Tutor Service Delivery", "Tutor conducts the agreed lesson."],
+  ["Tutor Service Delivery", "Tutor conducts the agreed lesson as an independent service provider."],
   ["Completion", "Booking/session becomes completed after service delivery."],
   ["Customer Feedback", "Student may rate tutor, leave review, contact support, or request an eligible refund."],
 ];
@@ -53,9 +53,10 @@ export default function PaymentProcessPage() {
             <p><strong>Rate:</strong> {formatPKR(2000, "hour")}</p>
             <p><strong>Sessions:</strong> 3</p>
             <p><strong>Subtotal:</strong> {formatPKR(6000)}</p>
-            <p><strong>Platform Fee:</strong> {formatPKR(0)}</p>
-            <p><strong>Tax:</strong> {formatPKR(0)}</p>
+            <p><strong>Student marketplace fee:</strong> {formatPKR(0)}</p>
+            <p><strong>Student-side tax:</strong> {formatPKR(0)}</p>
             <p><strong>Total Payable:</strong> {formatPKR(6000)}</p>
+            <p>Current student marketplace fee: 0%. Tutor-side marketplace deductions are calculated separately from tutor earnings.</p>
           </article>
           <article className={s.card}>
             <h2>Gateway activation note</h2>

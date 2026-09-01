@@ -336,8 +336,11 @@
   padding: 1.35rem;
   border-radius: 24px;
   overflow: hidden;
-  animation: cardIn 420ms var(--ease-out) both;
-  animation-delay: var(--delay);
+}
+
+.revealItem {
+  animation: cardIn 540ms var(--ease-out) both;
+  animation-delay: var(--delay, 0ms);
 }
 
 .stepCard::after {
@@ -621,7 +624,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .heroPanel,
-  .stepCard {
+  .revealItem {
     animation: none;
   }
 

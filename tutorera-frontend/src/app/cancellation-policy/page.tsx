@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
+import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Cancellation Policy",
@@ -7,33 +8,33 @@ export const metadata: Metadata = {
   alternates: { canonical: "/cancellation-policy" },
 };
 
-const C = { primary: "#1a1a2e", gray500: "#6b7280", gray50: "#f9fafb" };
-
 const sections = [
-  { title: "Cancellation by Student", content: "Students may cancel a booking before the first session. Refund eligibility depends on timing; cancellations made 24 or more hours in advance are eligible for a full refund minus the platform fee." },
-  { title: "Cancellation by Tutor", content: "Tutors must notify students and TUTORERA® at least 24 hours before a scheduled session. Repeated cancellations may result in account suspension." },
-  { title: "No-Show Policy", content: "If a tutor fails to attend without prior notice, the student is entitled to a full refund." },
-  { title: "Refund Processing", content: "Approved refunds are processed within 5-7 business days to the original payment method or another method confirmed during review." },
-  { title: "Disputes", content: `For payment or cancellation disputes, contact ${SUPPORT_EMAIL} with your booking details.` },
+  { title: "Cancellation by Student", content: "Students may request cancellation before the first session or according to the booking terms shown at checkout. Because students currently pay no marketplace service fee, eligible full refunds are assessed against the paid tutoring amount and any actual non-refundable payment-provider deductions where applicable." },
+  { title: "Cancellation by Tutor", content: "Tutors must notify the student and TUTORERA® as early as possible when they cannot deliver a confirmed session. Repeated late cancellations, no-shows, or unreliable scheduling may lead to profile restrictions or account suspension." },
+  { title: "No-Show Policy", content: "If a tutor fails to attend a confirmed paid session without notice, the student may request a full refund review. TUTORERA may inspect booking records, messages, attendance evidence, and payment status before finalizing the outcome." },
+  { title: "Rescheduling", content: "Students and tutors may agree to reschedule through the platform where the new timing is documented. Rescheduling does not change the accepted rate unless a new offer or support-approved adjustment is recorded." },
+  { title: "Refund Processing", content: "Approved refunds are processed to the original payment method where supported, or another documented method confirmed by support. Payment-provider and bank timelines may vary." },
+  { title: "Disputes", content: `For payment, cancellation, no-show, or service-delivery disputes, contact ${SUPPORT_EMAIL} with the booking reference, transaction reference, screenshots, and a short explanation.` },
   { title: "Merchant Details", content: `TUTORERA by MENTISERA is operated by ${LEGAL_OPERATOR}. Business address: ${BUSINESS_ADDRESS}.` },
 ];
 
 export default function CancellationPolicyPage() {
   return (
-    <div style={{ backgroundColor: "white" }}>
-      <section style={{ backgroundColor: C.primary, padding: "4rem 1.5rem", textAlign: "center" }}>
-        <h1 style={{ fontSize: "2.5rem", fontWeight: 800, color: "white" }}>Cancellation Policy</h1>
+    <main className={s.page}>
+      <section className={s.hero}>
+        <h1>Cancellation Policy</h1>
+        <p>Rules for cancelling or rescheduling tutor bookings created through the student-led offer marketplace.</p>
       </section>
-      <section style={{ padding: "4rem 1.5rem" }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <section className={s.container}>
+        <div className={s.grid}>
           {sections.map((section) => (
-            <div key={section.title} style={{ backgroundColor: C.gray50, borderRadius: "0.875rem", padding: "1.5rem", border: "1px solid #e5e7eb" }}>
-              <h2 style={{ fontWeight: 700, color: C.primary, fontSize: "1rem", marginBottom: "0.5rem" }}>{section.title}</h2>
-              <p style={{ color: C.gray500, lineHeight: 1.7, fontSize: "0.9rem" }}>{section.content}</p>
-            </div>
+            <article key={section.title} className={s.card}>
+              <h2>{section.title}</h2>
+              <p>{section.content}</p>
+            </article>
           ))}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

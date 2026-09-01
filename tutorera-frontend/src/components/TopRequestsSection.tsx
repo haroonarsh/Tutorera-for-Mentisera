@@ -1,102 +1,173 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MapPin, BookOpen, Clock } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, BookOpen, Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "@/lib/axios";
-import { formatPKR } from "@/lib/site";
-
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  gray500: '#6b7280',
-  gray50: '#f9fafb',
-  accentLight: '#eff6ff',
-};
+import { formatPKR, timeAgo } from "@/lib/site";
+import s from "./TopRequestsSection.module.css";
 
 interface RequestPreview {
   _id: string;
   subject: string;
   level: string;
+  pricingUnit?: "hour" | "session" | "month" | "course";
   budget: number;
   teachingMode: string;
   city?: string;
   schedule: string;
-  student: { name: string; city?: string };
+  createdAt: string;
+  student: { name: string; city?: string; avatar?: string };
+}
+
+const LIMIT = 12;
+
+function initials(name: string): string {
+  return name
+    ?.split(" ")
+    .map((n) => n.charAt(0))
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "S";
 }
 
 export default function TopRequestsSection() {
   const [requests, setRequests] = useState<RequestPreview[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [errored, setErrored] = useState(false);
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / LIMIT)), [total]);
 
   useEffect(() => {
-    api.get("/requests/public/preview")
-      .then(res => setRequests(res.data.requests))
-      .catch(console.error)
+    setLoading(true);
+    setErrored(false);
+    api
+      .get(`/requests/public/preview?limit=${LIMIT}&page=${page}`)
+      .then((res) => {
+        setRequests(res.data.requests || []);
+        setTotal(res.data.total || 0);
+      })
+      .catch(() => {
+        setErrored(true);
+        setRequests([]);
+        setTotal(0);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
-  if (!loading && requests.length === 0) return null;
-
-  const handleSeeAll = () => {
-    router.push("/browse-requests");
-  };
+  const loadingSkeletons = Array.from({ length: 6 });
 
   return (
-    <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>
-            Students Are Looking for Tutors Right Now
-          </h2>
-          <p style={{ color: C.gray500 }}>
-            A glimpse of live tuition requests waiting for the right tutor.
+    <section className={s.root} aria-labelledby="requests-title">
+      <div className={s.container}>
+        <header className={s.head}>
+          <p className={s.eyebrow}>Live student demand</p>
+          <h2 id="requests-title">Active Tuition Requests</h2>
+          <p className={s.subtitle}>
+            Real students across Pakistan have posted tuition needs. Browse a request to see how offers and
+            booking work, or post your own requirement.
           </p>
-        </div>
+        </header>
 
-        {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb', animation: 'pulse 1.5s infinite', height: '180px' }} />
-            ))}
-            <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {requests.map(r => (
-              <div key={r._id} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', gap: '0.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s' }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)')}
-                onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)')}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>{r.subject}</h3>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: C.accent, backgroundColor: C.accentLight, padding: '0.15rem 0.6rem', borderRadius: '999px' }}>{r.level}</span>
-                  </div>
-                  <span style={{ fontSize: '0.95rem', fontWeight: '700', color: C.primary }}>{formatPKR(r.budget || 0)}</span>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.78rem', color: C.gray500 }}>
-                  {r.city && <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><MapPin size={13} />{r.city}</span>}
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><BookOpen size={13} />{r.teachingMode}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={13} />{r.schedule}</span>
-                </div>
-
-                <p style={{ fontSize: '0.8rem', color: C.gray500, marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #e5e7eb' }}>
-                  Posted by {r.student?.name}
-                </p>
-              </div>
+        {loading && (
+          <div className={s.grid}>
+            {loadingSkeletons.map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                className={s.skeleton}
+                style={{ animationDelay: `${i * 45}ms` }}
+                aria-hidden="true"
+              />
             ))}
           </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-          <button onClick={handleSeeAll}
-            style={{ border: `1.5px solid ${C.primary}`, color: C.primary, backgroundColor: 'transparent', padding: '0.75rem 2rem', borderRadius: '0.5rem', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer' }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = C.primary; e.currentTarget.style.color = 'white'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.primary; }}>
-            See Matching Requests & Send Offers
-          </button>
-        </div>
+        {!loading && errored && (
+          <p className={s.message}>Couldn't load requests right now. Please try again later.</p>
+        )}
+
+        {!loading && !errored && requests.length === 0 ? (
+          <div className={s.empty}>
+            <p>No open tuition requests at the moment. Be the first to post one.</p>
+            <Link className={s.primaryCta} href="/dashboard?tab=requests">
+              Post a tuition request
+            </Link>
+          </div>
+        ) : (
+          !loading &&
+          !errored && (
+            <div className={s.grid}>
+              {requests.map((r, i) => (
+                <article
+                  key={r._id}
+                  className={s.card}
+                  style={{ animationDelay: `${i * 75}ms` }}
+                >
+                  <header className={s.cardHead}>
+                    <h3>{r.subject}</h3>
+                    <span className={s.price}>{formatPKR(r.budget || 0, r.pricingUnit || "hour")}</span>
+                  </header>
+                  <span className={s.levelBadge}>{r.level}</span>
+                  <ul className={s.metaRow}>
+                    <li>
+                      <BookOpen size={13} aria-hidden="true" /> {r.teachingMode}
+                    </li>
+                    {r.city && (
+                      <li>
+                        <MapPin size={13} aria-hidden="true" /> {r.city}
+                      </li>
+                    )}
+                    <li>
+                      <Clock size={13} aria-hidden="true" /> {r.schedule}
+                    </li>
+                  </ul>
+                  <footer className={s.cardFooter}>
+                    <span className={s.avatar} aria-hidden="true">
+                      {initials(r.student?.name)}
+                    </span>
+                    <span className={s.studentName}>{r.student?.name}</span>
+                    <span className={s.posted}>Posted {timeAgo(r.createdAt)}</span>
+                  </footer>
+                </article>
+              ))}
+            </div>
+          )
+        )}
+
+        {!loading && !errored && total > 0 && totalPages > 1 && (
+          <nav className={s.pagination} aria-label="Requests pages">
+            <button
+              type="button"
+              className={s.pageBtn}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className={s.pageInfo}>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className={s.pageBtn}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              aria-label="Next page"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </nav>
+        )}
+
+        {!loading && !errored && (
+          <div className={s.browseAll}>
+            <Link className={s.textLink} href="/browse-requests">
+              Browse all tuition requests <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );

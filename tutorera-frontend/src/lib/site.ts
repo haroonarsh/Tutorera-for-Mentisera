@@ -17,3 +17,12 @@ export function formatPKR(amount: number, unit?: string) {
   const formatted = `PKR ${Math.round(amount).toLocaleString("en-PK")}`;
   return unit ? `${formatted} / ${unit}` : formatted;
 }
+
+export function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days} days ago`;
+  return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
+}
