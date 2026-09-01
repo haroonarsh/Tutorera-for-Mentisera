@@ -5,10 +5,11 @@ import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
-import { TOTAL_FEE_PERCENT } from "@/lib/site";
+import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
-const PLATFORM_FEE = TOTAL_FEE_PERCENT;
+const STUDENT_MARKETPLACE_FEE = 0;
+const TUTOR_TOTAL_DEDUCTION_PERCENT = 23;
 
 interface Usage {
   plan: string;
@@ -134,7 +135,7 @@ export default function BillingPage() {
       <div style={{ maxWidth: '900px' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Plans & Billing</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '2rem' }}>
-          Choose a plan. Payments are processed manually via NayaPay and activated within 24 hours.
+          Choose a plan. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation.
         </p>
 
         {/* ── Current Plan Banner ── */}
@@ -192,8 +193,8 @@ export default function BillingPage() {
                   : (plans.find(p => p.planKey === showPaymentInfo)?.priceNum || 0).toLocaleString()}
                 {billing === "yearly" ? "/year" : "/month"}
               </strong>{" "}
-              to the NayaPay account below, then email your payment proof to{" "}
-              <strong>billing@tutorera.ac.pk</strong> with your registered email. Your plan will be activated within 24 hours.
+              through TUTORERA&apos;s authorized payment gateway after merchant activation. For help, contact{" "}
+              <strong>{SUPPORT_EMAIL}</strong>.
             </p>
             <button onClick={() => setShowPaymentInfo(null)}
               style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#166534', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
@@ -251,7 +252,7 @@ export default function BillingPage() {
                   <span style={{ color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.875rem' }}>{displayPeriod}</span>
                   {billing === "yearly" && plan.priceNum > 0 && (
                     <p style={{ color: '#16a34a', fontSize: '0.75rem', marginTop: '0.2rem' }}>
-                      Save Rs. {Math.round(plan.priceNum * 12 * 0.2).toLocaleString()} vs monthly
+                      Save {formatPKR(Math.round(plan.priceNum * 12 * 0.2))} vs monthly
                     </p>
                   )}
                 </div>
@@ -304,11 +305,33 @@ export default function BillingPage() {
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+<<<<<<< HEAD
             <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
               <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Charged to Student</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
                 <span style={{ color: '#1d4ed8' }}>Platform Fee</span>
                 <span style={{ fontWeight: '700', color: C.primary }}>0%</span>
+=======
+            {[
+              { title: "Charged to Student", bg: '#eff6ff', border: '#bfdbfe', titleColor: '#1d4ed8', divider: '#bfdbfe' },
+              { title: "Deducted from Tutor", bg: '#f0fdf4', border: '#bbf7d0', titleColor: '#16a34a', divider: '#bbf7d0' },
+            ].map(box => (
+              <div key={box.title} style={{ backgroundColor: box.bg, borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${box.border}` }}>
+                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: box.titleColor, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{box.title}</p>
+                {(box.title === "Charged to Student"
+                  ? [{ label: "Marketplace Fee", value: `${STUDENT_MARKETPLACE_FEE}%` }, { label: "Tax", value: "PKR 0" }]
+                  : [{ label: "Platform Fee", value: "20%" }, { label: "Tax on Tutor Fee", value: "3%" }]
+                ).map(item => (
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
+                    <span style={{ color: box.titleColor }}>{item.label}</span>
+                    <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: `1px solid ${box.divider}` }}>
+                  <span style={{ color: C.primary }}>Total</span>
+                  <span style={{ color: box.titleColor }}>{box.title === "Charged to Student" ? `${STUDENT_MARKETPLACE_FEE}%` : `${TUTOR_TOTAL_DEDUCTION_PERCENT}%`}</span>
+                </div>
+>>>>>>> 16093509f736c1c30d600fe03011c9af3d061b78
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
                 <span style={{ color: '#1d4ed8' }}>GST</span>
@@ -336,12 +359,21 @@ export default function BillingPage() {
           </div>
 
           <div style={{ backgroundColor: '#fffbeb', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
+<<<<<<< HEAD
             <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>💡 Example — Tutor charges Rs. {EXAMPLE_RATE.toLocaleString()}/hr</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
               {[
                 { label: "Student Pays", value: `Rs. ${EXAMPLE_RATE.toLocaleString()}`, color: '#1d4ed8', bg: '#eff6ff' },
                 { label: "Platform Earns", value: `Rs. ${examplePlatformCut.toLocaleString()}`, color: '#d97706', bg: '#fffbeb' },
                 { label: "Tutor Receives", value: `Rs. ${exampleTutorPayout.toLocaleString()}`, color: '#16a34a', bg: '#f0fdf4' },
+=======
+            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>💡 Example — Tutor charges {formatPKR(1000, "hour")}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
+              {[
+                { label: "Student Pays", value: formatPKR(1000), color: '#1d4ed8', bg: '#eff6ff' },
+                { label: "Tutor Deduction", value: formatPKR(230), color: '#d97706', bg: '#fffbeb' },
+                { label: "Tutor Receives", value: formatPKR(770), color: '#16a34a', bg: '#f0fdf4' },
+>>>>>>> 16093509f736c1c30d600fe03011c9af3d061b78
               ].map(item => (
                 <div key={item.label} style={{ backgroundColor: item.bg, borderRadius: '0.5rem', padding: '0.875rem', textAlign: 'center' }}>
                   <p style={{ fontSize: '1.1rem', fontWeight: '800', color: item.color }}>{item.value}</p>
@@ -357,29 +389,29 @@ export default function BillingPage() {
           <p style={{ fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>🏦 How to Upgrade</p>
           <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#a16207', fontSize: '0.875rem' }}>
             <li>Click "Upgrade to Standard" or "Upgrade to Premium" above</li>
-            <li>Transfer the plan amount to the NayaPay account below</li>
-            <li>Email your payment proof to <strong>billing@tutorera.ac.pk</strong> with your registered email</li>
+            <li>Review the selected plan and final payable amount in PKR.</li>
+            <li>Pay through TUTORERA&apos;s authorized payment gateway after merchant activation.</li>
+            <li>Contact <strong>{SUPPORT_EMAIL}</strong> if you need billing help.</li>
             <li>Your plan will be activated within 24 hours</li>
           </ol>
         </div>
 
-        {/* ── NayaPay Payment Details ── */}
+        {/* ── Authorized payment gateway status ── */}
         <div ref={paymentRef} style={{ backgroundColor: 'white', border: `2px solid ${showPaymentInfo ? '#86efac' : '#e5e7eb'}`, borderRadius: '0.875rem', padding: '1.75rem', transition: 'border-color 0.3s' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
             <div style={{ width: 44, height: 44, backgroundColor: '#f0fdf4', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>💳</div>
             <div>
-              <p style={{ fontWeight: '800', color: C.primary, fontSize: '1rem', margin: 0 }}>Payment Account Details</p>
-              <p style={{ color: C.gray500, fontSize: '0.8rem', margin: 0 }}>Send your plan payment to this NayaPay account</p>
+              <p style={{ fontWeight: '800', color: C.primary, fontSize: '1rem', margin: 0 }}>Payment Gateway Status</p>
+              <p style={{ color: C.gray500, fontSize: '0.8rem', margin: 0 }}>Online checkout will be enabled after merchant activation.</p>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
             {[
-              { label: "Bank Name",      value: "NayaPay" },
-              { label: "Account Title",  value: "MENTISERA (SMC-PRIVATE) LIMITED" },
-              { label: "NayaPay ID",     value: "mentisera@nayapay" },
-              { label: "Account Number", value: "7556428306882526" },
-              { label: "IBAN",           value: "PK27NAYA7556428306882526" },
+              { label: "Payment Method", value: "Authorized payment gateway" },
+              { label: "Currency",       value: "PKR" },
+              { label: "Merchant",       value: "TUTORERA by MENTISERA" },
+              { label: "Support",        value: SUPPORT_EMAIL },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: C.gray50, borderRadius: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.8rem', color: C.gray500, fontWeight: 600 }}>{item.label}</span>
@@ -391,7 +423,7 @@ export default function BillingPage() {
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.875rem 1rem' }}>
             <p style={{ fontSize: '0.8rem', color: '#b91c1c', fontWeight: 600, margin: '0 0 0.25rem' }}>⚠ Important</p>
             <p style={{ fontSize: '0.8rem', color: '#ef4444', margin: 0, lineHeight: 1.6 }}>
-              After sending payment, email your proof to <strong>billing@tutorera.ac.pk</strong> with your registered email and the plan name. Payments are verified within 24 hours.
+              No live payment gateway credentials are displayed here. Payment confirmation will be verified server-side after the authorized gateway is activated.
             </p>
           </div>
         </div>

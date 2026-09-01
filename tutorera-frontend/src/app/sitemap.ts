@@ -5,7 +5,7 @@ import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetc
 const routes = [
   "", "about", "become-a-tutor", "blog", "contact", "coverage", "first-session-guarantee",
   "help", "help/for-parents", "help/for-tutors", "how-it-works", "how-tutor-offers-work", "levels", "locations", "pricing",
-  "safety-policy", "subjects", "tutors", "terms", "privacy", "complaint-process", "cancellation-policy",
+  "payment-process", "refund-policy", "safety-policy", "services", "student-journey", "subjects", "tutors", "terms", "privacy", "complaint-process", "cancellation-policy",
   "tutor-verification-standards", "review-policy", "editorial-policy", "academic-standards",
   "content-review-policy", "research-methodology", "tutor-screening-policy", "governance",
   "blog/how-to-find-a-trusted-tutor-in-pakistan", "blog/online-vs-home-tuition-in-pakistan",

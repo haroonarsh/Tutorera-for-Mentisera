@@ -1,3 +1,5 @@
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
+
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280' };
 
 export default function PrivacyPage() {
@@ -15,8 +17,8 @@ export default function PrivacyPage() {
             { title: "Data Security", content: "We implement industry-standard security measures to protect your personal information. Passwords are encrypted and sensitive documents are stored securely." },
             { title: "Sharing of Information", content: "We do not sell your personal information. Student and tutor contact details are kept private within the platform." },
             { title: "Cookies", content: "We use cookies to maintain your session and improve your experience on TUTORERA®." },
-            { title: "Your Rights", content: "You may request access to, correction of, or deletion of your personal data by contacting us at support@tutorera.ac.pk" },
-            { title: "Contact", content: "For privacy-related questions, contact us at support@tutorera.ac.pk or write to MENTISERA (SMC-Private) Limited, Islamabad, Pakistan." },
+            { title: "Your Rights", content: `You may request access to, correction of, or deletion of your personal data by contacting us at ${SUPPORT_EMAIL}` },
+            { title: "Business Controller and Contact", content: `The business controller and operating entity is ${LEGAL_OPERATOR}. Business address: ${BUSINESS_ADDRESS}. For privacy-related questions, contact ${SUPPORT_EMAIL}.` },
           ].map(section => (
             <div key={section.title}>
               <h2 style={{ fontWeight: '700', color: C.primary, fontSize: '1.1rem', marginBottom: '0.75rem' }}>{section.title}</h2>

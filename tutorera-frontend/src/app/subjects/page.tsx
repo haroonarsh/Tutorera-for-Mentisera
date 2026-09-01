@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { slugify } from "@/lib/tutor-directory";
+import { formatPKR } from "@/lib/site";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
 
@@ -52,7 +53,7 @@ export default function SubjectsPage() {
           Subjects We Cover
         </h1>
         <p style={{ color: '#9ca3af', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto' }}>
-          Find expert tutors across all major subjects taught in Pakistan.
+          Find expert tutors across major subjects taught in Pakistan. Tutor rates are shown in PKR before booking.
         </p>
       </section>
 
@@ -74,6 +75,9 @@ export default function SubjectsPage() {
                     </Link>
                   ))}
                 </div>
+                <p style={{ color: C.gray500, fontSize: '0.85rem', lineHeight: 1.65, marginTop: '1rem' }}>
+                  Pricing varies by tutor, level, mode, and availability. Final agreed rates are displayed in PKR before checkout; example available tutor rates may start from {formatPKR(1500, "hour")}.
+                </p>
               </div>
             ))}
           </div>
@@ -82,6 +86,9 @@ export default function SubjectsPage() {
             <p style={{ color: C.gray500, marginBottom: '1.5rem' }}>Can't find your subject? Post a request and tutors will reach out.</p>
             <Link href="/register" style={{ backgroundColor: C.accent, color: 'white', padding: '0.875rem 2rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', display: 'inline-block' }}>
               Post a Tuition Request
+            </Link>
+            <Link href="/services" style={{ marginLeft: '0.75rem', border: `1px solid ${C.accent}`, color: C.accent, padding: '0.875rem 2rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', display: 'inline-block' }}>
+              View Tutoring Services
             </Link>
           </div>
         </div>

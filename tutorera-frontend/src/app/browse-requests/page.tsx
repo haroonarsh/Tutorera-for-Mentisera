@@ -5,6 +5,7 @@ import { MapPin, BookOpen, Clock, Send } from "lucide-react";
 import Link from "next/link";
 import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { DashRequest } from "@/types/dashboard";
+import { formatPKR } from "@/lib/site";
 
 const C = {
   primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb',
@@ -125,7 +126,7 @@ export default function BrowseRequestsPage() {
                     <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: C.primary, marginBottom: '0.2rem' }}>{r.subject}</h3>
                     <span style={{ fontSize: '0.75rem', fontWeight: '600', color: C.accent, backgroundColor: C.accentLight, padding: '0.15rem 0.6rem', borderRadius: '999px' }}>{r.level}</span>
                   </div>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>Rs. {r.budget?.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{formatPKR(r.budget || 0, r.pricingUnit || "hour")}</span>
                 </div>
 
                 <p style={{ color: C.gray500, fontSize: '0.85rem', lineHeight: '1.5', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>

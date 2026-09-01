@@ -1,3 +1,5 @@
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
+
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
 
 export default function TermsPage() {
@@ -17,7 +19,7 @@ export default function TermsPage() {
             { title: "5. Payments", content: "All payments are processed through TUTORERA®. Students currently pay the agreed tutoring amount with no marketplace service fee. Tutors pay a 20% marketplace fee after earning through a paid booking, plus applicable tax calculated on that fee. Every booking stores the fee configuration disclosed at acceptance." },
             { title: "6. Contact Information", content: "Sharing personal contact details (phone, WhatsApp, email) in chat is prohibited to ensure platform safety and quality." },
             { title: "7. Termination", content: "TUTORERA® reserves the right to suspend or terminate any account that violates these terms." },
-            { title: "8. Contact Us", content: "For questions about these terms, email us at support@tutorera.ac.pk" },
+            { title: "8. Merchant and Contact Details", content: `TUTORERA by MENTISERA is operated by ${LEGAL_OPERATOR}. Business address: ${BUSINESS_ADDRESS}. For questions about these terms, email ${SUPPORT_EMAIL}.` },
           ].map(section => (
             <div key={section.title}>
               <h2 style={{ fontWeight: '700', color: C.primary, fontSize: '1.1rem', marginBottom: '0.75rem' }}>{section.title}</h2>

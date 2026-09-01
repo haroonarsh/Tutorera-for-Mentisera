@@ -436,7 +436,7 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
 
       await sendNotification(io, payload.requestStudent, {
         title: "📅 Booking Confirmed — Payment Required",
-        message: `Your booking has been created! Please send PKR ${payload.amount.toLocaleString()} to NayaPay ID: mentisera@nayapay and email proof to billing@tutorera.ac.pk.`,
+        message: `Your booking has been created! Please review the final payable amount of PKR ${payload.amount.toLocaleString()} and complete payment through the available authorized payment method. TUTORERA verifies payment before activation.`,
         type: "booking",
         link: "/dashboard",
       });

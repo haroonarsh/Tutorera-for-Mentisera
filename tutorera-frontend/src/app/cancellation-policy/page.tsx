@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Cancellation Policy",
@@ -12,8 +13,9 @@ const sections = [
   { title: "Cancellation by Student", content: "Students may cancel a booking before the first session. Refund eligibility depends on timing; cancellations made 24 or more hours in advance are eligible for a full refund minus the platform fee." },
   { title: "Cancellation by Tutor", content: "Tutors must notify students and TUTORERA® at least 24 hours before a scheduled session. Repeated cancellations may result in account suspension." },
   { title: "No-Show Policy", content: "If a tutor fails to attend without prior notice, the student is entitled to a full refund." },
-  { title: "Refund Processing", content: "Approved refunds are processed within 5–7 business days to the original payment method." },
-  { title: "Disputes", content: "For payment or cancellation disputes, contact support@tutorera.ac.pk with your booking details." },
+  { title: "Refund Processing", content: "Approved refunds are processed within 5-7 business days to the original payment method or another method confirmed during review." },
+  { title: "Disputes", content: `For payment or cancellation disputes, contact ${SUPPORT_EMAIL} with your booking details.` },
+  { title: "Merchant Details", content: `TUTORERA by MENTISERA is operated by ${LEGAL_OPERATOR}. Business address: ${BUSINESS_ADDRESS}.` },
 ];
 
 export default function CancellationPolicyPage() {
