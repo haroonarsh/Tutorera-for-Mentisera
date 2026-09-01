@@ -28,6 +28,7 @@ import guaranteeRoutes from "./routes/guarantee.routes";
 import referralRoutes from "./routes/referral.routes";
 import aiRoutes from "./routes/ai.routes";
 import earningsRoutes from "./routes/earnings.routes";
+import paymentRoutes from "./routes/payment.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -73,7 +74,17 @@ app.use(
     })
 );
 
-app.use(express.json({ limit: "100kb" }));
+app.use(express.json({
+    limit: "100kb",
+    // Capture the exact raw bytes of the request body as they arrived, before
+    // JSON parsing. Rapid Gateway's webhook signature is computed over these
+    // raw bytes — re-serializing the parsed JSON object would very likely
+    // produce different bytes (key order, whitespace) and make every
+    // signature check fail. This is cheap enough to do for all requests.
+    verify: (req, _res, buf) => {
+        (req as any).rawBody = buf;
+    },
+}));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
 app.use(hpp());
@@ -96,6 +107,7 @@ apiRouter.use("/guarantee", guaranteeRoutes);
 apiRouter.use("/referral", referralRoutes);
 apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/earnings", earningsRoutes);
+apiRouter.use("/payments", paymentRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
