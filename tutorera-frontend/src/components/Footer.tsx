@@ -50,12 +50,7 @@ const footerColumns = [
       { label: "Coverage", href: "/coverage" },
       { label: "Built by Haroon Arshad", href: "/developer" },
       { label: "Blog", href: "/blog" },
-<<<<<<< HEAD
-      { label: "Tutoring rates research", href: "/research/pakistan-tutoring-rates" },
-      { label: "Research methodology", href: "/research-methodology" }, 
-=======
       { label: "Complaint process", href: "/complaint-process" },
->>>>>>> 16093509f736c1c30d600fe03011c9af3d061b78
     ],
   },
   {

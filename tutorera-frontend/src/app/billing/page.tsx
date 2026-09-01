@@ -123,13 +123,6 @@ export default function BillingPage() {
 
   const planMeta = PLAN_META[currentPlan as keyof typeof PLAN_META] || PLAN_META.free;
 
-  // Worked example uses the tutor's listed hourly rate as the reference point:
-  // the student pays exactly this amount (no fee added on top); the platform
-  // fee + GST is deducted entirely from the tutor's side before payout.
-  const EXAMPLE_RATE = 1000;
-  const examplePlatformCut = Math.round(EXAMPLE_RATE * PLATFORM_FEE / 100);
-  const exampleTutorPayout = EXAMPLE_RATE - examplePlatformCut;
-
   return (
     <DashboardLayout>
       <div style={{ maxWidth: '900px' }}>
@@ -295,23 +288,13 @@ export default function BillingPage() {
         </div>
 
         {/* ── Platform Fee Breakdown ── */}
-        {/* Students are never charged a platform fee or GST — they pay exactly
-            the tutor's listed/agreed rate. The full platform fee + GST is
-            deducted from the tutor's payout only. */}
         <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '2rem' }}>
           <h3 style={{ fontWeight: '800', color: C.primary, fontSize: '1.1rem', marginBottom: '0.25rem' }}>📊 Platform Fee Breakdown</h3>
           <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-            Students pay the tutor&apos;s listed rate with no added fees. The platform fee is deducted from the tutor&apos;s payout only.
+            This fee applies to all bookings on TUTORERA® regardless of your plan.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-<<<<<<< HEAD
-            <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Charged to Student</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: '#1d4ed8' }}>Platform Fee</span>
-                <span style={{ fontWeight: '700', color: C.primary }}>0%</span>
-=======
             {[
               { title: "Charged to Student", bg: '#eff6ff', border: '#bfdbfe', titleColor: '#1d4ed8', divider: '#bfdbfe' },
               { title: "Deducted from Tutor", bg: '#f0fdf4', border: '#bbf7d0', titleColor: '#16a34a', divider: '#bbf7d0' },
@@ -331,49 +314,17 @@ export default function BillingPage() {
                   <span style={{ color: C.primary }}>Total</span>
                   <span style={{ color: box.titleColor }}>{box.title === "Charged to Student" ? `${STUDENT_MARKETPLACE_FEE}%` : `${TUTOR_TOTAL_DEDUCTION_PERCENT}%`}</span>
                 </div>
->>>>>>> 16093509f736c1c30d600fe03011c9af3d061b78
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: '#1d4ed8' }}>GST</span>
-                <span style={{ fontWeight: '700', color: C.primary }}>0%</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: '1px solid #bfdbfe' }}>
-                <span style={{ color: C.primary }}>Total</span>
-                <span style={{ color: '#1d4ed8' }}>0% — you pay the tutor&apos;s rate only</span>
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bbf7d0' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Deducted from Tutor</p>
-              {[{ label: "Platform Fee", value: "20%" }, { label: "GST (15% of 20%)", value: "3%" }].map(item => (
-                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
-                  <span style={{ color: '#16a34a' }}>{item.label}</span>
-                  <span style={{ fontWeight: '700', color: C.primary }}>{item.value}</span>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: '800', paddingTop: '0.5rem', borderTop: '1px solid #bbf7d0' }}>
-                <span style={{ color: C.primary }}>Total</span>
-                <span style={{ color: '#16a34a' }}>{PLATFORM_FEE}%</span>
-              </div>
-            </div>
+            ))}
           </div>
 
           <div style={{ backgroundColor: '#fffbeb', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
-<<<<<<< HEAD
-            <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>💡 Example — Tutor charges Rs. {EXAMPLE_RATE.toLocaleString()}/hr</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
-              {[
-                { label: "Student Pays", value: `Rs. ${EXAMPLE_RATE.toLocaleString()}`, color: '#1d4ed8', bg: '#eff6ff' },
-                { label: "Platform Earns", value: `Rs. ${examplePlatformCut.toLocaleString()}`, color: '#d97706', bg: '#fffbeb' },
-                { label: "Tutor Receives", value: `Rs. ${exampleTutorPayout.toLocaleString()}`, color: '#16a34a', bg: '#f0fdf4' },
-=======
             <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>💡 Example — Tutor charges {formatPKR(1000, "hour")}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
               {[
                 { label: "Student Pays", value: formatPKR(1000), color: '#1d4ed8', bg: '#eff6ff' },
                 { label: "Tutor Deduction", value: formatPKR(230), color: '#d97706', bg: '#fffbeb' },
                 { label: "Tutor Receives", value: formatPKR(770), color: '#16a34a', bg: '#f0fdf4' },
->>>>>>> 16093509f736c1c30d600fe03011c9af3d061b78
               ].map(item => (
                 <div key={item.label} style={{ backgroundColor: item.bg, borderRadius: '0.5rem', padding: '0.875rem', textAlign: 'center' }}>
                   <p style={{ fontSize: '1.1rem', fontWeight: '800', color: item.color }}>{item.value}</p>
