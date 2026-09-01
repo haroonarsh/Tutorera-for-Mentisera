@@ -77,7 +77,6 @@ const megaMenus = [
       { title: "Company and trust", links: [
         { label: "About", href: "/about", desc: "TUTORERA and MENTISERA." },
         { label: "Business model", href: "/business-model", desc: "Marketplace role and operations." },
-        { label: "Payment gateway information", href: "/payment-gateway-information", desc: "Merchant-review information." },
         { label: "Coverage", href: "/coverage", desc: "Where TUTORERA operates." },
         { label: "Contact", href: "/contact", desc: "Reach the support team." },
         { label: "Complaint process", href: "/complaint-process", desc: "Report and escalation route." },

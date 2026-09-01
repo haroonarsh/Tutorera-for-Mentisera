@@ -20,7 +20,6 @@ const footerColumns = [
       { label: "Browse open requests", href: "/browse-requests" },
       { label: "Pricing", href: "/pricing" },
       { label: "How Payments Work", href: "/payment-process" },
-      { label: "Payment Gateway Information", href: "/payment-gateway-information" },
     ],
   },
   {

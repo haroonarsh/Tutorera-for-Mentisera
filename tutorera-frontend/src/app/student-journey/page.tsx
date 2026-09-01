@@ -35,7 +35,7 @@ export default function StudentJourneyPage() {
       </section>
 
       <section className={s.container}>
-        <h2 className={s.sectionTitle}>Customer journey RapidPay must see</h2>
+        <h2 className={s.sectionTitle}>Complete customer journey</h2>
         <ol className={s.journey}>{journey.map(([title, body]) => <li key={title}><div><strong>{title}</strong><p>{body}</p></div></li>)}</ol>
       </section>
 
@@ -48,7 +48,7 @@ export default function StudentJourneyPage() {
             </article>
             <article className={s.card}>
               <h2>Payment rule</h2>
-              <p>RapidPay is not used to process bidding or hold speculative money. Payment occurs only after a tutor has been selected, a final tutoring rate has been agreed, a booking exists, and the final amount is clearly displayed in PKR.</p>
+              <p>The payment gateway is not used to process offers or hold speculative money. Payment occurs only after a tutor has been selected, a final tutoring rate has been agreed, a booking exists, and the final amount is clearly displayed in PKR.</p>
               <Link className={s.cta} href="/payment-process">See payment process</Link>
             </article>
           </div>

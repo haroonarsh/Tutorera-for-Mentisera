@@ -79,7 +79,7 @@ export default function BusinessModelPage() {
           <p><strong>Email:</strong> <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
           <p><strong>Phone / WhatsApp:</strong> {SUPPORT_PHONE}</p>
           <p><strong>Address:</strong> <span className={s.address}>{BUSINESS_ADDRESS}</span></p>
-          <p><Link className={s.cta} href="/payment-gateway-information">View payment gateway information</Link></p>
+          <p><Link className={s.cta} href="/payment-process">View payment process</Link></p>
         </div>
       </section>
     </main>

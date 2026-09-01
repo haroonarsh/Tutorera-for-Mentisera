@@ -62,7 +62,7 @@ export default function PaymentProcessPage() {
             <p>Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation.</p>
             <p>The official marketplace price and settlement amount remains PKR. Foreign-currency estimates, if displayed later, will be for convenience only.</p>
             <p>For support, contact <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-            <Link className={s.cta} href="/payment-gateway-information">Merchant gateway information</Link>
+            <Link className={s.cta} href="/student-journey">View student journey</Link>
           </article>
         </div>
       </section>
