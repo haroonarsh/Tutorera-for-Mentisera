@@ -38,6 +38,7 @@ const footerColumns = [
       { label: "Tutor guide", href: "/help/for-tutors" },
       { label: "Earnings", href: "/earnings" },
       { label: "Verification standards", href: "/tutor-verification-standards" },
+      { label: "Safety policy", href: "/safety-policy" },
     ],
   },
   {
@@ -48,7 +49,6 @@ const footerColumns = [
       { label: "Help center", href: "/help" },
       { label: "Coverage", href: "/coverage" },
       { label: "Blog", href: "/blog" },
-      { label: "Safety policy", href: "/safety-policy" },
       { label: "Complaint process", href: "/complaint-process" },
     ],
   },
