@@ -19,7 +19,7 @@
 
 /* ── Header banner ── */
 .header {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-royal-blue) 58%, var(--color-purple) 100%);
   padding: 36px 24px 32px;
 }
 
@@ -130,7 +130,7 @@
 .statValue {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: var(--color-heading);
   line-height: 1;
   white-space: nowrap;
 }
@@ -175,21 +175,21 @@
   gap: 6px;
 }
 
-.tab:hover { color: #1a1a2e; background: #f9fafb; }
+.tab:hover { color: var(--color-heading); background: var(--color-soft-blue); }
 
 .tabActive {
-  background: #1a1a2e;
+  background: var(--color-navy);
   color: #ffffff;
   font-weight: 600;
 }
 
 .tabs button[aria-current="true"] {
-  background: #1a1a2e;
+  background: var(--color-navy);
   color: #ffffff;
   font-weight: 600;
 }
 
-.tabActive:hover { background: #1a1a2e; color: #fff; }
+.tabActive:hover { background: var(--color-navy); color: #fff; }
 
 .tabBadge {
   background: #e94560;
@@ -217,7 +217,7 @@
 .sectionTitle {
   font-size: 16px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-heading);
   margin: 0;
 }
 
@@ -225,7 +225,7 @@
 .btnPrimary {
   padding: 9px 20px;
   border-radius: 8px;
-  background: #2563eb;
+  background: linear-gradient(135deg, var(--color-royal-blue), var(--color-digital-blue));
   color: #fff;
   border: none;
   font-size: 13px;
@@ -253,7 +253,7 @@
   font-family: inherit;
 }
 
-.btnOutline:hover { border-color: #2563eb; color: #2563eb; }
+.btnOutline:hover { border-color: var(--color-digital-blue); color: var(--color-digital-blue); }
 
 .btnDanger {
   padding: 7px 14px;
@@ -308,7 +308,7 @@
 .cardTitle {
   font-size: 15px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-heading);
   margin: 0 0 4px 0;
 }
 
@@ -339,7 +339,7 @@
   letter-spacing: 0.02em;
 }
 
-.badgeOpen      { background: rgba(37,99,235,0.1);   color: #2563eb;  border: 1px solid rgba(37,99,235,0.2); }
+.badgeOpen      { background: rgba(1,110,248,0.1);   color: var(--color-digital-blue);  border: 1px solid rgba(1,110,248,0.2); }
 .badgeClosed    { background: rgba(107,114,128,0.1); color: #6b7280;  border: 1px solid rgba(107,114,128,0.2); }
 .badgeCancelled { background: rgba(233,69,96,0.1);   color: #e94560;  border: 1px solid rgba(233,69,96,0.2); }
 .badgeUpcoming  { background: rgba(16,185,129,0.1);  color: #10b981;  border: 1px solid rgba(16,185,129,0.2); }
@@ -409,7 +409,7 @@
   justify-content: center;
   font-size: 14px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-digital-blue);
 }
 
 .bidAvatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -419,14 +419,14 @@
 .bidTutorName {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-heading);
   margin: 0 0 2px 0;
 }
 
 .bidAmount {
   font-size: 15px;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--color-digital-blue);
   margin: 0 0 6px 0;
 }
 
@@ -459,13 +459,13 @@
   justify-content: center;
   font-size: 15px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-digital-blue);
   flex-shrink: 0;
 }
 
 .personAvatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.personName { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+.personName { font-size: 14px; font-weight: 600; color: var(--color-heading); }
 .personSub  { font-size: 12px; color: #9ca3af; }
 
 /* ── Expand toggle ── */
@@ -477,7 +477,7 @@
   border: none;
   font-size: 12px;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--color-digital-blue);
   cursor: pointer;
   padding: 0;
   margin-top: 12px;
@@ -506,7 +506,7 @@
   width: 32px;
   height: 32px;
   border: 3px solid #e5e7eb;
-  border-top-color: #2563eb;
+  border-top-color: var(--color-digital-blue);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin: 60px auto;
@@ -544,7 +544,7 @@
   font-size: 11px;
   font-weight: 600;
   background: rgba(37,99,235,0.08);
-  color: #2563eb;
+  color: var(--color-digital-blue);
   border: 1px solid rgba(37,99,235,0.15);
 }
 

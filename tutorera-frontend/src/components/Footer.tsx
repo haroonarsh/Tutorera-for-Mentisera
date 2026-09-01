@@ -1,5 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import Image from "next/image";
 import { BookOpen, Mail, MapPin, ShieldCheck } from "lucide-react";
 import { FiFacebook } from "react-icons/fi";
 import { RiTwitterLine } from "react-icons/ri";
@@ -54,7 +54,7 @@ export default function Footer() {
         <div className={s.top}>
           <div className={s.brand}>
             <Link href="/" className={s.logo} aria-label="TUTORERA home">
-              <Image src="/tutorera-icon-192.png" alt="" width={54} height={54} className={s.logoImage} />
+              <img src="/tutorera-icon-192.png" alt="" width={54} height={54} className={s.logoImage} />
               <span>
                 <strong>TUTORERA<em>®</em></strong>
                 <small>by MENTISERA</small>

@@ -24,6 +24,45 @@
   --radius-lg: 20px;
   --radius-xl: 24px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --background: var(--color-background);
+  --foreground: var(--color-body);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-body);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-body);
+  --primary: var(--color-royal-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-soft-blue);
+  --secondary-foreground: var(--color-heading);
+  --muted: var(--color-soft-blue);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--color-soft-blue);
+  --accent-foreground: var(--color-heading);
+  --destructive: #dc2626;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-digital-blue);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 }
 
 * {
@@ -40,6 +79,83 @@ body {
   background-color: var(--color-background);
   color: var(--color-body);
   font-family: "Inter", sans-serif;
+}
+
+::selection {
+  color: #ffffff;
+  background: var(--color-royal-blue);
+}
+
+a {
+  text-underline-offset: 0.18em;
+}
+
+button,
+[role="button"],
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+[role="button"],
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  color: var(--color-body);
+  border-color: var(--color-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-muted);
+}
+
+[data-slot="button"] {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+[data-slot="button"]:active {
+  transform: scale(0.97);
+}
+
+[data-slot="input"],
+[data-slot="select-trigger"] {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px rgba(2, 21, 80, 0.04);
+}
+
+[data-slot="badge"] {
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.card,
+[class*="card"],
+[class*="Card"] {
+  border-color: var(--color-border);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-slot="button"]:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 /* Consistent, visible focus indicator for keyboard navigation. */
@@ -62,4 +178,24 @@ button:focus:not(:focus-visible),
 a:focus:not(:focus-visible),
 [role="button"]:focus:not(:focus-visible) {
   outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  [data-slot="button"]:hover,
+  [data-slot="button"]:active {
+    transform: none;
+  }
 }

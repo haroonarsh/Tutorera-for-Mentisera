@@ -17,9 +17,9 @@
 }
 
 .card:hover {
-  border-color: #2563eb;
+  border-color: var(--color-digital-blue);
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px -8px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 12px 32px -8px rgba(1, 110, 248, 0.18);
 }
 
 /* Verified badge */
@@ -51,7 +51,7 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  border: 2.5px solid rgba(37, 99, 235, 0.2);
+  border: 2.5px solid rgba(1, 110, 248, 0.2);
   background: #f3f4f6;
 }
 
@@ -67,10 +67,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(26, 26, 46, 0.12));
+  background: linear-gradient(135deg, rgba(1, 110, 248, 0.12), rgba(8, 191, 252, 0.12));
   font-size: 24px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-digital-blue);
 }
 
 .nameBlock {
@@ -82,7 +82,7 @@
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-heading);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -142,9 +142,9 @@
 }
 
 .modeInPerson {
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(1, 110, 248, 0.1);
+  color: var(--color-digital-blue);
+  border: 1px solid rgba(1, 110, 248, 0.2);
 }
 
 .modeBoth {
@@ -178,9 +178,9 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(37, 99, 235, 0.08);
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: rgba(1, 110, 248, 0.08);
+  color: var(--color-digital-blue);
+  border: 1px solid rgba(1, 110, 248, 0.18);
 }
 
 .tagGray {
@@ -207,7 +207,7 @@
 .price {
   font-size: 22px;
   font-weight: 800;
-  color: #1a1a2e;
+  color: var(--color-heading);
 }
 
 .priceUnit {
@@ -218,7 +218,7 @@
 .cta {
   padding: 8px 18px;
   border-radius: 8px;
-  background: #1a1a2e;
+  background: var(--color-navy);
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
@@ -229,5 +229,5 @@
 }
 
 .card:hover .cta {
-  background: #2563eb;
+  background: linear-gradient(135deg, var(--color-royal-blue), var(--color-digital-blue));
 }
