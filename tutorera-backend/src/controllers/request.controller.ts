@@ -15,6 +15,7 @@ import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
 import sendEmail from "../utils/sendEmail";
 import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail } from "../utils/emailTemplates";
+import { createTransaction } from "../utils/rapidGateway";
 
 // ─── Plan Limits ───────────────────────────────────────────────────────────────
 const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
@@ -291,10 +292,138 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
   res.status(200).json({ success: true, total: bids.length, bids });
 };
 
-// @desc    Accept a bid → creates booking automatically
+// ── Relevant excerpt: request.controller.ts ──
+// Replaces the old acceptBid. Two functions now:
+//   1. initiateAcceptBid  — route handler, reserves the bid, starts Rapid Gateway checkout
+//   2. finalizeBidAcceptance — NOT a route; called only by the payment webhook once payment confirms
+
+const PAYMENT_HOLD_MINUTES = 30;
+
+// If a previous accept attempt's payment reservation has expired (student
+// abandoned checkout), revert the request/bid back to an acceptable state
+// so the bid isn't stuck in limbo forever. Called defensively at the start
+// of the accept flow.
+async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<void> {
+  const staleBid = await Bid.findOne({
+    request: requestId,
+    status: "payment_pending",
+    paymentPendingExpiresAt: { $lte: new Date() },
+  });
+
+  if (!staleBid) return;
+
+  // Best-effort revert — not wrapped in the caller's transaction since this
+  // is cleanup for a PAST abandoned attempt, not part of the current one.
+  await Bid.updateOne(
+    { _id: staleBid._id, status: "payment_pending" },
+    { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
+  );
+  await Request.updateOne(
+    { _id: requestId, status: "awaiting_payment" },
+    { status: "open" }
+  );
+}
+
+// @desc    Accept a bid — reserves it and starts a Rapid Gateway checkout.
+//          The booking is NOT created here; it's created by
+//          finalizeBidAcceptance once payment is confirmed via webhook.
 // @route   PATCH /api/requests/:id/bids/:bidId/accept
 // @access  Private (student)
-export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
+export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
+  const requestId = new Types.ObjectId(req.params.id as string);
+  const bidId = new Types.ObjectId(req.params.bidId as string);
+
+  await releaseExpiredPaymentHold(requestId);
+
+  const request = await Request.findById(requestId);
+  if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
+    res.status(400).json({ success: false, message: "Request not available" });
+    return;
+  }
+
+  const bid = await Bid.findOne({
+    _id: bidId,
+    request: requestId,
+    status: { $in: ["pending", "submitted", "viewed", "countered"] },
+  });
+
+  if (!bid) {
+    res.status(404).json({ success: false, message: "Offer not found or does not belong to this request" });
+    return;
+  }
+
+  if (bid.expiresAt && bid.expiresAt.getTime() <= Date.now()) {
+    res.status(410).json({ success: false, message: "This offer has expired." });
+    return;
+  }
+
+  const isOwner = request.student.toString() === req.user?._id?.toString();
+  const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
+  if (!isOwner && !isDirectTutorAccept) {
+    res.status(403).json({ success: false, message: "Not authorized to accept this offer" });
+    return;
+  }
+
+  // Atomic guard — identical purpose to the original: only one accept
+  // attempt can win this transition, so two concurrent accept clicks can't
+  // both proceed. Everything downstream is safe BECAUSE this succeeded.
+  const reservedRequest = await Request.findOneAndUpdate(
+    { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+    { status: "awaiting_payment" },
+    { new: true }
+  );
+
+  if (!reservedRequest) {
+    res.status(409).json({ success: false, message: "This request was just accepted or is no longer available." });
+    return;
+  }
+
+  const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
+  bid.status = "payment_pending";
+  bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
+  await bid.save();
+
+  try {
+    const student = await User.findById(req.user?._id).select("name email phone");
+    const checkoutUrl = await createTransaction({
+      amount: bid.amount,
+      customerMobileNo: student?.phone || "03000000000",
+      customerEmail: student?.email || "",
+      // "BID-" prefix lets the webhook handler tell this apart from a
+      // plain booking-id checkout (see payment.controller.ts).
+      basketId: `BID-${bid._id.toString()}`,
+      description: `TUTORERA offer acceptance ${bid._id.toString()}`,
+      successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
+      failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
+      checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
+      checkoutUrl,
+    });
+  } catch (err: any) {
+    // Checkout creation failed — roll back the reservation immediately so
+    // the request/bid aren't stranded in "awaiting_payment" until the next
+    // lazy cleanup happens to run.
+    await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
+    await Bid.updateOne(
+      { _id: bid._id, status: "payment_pending" },
+      { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
+    );
+
+    console.error("Failed to create Rapid Gateway checkout for bid acceptance:", err);
+    res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+  }
+};
+
+// Called ONLY by the payment webhook (payment.controller.ts) once Rapid
+// Gateway confirms payment for a "BID-<id>" checkout. Runs the same
+// transactional booking-creation logic the old acceptBid used to run
+// synchronously — atomic accept guard, reject other bids, create the
+// booking (now with paymentStatus already "confirmed"), lock the slot.
+export async function finalizeBidAcceptance(bidId: string, io: any): Promise<void> {
   const session = await mongoose.startSession();
 
   try {
@@ -311,63 +440,41 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
     } | null = null;
 
     await session.withTransaction(async () => {
-      const request = await Request.findById(new Types.ObjectId(req.params.id as string)).session(session);
-
-      if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
-        throw { statusCode: 400, message: "Request not available" };
-      }
-
-      const bid = await Bid.findOne({
-        _id: new Types.ObjectId(req.params.bidId as string),
-        request: new Types.ObjectId(req.params.id as string),
-        status: { $in: ["pending", "submitted", "viewed", "countered"] },
-      }).session(session);
-
-      if (!bid) {
-        throw { statusCode: 404, message: "Offer not found or does not belong to this request" };
-      }
-
-      // Authorization: either the student who owns the request, OR the tutor on a direct request accepting their own bid
-      const isOwner = request.student.toString() === req.user?._id?.toString();
-      const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
-
-      if (!isOwner && !isDirectTutorAccept) {
-        throw { statusCode: 403, message: "Not authorized to accept this offer" };
-      }
-
-      // Atomic conditional update — only succeeds if request is still "open".
-      // This is what prevents two concurrent accept calls from both proceeding.
-      const closedRequest = await Request.findOneAndUpdate(
-        { _id: request._id, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-        { status: "closed" },
+      // Atomic guard — only proceeds if this bid is still awaiting payment
+      // confirmation. Protects against Rapid Gateway's documented
+      // at-least-once webhook delivery calling this twice for the same
+      // event; the second call finds status already "accepted" and no-ops.
+      const bid = await Bid.findOneAndUpdate(
+        { _id: new Types.ObjectId(bidId), status: "payment_pending" },
+        { status: "accepted" },
         { new: true, session }
       );
 
-      if (!closedRequest) {
-        throw { statusCode: 409, message: "This request was just accepted or is no longer available." };
+      if (!bid) {
+        // Already finalized by a prior webhook delivery, or the hold expired
+        // and was reverted before payment confirmed — nothing to do.
+        return;
       }
 
-      // Accept this bid
-      bid.status = "accepted";
-      await bid.save({ session });
+      const request = await Request.findById(bid.request).session(session);
+      if (!request) return;
 
-      // Reject all other bids
+      request.status = "closed";
+      await request.save({ session });
+
       await Bid.updateMany(
         { request: request._id, _id: { $ne: bid._id } },
         { status: "not_selected" },
         { session }
       );
 
-      // Auto-detect if this is the first booking between this student and this tutor
       const existingBookingsCount = await Booking.countDocuments({
         student: request.student,
         tutor: bid.tutor,
       }).session(session);
 
-      if (bid.expiresAt && bid.expiresAt.getTime() <= Date.now()) throw { statusCode: 410, message: "This offer has expired." };
       const fees = calculateMarketplaceFees(bid.amount);
 
-      // Auto-create booking
       const bookingArr = await Booking.create([{
         student: request.student,
         tutor: bid.tutor,
@@ -383,11 +490,15 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
         schedule: request.schedule,
         teachingMode: request.teachingMode,
         isFirstSession: existingBookingsCount === 0,
+        // Payment already succeeded via Rapid Gateway before this booking
+        // was ever created — no manual confirmation step needed.
+        paymentStatus: "confirmed",
+        paymentNote: "Paid via Rapid Gateway before booking creation",
       }], { session });
       const booking = bookingArr[0];
+
       await OfferNegotiation.updateMany({ offer: bid._id, status: "active" }, { status: "accepted" }, { session });
 
-      // Lock the slot if it's a direct booking with a slot
       if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
         await BookedSlot.create([{
           tutor: bid.tutor,
@@ -412,8 +523,6 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
       };
     });
 
-    // ── Everything below happens AFTER the transaction commits successfully ──
-    // Notifications/emails are best-effort side effects, not part of the atomic write.
     if (responsePayload && responseBooking) {
       const payload = responsePayload as {
         bidTutor: string;
@@ -425,21 +534,22 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
         subject: string;
         amount: number;
       };
-      const io = req.app.get("io");
 
-      await sendNotification(io, payload.bidTutor, {
-        title: "✅ Offer Accepted!",
-        message: "Your offer has been accepted! A booking has been created.",
-        type: "booking",
-        link: "/dashboard",
-      });
-
-      await sendNotification(io, payload.requestStudent, {
-        title: "📅 Booking Confirmed — Payment Required",
-        message: `Your booking has been created! Please review the final payable amount of PKR ${payload.amount.toLocaleString()} and complete payment through the available authorized payment method. TUTORERA verifies payment before activation.`,
-        type: "booking",
-        link: "/dashboard",
-      });
+      // Notifications/emails are best-effort — same as the original flow.
+      if (io) {
+        await sendNotification(io, payload.bidTutor, {
+          title: "✅ Offer Accepted & Paid!",
+          message: "The student has completed payment. A booking has been created.",
+          type: "booking",
+          link: "/dashboard",
+        });
+        await sendNotification(io, payload.requestStudent, {
+          title: "📅 Booking Confirmed",
+          message: `Your payment was received and your booking for ${payload.subject} is confirmed.`,
+          type: "booking",
+          link: "/dashboard",
+        });
+      }
 
       try {
         const [tutorUser, studentUser] = await Promise.all([
@@ -448,40 +558,21 @@ export const acceptBid = async (req: AuthRequest, res: Response): Promise<void> 
         ]);
 
         if (tutorUser && studentUser) {
-          if (payload.isDirect && payload.selectedDate) {
-            const tutorMail = directBookingAcceptedEmail(tutorUser.name, studentUser.name, payload.subject, payload.selectedDate, payload.selectedStartTime, payload.selectedEndTime);
-            const studentMail = directBookingAcceptedEmail(studentUser.name, tutorUser.name, payload.subject, payload.selectedDate, payload.selectedStartTime, payload.selectedEndTime, { amount: payload.amount });
-            await Promise.all([
-              sendEmail({ to: tutorUser.email, subject: tutorMail.subject, html: tutorMail.html }),
-              sendEmail({ to: studentUser.email, subject: studentMail.subject, html: studentMail.html }),
-            ]);
-          } else {
-            const bidEmail = bidAcceptedEmail(tutorUser.name, studentUser.name, payload.amount);
-            const bookingEmail = bookingConfirmedEmail(studentUser.name, tutorUser.name, payload.amount);
-            await Promise.all([
-              sendEmail({ to: tutorUser.email, subject: bidEmail.subject, html: bidEmail.html }),
-              sendEmail({ to: studentUser.email, subject: bookingEmail.subject, html: bookingEmail.html }),
-            ]);
-          }
+          const bidEmail = bidAcceptedEmail(tutorUser.name, studentUser.name, payload.amount);
+          const bookingEmail = bookingConfirmedEmail(studentUser.name, tutorUser.name, payload.amount);
+          await Promise.all([
+            sendEmail({ to: tutorUser.email, subject: bidEmail.subject, html: bidEmail.html }),
+            sendEmail({ to: studentUser.email, subject: bookingEmail.subject, html: bookingEmail.html }),
+          ]);
         }
       } catch (err) {
-        console.error("Failed to send booking/offer emails:", err);
+        console.error("Failed to send booking/offer emails after payment:", err);
       }
-
-      res.status(200).json({
-        success: true,
-        message: "Offer accepted. Booking created successfully.",
-        booking: responseBooking,
-      });
     }
-  } catch (err: any) {
-    const statusCode = err?.statusCode || 500;
-    const message = err?.message || "Failed to accept offer. Please try again.";
-    res.status(statusCode).json({ success: false, message });
   } finally {
     await session.endSession();
   }
-};
+}
 
 // @desc    Create a direct booking request targeted at a specific tutor
 // @route   POST /api/requests/direct

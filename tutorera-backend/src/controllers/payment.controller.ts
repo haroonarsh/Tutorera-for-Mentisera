@@ -4,11 +4,15 @@ import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
+import { finalizeBidAcceptance } from "./request.controller";
 import logger from "../config/logger";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
-// @desc    Create a Rapid Gateway checkout session for a booking
+// @desc    Create a Rapid Gateway checkout session for an EXISTING booking.
+//          (Retained for any booking that already exists without payment —
+//          the primary path now is initiateAcceptBid, which pays BEFORE the
+//          booking is created.)
 // @route   POST /api/v1/payments/booking/:bookingId/checkout
 // @access  Private (student who owns the booking)
 export const createBookingCheckout = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -33,9 +37,6 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     return;
   }
 
-  // BASKET_ID is the field Rapid Gateway echoes back in every webhook as
-  // merchantTransactionId — using the booking's own _id means reconciling a
-  // webhook to a booking needs no extra field or lookup table.
   const basketId = booking._id.toString();
 
   try {
@@ -65,7 +66,6 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
   const rawBody: Buffer | undefined = (req as any).rawBody;
 
   if (!rawBody) {
-    // Should never happen if app.ts's express.json({verify}) is wired correctly.
     logger.error({ requestId: (req as any).id }, "Webhook received with no raw body captured");
     res.status(500).json({ success: false });
     return;
@@ -84,35 +84,42 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
   const event = req.body as {
     eventId: string;
     eventType: string;
-    merchantTransactionId: string; // == our BASKET_ID == booking._id
+    merchantTransactionId: string; // == our BASKET_ID
     status: string;
     amount: number;
   };
 
-  // Respond fast per their docs ("respond with 2xx quickly; anything else
-  // counts as a failed delivery attempt and gets retried"). We do the DB
-  // update inline here since it's a single fast write, not a slow job.
   try {
     if (event.eventType === "transaction.completed") {
-      const booking = await Booking.findById(event.merchantTransactionId);
+      if (event.merchantTransactionId.startsWith("BID-")) {
+        // Pay-before-accept flow: no booking exists yet — payment success
+        // is what triggers the actual atomic booking creation.
+        const bidId = event.merchantTransactionId.slice("BID-".length);
+        const io = req.app.get("io");
+        await finalizeBidAcceptance(bidId, io);
+      } else {
+        // Legacy/direct path: booking already exists, just mark it paid.
+        const booking = await Booking.findById(event.merchantTransactionId);
 
-      if (!booking) {
-        logger.warn({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Webhook for unknown booking");
-        res.status(200).json({ success: true }); // acknowledge anyway — retrying won't help if the booking doesn't exist
-        return;
-      }
+        if (!booking) {
+          logger.warn({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Webhook for unknown booking");
+          res.status(200).json({ success: true });
+          return;
+        }
 
-      // Idempotent: if we've already marked this confirmed (e.g. a retried
-      // or duplicate webhook delivery — their docs explicitly warn delivery
-      // is at-least-once), don't reprocess.
-      if (booking.paymentStatus !== "confirmed") {
-        booking.paymentStatus = "confirmed";
-        booking.paymentNote = `Confirmed via Rapid Gateway (event ${event.eventId})`;
-        await booking.save();
+        if (booking.paymentStatus !== "confirmed") {
+          booking.paymentStatus = "confirmed";
+          booking.paymentNote = `Confirmed via Rapid Gateway (event ${event.eventId})`;
+          await booking.save();
+        }
       }
     } else if (event.eventType === "transaction.failed") {
       logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Rapid Gateway reported a failed transaction");
-      // paymentStatus stays "pending" — the student can retry checkout.
+      // For BID- checkouts, we deliberately do nothing here — the bid stays
+      // "payment_pending" until its 30-minute hold expires and is reverted
+      // by releaseExpiredPaymentHold, rather than reverting instantly on a
+      // single failure (the student may immediately retry the same
+      // checkout attempt).
     }
 
     res.status(200).json({ success: true });
