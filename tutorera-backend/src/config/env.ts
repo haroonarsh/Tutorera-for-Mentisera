@@ -31,8 +31,6 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     { key: "GOOGLE_CLIENT_ID" },
     { key: "GOOGLE_CLIENT_SECRET" },
     { key: "RAPID_GATEWAY_MERCHANT_ID" },
-    { key: "RAPID_GATEWAY_MERCHANT_NAME" },
-    { key: "RAPID_GATEWAY_CLIENT_SECRET" },
     { key: "RAPID_GATEWAY_WEBHOOK_SECRET" },
 ];
 

@@ -55,7 +55,7 @@ export default function TeamPage() {
           </article>
 
           <article style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "1.25rem", padding: "2rem", boxShadow: "0 14px 38px rgba(17,24,39,0.06)" }}>
-            <Image src="/developer/haroon.jpeg" alt="Haroon Arshad" width={88} height={88} style={{ borderRadius: "50%", objectFit: "cover", marginBottom: "1.25rem" }} />
+            <Image src="https://res.cloudinary.com/dtoy2m9rj/image/upload/v1788291272/tutorera/avatars/zjvbipsvq8uvqappbkaz.jpg" alt="Haroon Arshad" width={88} height={88} style={{ borderRadius: "50%", objectFit: "cover", marginBottom: "1.25rem" }} />
             <p style={{ color: C.accent, fontSize: "0.78rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.45rem" }}>Full-Stack Developer</p>
             <h2 style={{ color: C.primary, fontSize: "1.55rem", fontWeight: 850, marginBottom: "0.75rem" }}>Haroon Arshad</h2>
             <p style={{ color: C.gray500, lineHeight: 1.75 }}>
