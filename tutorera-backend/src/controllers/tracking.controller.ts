@@ -25,6 +25,7 @@ import {
   educationalDocumentsRejectedEmail,
   educationalDocumentsVerifiedEmail,
   homeTuitionActivatedEmail,
+  homeTuitionDeactivatedEmail,
   marketplaceActivatedEmail,
   marketplaceDeactivatedEmail,
   policeRejectedEmail,
@@ -611,14 +612,26 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.marketplaceEligibleAt = undefined as any;
     profile.lastStatusChangeAt = now;
     await profile.save();
+    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile auto-deactivated after a verification requirement lapsed" });
+    await sendEmailSafely(() => marketplaceDeactivatedEmail(user.name, "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs(user)), user.email);
+    await notifyTutor(req, user._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification" });
   }
   if (htEligible && !profile.homeTuitionEligible) {
     profile.homeTuitionEligible = true;
     profile.homeTuitionEligibleAt = now;
+    profile.lastStatusChangeAt = now;
     await profile.save();
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility auto-activated" });
     await sendEmailSafely(() => homeTuitionActivatedEmail(user.name, ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", link: "/tutor/application-status", type: "verification" });
+  } else if (!htEligible && profile.homeTuitionEligible) {
+    profile.homeTuitionEligible = false;
+    profile.homeTuitionEligibleAt = undefined as any;
+    profile.lastStatusChangeAt = now;
+    await profile.save();
+    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility auto-deactivated after a verification requirement lapsed" });
+    await sendEmailSafely(() => homeTuitionDeactivatedEmail(user.name, "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs(user)), user.email);
+    await notifyTutor(req, user._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification" });
   }
 }
 

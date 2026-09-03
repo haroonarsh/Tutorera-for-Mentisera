@@ -42,6 +42,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const t = generateTrackingToken();
     user.trackingTokenHash = t.hash;
     user.trackingTokenCreatedAt = new Date();
+    user.applicationSubmittedAt = new Date();
     await user.save();
     trackingToken = t.plaintext;
   }
@@ -232,6 +233,7 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     const t = generateTrackingToken();
     user.trackingTokenHash = t.hash;
     user.trackingTokenCreatedAt = new Date();
+    user.applicationSubmittedAt = new Date();
     trackingToken = t.plaintext;
   }
   await user.save();

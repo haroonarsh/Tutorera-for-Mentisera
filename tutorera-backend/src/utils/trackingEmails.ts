@@ -153,6 +153,17 @@ export const homeTuitionActivatedEmail = (tutorName: string, args: CtaArgs) => (
   `,
 });
 
+export const homeTuitionDeactivatedEmail = (tutorName: string, reason: string, args: CtaArgs) => ({
+  subject: "TUTORERA® — Home tuition paused",
+  html: `
+    <h2 style="color:#d97706;margin:0 0 12px;">Home tuition paused</h2>
+    <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
+    <p style="color:#374151;">Your home tuition access has been temporarily paused.</p>
+    ${reason ? `<p style="color:#374151;"><strong>Reason:</strong> ${escapeHtml(reason)}</p>` : ""}
+    ${trackingCta(args)}
+  `,
+});
+
 export const profileSuspendedEmail = (tutorName: string, reason: string, args: CtaArgs) => ({
   subject: "TUTORERA® — Your profile has been suspended",
   html: `

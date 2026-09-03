@@ -20,6 +20,17 @@ import Notification from "../models/Notification.model";
 import sendEmail from "../utils/sendEmail";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail } from "../utils/emailTemplates";
 import { getSignedViewUrl } from "../utils/uploadToCloudinary";
+import {
+  isMarketplaceEligible,
+  isHomeTuitionEligible,
+  recordStatusEvent,
+} from "../services/tracking.service";
+import {
+  marketplaceActivatedEmail,
+  marketplaceDeactivatedEmail,
+  homeTuitionActivatedEmail,
+  homeTuitionDeactivatedEmail,
+} from "../utils/trackingEmails";
 
 
 // @desc    Get dashboard stats
@@ -104,7 +115,9 @@ export const getTutorFullData = async (req: AuthRequest, res: Response): Promise
   res.status(200).json({ success: true, profile });
 };
 
-// @desc    Approve or reject tutor
+// @desc    Approve or reject tutor (legacy bulk endpoint — delegates to the
+//          per-component tracking system so canonical status, history rows,
+//          and marketplace / home-tuition eligibility stay in sync).
 // @route   PATCH /api/admin/verify/:id
 // @access  Private (admin)
 export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -121,45 +134,116 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     return;
   }
 
+  const tutorUser = await User.findById(profile.user).select("name email applicationId");
+  if (!tutorUser) {
+    res.status(404).json({ success: false, message: "Tutor user not found" });
+    return;
+  }
+
+  const actor = {
+    name: req.user?.name || "Admin",
+    role: "admin" as const,
+    id: req.user?._id?.toString(),
+  };
+  const io = req.app.get("io");
+  const now = new Date();
+
+  const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
+    (profile as any)[`${kind}VerificationStatus`] = status;
+    (profile as any)[`${kind}RejectionReason`] = status === "rejected" ? (reason || "") : "";
+    (profile as any)[`${kind}ReviewedAt`] = now;
+  };
+  component("cnic");
+  component("degree");
+  component("demoVideo");
+  if (profile.policeVerificationStatus !== "not_required") {
+    component("police");
+  }
+
   profile.verificationStatus = status;
   profile.isVerified = status === "approved";
-  if (status === "rejected" && reason) {
-    profile.rejectionReason = reason;
-  }
+  profile.rejectionReason = status === "rejected" ? (reason || "") : "";
+  profile.lastStatusChangeAt = now;
   await profile.save();
 
+  await recordStatusEvent({
+    tutorId: tutorUser._id.toString(),
+    tutorProfileId: profile._id.toString(),
+    actor,
+    event: status === "approved" ? "PROFILE_APPROVED" : "PROFILE_REJECTED",
+    message:
+      status === "approved"
+        ? "Tutor profile approved (bulk verify)"
+        : `Tutor profile rejected (bulk verify)${reason ? `: ${reason}` : ""}`,
+    statusAfter: status,
+  });
+
   try {
-    const tutorUser = await User.findById(profile.user).select("name email");
-    if (tutorUser) {
-      const { subject, html } = status === "approved"
-        ? tutorApprovedEmail(tutorUser.name)
-        : tutorRejectedEmail(tutorUser.name, reason);
-      await sendEmail({ to: tutorUser.email, subject, html });
-    }
+    const { subject, html } = status === "approved"
+      ? tutorApprovedEmail(tutorUser.name)
+      : tutorRejectedEmail(tutorUser.name, reason);
+    await sendEmail({ to: tutorUser.email, subject, html });
   } catch (err) {
     console.error("Failed to send tutor verification email:", err);
   }
 
   await logAudit({
     action: status === "approved" ? "tutor_approved" : "tutor_rejected",
-    actor: req.user?.name || "Admin",
-    actorId: req.user?._id?.toString(),
+    actor: actor.name,
+    actorId: actor.id,
     entity: "TutorProfile",
     targetId: profile._id.toString(),
-    targetName: (profile.user as any)?.name || profile._id.toString(),
+    targetName: tutorUser.name,
     metadata: status === "rejected" ? { reason } : undefined,
   });
 
-  // Send real-time notification to tutor
-  const io = req.app.get("io");
-  await sendNotification(io, profile.user.toString(), {
+  await sendNotification(io, tutorUser._id.toString(), {
     title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
     message: status === "approved"
       ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
       : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
     type: "verification",
-    link: "/dashboard",
+    link: "/tutor/application-status",
   });
+
+  // Sync marketplace + home-tuition eligibility through the same path the
+  // per-component endpoints use, so the tutor sees accurate status on their
+  // application-tracking page.
+  const mpEligible = isMarketplaceEligible(profile);
+  const htEligible = isHomeTuitionEligible(profile);
+  const cta = { applicationId: tutorUser.applicationId || "TUT-PENDING" };
+  if (mpEligible && !profile.marketplaceEligible) {
+    profile.marketplaceEligible = true;
+    profile.marketplaceEligibleAt = now;
+    await profile.save();
+    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
+    try {
+      const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
+    } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
+    await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/tutor/application-status" });
+  } else if (!mpEligible && profile.marketplaceEligible) {
+    profile.marketplaceEligible = false;
+    profile.marketplaceEligibleAt = undefined as any;
+    await profile.save();
+    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
+  }
+  if (htEligible && !profile.homeTuitionEligible) {
+    profile.homeTuitionEligible = true;
+    profile.homeTuitionEligibleAt = now;
+    await profile.save();
+    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
+    try {
+      const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
+    } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
+    await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
+  } else if (!htEligible && profile.homeTuitionEligible) {
+    profile.homeTuitionEligible = false;
+    profile.homeTuitionEligibleAt = undefined as any;
+    await profile.save();
+    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
+  }
 
   res.status(200).json({
     success: true,
