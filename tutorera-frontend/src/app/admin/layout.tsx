@@ -7,6 +7,7 @@ import {
   Star, Banknote, BarChart2, ClipboardList,
   Radio,
   Layers,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/admin/marketplace",      label: "Marketplace",      icon: <ClipboardList size={18} /> },
   { href: "/admin/subscriptions",    label: "Subscriptions",    icon: <Layers size={18} /> },
   { href: "/admin/audit-logs",       label: "Audit Logs",       icon: <ClipboardList size={18} /> },
+  { href: "/admin/email-logs",       label: "Email Logs",       icon: <Mail size={18} /> },
   { href: "/admin/broadcasts",       label: "Broadcasts",       icon: <Radio size={18} /> },
   { href: "/admin/verifications",    label: "Verifications",    icon: <ShieldCheck size={18} /> },
   { href: "/admin/applications",     label: "Applications",     icon: <ClipboardList size={18} /> },

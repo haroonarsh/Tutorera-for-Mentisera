@@ -15,6 +15,7 @@ import Review from "../models/Review.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 import { logAudit } from "../utils/logAudit";
 import AuditLog from "../models/AuditLog.model";
+import EmailLog from "../models/EmailLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import sendEmail from "../utils/sendEmail";
@@ -813,6 +814,52 @@ export const getAuditLogs = async (req: AuthRequest, res: Response): Promise<voi
     pages: Math.ceil(total / limitNum),
     logs,
     filters: { actions, entities },
+  });
+};
+
+// @desc    Get transactional email logs
+// @route   GET /api/admin/email-logs
+// @access  Private (admin)
+export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { status, eventType, recipient, page = "1", limit = "50" } = req.query;
+
+  const filter: Record<string, unknown> = {};
+  if (status && status !== "all") filter.status = status;
+  if (eventType && eventType !== "all") filter.eventType = eventType;
+  if (recipient) filter.recipientEmail = { $regex: String(recipient), $options: "i" };
+
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 50));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [total, logs, statusCounts, eventTypes] = await Promise.all([
+    EmailLog.countDocuments(filter),
+    EmailLog.find(filter)
+      .populate("user", "name role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    EmailLog.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
+    EmailLog.distinct("eventType"),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    total,
+    page: pageNum,
+    pages: Math.ceil(total / limitNum),
+    logs,
+    filters: {
+      eventTypes: eventTypes.sort(),
+      statusCounts: statusCounts.reduce((acc: Record<string, number>, row: { _id: string; count: number }) => {
+        acc[row._id] = row.count;
+        return acc;
+      }, {}),
+    },
   });
 };
 

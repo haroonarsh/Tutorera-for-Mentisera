@@ -16,6 +16,7 @@ import {
   getPayouts,
   getAnalytics,
   getAuditLogs,
+  getEmailLogs,
   getBroadcasts,
   sendBroadcast,
   getSubscriptions,
@@ -44,6 +45,7 @@ router.get("/marketplace/offers/:id", getMarketplaceOfferDetail);
 router.get("/verifications", getPendingVerifications);
 router.get("/payouts", getPayouts);
 router.get("/audit-logs", getAuditLogs);
+router.get("/email-logs", getEmailLogs);
 router.post("/broadcasts", sendBroadcast);
 router.get("/broadcasts",  getBroadcasts);
 router.get("/subscriptions", getSubscriptions);
