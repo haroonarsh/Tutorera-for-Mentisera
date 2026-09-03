@@ -127,7 +127,7 @@ const relatedLink = {
   padding: "0 .95rem",
   borderRadius: 999,
   color: "#1d4ed8",
-  background: "#eff6ff",
+  background: "#EEF5FF",
   border: "1px solid #bfdbfe",
   fontWeight: 800,
   textDecoration: "none",

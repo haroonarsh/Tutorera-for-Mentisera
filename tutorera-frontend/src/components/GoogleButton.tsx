@@ -1,7 +1,8 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useRef } from "react";
 
-const C = { primary: '#1a1a2e', gray500: '#6b7280' };
+const C = UI_COLORS;
 
 declare global {
   interface Window {

@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -7,12 +8,7 @@ import {
   Tooltip, ResponsiveContainer,
 } from "recharts";
 
-const C = {
-  primary: '#1a1a2e',
-  accent:  '#2563eb',
-  gray500: '#6b7280',
-  gray50:  '#f9fafb',
-};
+const C = UI_COLORS;
 
 interface Overview {
   totalUsers: number;
@@ -76,7 +72,7 @@ function ChartTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '#021550',
       borderRadius: '0.5rem',
       padding: '0.6rem 0.875rem',
       boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
@@ -91,14 +87,14 @@ function ChartTooltip({ active, payload, label }: {
 
 const planColors: Record<string, { bar: string; bg: string; text: string }> = {
   free:     { bar: '#6b7280', bg: '#f3f4f6', text: '#6b7280' },
-  standard: { bar: '#2563eb', bg: '#eff6ff', text: '#2563eb' },
+  standard: { bar: '#0329B2', bg: '#EEF5FF', text: '#0329B2' },
   premium:  { bar: '#9333ea', bg: '#fdf4ff', text: '#9333ea' },
 };
 
 const bookingStatusConfig: {
   key: keyof BookingStatus; label: string; color: string; bg: string;
 }[] = [
-  { key: 'upcoming',  label: 'Upcoming',  color: '#2563eb', bg: '#eff6ff' },
+  { key: 'upcoming',  label: 'Upcoming',  color: '#0329B2', bg: '#EEF5FF' },
   { key: 'ongoing',   label: 'Ongoing',   color: '#9333ea', bg: '#fdf4ff' },
   { key: 'completed', label: 'Completed', color: '#16a34a', bg: '#f0fdf4' },
   { key: 'cancelled', label: 'Cancelled', color: '#ef4444', bg: '#fef2f2' },
@@ -155,11 +151,11 @@ export default function AnalyticsPage() {
       {/* Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: 'Total Users',         value: ov?.totalUsers,           sub: `+${ov?.newUsersThisMonth ?? 0} this month`,  color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+          { label: 'Total Users',         value: ov?.totalUsers,           sub: `+${ov?.newUsersThisMonth ?? 0} this month`,  color: '#0329B2', bg: '#EEF5FF', border: '#bfdbfe' },
           { label: 'New This Week',        value: ov?.newUsersThisWeek,     sub: 'registered users',                           color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
           { label: 'Total Bookings',       value: ov?.totalBookings,        sub: 'all time',                                   color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
           { label: 'Revenue This Month',   value: `Rs. ${(ov?.revenueThisMonth ?? 0).toLocaleString()}`,  sub: 'confirmed payments', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-          { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+          { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: '#0329B2', bg: '#EEF5FF', border: '#bfdbfe' },
           { label: 'Pending Payouts',      value: `Rs. ${(ov?.pendingPayouts ?? 0).toLocaleString()}`,    sub: 'owed to tutors',      color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
         ].map(card => (
           <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', borderTop: `3px solid ${card.color}` }}>
@@ -185,8 +181,8 @@ export default function AnalyticsPage() {
             <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id="signupGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#2563eb" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#0329B2" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="#0329B2" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -204,16 +200,16 @@ export default function AnalyticsPage() {
               />
               <Tooltip
                 content={<ChartTooltip />}
-                cursor={{ stroke: '#2563eb', strokeWidth: 1, strokeDasharray: '4 4' }}
+                cursor={{ stroke: '#0329B2', strokeWidth: 1, strokeDasharray: '4 4' }}
               />
               <Area
                 type="monotone"
                 dataKey="users"
-                stroke="#2563eb"
+                stroke="#0329B2"
                 strokeWidth={2.5}
                 fill="url(#signupGradient)"
                 dot={false}
-                activeDot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: 'white' }}
+                activeDot={{ r: 5, fill: '#0329B2', strokeWidth: 2, stroke: 'white' }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -304,7 +300,7 @@ export default function AnalyticsPage() {
                       Rs. {tutor.revenue.toLocaleString()} earned
                     </p>
                   </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.accent, backgroundColor: '#eff6ff', padding: '0.2rem 0.6rem', borderRadius: '999px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.accent, backgroundColor: '#EEF5FF', padding: '0.2rem 0.6rem', borderRadius: '999px', flexShrink: 0 }}>
                     {tutor.count} {tutor.count === 1 ? 'booking' : 'bookings'}
                   </span>
                 </div>

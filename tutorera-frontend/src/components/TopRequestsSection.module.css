@@ -73,7 +73,7 @@
 
 .cardHead h3 {
   margin: 0;
-  color: #1a1a2e;
+  color: #021550;
   font-size: 1.1rem;
   font-weight: 800;
 }
@@ -90,7 +90,7 @@
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
   color: #1d4ed8;
-  background: #eff6ff;
+  background: #EEF5FF;
   font-size: 0.74rem;
   font-weight: 700;
 }
@@ -126,7 +126,7 @@
   height: 34px;
   border-radius: 999px;
   color: #fff;
-  background: linear-gradient(135deg, #2563eb, #16a34a);
+  background: linear-gradient(135deg, #0329B2, #16a34a);
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -134,7 +134,7 @@
 
 .studentName {
   font-weight: 700;
-  color: #1a1a2e;
+  color: #021550;
   font-size: 0.88rem;
 }
 
@@ -179,7 +179,7 @@
   border-radius: 0.5rem;
   border: 1px solid #e6ebf2;
   background: #fff;
-  color: #1a1a2e;
+  color: #021550;
   font-weight: 700;
   cursor: pointer;
   transition: background-color 160ms ease, box-shadow 160ms ease;
@@ -197,7 +197,7 @@
 
 .pageBtn:disabled:hover {
   background: #fff;
-  color: #1a1a2e;
+  color: #021550;
 }
 
 .pageInfo {
@@ -231,7 +231,7 @@
   font-weight: 800;
   text-decoration: none;
   color: #fff;
-  background: linear-gradient(135deg, #2563eb, #1646bf);
+  background: linear-gradient(135deg, #0329B2, #1646bf);
   box-shadow: 0 18px 34px rgba(37, 99, 235, 0.24);
 }
 

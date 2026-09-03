@@ -1,16 +1,16 @@
-'use client';
-
+"use client";
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { slugify } from "@/lib/tutor-directory";
 import { formatPKR } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
+const C = UI_COLORS;
 
 const subjectCategories = [
   {
     category: "Sciences",
-    color: "#eff6ff",
-    textColor: "#2563eb",
+    color: "#EEF5FF",
+    textColor: "#0329B2",
     subjects: ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "Statistics"],
   },
   {
@@ -34,7 +34,7 @@ const subjectCategories = [
   {
     category: "Test Preparation",
     color: "#fff1f2",
-    textColor: "#e94560",
+    textColor: "#C81B7F",
     subjects: ["MDCAT", "ECAT", "SAT", "IELTS", "Entry Tests"],
   },
   {

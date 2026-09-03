@@ -81,7 +81,7 @@ export default function AdminApplicationsPage() {
     <div style={{ padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ marginBottom: 18 }}>
-          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#2563eb", margin: "0 0 6px" }}>Admin</p>
+          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#0329B2", margin: "0 0 6px" }}>Admin</p>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#021550", margin: "0 0 6px" }}>Tutor Applications</h1>
           <p style={{ color: "#64748b", fontSize: 14, margin: 0 }}>Review verification, manage eligibility, and act on every tutor application.</p>
         </div>
@@ -170,7 +170,7 @@ export default function AdminApplicationsPage() {
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ width: 60, height: 6, background: "#f1f5f9", borderRadius: 999, overflow: "hidden" }}>
-                            <div style={{ width: `${row.progress}%`, height: "100%", background: "linear-gradient(90deg, #2563eb, #7C1BEA)" }} />
+                            <div style={{ width: `${row.progress}%`, height: "100%", background: "linear-gradient(90deg, #0329B2, #7C1BEA)" }} />
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 700 }}>{row.progress}%</span>
                         </div>
@@ -219,5 +219,5 @@ const inputStyle: React.CSSProperties = {
 };
 const thStyle: React.CSSProperties = { textAlign: "left", padding: "12px 14px", fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em" };
 const tdStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: "#1f2937", verticalAlign: "middle" };
-const btnPrimaryStyle: React.CSSProperties = { background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const btnSecondaryStyle: React.CSSProperties = { background: "#fff", color: "#1a1a2e", border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const btnPrimaryStyle: React.CSSProperties = { background: "#021550", color: "#fff", border: "none", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const btnSecondaryStyle: React.CSSProperties = { background: "#fff", color: "#021550", border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };

@@ -1,11 +1,12 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import { useSocket } from "@/context/SocketContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { Bell } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 export default function NotificationsPage() {
   const guardStatus = useAppGuard();
@@ -107,10 +108,10 @@ export default function NotificationsPage() {
             notifications.map(notif => (
               <div key={notif._id}
                 onClick={() => markAsRead(notif._id)}
-                style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff', display: 'flex', gap: '0.875rem', alignItems: 'flex-start' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #F5F7FF', cursor: 'pointer', backgroundColor: notif.isRead ? 'white' : '#f0f7ff', display: 'flex', gap: '0.875rem', alignItems: 'flex-start' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F7FF')}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = notif.isRead ? 'white' : '#f0f7ff')}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: notif.type === 'verification' ? '#f0fdf4' : notif.type === 'bid' ? '#eff6ff' : notif.type === 'booking' ? '#fdf4ff' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: notif.type === 'verification' ? '#f0fdf4' : notif.type === 'bid' ? '#EEF5FF' : notif.type === 'booking' ? '#fdf4ff' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>
                   {notif.type === 'verification' ? '🛡️' : notif.type === 'bid' ? '📬' : notif.type === 'booking' ? '📅' : notif.type === 'payment' ? '💰' : '🔔'}
                 </div>
                 <div style={{ flex: 1 }}>

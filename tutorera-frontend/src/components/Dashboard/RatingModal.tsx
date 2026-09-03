@@ -1,6 +1,5 @@
-// components/dashboard/RatingModal.tsx
 "use client";
-
+// components/dashboard/RatingModal.tsx
 import { useState } from "react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -53,7 +52,7 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
-            <h2 id="rating-modal-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a1a2e', margin: '0 0 4px' }}>{title}</h2>
+            <h2 id="rating-modal-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#021550', margin: '0 0 4px' }}>{title}</h2>
             <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{subtitle}</p>
           </div>
           <button onClick={onClose} aria-label="Close"
@@ -92,7 +91,7 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
 
         {/* Comment */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#1a1a2e', marginBottom: '0.4rem' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#021550', marginBottom: '0.4rem' }}>
             Your comment *
           </label>
           <textarea
@@ -100,8 +99,8 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
             onChange={e => setComment(e.target.value)}
             rows={4}
             placeholder="Share your experience in detail (min. 10 characters)..."
-            style={{ width: '100%', padding: '0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#1a1a2e', boxSizing: 'border-box' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#2563eb')}
+            style={{ width: '100%', padding: '0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#021550', boxSizing: 'border-box' }}
+            onFocus={e => (e.currentTarget.style.borderColor = '#0329B2')}
             onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
           <p style={{ fontSize: '0.7rem', color: comment.length < 10 ? '#9ca3af' : '#16a34a', margin: '4px 0 0', textAlign: 'right' }}>
             {comment.length} characters {comment.length < 10 ? `(${10 - comment.length} more needed)` : "✓"}
@@ -115,7 +114,7 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={loading}
-            style={{ flex: 1, padding: '0.75rem', backgroundColor: loading ? '#93c5fd' : '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.875rem' }}>
+            style={{ flex: 1, padding: '0.75rem', backgroundColor: loading ? '#93c5fd' : '#0329B2', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.875rem' }}>
             {loading ? "Submitting..." : "Submit Rating"}
           </button>
         </div>

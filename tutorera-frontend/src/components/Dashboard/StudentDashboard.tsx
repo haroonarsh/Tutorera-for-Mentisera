@@ -1,6 +1,6 @@
-// components/dashboard/StudentDashboard.tsx
 "use client";
-
+import { UI_COLORS } from "@/lib/brand";
+// components/dashboard/StudentDashboard.tsx
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import axiosInstance from "@/lib/axios";
@@ -14,11 +14,7 @@ import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  highlight: '#e94560',
-};
+const C = UI_COLORS;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,7 +128,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
           <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
           {/* First session badge */}
           {booking.isFirstSession && (
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#EEF5FF', color: '#0329B2', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
               1st Session
             </span>
           )}
@@ -142,7 +138,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
         <button onClick={handleChatClick} disabled={creatingChat}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#eff6ff', color: creatingChat ? '#9ca3af' : '#2563eb', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600', cursor: creatingChat ? 'not-allowed' : 'pointer' }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#EEF5FF', color: creatingChat ? '#9ca3af' : '#0329B2', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600', cursor: creatingChat ? 'not-allowed' : 'pointer' }}>
           {creatingChat ? "Opening..." : "💬 Chat"}
         </button>
 
@@ -175,7 +171,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
         {/* ── First Session Guarantee button ── */}
         {showGuaranteeButton && (
           <button onClick={() => setShowClaimForm(!showClaimForm)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showClaimForm ? '#fef2f2' : '#fff1f2', color: '#e94560', borderRadius: '0.5rem', border: '1px solid #fecdd3', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showClaimForm ? '#fef2f2' : '#fff1f2', color: '#C81B7F', borderRadius: '0.5rem', border: '1px solid #fecdd3', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
             😕 Not Satisfied?
           </button>
         )}
@@ -223,7 +219,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
       {/* Claim form — expands inline */}
       {showClaimForm && (
         <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
-          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e94560', marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C81B7F', marginBottom: '0.75rem' }}>
             First Session Guarantee Claim
           </p>
           <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.875rem', lineHeight: 1.5 }}>
@@ -232,11 +228,11 @@ function BookingCard({ booking, onClaimSubmitted }: {
 
           {/* Reason select */}
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#1a1a2e', marginBottom: '0.3rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#021550', marginBottom: '0.3rem' }}>
               What went wrong? *
             </label>
             <select title="Claim reasons" value={claimReason} onChange={e => setClaimReason(e.target.value)}
-              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: '#1a1a2e', backgroundColor: 'white', boxSizing: 'border-box' }}>
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: '#021550', backgroundColor: 'white', boxSizing: 'border-box' }}>
               <option value="">Select a reason</option>
               <option value="Tutor didn't show up">Tutor didn't show up</option>
               <option value="Tutor was unprepared">Tutor was unprepared</option>
@@ -250,17 +246,17 @@ function BookingCard({ booking, onClaimSubmitted }: {
 
           {/* Optional details */}
           <div style={{ marginBottom: '0.875rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#1a1a2e', marginBottom: '0.3rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#021550', marginBottom: '0.3rem' }}>
               Additional details <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
             </label>
             <textarea value={claimDetails} onChange={e => setClaimDetails(e.target.value)} rows={3}
               placeholder="Tell us more about what happened..."
-              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#1a1a2e', boxSizing: 'border-box' }} />
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#021550', boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim}
-              style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#e94560', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
+              style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#C81B7F', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
               {submittingClaim ? "Submitting..." : "Submit Claim"}
             </button>
             <button onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}
@@ -318,7 +314,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
           </div>
         </Link>
         <button onClick={handleRemove} disabled={removing}
-          style={{ background: 'none', border: 'none', cursor: removing ? 'not-allowed' : 'pointer', color: '#e94560', padding: '0.4rem', flexShrink: 0 }}
+          style={{ background: 'none', border: 'none', cursor: removing ? 'not-allowed' : 'pointer', color: '#C81B7F', padding: '0.4rem', flexShrink: 0 }}
           aria-label="Remove from favourites">
           <Trash2 size={16} />
         </button>
@@ -508,7 +504,7 @@ function RequestCard({
           )}
         </>
       )}
-      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#eff6ff"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
+      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
     </div>
   );
 }
@@ -631,7 +627,7 @@ const fetchRequests = useCallback(async () => {
         <div className={s.stats}>
           <div className={s.statCard}>
             <div className={s.statIcon} style={{ background: "rgba(37,99,235,0.1)" }}>
-              <svg width={22} height={22} viewBox="0 0 20 20" fill="#2563eb" aria-hidden="true">
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#0329B2" aria-hidden="true">
                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                 <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
               </svg>

@@ -1,14 +1,10 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  gray500: '#6b7280',
-  gray50: '#f9fafb',
-};
+const C = UI_COLORS;
 
 interface Booking {
   _id: string;
@@ -37,7 +33,7 @@ type FilterStatus = "all" | "pending" | "paid";
 const statusColors: Record<string, { bg: string; color: string }> = {
   pending:   { bg: '#fef3c7', color: '#d97706' },
   paid:      { bg: '#f0fdf4', color: '#16a34a' },
-  upcoming:  { bg: '#eff6ff', color: '#2563eb' },
+  upcoming:  { bg: '#EEF5FF', color: '#0329B2' },
   completed: { bg: '#f0fdf4', color: '#16a34a' },
   ongoing:   { bg: '#fdf4ff', color: '#9333ea' },
   cancelled: { bg: '#fef2f2', color: '#ef4444' },

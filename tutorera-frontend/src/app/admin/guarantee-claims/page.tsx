@@ -1,10 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Clock, Shield } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface Claim {
   _id: string;
@@ -94,7 +95,7 @@ export default function GuaranteeClaimsPage() {
                 onClick={() => setExpanded(expanded === claim._id ? null : claim._id)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <div style={{ width: 40, height: 40, backgroundColor: '#fff1f2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Shield size={18} color="#e94560" />
+                    <Shield size={18} color="#C81B7F" />
                   </div>
                   <div>
                     <p style={{ fontWeight: 700, color: C.primary, fontSize: '0.95rem' }}>{claim.student.name}</p>

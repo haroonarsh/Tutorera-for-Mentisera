@@ -1,11 +1,12 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { CheckCircle, Clock } from "lucide-react";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb' };
+const C = UI_COLORS;
 
 export default function OnboardingCompletePage() {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F5F7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '3rem 2rem', maxWidth: '480px', width: '100%', textAlign: 'center', border: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
 
         <div style={{ width: '72px', height: '72px', backgroundColor: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>

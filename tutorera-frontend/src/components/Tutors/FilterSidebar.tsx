@@ -1,6 +1,5 @@
-// components/tutors/FilterSidebar.tsx
 "use client";
-
+// components/tutors/FilterSidebar.tsx
 import { FiltersState, LEVELS, TEACHING_MODES, CITIES } from "@/types/tutor";
 import StarRating from "./StarRating";
 import styles from "./Filtersidebar.module.css";

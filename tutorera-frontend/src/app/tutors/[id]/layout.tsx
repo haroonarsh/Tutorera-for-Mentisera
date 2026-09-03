@@ -41,5 +41,5 @@ export default async function TutorProfileLayout({ children, params }: Props) {
       ],
     },
   };
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} /><nav aria-label="Breadcrumb" style={{ maxWidth: 1100, margin: "0 auto", padding: "1rem 1.5rem 0", color: "#6b7280", fontSize: ".875rem" }}><Link href="/tutors" style={{ color: "#2563eb" }}>Tutors</Link> <span aria-hidden="true">/</span> {name}<p style={{ marginTop: ".5rem" }}>{name} teaches {tutor.subjects?.join(", ") || "multiple subjects"} in {tutor.city || "Pakistan"} and offers {tutor.teachingMode === "both" ? "online and in-person" : tutor.teachingMode} lessons.</p></nav>{children}</>;
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} /><nav aria-label="Breadcrumb" style={{ maxWidth: 1100, margin: "0 auto", padding: "1rem 1.5rem 0", color: "#6b7280", fontSize: ".875rem" }}><Link href="/tutors" style={{ color: "#0329B2" }}>Tutors</Link> <span aria-hidden="true">/</span> {name}<p style={{ marginTop: ".5rem" }}>{name} teaches {tutor.subjects?.join(", ") || "multiple subjects"} in {tutor.city || "Pakistan"} and offers {tutor.teachingMode === "both" ? "online and in-person" : tutor.teachingMode} lessons.</p></nav>{children}</>;
 }

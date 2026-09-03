@@ -249,7 +249,7 @@ export default function OffersPage() {
 
 const card = { background: "white", padding: 20, border: "1px solid #e2e8f0", borderRadius: 14 } as const;
 const actions = { display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" } as const;
-const primary = { background: "#2563eb", color: "white", border: 0, borderRadius: 8, padding: "9px 14px", fontWeight: 700, cursor: "pointer" } as const;
+const primary = { background: "#0329B2", color: "white", border: 0, borderRadius: 8, padding: "9px 14px", fontWeight: 700, cursor: "pointer" } as const;
 const secondary = { background: "white", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 8, padding: "9px 14px", fontWeight: 600, cursor: "pointer", textDecoration: "none" } as const;
 const danger = { ...secondary, color: "#b91c1c" } as const;
 const overlay = { position: "fixed" as const, inset: 0, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 20, zIndex: 1000 } as const;

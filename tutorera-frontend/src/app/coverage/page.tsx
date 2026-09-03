@@ -1,7 +1,8 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { MapPin, Wifi } from "lucide-react";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 const cities = [
   { name: "Islamabad", areas: ["F-6", "F-7", "F-8", "F-10", "G-9", "G-11", "DHA", "Bahria Town"] },
@@ -27,16 +28,16 @@ export default function CoveragePage() {
       </section>
 
       {/* Online Banner */}
-      <section style={{ padding: '3rem 1.5rem', backgroundColor: '#eff6ff', borderBottom: '1px solid #bfdbfe' }}>
+      <section style={{ padding: '3rem 1.5rem', backgroundColor: '#EEF5FF', borderBottom: '1px solid #bfdbfe' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-          <div style={{ width: '56px', height: '56px', backgroundColor: '#2563eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '56px', height: '56px', backgroundColor: '#0329B2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Wifi size={24} color="white" />
           </div>
           <div>
             <h2 style={{ fontWeight: '800', color: C.primary, fontSize: '1.2rem', marginBottom: '0.3rem' }}>Online Tutoring — Available Pakistan-Wide</h2>
             <p style={{ color: C.gray500, fontSize: '0.9rem' }}>No matter where you are in Pakistan, you can access tutors online via TUTORERA®. Video sessions, screen sharing, and real-time chat included.</p>
           </div>
-          <Link href="/tutors?teachingMode=online" style={{ backgroundColor: '#2563eb', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          <Link href="/tutors?teachingMode=online" style={{ backgroundColor: '#0329B2', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             Find Online Tutors
           </Link>
         </div>

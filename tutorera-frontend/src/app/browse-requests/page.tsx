@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
 import { MapPin, BookOpen, Clock, Send } from "lucide-react";
@@ -7,10 +8,7 @@ import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { DashRequest } from "@/types/dashboard";
 import { formatPKR } from "@/lib/site";
 
-const C = {
-  primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb',
-  accentLight: '#eff6ff', error: '#ef4444', success: '#16a34a',
-};
+const C = UI_COLORS;
 
 interface RequestItem {
   _id: string;

@@ -1,10 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { UserCheck, UserX, Search } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface User {
   _id: string;
@@ -20,12 +21,12 @@ interface User {
 
 const planColors: Record<string, { bg: string; color: string }> = {
   free:     { bg: '#f3f4f6', color: '#6b7280' },
-  standard: { bg: '#eff6ff', color: '#2563eb' },
+  standard: { bg: '#EEF5FF', color: '#0329B2' },
   premium:  { bg: '#fdf4ff', color: '#9333ea' },
 };
 
 const roleColors: Record<string, { bg: string; color: string }> = {
-  student: { bg: '#eff6ff', color: '#2563eb' },
+  student: { bg: '#EEF5FF', color: '#0329B2' },
   tutor:   { bg: '#f0fdf4', color: '#16a34a' },
   admin:   { bg: '#f5f3ff', color: '#7c3aed' },
 };
@@ -184,7 +185,7 @@ export default function UsersPage() {
                       {["free", "standard", "premium"].map(plan => (
                         <button key={plan}
                           onClick={() => handleChangePlan(user._id, plan)}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 0.875rem', fontSize: '0.8rem', fontWeight: user.plan === plan ? '700' : '500', color: user.plan === plan ? C.accent : C.primary, backgroundColor: user.plan === plan ? '#eff6ff' : 'transparent', border: 'none', cursor: 'pointer', textTransform: 'capitalize' }}>
+                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 0.875rem', fontSize: '0.8rem', fontWeight: user.plan === plan ? '700' : '500', color: user.plan === plan ? C.accent : C.primary, backgroundColor: user.plan === plan ? '#EEF5FF' : 'transparent', border: 'none', cursor: 'pointer', textTransform: 'capitalize' }}>
                           {plan} {user.plan === plan && '✓'}
                         </button>
                       ))}

@@ -1,6 +1,5 @@
-// components/tutors/SlotPicker.tsx
 "use client";
-
+// components/tutors/SlotPicker.tsx
 import { useState, useEffect } from "react";
 import api from "@/lib/axios";
 
@@ -107,13 +106,13 @@ export default function SlotPicker({ tutorUserId, onSlotSelect, selectedSlot }: 
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '2rem' }}>
-      <div style={{ width: 28, height: 28, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+      <div style={{ width: 28, height: 28, border: '3px solid #e5e7eb', borderTopColor: '#0329B2', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   if (!hasAvailability || allSlots.length === 0) return (
-    <div style={{ backgroundColor: '#f9fafb', borderRadius: '0.75rem', padding: '1.5rem', textAlign: 'center', border: '1px dashed #e5e7eb' }}>
+    <div style={{ backgroundColor: '#F5F7FF', borderRadius: '0.75rem', padding: '1.5rem', textAlign: 'center', border: '1px dashed #e5e7eb' }}>
       <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📅</p>
       <p style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>No available slots in the next 2 weeks</p>
       <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.25rem' }}>This tutor hasn't set their schedule yet or is fully booked.</p>
@@ -133,14 +132,14 @@ export default function SlotPicker({ tutorUserId, onSlotSelect, selectedSlot }: 
         <button
           onClick={() => setWeekOffset(0)}
           disabled={weekOffset === 0}
-          style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 0 ? '#f9fafb' : 'white', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
+          style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 0 ? '#F5F7FF' : 'white', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
           ←
         </button>
-        <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a2e' }}>{weekLabel}</span>
+        <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#021550' }}>{weekLabel}</span>
         <button
           onClick={() => setWeekOffset(1)}
           disabled={weekOffset === 1 || week2Days.length === 0}
-          style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 1 || week2Days.length === 0 ? '#f9fafb' : 'white', cursor: weekOffset === 1 || week2Days.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 1 || week2Days.length === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
+          style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 1 || week2Days.length === 0 ? '#F5F7FF' : 'white', cursor: weekOffset === 1 || week2Days.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 1 || week2Days.length === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
           →
         </button>
       </div>
@@ -156,14 +155,14 @@ export default function SlotPicker({ tutorUserId, onSlotSelect, selectedSlot }: 
             style={{
               flex: 1, minWidth: 44, padding: '0.6rem 0.25rem',
               borderRadius: '0.75rem', border: '1.5px solid',
-              borderColor: selectedDate === day.date ? '#2563eb' : '#e5e7eb',
-              backgroundColor: selectedDate === day.date ? '#eff6ff' : 'white',
+              borderColor: selectedDate === day.date ? '#0329B2' : '#e5e7eb',
+              backgroundColor: selectedDate === day.date ? '#EEF5FF' : 'white',
               cursor: 'pointer', textAlign: 'center',
             }}>
-            <p style={{ margin: 0, fontSize: '0.65rem', color: selectedDate === day.date ? '#2563eb' : '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>{day.dayShort}</p>
-            <p style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: selectedDate === day.date ? '#2563eb' : '#1a1a2e' }}>{day.dateNum}</p>
+            <p style={{ margin: 0, fontSize: '0.65rem', color: selectedDate === day.date ? '#0329B2' : '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>{day.dayShort}</p>
+            <p style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: selectedDate === day.date ? '#0329B2' : '#021550' }}>{day.dateNum}</p>
             <p style={{ margin: 0, fontSize: '0.6rem', color: selectedDate === day.date ? '#60a5fa' : '#9ca3af' }}>{day.monthShort}</p>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: selectedDate === day.date ? '#2563eb' : '#d1d5db', margin: '4px auto 0' }} />
+            <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: selectedDate === day.date ? '#0329B2' : '#d1d5db', margin: '4px auto 0' }} />
           </button>
         ))}
       </div>
@@ -188,8 +187,8 @@ export default function SlotPicker({ tutorUserId, onSlotSelect, selectedSlot }: 
                         onClick={() => onSlotSelect(isSelected ? null : slot)}
                         style={{
                           padding: '0.4rem 0.875rem', borderRadius: '0.5rem',
-                          border: `1.5px solid ${isSelected ? '#2563eb' : '#e5e7eb'}`,
-                          backgroundColor: isSelected ? '#2563eb' : 'white',
+                          border: `1.5px solid ${isSelected ? '#0329B2' : '#e5e7eb'}`,
+                          backgroundColor: isSelected ? '#0329B2' : 'white',
                           color: isSelected ? 'white' : '#374151',
                           fontSize: '0.8rem', fontWeight: isSelected ? 700 : 500,
                           cursor: 'pointer', transition: 'all 0.15s',

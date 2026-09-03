@@ -1,13 +1,9 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
 
-const C = {
-  primary: '#1a1a2e',
-  accent:  '#2563eb',
-  gray500: '#6b7280',
-  gray50:  '#f9fafb',
-};
+const C = UI_COLORS;
 
 interface AuditLog {
   _id: string;
@@ -38,7 +34,7 @@ function getActionStyle(action: string): { bg: string; color: string } {
     return { bg: '#fef2f2', color: '#ef4444' };
   }
   if (action.includes("registered") || action.includes("created") || action.includes("placed")) {
-    return { bg: '#eff6ff', color: '#2563eb' };
+    return { bg: '#EEF5FF', color: '#0329B2' };
   }
   if (action.includes("plan_changed") || action.includes("updated")) {
     return { bg: '#fdf4ff', color: '#9333ea' };

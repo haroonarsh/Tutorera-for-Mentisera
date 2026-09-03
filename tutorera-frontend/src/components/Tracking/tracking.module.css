@@ -2,7 +2,7 @@
 
 .trackingPage {
   min-height: 100vh;
-  background: #f9fafb;
+  background: #F5F7FF;
   padding: 32px 20px 64px;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: #1f2937;
@@ -22,7 +22,7 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: #0329B2;
   margin-bottom: 6px;
 }
 
@@ -177,7 +177,7 @@
 }
 .progressBar > div {
   height: 100%;
-  background: linear-gradient(90deg, #2563eb 0%, #7C1BEA 100%);
+  background: linear-gradient(90deg, #0329B2 0%, #7C1BEA 100%);
   transition: width 0.4s ease;
 }
 
@@ -213,7 +213,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #1a1a2e;
+  background: #021550;
   color: #fff;
   border: none;
   border-radius: 999px;
@@ -231,8 +231,8 @@
 
 .ctaButton.secondary {
   background: #fff;
-  color: #1a1a2e;
-  border: 1.5px solid #1a1a2e;
+  color: #021550;
+  border: 1.5px solid #021550;
 }
 
 .timeline {
@@ -431,7 +431,7 @@
 }
 
 .copyBox button {
-  background: #1a1a2e;
+  background: #021550;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -449,7 +449,7 @@
   height: 32px;
   border-radius: 50%;
   border: 3px solid #e2e8f0;
-  border-top-color: #2563eb;
+  border-top-color: #0329B2;
   animation: trackingSpin 0.7s linear infinite;
   margin: 64px auto 16px;
 }

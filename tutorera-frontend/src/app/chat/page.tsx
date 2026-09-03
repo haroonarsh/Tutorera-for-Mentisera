@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -7,7 +8,7 @@ import { MessageSquare, ArrowRight } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface Conversation {
   _id: string;
@@ -91,7 +92,7 @@ export default function ChatListPage() {
                         ) : otherUser?.name?.charAt(0)}
                       </div>
                       {unreadCount > 0 && (
-                        <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '18px', height: '18px', backgroundColor: '#e94560', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '800', color: 'white' }}>
+                        <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '18px', height: '18px', backgroundColor: '#C81B7F', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '800', color: 'white' }}>
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}

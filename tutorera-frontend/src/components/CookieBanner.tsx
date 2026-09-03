@@ -1,8 +1,9 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb' };
+const C = UI_COLORS;
 
 export default function CookieBanner() {
   const [show, setShow] = useState(false);
@@ -74,7 +75,7 @@ export default function CookieBanner() {
             borderRadius: '0.5rem', background: 'white', cursor: 'pointer',
             fontSize: '0.8rem', fontWeight: '600', color: '#6b7280',
           }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F7FF')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'white')}>
           Decline
         </button>

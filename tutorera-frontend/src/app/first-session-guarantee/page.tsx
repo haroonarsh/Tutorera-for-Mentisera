@@ -1,12 +1,13 @@
+import { UI_COLORS } from "@/lib/brand";
 // app/first-session-guarantee/page.tsx
 import Link from "next/link";
 import { CheckCircle, Shield, RefreshCw, Clock } from "lucide-react";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb' };
+const C = UI_COLORS;
 
 export default function FirstSessionGuaranteePage() {
   return (
-    <div style={{ backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: '#F5F7FF', minHeight: '100vh' }}>
 
       {/* Hero */}
       <div style={{ backgroundColor: C.primary, padding: '4rem 1.5rem', textAlign: 'center' }}>
@@ -28,7 +29,7 @@ export default function FirstSessionGuaranteePage() {
         {/* Promise cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '3rem' }}>
           {[
-            { icon: <RefreshCw size={24} color={C.accent} />, bg: '#eff6ff', title: "Try Another Tutor", desc: "We'll credit your account so you can book a session with a different tutor at no extra cost." },
+            { icon: <RefreshCw size={24} color={C.accent} />, bg: '#EEF5FF', title: "Try Another Tutor", desc: "We'll credit your account so you can book a session with a different tutor at no extra cost." },
             { icon: <Shield size={24} color="#16a34a" />, bg: '#f0fdf4', title: "Or Get a Refund", desc: "If you'd prefer a refund instead, our team will review your claim and process it within 5 business days." },
             { icon: <Clock size={24} color="#d97706" />, bg: '#fffbeb', title: "Quick Resolution", desc: "We review all claims within 24–48 hours and keep you updated every step of the way." },
           ].map(card => (
@@ -52,7 +53,7 @@ export default function FirstSessionGuaranteePage() {
             { step: "04", title: "We make it right", desc: "You'll receive either a session credit to try another tutor or a full refund — your choice." },
           ].map((item, i) => (
             <div key={item.step} style={{ display: 'flex', gap: '1.25rem', paddingBottom: i < 3 ? '1.5rem' : 0, marginBottom: i < 3 ? '1.5rem' : 0, borderBottom: i < 3 ? '1px solid #f3f4f6' : 'none' }}>
-              <div style={{ width: 40, height: 40, backgroundColor: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', color: C.accent, flexShrink: 0 }}>
+              <div style={{ width: 40, height: 40, backgroundColor: '#EEF5FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', color: C.accent, flexShrink: 0 }}>
                 {item.step}
               </div>
               <div>

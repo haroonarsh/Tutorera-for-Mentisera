@@ -1,17 +1,12 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { BookOpen, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  gray500: '#6b7280',
-  gray50: '#f9fafb',
-  accentLight: '#eff6ff',
-};
+const C = UI_COLORS;
 
 const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Other"];
 const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
@@ -124,7 +119,7 @@ export default function StudentOnboardingPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
           <BookOpen size={24} color="#60a5fa" />
           <span style={{ color: 'white', fontWeight: '800', fontSize: '1.2rem' }}>
-            TUTORERA<span style={{ color: '#e94560' }}>®</span>
+            TUTORERA<span style={{ color: '#C81B7F' }}>®</span>
           </span>
         </div>
         <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.3rem' }}>Student Registration</p>

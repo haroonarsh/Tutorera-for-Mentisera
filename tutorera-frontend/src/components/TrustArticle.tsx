@@ -15,9 +15,9 @@ export default function TrustArticle({ title, intro, path, sections, updated = "
     ] },
   };
   return (
-    <main style={{ background: "#fff", color: "#1a1a2e" }}>
+    <main style={{ background: "#fff", color: "#021550" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      <header style={{ background: "#1a1a2e", padding: "4.5rem 1.5rem", textAlign: "center" }}>
+      <header style={{ background: "#021550", padding: "4.5rem 1.5rem", textAlign: "center" }}>
         <h1 style={{ color: "#fff", fontSize: "clamp(2rem,4vw,3rem)", marginBottom: "1rem" }}>{title}</h1>
         <p style={{ color: "#cbd5e1", maxWidth: 760, margin: "0 auto", lineHeight: 1.75 }}>{intro}</p>
       </header>
@@ -30,8 +30,8 @@ export default function TrustArticle({ title, intro, path, sections, updated = "
             {section.items && <ul style={{ color: "#4b5563", lineHeight: 1.8, paddingLeft: "1.25rem", marginTop: ".75rem" }}>{section.items.map((item) => <li key={item}>{item}</li>)}</ul>}
           </section>
         ))}
-        <aside style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "1.25rem" }}>
-          <strong>Questions or concerns?</strong>{" "}<Link href="/contact" style={{ color: "#2563eb" }}>Contact TUTORERA support</Link> at {SUPPORT_EMAIL}.
+        <aside style={{ background: "#EEF5FF", border: "1px solid #bfdbfe", borderRadius: 12, padding: "1.25rem" }}>
+          <strong>Questions or concerns?</strong>{" "}<Link href="/contact" style={{ color: "#0329B2" }}>Contact TUTORERA support</Link> at {SUPPORT_EMAIL}.
         </aside>
       </article>
     </main>

@@ -1,10 +1,11 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { MessageSquare, BookOpen, Users, Shield } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Help Center", description: "Answers about finding tutors, tutor verification, bookings, payments, safety, cancellations, and support on TUTORERA.", alternates: { canonical: "/help" } };
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
+const C = UI_COLORS;
 
 const faqs = [
   { q: "How do I find a tutor?", a: "Go to 'Find a Tutor', use filters to search by subject, level, city, and budget, then view tutor profiles and post a request." },

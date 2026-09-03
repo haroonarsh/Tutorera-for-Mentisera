@@ -1,4 +1,5 @@
-const C = { primary: '#1a1a2e', gray500: '#6b7280' };
+import { UI_COLORS } from "@/lib/brand";
+const C = UI_COLORS;
 export default function DisclaimerPage() {
   return (
     <div style={{ backgroundColor: 'white' }}>

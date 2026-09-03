@@ -1,3 +1,4 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { BookOpen, Users, Shield, Target, Heart } from "lucide-react";
 import type { Metadata } from "next";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/about" },
 };
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
+const C = UI_COLORS;
 
 export default function AboutPage() {
   return (
@@ -20,7 +21,7 @@ export default function AboutPage() {
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
             <BookOpen size={36} color="#60a5fa" />
-            <span style={{ fontSize: '2rem', fontWeight: '800', color: 'white' }}>TUTORERA<span style={{ color: '#e94560' }}>®</span></span>
+            <span style={{ fontSize: '2rem', fontWeight: '800', color: 'white' }}>TUTORERA<span style={{ color: '#C81B7F' }}>®</span></span>
           </div>
           <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '800', color: 'white', marginBottom: '1.25rem', lineHeight: '1.2' }}>
             Pakistan's Trusted Tutoring Marketplace

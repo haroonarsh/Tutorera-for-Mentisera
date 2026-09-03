@@ -1,6 +1,6 @@
-// app/support/page.tsx
 "use client";
-
+import { UI_COLORS } from "@/lib/brand";
+// app/support/page.tsx
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +8,7 @@ import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import api from "@/lib/axios";
 import { CheckCircle, MessageCircle, AlertTriangle } from "lucide-react";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 const SUBJECTS = [
   "Session not starting / technical issue",
@@ -93,7 +93,7 @@ function SupportForm() {
 
       {/* Booking reference badge */}
       {bookingId && (
-        <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.6rem 1rem', marginBottom: '1.5rem', fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
+        <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.6rem 1rem', marginBottom: '1.5rem', fontSize: '0.8rem', color: '#0329B2', fontWeight: 600 }}>
           📎 Linked to booking: {bookingId.slice(-8).toUpperCase()}
         </div>
       )}
@@ -140,7 +140,7 @@ function SupportForm() {
             </label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button type="button" onClick={() => setPriority("normal")}
-                style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', border: `1.5px solid ${priority === "normal" ? C.accent : '#e5e7eb'}`, backgroundColor: priority === "normal" ? '#eff6ff' : 'white', color: priority === "normal" ? C.accent : C.gray500, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', border: `1.5px solid ${priority === "normal" ? C.accent : '#e5e7eb'}`, backgroundColor: priority === "normal" ? '#EEF5FF' : 'white', color: priority === "normal" ? C.accent : C.gray500, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                 Normal
               </button>
               <button type="button" onClick={() => setPriority("urgent")}

@@ -1,10 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { MessageSquare, AlertTriangle, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface Contact {
   _id: string;
@@ -154,7 +155,7 @@ export default function ContactsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{
                       width: '40px', height: '40px', borderRadius: '50%',
-                      backgroundColor: isSupport ? '#fff7ed' : '#eff6ff',
+                      backgroundColor: isSupport ? '#fff7ed' : '#EEF5FF',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
                       {isSupport
@@ -188,7 +189,7 @@ export default function ContactsPage() {
                     {/* Status badge */}
                     <span style={{
                       padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
-                      backgroundColor: contact.status === "resolved" ? '#f0fdf4' : contact.status === "in_progress" ? '#eff6ff' : '#fffbeb',
+                      backgroundColor: contact.status === "resolved" ? '#f0fdf4' : contact.status === "in_progress" ? '#EEF5FF' : '#fffbeb',
                       color: contact.status === "resolved" ? '#16a34a' : contact.status === "in_progress" ? C.accent : '#d97706',
                       textTransform: 'capitalize',
                     }}>
@@ -207,7 +208,7 @@ export default function ContactsPage() {
 
                     {/* Booking ID reference for support requests */}
                     {isSupport && contact.bookingId && (
-                      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.4rem', padding: '0.5rem 0.875rem', marginBottom: '1rem', fontSize: '0.8rem', color: C.accent, fontWeight: 600 }}>
+                      <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.4rem', padding: '0.5rem 0.875rem', marginBottom: '1rem', fontSize: '0.8rem', color: C.accent, fontWeight: 600 }}>
                         📎 Booking ID: {contact.bookingId}
                       </div>
                     )}
@@ -235,7 +236,7 @@ export default function ContactsPage() {
                             <button
                               disabled={statusLoading === contact._id}
                               onClick={() => handleStatusChange(contact._id, "in_progress")}
-                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#eff6ff', color: C.accent, border: '1px solid #bfdbfe', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#EEF5FF', color: C.accent, border: '1px solid #bfdbfe', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                               Mark In Progress
                             </button>
                           )}
@@ -251,7 +252,7 @@ export default function ContactsPage() {
                             <button
                               disabled={statusLoading === contact._id}
                               onClick={() => handleStatusChange(contact._id, "open")}
-                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#f9fafb', color: C.gray500, border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#F5F7FF', color: C.gray500, border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                               Reopen
                             </button>
                           )}

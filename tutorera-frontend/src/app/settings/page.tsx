@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +9,7 @@ import { Camera, Save, Shield, Monitor, Smartphone } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();

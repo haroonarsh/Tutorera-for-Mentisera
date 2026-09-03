@@ -1,11 +1,12 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, ShieldCheck, BookOpen, MessageSquare, CheckCircle, Clock, TrendingUp, Download, FileSpreadsheet, FileText } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface Stats {
   totalUsers: number;
@@ -57,13 +58,13 @@ export default function AdminDashboard() {
   };
 
   const statCards = [
-    { label: "Total Users", value: stats?.totalUsers, icon: <Users size={22} color={C.accent} />, bg: '#eff6ff', link: "/admin/users" },
+    { label: "Total Users", value: stats?.totalUsers, icon: <Users size={22} color={C.accent} />, bg: '#EEF5FF', link: "/admin/users" },
     { label: "Total Tutors", value: stats?.totalTutors, icon: <BookOpen size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/users?role=tutor" },
     { label: "Total Students", value: stats?.totalStudents, icon: <Users size={22} color="#7c3aed" />, bg: '#f5f3ff', link: "/admin/users?role=student" },
     { label: "Pending Applications", value: stats?.pendingVerifications, icon: <Clock size={22} color="#d97706" />, bg: '#fffbeb', link: "/admin/applications?status=UNDER_REVIEW" },
     { label: "Approved Tutors", value: stats?.approvedTutors, icon: <CheckCircle size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/applications?status=APPROVED_FOR_MARKETPLACE" },
-    { label: "Total Bookings", value: stats?.totalBookings, icon: <TrendingUp size={22} color={C.accent} />, bg: '#eff6ff', link: "/admin/bookings" },
-    { label: "Contact Messages", value: stats?.totalContacts, icon: <MessageSquare size={22} color="#e94560" />, bg: '#fff1f2', link: "/admin/contacts" },
+    { label: "Total Bookings", value: stats?.totalBookings, icon: <TrendingUp size={22} color={C.accent} />, bg: '#EEF5FF', link: "/admin/bookings" },
+    { label: "Contact Messages", value: stats?.totalContacts, icon: <MessageSquare size={22} color="#C81B7F" />, bg: '#fff1f2', link: "/admin/contacts" },
     { label: "Application Reviews", value: (stats?.approvedTutors || 0), icon: <ShieldCheck size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/applications" },
   ];
 
@@ -115,13 +116,13 @@ export default function AdminDashboard() {
           <Link href="/admin/applications?status=UNDER_REVIEW" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#fffbeb', color: '#d97706', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #fde68a' }}>
             ⏳ Review Pending Tutors ({loading ? "..." : stats?.pendingVerifications ?? 0})
           </Link>
-          <Link href="/admin/bookings" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#eff6ff', color: C.accent, borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #bfdbfe' }}>
+          <Link href="/admin/bookings" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#EEF5FF', color: C.accent, borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #bfdbfe' }}>
             📋 Manage Bookings
           </Link>
           <Link href="/admin/payments" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#f0fdf4', color: '#16a34a', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #bbf7d0' }}>
             💰 Payment Management
           </Link>
-          <Link href="/admin/contacts" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#fff1f2', color: '#e94560', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #fecdd3' }}>
+          <Link href="/admin/contacts" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#fff1f2', color: '#C81B7F', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #fecdd3' }}>
             📬 View Messages
           </Link>
         </div>

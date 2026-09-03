@@ -1,10 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', error: '#ef4444' };
+const C = UI_COLORS;
 
 export default function SelectRolePage() {
   const [role, setRole] = useState<"student" | "tutor">("student");
@@ -32,13 +33,13 @@ export default function SelectRolePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F5F7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <BookOpen size={28} color={C.accent} />
-            <span style={{ fontSize: '1.4rem', fontWeight: '800', color: C.primary }}>TUTORERA<span style={{ color: '#e94560' }}>®</span></span>
+            <span style={{ fontSize: '1.4rem', fontWeight: '800', color: C.primary }}>TUTORERA<span style={{ color: '#C81B7F' }}>®</span></span>
           </div>
           <h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>One more step</h1>
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>How do you want to use TUTORERA?</p>

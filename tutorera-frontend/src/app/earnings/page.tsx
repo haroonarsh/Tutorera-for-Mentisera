@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
@@ -11,12 +12,7 @@ import { Download } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = {
-  primary: '#1a1a2e',
-  accent:  '#2563eb',
-  gray500: '#6b7280',
-  gray50:  '#f9fafb',
-};
+const C = UI_COLORS;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface MonthlyPoint {
@@ -78,7 +74,7 @@ function ChartTooltip({ active, payload, label, isTutor }: any) {
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value as number | undefined;
   return (
-    <div style={{ backgroundColor: '#1a1a2e', borderRadius: '0.5rem', padding: '0.6rem 0.875rem', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+    <div style={{ backgroundColor: '#021550', borderRadius: '0.5rem', padding: '0.6rem 0.875rem', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
       <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ color: 'white', fontSize: '0.875rem', fontWeight: '700', margin: 0 }}>
         {isTutor ? `Rs. ${(value || 0).toLocaleString()}` : `${value} session${value !== 1 ? "s" : ""}`}
@@ -167,11 +163,11 @@ export default function EarningsPage() {
   // Stat cards
   const statCards = isTutor ? [
     { label: "Total Earnings",      value: `Rs. ${(tutorData?.stats.totalEarnings ?? 0).toLocaleString()}`, color: '#16a34a', bg: '#f0fdf4', icon: '💰' },
-    { label: "Sessions Completed",  value: tutorData?.stats.sessionsCount ?? 0,                             color: C.accent,  bg: '#eff6ff', icon: '✅' },
+    { label: "Sessions Completed",  value: tutorData?.stats.sessionsCount ?? 0,                             color: C.accent,  bg: '#EEF5FF', icon: '✅' },
     { label: "Hours Taught",        value: `${tutorData?.stats.hoursTaught ?? 0} hrs`,                      color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
     { label: "Subjects Taught",     value: tutorData?.stats.subjectsCount ?? 0,                             color: '#d97706', bg: '#fffbeb', icon: '📖' },
   ] : [
-    { label: "Sessions Completed",  value: studentData?.stats.sessionsCount ?? 0,                           color: C.accent,  bg: '#eff6ff', icon: '✅' },
+    { label: "Sessions Completed",  value: studentData?.stats.sessionsCount ?? 0,                           color: C.accent,  bg: '#EEF5FF', icon: '✅' },
     { label: "Hours Learned",       value: `${studentData?.stats.hoursLearned ?? 0} hrs`,                   color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
     { label: "Subjects Learned",    value: studentData?.stats.subjectsCount ?? 0,                           color: '#d97706', bg: '#fffbeb', icon: '📖' },
     { label: "Tutors Worked With",  value: studentData?.stats.tutorsCount ?? 0,                             color: '#16a34a', bg: '#f0fdf4', icon: '👨‍🏫' },
@@ -331,7 +327,7 @@ export default function EarningsPage() {
                     {/* Desktop row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', padding: '0.875rem 1.5rem', alignItems: 'center', borderBottom: idx < (tutorData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-table-row">
                       <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.studentName}</p>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#eff6ff', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#EEF5FF', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
                       <p style={{ fontSize: '0.875rem', color: C.gray500, margin: 0 }}>Rs. {(s.amount || 0).toLocaleString()}</p>
                       <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: 0 }}>Rs. {(s.tutorPayout || 0).toLocaleString()}</p>
                     </div>
@@ -367,7 +363,7 @@ export default function EarningsPage() {
                             <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{t.name}</p>
                             <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>{t.sessions} session{t.sessions !== 1 ? "s" : ""} completed</p>
                           </div>
-                          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: C.accent, backgroundColor: '#eff6ff', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: C.accent, backgroundColor: '#EEF5FF', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
                             #{i + 1}
                           </span>
                         </div>
@@ -390,7 +386,7 @@ export default function EarningsPage() {
                     <div key={s._id}>
                       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', padding: '0.875rem 1.5rem', alignItems: 'center', borderBottom: idx < (studentData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-table-row">
                         <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.tutorName}</p>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#eff6ff', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#EEF5FF', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
                         <p style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary, margin: 0 }}>Rs. {(s.amount || 0).toLocaleString()}</p>
                       </div>
                       <div style={{ padding: '0.875rem 1.25rem', borderBottom: idx < (studentData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-mobile-card">

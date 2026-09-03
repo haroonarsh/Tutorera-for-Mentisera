@@ -1,11 +1,12 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import { TOTAL_FEE_PERCENT } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 // Platform fee: 20% base + 15% GST on that fee = 3% GST = 23% total
 const PLATFORM_FEE_PERCENT = TOTAL_FEE_PERCENT;
@@ -80,7 +81,7 @@ export default function PaymentsPage() {
         {[
           { label: "Total Confirmed",  value: `Rs. ${totalReceived.toLocaleString()}`,     icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
           { label: "Pending Payments", value: `Rs. ${totalPending.toLocaleString()}`,       icon: <Clock size={20} color="#d97706" />,        bg: '#fffbeb' },
-          { label: "Platform Revenue", value: `Rs. ${totalPlatformFees.toLocaleString()}`,  icon: <AlertCircle size={20} color={C.accent} />, bg: '#eff6ff' },
+          { label: "Platform Revenue", value: `Rs. ${totalPlatformFees.toLocaleString()}`,  icon: <AlertCircle size={20} color={C.accent} />, bg: '#EEF5FF' },
         ].map(card => (
           <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -95,7 +96,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* NayaPay Account Info */}
-      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem', marginBottom: '2rem' }}>
+      <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem', marginBottom: '2rem' }}>
         <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', marginBottom: '0.75rem' }}>💳 Company NayaPay Account</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
           {[

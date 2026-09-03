@@ -1,8 +1,9 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { CheckCircle, Star, Users, Clock, Shield, BookOpen, ArrowRight } from "lucide-react";
 import { formatPKR } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
+const C = UI_COLORS;
 
 export default function BecomeTutorPage() {
   return (

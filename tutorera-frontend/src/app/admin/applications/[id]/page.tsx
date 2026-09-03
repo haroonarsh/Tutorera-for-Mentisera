@@ -167,7 +167,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
   return (
     <div style={{ padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#2563eb", margin: "0 0 6px" }}>Admin · Applications</p>
+        <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#0329B2", margin: "0 0 6px" }}>Admin · Applications</p>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#021550", margin: "0 0 4px" }}>{data.tutorName}</h1>
         <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 16px" }}>
           {data.applicationId} · {data.tutorEmail} · Submitted {formatDateLong(p.createdAt)}
@@ -295,6 +295,6 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
   );
 }
 
-const btnSecondaryStyle: React.CSSProperties = { background: "#fff", color: "#1a1a2e", border: "1px solid #cbd5e1", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" };
+const btnSecondaryStyle: React.CSSProperties = { background: "#fff", color: "#021550", border: "1px solid #cbd5e1", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" };
 const btnSuccessStyle: React.CSSProperties = { background: "#16a34a", color: "#fff", border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
 const btnDangerStyle: React.CSSProperties = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };

@@ -21,7 +21,7 @@ function LoadingScreen() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: "#f9fafb",
+        background: "#F5F7FF",
         gap: 16,
       }}
     >
@@ -30,7 +30,7 @@ function LoadingScreen() {
           width: 40,
           height: 40,
           border: "3px solid #e5e7eb",
-          borderTopColor: "#2563eb",
+          borderTopColor: "#0329B2",
           borderRadius: "50%",
           animation: "spin 0.8s linear infinite",
         }}
@@ -50,7 +50,7 @@ function LoadingScreen() {
 
 function PendingApprovalScreen() {
   return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f9fafb", padding: "2rem" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F7FF", padding: "2rem" }}>
         <div style={{ backgroundColor: "white", borderRadius: "1.25rem", border: "1px solid #e5e7eb", padding: "3rem 2.5rem", maxWidth: "500px", width: "100%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
 
           {/* Icon */}
@@ -58,7 +58,7 @@ function PendingApprovalScreen() {
             ⏳
           </div>
 
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#1a1a2e", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem" }}>
             Profile Under Review
           </h2>
           <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "2rem" }}>
@@ -67,8 +67,8 @@ function PendingApprovalScreen() {
           </p>
 
           {/* Steps */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: "0.75rem", padding: "1.25rem", marginBottom: "2rem", textAlign: "left" }}>
-            <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1a1a2e", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>What happens next?</p>
+          <div style={{ backgroundColor: "#F5F7FF", borderRadius: "0.75rem", padding: "1.25rem", marginBottom: "2rem", textAlign: "left" }}>
+            <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#021550", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>What happens next?</p>
             {[
               { icon: "✅", text: "Profile submitted successfully" },
               { icon: "🔍", text: "Admin reviews your documents (24–48 hrs)", active: true },
@@ -77,7 +77,7 @@ function PendingApprovalScreen() {
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0", borderBottom: i < 3 ? "1px solid #e5e7eb" : "none" }}>
                 <span style={{ fontSize: "1rem", flexShrink: 0 }}>{step.icon}</span>
-                <span style={{ fontSize: "0.85rem", color: step.active ? "#1a1a2e" : "#6b7280", fontWeight: step.active ? 600 : 400 }}>
+                <span style={{ fontSize: "0.85rem", color: step.active ? "#021550" : "#6b7280", fontWeight: step.active ? 600 : 400 }}>
                   {step.text}
                 </span>
                 {step.active && (
@@ -91,7 +91,7 @@ function PendingApprovalScreen() {
 
           <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
             Questions? Contact us at{" "}
-            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "#2563eb", fontWeight: 600 }}>
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "#0329B2", fontWeight: 600 }}>
               {SUPPORT_EMAIL}
             </a>
           </p>
@@ -105,14 +105,14 @@ function PendingApprovalScreen() {
 function RejectedScreen({ reason }: { reason?: string }) {
   const router = useRouter();
   return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f9fafb", padding: "2rem" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F7FF", padding: "2rem" }}>
         <div style={{ backgroundColor: "white", borderRadius: "1.25rem", border: "1px solid #fecaca", padding: "3rem 2.5rem", maxWidth: "500px", width: "100%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
 
           <div style={{ width: 72, height: 72, backgroundColor: "#fef2f2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", fontSize: "2rem" }}>
             ❌
           </div>
 
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#1a1a2e", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem" }}>
             Profile Not Approved
           </h2>
           <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
@@ -129,12 +129,12 @@ function RejectedScreen({ reason }: { reason?: string }) {
 
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
             <a href={`mailto:${SUPPORT_EMAIL}`}
-              style={{ padding: "0.75rem 1.5rem", backgroundColor: "#1a1a2e", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
+              style={{ padding: "0.75rem 1.5rem", backgroundColor: "#021550", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
               Contact Support
             </a>
             <button
               onClick={() => router.push("/onboarding/tutor")}
-              style={{ padding: "0.75rem 1.5rem", backgroundColor: "white", color: "#1a1a2e", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
+              style={{ padding: "0.75rem 1.5rem", backgroundColor: "white", color: "#021550", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
               Re-submit Profile
             </button>
           </div>

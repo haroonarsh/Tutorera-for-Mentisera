@@ -1,6 +1,5 @@
-// components/dashboard/AvailabilityManager.tsx
 "use client";
-
+// components/dashboard/AvailabilityManager.tsx
 import { useState, useEffect } from "react";
 import axiosInstance from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -62,17 +61,17 @@ export default function AvailabilityManager() {
     }
   };
 
-  if (loading) return <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 24, height: 24, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
+  if (loading) return <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 24, height: 24, border: '3px solid #e5e7eb', borderTopColor: '#0329B2', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
 
   return (
     <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1.5px solid #e5e7eb', padding: '1.25rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
-          <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.95rem', margin: 0 }}>Weekly Availability</p>
+          <p style={{ fontWeight: 700, color: '#021550', fontSize: '0.95rem', margin: 0 }}>Weekly Availability</p>
           <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: '2px 0 0' }}>Set your recurring weekly slots. Students will see your next 2 weeks of availability.</p>
         </div>
         <button onClick={handleSave} disabled={saving}
-          style={{ padding: '0.5rem 1.25rem', backgroundColor: saving ? '#93c5fd' : saved ? '#16a34a' : '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.8rem', cursor: saving ? 'not-allowed' : 'pointer' }}>
+          style={{ padding: '0.5rem 1.25rem', backgroundColor: saving ? '#93c5fd' : saved ? '#16a34a' : '#0329B2', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.8rem', cursor: saving ? 'not-allowed' : 'pointer' }}>
           {saving ? "Saving..." : saved ? "✓ Saved!" : "Save Availability"}
         </button>
       </div>
@@ -81,11 +80,11 @@ export default function AvailabilityManager() {
         {DAYS.map(day => {
           const daySlots = slots.filter(s => s.day === day);
           return (
-            <div key={day} style={{ backgroundColor: '#f9fafb', borderRadius: '0.625rem', padding: '0.875rem' }}>
+            <div key={day} style={{ backgroundColor: '#F5F7FF', borderRadius: '0.625rem', padding: '0.875rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: daySlots.length > 0 ? '0.625rem' : 0 }}>
-                <p style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.875rem', margin: 0 }}>{day}</p>
+                <p style={{ fontWeight: 700, color: '#021550', fontSize: '0.875rem', margin: 0 }}>{day}</p>
                 <button onClick={() => addSlot(day)}
-                  style={{ padding: '0.25rem 0.75rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
+                  style={{ padding: '0.25rem 0.75rem', backgroundColor: '#EEF5FF', color: '#0329B2', border: '1px solid #bfdbfe', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
                   + Add Slot
                 </button>
               </div>
@@ -101,13 +100,13 @@ export default function AvailabilityManager() {
                   <div key={realIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
                     <select value={slot.startTime} onChange={e => updateSlot(realIndex, "startTime", e.target.value)}
                       title="Start time"
-                      style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.8rem', outline: 'none', color: '#1a1a2e' }}>
+                      style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.8rem', outline: 'none', color: '#021550' }}>
                       {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>to</span>
                     <select value={slot.endTime} onChange={e => updateSlot(realIndex, "endTime", e.target.value)}
                       title="End time"
-                      style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.8rem', outline: 'none', color: '#1a1a2e' }}>
+                      style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.8rem', outline: 'none', color: '#021550' }}>
                       {TIME_OPTIONS.filter(t => t > slot.startTime).map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <button onClick={() => removeSlot(realIndex)}

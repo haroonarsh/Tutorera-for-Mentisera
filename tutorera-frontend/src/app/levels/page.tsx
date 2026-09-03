@@ -1,18 +1,19 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Tutors by Academic Level", description: "Find verified tutors for Primary, Middle, Matric, Intermediate, O-Level, A-Level, and university students in Pakistan.", alternates: { canonical: "/levels" } };
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 const levels = [
-  { name: "Primary School", grades: "Grade 1–5", age: "Ages 5–10", desc: "Foundation subjects including English, Urdu, Mathematics, Science, and Islamiyat.", color: "#eff6ff", textColor: "#2563eb" },
+  { name: "Primary School", grades: "Grade 1–5", age: "Ages 5–10", desc: "Foundation subjects including English, Urdu, Mathematics, Science, and Islamiyat.", color: "#EEF5FF", textColor: "#0329B2" },
   { name: "Middle School", grades: "Grade 6–8", age: "Ages 11–13", desc: "Core subjects with increasing complexity. Science, Math, Languages, and Social Studies.", color: "#f0fdf4", textColor: "#16a34a" },
   { name: "Matriculation", grades: "Grade 9–10", age: "Ages 14–15", desc: "Board exam preparation for all Pakistani education boards (Punjab, Federal, Sindh, KPK).", color: "#fffbeb", textColor: "#d97706" },
   { name: "O-Levels", grades: "Cambridge IGCSE", age: "Ages 14–16", desc: "Cambridge O-Level preparation across all subjects including Pure Math, Sciences, and Languages.", color: "#fdf4ff", textColor: "#7c3aed" },
-  { name: "Intermediate / FSc", grades: "Grade 11–12", age: "Ages 16–17", desc: "Pre-medical, Pre-engineering, ICS, and FA preparation for all boards.", color: "#fff1f2", textColor: "#e94560" },
-  { name: "A-Levels", grades: "Cambridge AS & A2", age: "Ages 16–18", desc: "Advanced Cambridge A-Level preparation for university entrance.", color: "#eff6ff", textColor: "#2563eb" },
+  { name: "Intermediate / FSc", grades: "Grade 11–12", age: "Ages 16–17", desc: "Pre-medical, Pre-engineering, ICS, and FA preparation for all boards.", color: "#fff1f2", textColor: "#C81B7F" },
+  { name: "A-Levels", grades: "Cambridge AS & A2", age: "Ages 16–18", desc: "Advanced Cambridge A-Level preparation for university entrance.", color: "#EEF5FF", textColor: "#0329B2" },
   { name: "University Level", grades: "Bachelor's / Master's", age: "Ages 18+", desc: "University-level tutoring for engineering, medicine, business, CS, and more.", color: "#f0fdf4", textColor: "#16a34a" },
   { name: "Test Preparation", grades: "Entry Tests", age: "All Ages", desc: "MDCAT, ECAT, NTS, IELTS, SAT, and other competitive exam preparation.", color: "#fffbeb", textColor: "#d97706" },
 ];

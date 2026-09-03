@@ -31,7 +31,7 @@ const statuses: EmailStatus[] = ["queued", "sent", "delivered", "opened", "bounc
 
 const colors: Record<EmailStatus, { bg: string; color: string; border: string }> = {
   queued: { bg: "#fffbeb", color: "#92400e", border: "#fde68a" },
-  sent: { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
+  sent: { bg: "#EEF5FF", color: "#1d4ed8", border: "#bfdbfe" },
   delivered: { bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
   opened: { bg: "#f5f3ff", color: "#6d28d9", border: "#ddd6fe" },
   bounced: { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
@@ -75,7 +75,7 @@ export default function AdminEmailLogsPage() {
   return (
     <div style={{ padding: "2rem" }}>
       <div style={{ marginBottom: 24 }}>
-        <p style={{ margin: "0 0 6px", color: "#2563eb", fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Admin · Communications</p>
+        <p style={{ margin: "0 0 6px", color: "#0329B2", fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>Admin · Communications</p>
         <h1 style={{ margin: 0, color: "#021550", fontSize: 28, fontWeight: 900 }}>Transactional Email Logs</h1>
         <p style={{ margin: "8px 0 0", color: "#64748b" }}>Track critical emails for verification, payment, booking, dispute, and account events.</p>
       </div>

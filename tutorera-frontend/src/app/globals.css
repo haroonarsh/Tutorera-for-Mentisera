@@ -9,12 +9,13 @@
   --color-magenta: #c81b7f;
   --color-orange: #f9691a;
   --color-gold: #fcb208;
-  --color-background: #f7f9fc;
+  --color-background: #f5f7ff;
   --color-surface: #ffffff;
-  --color-soft-blue: #f1f6ff;
+  --color-card: #f8faff;
+  --color-soft-blue: #eef5ff;
   --color-border: #e2e8f0;
   --color-muted: #64748b;
-  --color-body: #334155;
+  --color-body: #1f2937;
   --color-heading: #021550;
   --color-dark: #010b2c;
   --shadow-card: 0 8px 30px rgba(2, 21, 80, 0.08);
@@ -24,6 +25,7 @@
   --radius-lg: 20px;
   --radius-xl: 24px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --background: var(--color-background);
   --foreground: var(--color-body);
   --card: var(--color-surface);
@@ -79,6 +81,8 @@ body {
   background-color: var(--color-background);
   color: var(--color-body);
   font-family: "Inter", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
@@ -88,6 +92,7 @@ body {
 
 a {
   text-underline-offset: 0.18em;
+  color: inherit;
 }
 
 button,
@@ -166,9 +171,33 @@ select:focus-visible,
 textarea:focus-visible,
 [role="button"]:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #0329B2;
+  outline: 2px solid var(--color-digital-blue);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+button,
+a,
+[role="button"] {
+  transition:
+    transform 160ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+button:not(:disabled):active,
+a:active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    color: var(--color-royal-blue);
+  }
 }
 
 /* Suppress outline on mouse click ONLY for buttons and links —

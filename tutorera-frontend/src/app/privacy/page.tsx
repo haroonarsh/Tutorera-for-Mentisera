@@ -1,6 +1,7 @@
+import { UI_COLORS } from "@/lib/brand";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280' };
+const C = UI_COLORS;
 
 export default function PrivacyPage() {
   return (

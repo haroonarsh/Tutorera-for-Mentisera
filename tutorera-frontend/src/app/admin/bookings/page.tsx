@@ -1,10 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import { TOTAL_FEE_PERCENT } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface Booking {
   _id: string;
@@ -44,7 +45,7 @@ export default function BookingsPage() {
   };
 
   const statusColors: Record<string, { bg: string; color: string }> = {
-    upcoming: { bg: '#eff6ff', color: '#2563eb' },
+    upcoming: { bg: '#EEF5FF', color: '#0329B2' },
     ongoing: { bg: '#fffbeb', color: '#d97706' },
     completed: { bg: '#f0fdf4', color: '#16a34a' },
     cancelled: { bg: '#fef2f2', color: '#ef4444' },
@@ -52,7 +53,7 @@ export default function BookingsPage() {
 
   const paymentColors: Record<string, { bg: string; color: string }> = {
     pending: { bg: '#fffbeb', color: '#d97706' },
-    received: { bg: '#eff6ff', color: '#2563eb' },
+    received: { bg: '#EEF5FF', color: '#0329B2' },
     confirmed: { bg: '#f0fdf4', color: '#16a34a' },
     refunded: { bg: '#fef2f2', color: '#ef4444' },
   };

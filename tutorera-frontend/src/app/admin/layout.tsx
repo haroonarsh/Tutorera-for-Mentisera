@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,7 +15,7 @@ import { useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 import { useEffect, useState } from "react";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb' };
+const C = UI_COLORS;
 
 const navItems = [
   { href: "/admin",                  label: "Dashboard",        icon: <LayoutDashboard size={18} /> },
@@ -58,7 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Logo */}
       <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
         <p style={{ color: 'white', fontWeight: '800', fontSize: '1.1rem' }}>
-          TUTORERA<span style={{ color: '#e94560' }}>®</span>
+          TUTORERA<span style={{ color: '#C81B7F' }}>®</span>
         </p>
         <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.2rem' }}>Admin Panel</p>
       </div>
@@ -93,7 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminGuard>
-      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F5F7FF' }}>
 
         {/* Desktop Sidebar */}
         <div style={{ width: '240px', backgroundColor: C.primary, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 40 }} className="admin-sidebar-desktop">
@@ -129,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Menu size={24} />
             </button>
             <p style={{ fontWeight: '800', color: C.primary, fontSize: '1rem' }}>
-              TUTORERA<span style={{ color: '#e94560' }}>®</span> Admin
+              TUTORERA<span style={{ color: '#C81B7F' }}>®</span> Admin
             </p>
           </div>
 

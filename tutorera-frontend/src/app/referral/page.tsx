@@ -1,5 +1,6 @@
-// app/referral/page.tsx
 "use client";
+import { UI_COLORS } from "@/lib/brand";
+// app/referral/page.tsx
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -7,7 +8,7 @@ import Link from "next/link";
 import { Gift, Copy, Check, Users, Coins } from "lucide-react";
 import api from "@/lib/axios";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface ReferralData {
   referralCode: string;
@@ -125,7 +126,7 @@ export default function ReferralPage() {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
           {[
-            { label: "Friends Referred", value: data.stats.totalReferred, icon: <Users size={20} color={C.accent} />, bg: '#eff6ff' },
+            { label: "Friends Referred", value: data.stats.totalReferred, icon: <Users size={20} color={C.accent} />, bg: '#EEF5FF' },
             { label: "Completed", value: data.stats.creditedCount, icon: <Check size={20} color="#16a34a" />, bg: '#f0fdf4' },
             { label: "Pending", value: data.stats.pendingCount, icon: <Gift size={20} color="#d97706" />, bg: '#fffbeb' },
             { label: "Total Earned", value: `Rs. ${data.stats.totalEarned.toLocaleString()}`, icon: <Coins size={20} color="#7c3aed" />, bg: '#f5f3ff' },
@@ -152,7 +153,7 @@ export default function ReferralPage() {
               { step: "03", emoji: "💰", title: "You earn Rs. 200", desc: "Once they complete their first booking, Rs. 200 is added to your credit balance." },
             ].map(item => (
               <div key={item.step} style={{ textAlign: 'center' }}>
-                <div style={{ width: 56, height: 56, backgroundColor: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.875rem', fontSize: '1.5rem' }}>
+                <div style={{ width: 56, height: 56, backgroundColor: '#EEF5FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.875rem', fontSize: '1.5rem' }}>
                   {item.emoji}
                 </div>
                 <p style={{ fontSize: '0.7rem', fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>Step {item.step}</p>

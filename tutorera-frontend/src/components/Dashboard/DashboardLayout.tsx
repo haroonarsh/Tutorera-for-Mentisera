@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -9,14 +10,7 @@ import {
   CreditCard, User, BookOpen, Search, Menu, TrendingUp,
 } from "lucide-react";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  gray500: '#6b7280',
-  gray50: '#f9fafb',
-  sidebar: '#ffffff',
-  sidebarBorder: '#e5e7eb',
-};
+const C = UI_COLORS;
 
 interface NavItem {
   href: string;
@@ -85,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BookOpen size={22} color={C.accent} />
             <span style={{ fontWeight: '800', color: C.primary, fontSize: '1rem' }}>
-              TUTORERA<span style={{ color: '#e94560' }}>®</span>
+              TUTORERA<span style={{ color: '#C81B7F' }}>®</span>
             </span>
           </Link>
         )}
@@ -124,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
                 borderRadius: '0.5rem', textDecoration: 'none',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                backgroundColor: isActive ? '#EEF5FF' : 'transparent',
                 color: isActive ? C.accent : C.gray500,
                 fontWeight: isActive ? '600' : '400',
                 fontSize: '0.875rem', transition: 'all 0.15s',
@@ -153,7 +147,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
                 borderRadius: '0.5rem', textDecoration: 'none',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                backgroundColor: isActive ? '#EEF5FF' : 'transparent',
                 color: isActive ? C.accent : C.gray500,
                 fontWeight: isActive ? '600' : '400',
                 fontSize: '0.875rem', transition: 'all 0.15s',

@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -6,14 +7,7 @@ import { Star, MapPin } from "lucide-react";
 import api from "@/lib/axios";
 import { formatPKR } from "@/lib/site";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  gray500: '#6b7280',
-  gray50: '#f9fafb',
-  accentLight: '#eff6ff',
-  gold: '#f59e0b',
-};
+const C = UI_COLORS;
 
 interface Tutor {
   _id: string;

@@ -1,6 +1,6 @@
-// components/dashboard/TutorDashboard.tsx
 "use client";
-
+import { UI_COLORS } from "@/lib/brand";
+// components/dashboard/TutorDashboard.tsx
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import axiosInstance from "@/lib/axios";
@@ -14,11 +14,7 @@ import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { formatPKR } from "@/lib/site";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  highlight: '#e94560',
-};
+const C = UI_COLORS;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -175,8 +171,8 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         disabled={creatingChat}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-          padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#eff6ff',
-          color: creatingChat ? '#9ca3af' : '#2563eb', borderRadius: '0.5rem',
+          padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#EEF5FF',
+          color: creatingChat ? '#9ca3af' : '#0329B2', borderRadius: '0.5rem',
           border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600',
           cursor: creatingChat ? 'not-allowed' : 'pointer', marginBottom: '0.5rem'
         }}>
@@ -366,7 +362,7 @@ function DirectRequestCard({
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
             <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
-            <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
+            <span style={{ backgroundColor: '#EEF5FF', color: '#0329B2', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
               📩 Direct Request
             </span>
           </div>
@@ -428,20 +424,20 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
             width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
             border: "2.5px solid #e5e7eb", background: "#e5e7eb", flexShrink: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, fontWeight: 700, color: "#2563eb",
+            fontSize: 20, fontWeight: 700, color: "#0329B2",
           }}>
             {profile.user.avatar
               ? <img src={profile.user.avatar} alt={profile.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : profile.user.name.charAt(0).toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: "0 0 3px", fontSize: 17, fontWeight: 700, color: "#1a1a2e" }}>
+            <p style={{ margin: "0 0 3px", fontSize: 17, fontWeight: 700, color: "#021550" }}>
               {profile.user.name}
             </p>
             <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>{profile.city} · {profile.teachingMode}</p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: "#1a1a2e" }}>
+            <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: "#021550" }}>
               PKR {profile.hourlyRate.toLocaleString()}<span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 400 }}>/hr</span>
             </p>
             <span className={`${s.badge} ${profile.verificationStatus === "approved" ? s.badgeApproved : s.badgePending}`}>
@@ -495,7 +491,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           <p className={s.profileCardTitle}>Education</p>
           {profile.education.length > 0 ? profile.education.map((edu) => (
             <div key={edu._id} style={{ marginBottom: 8 }}>
-              <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "#1a1a2e" }}>{edu.degree}</p>
+              <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "#021550" }}>{edu.degree}</p>
               <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{edu.institution} · {edu.year}</p>
             </div>
           )) : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
@@ -648,7 +644,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
         <div className={s.stats}>
           <div className={s.statCard}>
             <div className={s.statIcon} style={{ background: "rgba(37,99,235,0.1)" }}>
-              <svg width={22} height={22} viewBox="0 0 20 20" fill="#2563eb" aria-hidden="true">
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#0329B2" aria-hidden="true">
                 <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
               </svg>
             </div>

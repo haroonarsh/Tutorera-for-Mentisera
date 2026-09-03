@@ -1,6 +1,5 @@
-// components/tutors/DirectBookingModal.tsx
 "use client";
-
+// components/tutors/DirectBookingModal.tsx
 import { useState } from "react";
 import axiosInstance from "@/lib/axios";
 import SlotPicker from "@/components/Tutors/SlotPicker";
@@ -113,9 +112,9 @@ export default function DirectBookingModal({
           {error && <div className={styles.error}>{error}</div>}
 
           {/* Rate */}
-          <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>Tutor's Rate</span>
-            <span style={{ fontSize: '0.95rem', color: '#1a1a2e', fontWeight: 800 }}>{formatPKR(hourlyRate, "hour")}</span>
+          <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8rem', color: '#0329B2', fontWeight: 600 }}>Tutor's Rate</span>
+            <span style={{ fontSize: '0.95rem', color: '#021550', fontWeight: 800 }}>{formatPKR(hourlyRate, "hour")}</span>
           </div>
 
           {/* Subject + Level */}
@@ -160,7 +159,7 @@ export default function DirectBookingModal({
           ) : (
             <div className={styles.field} style={{ marginBottom: '1rem' }}>
               <label className={styles.label}>Teaching Mode</label>
-              <div style={{ padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: '#6b7280', textTransform: 'capitalize', backgroundColor: '#f9fafb' }}>
+              <div style={{ padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: '#6b7280', textTransform: 'capitalize', backgroundColor: '#F5F7FF' }}>
                 {tutorTeachingMode}
               </div>
             </div>

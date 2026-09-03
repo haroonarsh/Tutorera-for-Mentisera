@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -8,12 +9,7 @@ import api from "@/lib/axios";
 import { io, Socket } from "socket.io-client";
 import { formatPKR } from "@/lib/site";
 
-const C = {
-  primary: '#1a1a2e',
-  accent: '#2563eb',
-  gray500: '#6b7280',
-  gray50: '#f9fafb',
-};
+const C = UI_COLORS;
 
 interface Message {
   _id: string;
@@ -239,7 +235,7 @@ export default function ChatPage() {
         )}
         {messages.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ width: '60px', height: '60px', backgroundColor: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '60px', height: '60px', backgroundColor: '#EEF5FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Send size={24} color={C.accent} />
             </div>
             <p style={{ color: C.gray500, fontSize: '0.9rem', fontWeight: '600' }}>No messages yet</p>

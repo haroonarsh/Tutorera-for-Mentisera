@@ -1,17 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = {
-  primary: '#1a1a2e',
-  accent:  '#2563eb',
-  gray500: '#6b7280',
-  gray50:  '#f9fafb',
-  error:   '#ef4444',
-  success: '#16a34a',
-};
+const C = UI_COLORS;
 
 interface SubUser {
   _id: string;
@@ -31,7 +25,7 @@ interface SubscriptionsData {
 }
 
 const planMeta: Record<string, { bg: string; text: string }> = {
-  standard: { bg: '#eff6ff', text: '#2563eb' },
+  standard: { bg: '#EEF5FF', text: '#0329B2' },
   premium:  { bg: '#fdf4ff', text: '#9333ea' },
 };
 
@@ -98,7 +92,7 @@ export default function SubscriptionsPage() {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {[
-          { label: 'Standard Subscribers', value: data?.counts.standard ?? 0, color: '#2563eb', bg: '#eff6ff' },
+          { label: 'Standard Subscribers', value: data?.counts.standard ?? 0, color: '#0329B2', bg: '#EEF5FF' },
           { label: 'Premium Subscribers',  value: data?.counts.premium ?? 0,  color: '#9333ea', bg: '#fdf4ff' },
           { label: 'Total Paid Users',     value: data?.total ?? 0,           color: '#16a34a', bg: '#f0fdf4' },
         ].map(card => (

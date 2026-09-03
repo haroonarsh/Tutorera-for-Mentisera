@@ -1,3 +1,4 @@
+import { UI_COLORS } from "@/lib/brand";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/team" },
 };
 
-const C = { primary: "#1a1a2e", accent: "#2563eb", gray500: "#6b7280", gray50: "#f9fafb", accentLight: "#eff6ff" };
+const C = UI_COLORS;
 
 const productHighlights = [
   "Student-led request and tutor-offer marketplace",
@@ -39,7 +40,7 @@ export default function TeamPage() {
       <section style={{ padding: "5rem 1.5rem", backgroundColor: C.gray50 }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", alignItems: "stretch" }}>
           <article style={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "1.25rem", padding: "2rem", boxShadow: "0 14px 38px rgba(17,24,39,0.06)" }}>
-            <div style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, #2563eb, #7c3aed)", display: "grid", placeItems: "center", color: "white", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1.25rem" }} aria-hidden="true">
+            <div style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, #0329B2, #7c3aed)", display: "grid", placeItems: "center", color: "white", fontSize: "1.5rem", fontWeight: 900, marginBottom: "1.25rem" }} aria-hidden="true">
               SN
             </div>
             <p style={{ color: C.accent, fontSize: "0.78rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.45rem" }}>Chief Executive Officer</p>

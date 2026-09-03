@@ -1,9 +1,10 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import api from "@/lib/axios";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface StudentRating {
   _id: string;
@@ -77,7 +78,7 @@ export default function StudentRatingsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.875rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                   {/* Student avatar */}
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.accent, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#EEF5FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.accent, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
                     {r.student.avatar
                       ? <img src={r.student.avatar} alt={r.student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : r.student.name.charAt(0).toUpperCase()}

@@ -1,5 +1,6 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280' };
+const C = UI_COLORS;
 export default function CareersPage() {
   return (
     <div style={{ backgroundColor: 'white' }}>

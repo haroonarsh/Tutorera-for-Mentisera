@@ -1,4 +1,5 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
@@ -7,7 +8,7 @@ import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 const STUDENT_MARKETPLACE_FEE = 0;
 const TUTOR_TOTAL_DEDUCTION_PERCENT = 23;
 
@@ -21,8 +22,8 @@ interface Usage {
 
 const PLAN_META = {
   free:     { label: "Free",     price: 0,    color: '#f0edec', borderColor: '#e5e7eb', textColor: '#414754', dark: false },
-  standard: { label: "Standard", price: 500,  color: '#1a1a2e', borderColor: '#2563eb', textColor: 'white',   dark: true  },
-  premium:  { label: "Premium",  price: 1000, color: '#1a1a2e', borderColor: '#2563eb', textColor: 'white',   dark: true  },
+  standard: { label: "Standard", price: 500,  color: '#021550', borderColor: '#0329B2', textColor: 'white',   dark: true  },
+  premium:  { label: "Premium",  price: 1000, color: '#021550', borderColor: '#0329B2', textColor: 'white',   dark: true  },
 };
 
 const plans = [
@@ -132,7 +133,7 @@ export default function BillingPage() {
         </p>
 
         {/* ── Current Plan Banner ── */}
-        <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
+        <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.875rem' }}>
             <div>
               <p style={{ fontSize: '0.8rem', color: '#1d4ed8', fontWeight: '600', marginBottom: '0.2rem' }}>CURRENT PLAN</p>
@@ -158,7 +159,7 @@ export default function BillingPage() {
               <div style={{
                 height: '100%',
                 width: `${usagePercent}%`,
-                backgroundColor: usagePercent >= 100 ? '#ef4444' : usagePercent >= 75 ? '#f59e0b' : '#2563eb',
+                backgroundColor: usagePercent >= 100 ? '#ef4444' : usagePercent >= 75 ? '#f59e0b' : '#0329B2',
                 borderRadius: '999px',
                 transition: 'width 0.5s ease',
               }} />
@@ -216,8 +217,8 @@ export default function BillingPage() {
             const isDark = plan.planKey !== "free";
             const featureColor = isDark ? '#d1fae5' : '#16a34a';
             const textColor = isDark ? 'white' : '#414754';
-            const cardBg = isDark ? '#1a1a2e' : '#f0edec';
-            const cardBorder = isDark ? '#2563eb' : '#e5e7eb';
+            const cardBg = isDark ? '#021550' : '#f0edec';
+            const cardBorder = isDark ? '#0329B2' : '#e5e7eb';
 
             const displayPrice = billing === "yearly" && plan.priceNum > 0
               ? `PKR ${Math.round(plan.priceNum * 12 * 0.8).toLocaleString()}`
@@ -225,7 +226,7 @@ export default function BillingPage() {
             const displayPeriod = billing === "yearly" && plan.priceNum > 0 ? "/yr" : "/mo";
 
             return (
-              <div key={plan.planKey} style={{ backgroundColor: cardBg, borderRadius: '1rem', padding: '2rem', border: `2px solid ${isCurrentPlan ? '#2563eb' : cardBorder}`, position: 'relative', boxShadow: isCurrentPlan ? '0 0 0 3px rgba(37,99,235,0.15)' : 'none' }}>
+              <div key={plan.planKey} style={{ backgroundColor: cardBg, borderRadius: '1rem', padding: '2rem', border: `2px solid ${isCurrentPlan ? '#0329B2' : cardBorder}`, position: 'relative', boxShadow: isCurrentPlan ? '0 0 0 3px rgba(37,99,235,0.15)' : 'none' }}>
                 {plan.popular && !isCurrentPlan && (
                   <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', backgroundColor: C.accent, color: 'white', fontSize: '0.75rem', fontWeight: '700', padding: '0.25rem 1rem', borderRadius: '999px' }}>
                     Most Popular
@@ -272,7 +273,7 @@ export default function BillingPage() {
                     width: '100%', padding: '0.875rem', borderRadius: '0.5rem',
                     fontWeight: '700', fontSize: '0.875rem', border: 'none',
                     cursor: isUpgrade ? 'pointer' : 'not-allowed',
-                    backgroundColor: isCurrentPlan ? '#e5e7eb' : isUpgrade ? '#2563eb' : '#d1d5db',
+                    backgroundColor: isCurrentPlan ? '#e5e7eb' : isUpgrade ? '#0329B2' : '#d1d5db',
                     color: isCurrentPlan ? '#6b7280' : isUpgrade ? 'white' : '#9ca3af',
                     transition: 'opacity 0.2s',
                   }}>
@@ -296,7 +297,7 @@ export default function BillingPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             {[
-              { title: "Charged to Student", bg: '#eff6ff', border: '#bfdbfe', titleColor: '#1d4ed8', divider: '#bfdbfe' },
+              { title: "Charged to Student", bg: '#EEF5FF', border: '#bfdbfe', titleColor: '#1d4ed8', divider: '#bfdbfe' },
               { title: "Deducted from Tutor", bg: '#f0fdf4', border: '#bbf7d0', titleColor: '#16a34a', divider: '#bbf7d0' },
             ].map(box => (
               <div key={box.title} style={{ backgroundColor: box.bg, borderRadius: '0.75rem', padding: '1.25rem', border: `1px solid ${box.border}` }}>
@@ -322,7 +323,7 @@ export default function BillingPage() {
             <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#92400e', marginBottom: '0.75rem' }}>💡 Example — Tutor charges {formatPKR(1000, "hour")}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
               {[
-                { label: "Student Pays", value: formatPKR(1000), color: '#1d4ed8', bg: '#eff6ff' },
+                { label: "Student Pays", value: formatPKR(1000), color: '#1d4ed8', bg: '#EEF5FF' },
                 { label: "Tutor Deduction", value: formatPKR(230), color: '#d97706', bg: '#fffbeb' },
                 { label: "Tutor Receives", value: formatPKR(770), color: '#16a34a', bg: '#f0fdf4' },
               ].map(item => (

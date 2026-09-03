@@ -1,8 +1,9 @@
+import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { CheckCircle, XCircle } from "lucide-react";
 import { GST_EFFECTIVE_PERCENT, GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT, SUPPORT_EMAIL, TOTAL_FEE_PERCENT } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
+const C = UI_COLORS;
 
 export default function PricingPage() {
   return (
@@ -51,7 +52,7 @@ export default function PricingPage() {
             </div>
 
             {/* For Tutors */}
-            <div style={{ backgroundColor: C.primary, borderRadius: '1rem', padding: '2.5rem', border: '2px solid #2563eb' }}>
+            <div style={{ backgroundColor: C.primary, borderRadius: '1rem', padding: '2.5rem', border: '2px solid #0329B2' }}>
               <h3 style={{ fontWeight: '800', color: 'white', fontSize: '1.2rem', marginBottom: '0.5rem' }}>For Tutors</h3>
               <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Join and start earning</p>
               <div style={{ marginBottom: '1.5rem' }}>
@@ -72,7 +73,7 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/become-a-tutor" style={{ display: 'block', textAlign: 'center', backgroundColor: '#2563eb', color: 'white', padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none' }}>
+              <Link href="/become-a-tutor" style={{ display: 'block', textAlign: 'center', backgroundColor: '#0329B2', color: 'white', padding: '0.875rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none' }}>
                 Become a Tutor
               </Link>
             </div>

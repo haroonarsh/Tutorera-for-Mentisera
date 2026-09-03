@@ -1,6 +1,7 @@
+import { UI_COLORS } from "@/lib/brand";
 // for-tutors
 import Link from "next/link";
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 export default function ForTutorsPage() {
   return (
     <div style={{ backgroundColor: 'white' }}>

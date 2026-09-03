@@ -1,10 +1,11 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Eye, EyeOff, Clock, Download } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb' };
+const C = UI_COLORS;
 
 interface TutorProfile {
   _id: string;
@@ -253,7 +254,7 @@ export default function VerificationsPage() {
                       <div style={{ marginTop: '0.75rem' }}>
                         <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Subjects</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                          {tutor.subjects?.map(s => <span key={s} style={{ backgroundColor: '#eff6ff', color: C.accent, fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>{s}</span>)}
+                          {tutor.subjects?.map(s => <span key={s} style={{ backgroundColor: '#EEF5FF', color: C.accent, fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>{s}</span>)}
                         </div>
                       </div>
                       <div style={{ marginTop: '0.75rem' }}>

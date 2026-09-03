@@ -1,6 +1,5 @@
-// components/AIChatWidget.tsx
 "use client";
-
+// components/AIChatWidget.tsx
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
@@ -115,7 +114,7 @@ export default function AIChatWidget() {
         }}>
 
           {/* Header */}
-          <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ background: 'linear-gradient(135deg, #021550 0%, #16213e 100%)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ width: 36, height: 36, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
               🤖
             </div>
@@ -139,8 +138,8 @@ export default function AIChatWidget() {
                 <div style={{
                   maxWidth: '80%', padding: '0.625rem 0.875rem',
                   borderRadius: msg.role === "user" ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
-                  backgroundColor: msg.role === "user" ? '#2563eb' : '#f3f4f6',
-                  color: msg.role === "user" ? 'white' : '#1a1a2e',
+                  backgroundColor: msg.role === "user" ? '#0329B2' : '#f3f4f6',
+                  color: msg.role === "user" ? 'white' : '#021550',
                   fontSize: '0.8rem', lineHeight: 1.6,
                 }}>
                   {msg.text}
@@ -165,7 +164,7 @@ export default function AIChatWidget() {
                 <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: 0 }}>Suggested questions:</p>
                 {SUGGESTED_QUESTIONS.map(q => (
                   <button key={q} onClick={() => sendMessage(q)}
-                    style={{ textAlign: 'left', padding: '0.4rem 0.75rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer' }}>
+                    style={{ textAlign: 'left', padding: '0.4rem 0.75rem', backgroundColor: '#EEF5FF', color: '#0329B2', border: '1px solid #bfdbfe', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer' }}>
                     {q}
                   </button>
                 ))}
@@ -183,12 +182,12 @@ export default function AIChatWidget() {
               onKeyDown={handleKeyDown}
               placeholder="Ask me anything about TUTORERA®..."
               rows={1}
-              style={{ flex: 1, padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '0.8rem', outline: 'none', resize: 'none', fontFamily: 'inherit', color: '#1a1a2e', lineHeight: 1.5 }}
-              onFocus={e => (e.currentTarget.style.borderColor = '#2563eb')}
+              style={{ flex: 1, padding: '0.6rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '0.8rem', outline: 'none', resize: 'none', fontFamily: 'inherit', color: '#021550', lineHeight: 1.5 }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#0329B2')}
               onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
             />
             <button title="button" onClick={() => sendMessage(input)} disabled={loading || !input.trim()}
-              style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: loading || !input.trim() ? '#e5e7eb' : '#2563eb', border: 'none', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s' }}>
+              style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: loading || !input.trim() ? '#e5e7eb' : '#0329B2', border: 'none', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s' }}>
               <svg width={16} height={16} viewBox="0 0 20 20" fill={loading || !input.trim() ? '#9ca3af' : 'white'}>
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
               </svg>
@@ -204,7 +203,7 @@ export default function AIChatWidget() {
         style={{
           position: 'fixed', bottom: '5.5rem', right: '1.5rem',
           width: '56px', height: '56px',
-          backgroundColor: '#1a1a2e', borderRadius: '50%',
+          backgroundColor: '#021550', borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 16px rgba(26,26,46,0.4)',
           border: 'none', cursor: 'pointer', zIndex: 999,
@@ -230,10 +229,10 @@ export default function AIChatWidget() {
             {/* Head */}
             <rect x="4.5" y="5" width="15" height="13" rx="4" fill="white" />
             {/* Eyes */}
-            <circle cx="9" cy="11.2" r="1.6" fill="#1a1a2e" />
-            <circle cx="15" cy="11.2" r="1.6" fill="#1a1a2e" />
+            <circle cx="9" cy="11.2" r="1.6" fill="#021550" />
+            <circle cx="15" cy="11.2" r="1.6" fill="#021550" />
             {/* Mouth */}
-            <rect x="9" y="14.5" width="6" height="1.3" rx="0.65" fill="#1a1a2e" />
+            <rect x="9" y="14.5" width="6" height="1.3" rx="0.65" fill="#021550" />
             {/* Side ears/antennae nubs */}
             <rect x="2.5" y="9.5" width="2" height="4" rx="1" fill="white" />
             <rect x="19.5" y="9.5" width="2" height="4" rx="1" fill="white" />

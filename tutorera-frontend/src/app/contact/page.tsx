@@ -1,11 +1,12 @@
 "use client";
+import { UI_COLORS } from "@/lib/brand";
 
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 
-const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', gray50: '#f9fafb', accentLight: '#eff6ff' };
+const C = UI_COLORS;
 const subjects = ["Student Support", "Tutor Support", "Booking Issue", "Payment Issue", "Refund Request", "Dispute", "Technical Support", "General Enquiry"];
 
 export default function ContactPage() {

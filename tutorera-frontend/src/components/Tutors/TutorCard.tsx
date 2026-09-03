@@ -1,5 +1,5 @@
-// components/tutors/TutorCard.tsx
 "use client";
+// components/tutors/TutorCard.tsx
 import Link from "next/link";
 import Image from "next/image";
 import { Heart } from "lucide-react";
@@ -72,8 +72,8 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         >
           <Heart
             size={16}
-            color={favourited ? "#e94560" : "#9ca3af"}
-            fill={favourited ? "#e94560" : "none"}
+            color={favourited ? "#C81B7F" : "#9ca3af"}
+            fill={favourited ? "#C81B7F" : "none"}
           />
         </button>
       )}
