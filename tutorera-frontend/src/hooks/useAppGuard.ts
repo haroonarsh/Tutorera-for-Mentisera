@@ -39,7 +39,8 @@ export function useAppGuard() {
         }
 
         if (user.role === "tutor") {
-        api.get("/tutors/onboarding/status")
+        setStatus("loading");
+        api.get("/tutors/onboarding/status", { timeout: 8000 })
             .then(res => {
             if (res.data.verificationStatus === "approved") {
                 setStatus("ok");
@@ -51,6 +52,7 @@ export function useAppGuard() {
             .catch(() => {
             // Fail closed — don't assume approved on a network error.
             setStatus("blocked");
+            router.replace("/dashboard");
             });
         return;
         }

@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname                    = usePathname();
   const router                      = useRouter();
 
-  const handleLogout = async () => { await logout(); router.push("/"); };
+  const handleLogout = async () => { await logout(); router.replace("/"); };
   const roleItems = user?.role === "tutor" ? tutorItems : studentItems;
 
   const pageTitle = PAGE_TITLES[pathname]

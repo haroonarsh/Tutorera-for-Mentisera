@@ -157,6 +157,12 @@ export default function DashboardPage() {
     if (!loading && !user) {
       router.replace("/login");
     }
+    if (!loading && user?.role === "pending") {
+      router.replace("/select-role");
+    }
+    if (!loading && user?.role === "admin") {
+      router.replace("/admin");
+    }
   }, [user, loading, router]);
 
    // For tutors: fetch verification status
@@ -181,7 +187,7 @@ export default function DashboardPage() {
   }, [user]);
 
   // Show loading while auth or status check is in progress
-  if (loading || !user || (user.role === "tutor" && checkingStatus)) {
+  if (loading || !user || user.role === "pending" || user.role === "admin" || (user.role === "tutor" && checkingStatus)) {
     return <LoadingScreen />;
   }
 
