@@ -98,13 +98,3 @@ export const tutorRotateLimiter = rateLimit({
     legacyHeaders: false,
     message: { success: false, message: "You can only rotate your tracking link a few times per hour." },
 });
-
-// TEMPORARY: test email endpoint — keep abuse bounded but allow easy
-// triggering for design QA. Remove with the /admin/test-email route.
-export const publicTestEmailLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, message: "Too many test emails sent from this address. Please try again later." },
-});

@@ -20,7 +20,6 @@ import {
   sendBroadcast,
   getSubscriptions,
   getTutorDocumentUrl,
-  sendTestEmail,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -29,16 +28,10 @@ import {
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
-import { publicTestEmailLimiter } from "../middlewares/rateLimiters";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffers, listMarketplaceRequests } from "../controllers/marketplaceAdmin.controller";
 
 const router = Router();
-
-// TEMPORARY: unauthenticated test email endpoint to verify the new
-// branded email chrome in a real inbox. Rate-limited by IP and
-// logged to AuditLog. Remove after design sign-off.
-router.post("/test-email", publicTestEmailLimiter, sendTestEmail);
 
 router.use(protect, authorize("admin"));
 
