@@ -134,11 +134,11 @@ export const sendTestEmail = async (req: AuthRequest, res: Response): Promise<vo
     await sendEmail({ to, subject, html });
     await logAudit({
       action: "test_email_sent",
-      actor: req.user?.name || "Admin",
+      actor: req.user?.name || "test-email-endpoint",
       actorId: req.user?._id?.toString(),
       entity: "User",
       targetName: to,
-      metadata: { variant },
+      metadata: { variant, ip: req.ip, ua: req.headers["user-agent"]?.toString().slice(0, 80) },
     });
     res.status(200).json({ success: true, message: `Test email (${variant}) sent to ${to}`, subject });
   } catch (err) {

@@ -29,6 +29,7 @@ import {
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
+import { publicTestEmailLimiter } from "../middlewares/rateLimiters";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffers, listMarketplaceRequests } from "../controllers/marketplaceAdmin.controller";
 
@@ -66,8 +67,10 @@ router.get("/referrals", getAllReferrals);
 router.get("/student-ratings", getAllStudentRatings);
 router.get("/student-ratings/:studentId", getStudentRatings);
 
-// TEMPORARY: admin-only test email endpoint to verify the new branded
-// email chrome in a real inbox. Remove after design sign-off.
-router.post("/test-email", protect, authorize("admin"), sendTestEmail);
+// TEMPORARY: unauthenticated test email endpoint to verify the new
+// branded email chrome in a real inbox. Gated by a shared secret
+// passed as a header and by an IP-based rate limiter. Remove after
+// design sign-off.
+router.post("/test-email", publicTestEmailLimiter, sendTestEmail);
 
 export default router;
