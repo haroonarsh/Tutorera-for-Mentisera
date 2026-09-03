@@ -77,7 +77,7 @@ app.use(
 app.use(express.json({
     limit: "100kb",
     // Capture the exact raw bytes of the request body as they arrived, before
-    // JSON parsing. Rapid Gateway's webhook signature is computed over these
+    // JSON parsing. The payment webhook signature is computed over these
     // raw bytes — re-serializing the parsed JSON object would very likely
     // produce different bytes (key order, whitespace) and make every
     // signature check fail. This is cheap enough to do for all requests.
