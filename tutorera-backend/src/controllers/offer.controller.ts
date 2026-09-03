@@ -14,11 +14,14 @@ import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
 import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
+import { createTransaction } from "../utils/rapidGateway";
+import { releaseExpiredPaymentHold } from "./request.controller";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
 const expiry = () => new Date(Date.now() + 24 * 60 * 60 * 1000);
 const terminalOfferStates = ["accepted", "rejected", "withdrawn", "expired", "not_selected"];
+const PAYMENT_HOLD_MINUTES = 30;
 
 function moderationReasons(message = "", amount?: number, baseline?: number) {
   const reasons: string[] = [];
@@ -101,33 +104,101 @@ export const renewOffer = async (req: AuthRequest, res: Response): Promise<void>
   await logAudit({ action: "offer_renewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: offer.id, metadata: { renewalCount: offer.renewalCount } }); res.json({ success: true, message: "Offer renewed for 24 hours.", offer });
 };
 
+// @desc    Accept an offer — reserves it and starts a Rapid Gateway checkout.
+//          The booking is NOT created here anymore; it's created by
+//          finalizeBidAcceptance (request.controller.ts) once payment is
+//          confirmed via webhook. This is the REAL accept path the live
+//          "Accept" button on the Offers page calls.
 export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void> => {
-  const session = await mongoose.startSession(); let booking: any; let tutorId = ""; let studentId = "";
+  const offerId = new Types.ObjectId(req.params.id as string);
+
   try {
-    await session.withTransaction(async () => {
-      const offer = await Bid.findById(new Types.ObjectId(req.params.id as string)).session(session); if (!offer) throw { statusCode: 404, message: "Offer not found." };
-      const request = await Request.findOne({ _id: offer.request, status: { $in: [...ACTIVE_REQUEST_STATES] } }).session(session);
-      if (!request) throw { statusCode: 409, message: "This request has already been matched with another tutor." };
-      const userId = req.user?._id?.toString();
-      const isStudentOwner = request.student.toString() === userId;
-      const isTutorOwner = offer.tutor.toString() === userId;
-      const latestNegotiation = await OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").session(session);
-      if (!isStudentOwner && !(isTutorOwner && latestNegotiation?.senderRole === "student")) throw { statusCode: 403, message: "Only the student can accept a tutor offer, or the tutor can accept the student's latest counter." };
-      if (!(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status) || (offer.expiresAt && offer.expiresAt.getTime() <= Date.now())) throw { statusCode: 410, message: "This offer is no longer available." };
-      const locked = await Request.updateOne({ _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } }, { status: "awaiting_payment", acceptedOffer: offer._id, finalAgreedRate: offer.amount }, { session });
-      if (locked.modifiedCount !== 1) throw { statusCode: 409, message: "This request has already been matched with another tutor." };
-      offer.status = "accepted"; await offer.save({ session });
-      await Bid.updateMany({ request: request._id, _id: { $ne: offer._id }, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "not_selected" }, { session });
-      await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "accepted" }, { session });
-      const fees = calculateMarketplaceFees(offer.amount); const first = await Booking.countDocuments({ student: request.student, tutor: offer.tutor }).session(session) === 0;
-      [booking] = await Booking.create([{ student: request.student, tutor: offer.tutor, request: request._id, bid: offer._id, amount: offer.amount, finalAgreedRate: offer.amount, pricingUnit: offer.pricingUnit, sessionCount: 1, ...fees, platformFee: fees.tutorFee + fees.tax, tutorPayout: fees.tutorNet, schedule: request.schedule, teachingMode: request.teachingMode, isFirstSession: first }], { session });
-      tutorId = offer.tutor.toString(); studentId = request.student.toString();
-    });
-    await Promise.all([sendNotification(req.app.get("io"), tutorId, { title: "Offer Accepted", message: "Your offer was accepted. The booking is awaiting payment.", type: "booking", link: "/dashboard" }), sendNotification(req.app.get("io"), studentId, { title: "Payment Required", message: "Your agreed rate is locked. Complete payment to activate the booking.", type: "booking", link: "/dashboard" })]);
-    await Promise.all([offerEmail(tutorId, "Offer Accepted", "Your tutor offer was accepted. The booking is awaiting payment."), offerEmail(studentId, "Payment Required", "Your agreed rate is locked. Complete payment to activate the booking.")]);
-    await logAudit({ action: "offer_accepted", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: req.params.id as string, metadata: { bookingId: booking.id, finalAgreedRate: booking.finalAgreedRate } });
-    res.json({ success: true, message: "Rate agreed. Complete payment to activate the booking.", booking });
-  } catch (error: any) { res.status(error.statusCode || 500).json({ success: false, message: error.message || "Unable to accept offer." }); } finally { await session.endSession(); }
+    const offer = await Bid.findById(offerId);
+    if (!offer) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
+
+    await releaseExpiredPaymentHold(offer.request as Types.ObjectId);
+
+    const request = await Request.findOne({ _id: offer.request, status: { $in: [...ACTIVE_REQUEST_STATES] } });
+    if (!request) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
+
+    const userId = req.user?._id?.toString();
+    const isStudentOwner = request.student.toString() === userId;
+    const isTutorOwner = offer.tutor.toString() === userId;
+    const latestNegotiation = await OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber");
+    if (!isStudentOwner && !(isTutorOwner && latestNegotiation?.senderRole === "student")) {
+      res.status(403).json({ success: false, message: "Only the student can accept a tutor offer, or the tutor can accept the student's latest counter." });
+      return;
+    }
+
+    if (!(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status) || (offer.expiresAt && offer.expiresAt.getTime() <= Date.now())) {
+      res.status(410).json({ success: false, message: "This offer is no longer available." });
+      return;
+    }
+
+    // Atomic guard — same purpose as before: only one accept attempt can
+    // win this transition, so two concurrent accept clicks can't both
+    // proceed. We reserve the AGREED RATE here too, exactly like before,
+    // just without creating the booking yet.
+    const locked = await Request.updateOne(
+      { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
+      { status: "awaiting_payment", acceptedOffer: offer._id, finalAgreedRate: offer.amount }
+    );
+    if (locked.modifiedCount !== 1) {
+      res.status(409).json({ success: false, message: "This request has already been matched with another tutor." });
+      return;
+    }
+
+    const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
+    offer.status = "payment_pending";
+    offer.paymentPendingExpiresAt = paymentPendingExpiresAt;
+    await offer.save();
+
+    try {
+      const student = await User.findById(request.student).select("name email phone");
+      const checkoutUrl = await createTransaction({
+        amount: offer.amount,
+        customerMobileNo: student?.phone || "03000000000",
+        customerEmail: student?.email || "",
+        // Same "BID-" prefix the webhook handler already branches on —
+        // Offer and Bid are the same collection, so this is fully
+        // compatible with the existing payment.controller.ts webhook logic.
+        basketId: `BID-${offer._id.toString()}`,
+        description: `TUTORERA offer acceptance ${offer._id.toString()}`,
+        successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
+        failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
+        checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
+      });
+
+      await logAudit({
+        action: "offer_accept_checkout_started",
+        actor: req.user?.name,
+        actorId: userId,
+        entity: "Bid",
+        targetId: offer.id,
+        metadata: { finalAgreedRate: offer.amount },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Redirecting to payment. Your booking will be created once payment completes.",
+        checkoutUrl,
+      });
+    } catch (err: any) {
+      // Checkout creation failed — roll back the reservation immediately.
+      await Request.updateOne(
+        { _id: request._id, status: "awaiting_payment" },
+        { status: "receiving_offers", $unset: { acceptedOffer: "", finalAgreedRate: "" } }
+      );
+      await Bid.updateOne(
+        { _id: offer._id, status: "payment_pending" },
+        { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
+      );
+      console.error("Failed to create Rapid Gateway checkout for offer acceptance:", err);
+      res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+    }
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || "Unable to accept offer." });
+  }
 };
 
 export const getRequestOffers = async (req: AuthRequest, res: Response): Promise<void> => {

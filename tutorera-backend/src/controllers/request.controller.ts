@@ -303,7 +303,7 @@ const PAYMENT_HOLD_MINUTES = 30;
 // abandoned checkout), revert the request/bid back to an acceptable state
 // so the bid isn't stuck in limbo forever. Called defensively at the start
 // of the accept flow.
-async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<void> {
+export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<void> {
   const staleBid = await Bid.findOne({
     request: requestId,
     status: "payment_pending",
