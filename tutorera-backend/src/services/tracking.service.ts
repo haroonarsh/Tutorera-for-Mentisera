@@ -123,18 +123,8 @@ const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   RE_VERIFICATION_REQUIRED: "Re-verification required",
 };
 
-const PUBLIC_BASE_URL = "https://tutorera.ac.pk";
-
 export function getCanonicalStatusLabel(status: CanonicalStatus): string {
   return CANONICAL_LABELS[status] || status;
-}
-
-export function publicTrackingPathFor(applicationId: string): string {
-  return `/track/tutor/[secure-token]`;
-}
-
-export function publicTrackingUrl(applicationId: string): string {
-  return `${PUBLIC_BASE_URL}/track/tutor/[secure-token]`;
 }
 
 export async function allocateApplicationId(): Promise<string> {
@@ -583,18 +573,18 @@ export async function buildPublicTrackingPayload(plaintextToken: string): Promis
     canonicalStatusLabel: getCanonicalStatusLabel(canonicalStatus),
     marketplaceEligibility: {
       eligible: marketplaceEligible,
-      since: profile.marketplaceEligibleAt?.toISOString() || null,
+      since: null,
       reasonIfBlocked: null,
     },
     homeTuitionEligibility: {
       eligible: homeTuitionEligible,
-      since: profile.homeTuitionEligibleAt?.toISOString() || null,
+      since: null,
       reasonIfBlocked: null,
     },
     homeTuitionRequired: policeIsRequired(profile),
     verifiedBadge: false,
     demoVideo: {
-      status: "not_submitted",
+      status: profile.demoVideoStatus === "approved" ? "approved" : "not_submitted",
       publicProfileVisible: profile.demoVideoStatus === "approved",
       reviewedAt: null,
       rejectionReason: null,
@@ -633,11 +623,6 @@ export async function recordStatusEvent(input: RecordStatusEventInput): Promise<
   } catch (err) {
     console.error("[TrackingService] Failed to record status event:", err);
   }
-}
-
-export function tutorDisplayName(fullName?: string, userName?: string): string {
-  const source = (fullName && fullName.trim()) || userName || "Tutor";
-  return source;
 }
 
 

@@ -34,7 +34,7 @@ import {
   reVerificationRequiredEmail,
   trackingWelcomeEmail,
 } from "../utils/trackingEmails";
-import { tutorPendingEmail } from "../utils/emailTemplates";
+
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 const APPLICATION_STATUS_URL = `${TRACKING_BASE_URL}/tutor/application-status`;
@@ -199,6 +199,7 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
   if (status && status !== "all") {
     const map: Record<string, Record<string, unknown>> = {
       APPLICATION_STARTED: { onboardingStep: 1, onboardingComplete: false },
+      DOCUMENTS_REQUIRED: { onboardingComplete: false, onboardingStep: { $gt: 1 } },
       APPLICATION_SUBMITTED: { onboardingComplete: true, verificationStatus: "pending" },
       UNDER_REVIEW: { verificationStatus: "pending" },
       ACTION_REQUIRED: { $or: [
@@ -639,6 +640,3 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     await notifyTutor(req, user._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification" });
   }
 }
-
-// Re-export for onboarding step hook
-export { tutorPendingEmail };

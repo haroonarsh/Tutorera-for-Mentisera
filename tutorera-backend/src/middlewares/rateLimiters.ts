@@ -81,10 +81,13 @@ export const googleAuthLimiter = rateLimit({
     message: { success: false, message: "Too many attempts. Please try again later." },
 });
 
-// Public token-based tracking lookup — cap to prevent enumeration/scraping
+// Public token-based tracking lookup — cap to prevent enumeration/scraping.
+// 256-bit base64url tokens are not brute-forceable, so the limit only
+// needs to throttle a misbehaving scraper; legitimate tutors, parents,
+// and references routinely share the link with several people.
 export const trackingLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 30,
+    max: 300,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: "Too many tracking lookups. Please try again later." },

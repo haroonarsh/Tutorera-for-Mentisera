@@ -82,12 +82,13 @@ export const getTutorById = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
+  const id = extractObjectId(String(req.params.id || ""));
   const profile =
-    (await TutorProfile.findById(req.params.id).populate(
+    (await TutorProfile.findById(id).populate(
       "user",
       "name email avatar phone city"
     )) ??
-    (await TutorProfile.findOne({ user: req.params.id }).populate(
+    (await TutorProfile.findOne({ user: id }).populate(
       "user",
       "name email avatar phone city"
     ));
@@ -99,6 +100,10 @@ export const getTutorById = async (
 
   res.status(200).json({ success: true, profile });
 };
+
+function extractObjectId(value: string): string {
+  return value.match(/[a-f\d]{24}/i)?.[0] || value;
+}
 
 // @desc    Get all tutors with search & filter
 // @route   GET /api/tutors
@@ -415,11 +420,20 @@ export const saveOnboardingStep = async (
       return;
     }
 
+    // On any re-submission, the prior rejection reason is no longer valid
+    // and the component should return to "pending" so an admin re-reviews it.
+    const resubmitCnic = Boolean(cnicFrontUrl) && (profile.cnicVerificationStatus === "rejected" || profile.cnicVerificationStatus === "approved");
+    const resubmitDemo = Boolean(videoIntroUrl) && (profile.demoVideoStatus === "rejected" || profile.demoVideoStatus === "approved");
+    const resubmitPolice = Boolean(policeCertificateUrl) && (profile.policeVerificationStatus === "rejected" || profile.policeVerificationStatus === "approved");
+
     updateData = {
       ...(cnicFrontUrl && { cnicFront: cnicFrontUrl, cnicFrontPublicId, cnicVerificationStatus: "pending" as const, cnicSubmittedAt: new Date() }),
       ...(cnicBackUrl && { cnicBack: cnicBackUrl, cnicBackPublicId }),
+      ...(resubmitCnic && { cnicRejectionReason: "" }),
       ...(videoIntroUrl && { videoIntro: videoIntroUrl, videoIntroPublicId, demoVideoStatus: "pending" as const, demoVideoSubmittedAt: new Date() }),
+      ...(resubmitDemo && { demoVideoRejectionReason: "" }),
       ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl, policeCertificatePublicId, policeVerificationStatus: "pending" as const, policeSubmittedAt: new Date() }),
+      ...(resubmitPolice && { policeRejectionReason: "" }),
       onboardingStep: 5,
       onboardingComplete: true,
       verificationStatus: "pending",
