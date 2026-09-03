@@ -10,7 +10,7 @@ import { Suspense } from "react";
 
 const C = { primary: '#1a1a2e', accent: '#2563eb', gray500: '#6b7280', error: '#ef4444' };
 
-const cities = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad", "Other"];
+const cities = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad"];
 
 function RegisterForm() {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor", phone: "", city: "" });
@@ -145,13 +145,23 @@ function RegisterForm() {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>City</label>
-              <select title="options" name="city" value={form.city} onChange={handleChange}
+              {/* Free-text input with autocomplete suggestions from the
+                  common-cities list, instead of a locked <select> — the
+                  student can type any city, including ones not listed. */}
+              <input
+                name="city"
+                type="text"
+                list="city-suggestions"
+                value={form.city}
+                onChange={handleChange}
+                placeholder="e.g. Islamabad"
+                autoComplete="off"
                 style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: form.city ? C.primary : C.gray500, backgroundColor: 'white' }}
                 onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-                <option value="">Select city</option>
-                {cities.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+                onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              <datalist id="city-suggestions">
+                {cities.map(c => <option key={c} value={c} />)}
+              </datalist>
             </div>
           </div>
 
