@@ -7,6 +7,14 @@ import { AuthRequest } from "../types";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail";
 import { welcomeEmail, tutorPendingEmail, planUpgradedEmail } from "../utils/emailTemplates";
+import {
+  allocateApplicationId,
+  generateTrackingToken,
+  recordStatusEvent,
+} from "../services/tracking.service";
+import { trackingWelcomeEmail } from "../utils/trackingEmails";
+
+const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
 
 // Plan limits reference
@@ -28,19 +36,44 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
   const user = await User.create({ name, email, password, role, phone, city });
 
+  let trackingToken: string | undefined;
+  if (user.role === "tutor") {
+    user.applicationId = await allocateApplicationId();
+    const t = generateTrackingToken();
+    user.trackingTokenHash = t.hash;
+    user.trackingTokenCreatedAt = new Date();
+    await user.save();
+    trackingToken = t.plaintext;
+  }
+
   await logAudit({
     action: "user_registered",
     actor: "System",
     entity: "User",
     targetId: user._id.toString(),
     targetName: user.name,
-    metadata: { role: user.role, email: user.email },
+    metadata: { role: user.role, email: user.email, applicationId: user.applicationId },
   });
+
+  if (user.role === "tutor") {
+    await recordStatusEvent({
+      tutorId: user._id.toString(),
+      actor: { name: user.name, role: "system" },
+      event: "APPLICATION_CREATED",
+      message: "Tutor application created",
+      isPublic: true,
+    });
+  }
 
   try {
     if (user.role === "tutor") {
       const { subject, html } = tutorPendingEmail(user.name);
       await sendEmail({ to: user.email, subject, html });
+      if (user.applicationId && trackingToken) {
+        const trackingUrl = `${TRACKING_BASE_URL}/track/tutor/${trackingToken}`;
+        const welcome = trackingWelcomeEmail(user.name, { applicationId: user.applicationId, trackingUrl, statusUrl: `${TRACKING_BASE_URL}/tutor/application-status` });
+        await sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html });
+      }
     } else {
       const { subject, html } = welcomeEmail(user.name);
       await sendEmail({ to: user.email, subject, html });
@@ -193,6 +226,14 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
   }
 
   user.role = role;
+  let trackingToken: string | undefined;
+  if (role === "tutor") {
+    user.applicationId = await allocateApplicationId();
+    const t = generateTrackingToken();
+    user.trackingTokenHash = t.hash;
+    user.trackingTokenCreatedAt = new Date();
+    trackingToken = t.plaintext;
+  }
   await user.save();
 
   await logAudit({
@@ -201,8 +242,29 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     entity: "User",
     targetId: user._id.toString(),
     targetName: user.name,
-    metadata: { role },
+    metadata: { role, applicationId: user.applicationId },
   });
+
+  if (role === "tutor") {
+    await recordStatusEvent({
+      tutorId: user._id.toString(),
+      actor: { name: user.name, role: "system" },
+      event: "APPLICATION_CREATED",
+      message: "Tutor application created",
+      isPublic: true,
+    });
+    try {
+      const { subject, html } = tutorPendingEmail(user.name);
+      await sendEmail({ to: user.email, subject, html });
+      if (user.applicationId && trackingToken) {
+        const trackingUrl = `${TRACKING_BASE_URL}/track/tutor/${trackingToken}`;
+        const welcome = trackingWelcomeEmail(user.name, { applicationId: user.applicationId, trackingUrl, statusUrl: `${TRACKING_BASE_URL}/tutor/application-status` });
+        await sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html });
+      }
+    } catch (err) {
+      console.error("Failed to send tutor welcome email:", err);
+    }
+  }
 
   sendTokenResponse(user, 200, res);
 };

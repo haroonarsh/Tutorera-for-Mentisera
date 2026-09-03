@@ -51,6 +51,36 @@ export interface ITutorProfile extends Document {
   rejectionReason: string;
   isVerified: boolean;
 
+  // ── Per-component verification (Tutor Application Tracking) ──
+  cnicVerificationStatus: "not_submitted" | "pending" | "approved" | "rejected";
+  cnicRejectionReason: string;
+  degreeVerificationStatus: "not_submitted" | "pending" | "approved" | "rejected";
+  degreeRejectionReason: string;
+  demoVideoStatus: "not_submitted" | "pending" | "approved" | "rejected";
+  demoVideoRejectionReason: string;
+  policeVerificationStatus: "not_required" | "not_submitted" | "pending" | "approved" | "rejected";
+  policeRejectionReason: string;
+  cnicSubmittedAt: Date;
+  degreeSubmittedAt: Date;
+  demoVideoSubmittedAt: Date;
+  policeSubmittedAt: Date;
+  cnicReviewedAt: Date;
+  degreeReviewedAt: Date;
+  demoVideoReviewedAt: Date;
+  policeReviewedAt: Date;
+
+  // ── Eligibility & lifecycle ──
+  marketplaceEligible: boolean;
+  marketplaceEligibleAt: Date;
+  homeTuitionEligible: boolean;
+  homeTuitionEligibleAt: Date;
+  homeTuitionRequired: boolean;
+  suspendedAt: Date;
+  suspendedReason: string;
+  reVerificationRequired: boolean;
+  reVerificationReason: string;
+  lastStatusChangeAt: Date;
+
   // Stats
   averageRating: number;
   totalReviews: number;
@@ -113,6 +143,36 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     verificationStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     rejectionReason: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
+
+    // Per-component verification
+    cnicVerificationStatus: { type: String, enum: ["not_submitted", "pending", "approved", "rejected"], default: "not_submitted" },
+    cnicRejectionReason: { type: String, default: "" },
+    degreeVerificationStatus: { type: String, enum: ["not_submitted", "pending", "approved", "rejected"], default: "not_submitted" },
+    degreeRejectionReason: { type: String, default: "" },
+    demoVideoStatus: { type: String, enum: ["not_submitted", "pending", "approved", "rejected"], default: "not_submitted" },
+    demoVideoRejectionReason: { type: String, default: "" },
+    policeVerificationStatus: { type: String, enum: ["not_required", "not_submitted", "pending", "approved", "rejected"], default: "not_required" },
+    policeRejectionReason: { type: String, default: "" },
+    cnicSubmittedAt: { type: Date },
+    degreeSubmittedAt: { type: Date },
+    demoVideoSubmittedAt: { type: Date },
+    policeSubmittedAt: { type: Date },
+    cnicReviewedAt: { type: Date },
+    degreeReviewedAt: { type: Date },
+    demoVideoReviewedAt: { type: Date },
+    policeReviewedAt: { type: Date },
+
+    // Eligibility & lifecycle
+    marketplaceEligible: { type: Boolean, default: false },
+    marketplaceEligibleAt: { type: Date },
+    homeTuitionEligible: { type: Boolean, default: false },
+    homeTuitionEligibleAt: { type: Date },
+    homeTuitionRequired: { type: Boolean, default: false },
+    suspendedAt: { type: Date },
+    suspendedReason: { type: String, default: "" },
+    reVerificationRequired: { type: Boolean, default: false },
+    reVerificationReason: { type: String, default: "" },
+    lastStatusChangeAt: { type: Date },
 
     // Stats
     averageRating: { type: Number, default: 0 },

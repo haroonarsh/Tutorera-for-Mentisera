@@ -169,6 +169,14 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     });
     return;
   }
+  if (tutorProfile.suspendedAt || tutorProfile.reVerificationRequired) {
+    res.status(403).json({
+      success: false,
+      code: "TUTOR_SUSPENDED",
+      message: "Your profile is currently suspended or requires re-verification. Please check your application status.",
+    });
+    return;
+  }
   const requested = await Request.findById(req.params.id).select("student subject level teachingMode city status budget pricingUnit allowCounterOffers isDirect targetTutor");
   if (!requested || !["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) { res.status(400).json({ success: false, message: "Request is not accepting offers" }); return; }
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
