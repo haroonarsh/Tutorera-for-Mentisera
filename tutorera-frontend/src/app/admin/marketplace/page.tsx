@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 
-type Metrics = Record<string, number>;
+type Metrics = Record<string, number | null>;
 type RequestRow = { _id: string; subject: string; city?: string; level?: string; teachingMode?: string; budget?: number; status: string; flaggedForModeration?: boolean; moderationReasons?: string[]; createdAt: string; student?: { name: string } };
 type OfferRow = { _id: string; amount: number; initialStudentRate?: number; pricingUnit?: string; status: string; flaggedForModeration?: boolean; moderationReasons?: string[]; createdAt: string; tutor?: { name: string }; request?: { subject: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string } };
 type HistoryRow = { _id: string; senderRole: string; amount: number; message?: string; status: string; flaggedForModeration?: boolean; createdAt: string };
@@ -28,7 +28,8 @@ const labels: Record<string, string> = {
   averageTutorResponseMinutes: "Tutor response minutes",
 };
 
-function formatMetric(key: string, value: number) {
+function formatMetric(key: string, value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
   if (key.toLowerCase().includes("rate") || key.toLowerCase().includes("discount") || ["conversionRate", "completionRate", "cancellationRate", "disputeRate"].includes(key)) return `${value.toFixed(1)}%`;
   if (key.includes("GMV") || key.includes("Revenue") || key.includes("HourlyRate")) return `PKR ${value.toLocaleString()}`;
   return value.toFixed(key.toLowerCase().includes("average") ? 1 : 0);
