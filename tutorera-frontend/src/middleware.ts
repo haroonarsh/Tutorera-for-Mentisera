@@ -13,10 +13,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(destination, 301);
   }
 
-  if (request.nextUrl.pathname.startsWith("/admin") && !request.cookies.get("token")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
   const response = NextResponse.next();
   if (PRIVATE_PATHS.some((path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`))) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");

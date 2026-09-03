@@ -39,23 +39,52 @@ export default function Page() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [selected, setSelected] = useState<{ offer: OfferRow; history: HistoryRow[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    api.get("/admin/marketplace-analytics").then(r => setMetrics(r.data.metrics));
-    api.get("/admin/marketplace/requests").then(r => setRequests(r.data.requests ?? []));
-    api.get("/admin/marketplace/offers", { params: { flagged: true } }).then(r => setOffers(r.data.offers ?? []));
+    let cancelled = false;
+
+    async function loadMarketplace() {
+      setLoading(true);
+      setLoadError("");
+      const [metricsResult, requestsResult, offersResult] = await Promise.allSettled([
+        api.get("/admin/marketplace-analytics"),
+        api.get("/admin/marketplace/requests"),
+        api.get("/admin/marketplace/offers", { params: { flagged: true } }),
+      ]);
+
+      if (cancelled) return;
+
+      if (metricsResult.status === "fulfilled") setMetrics(metricsResult.value.data.metrics);
+      if (requestsResult.status === "fulfilled") setRequests(requestsResult.value.data.requests ?? []);
+      if (offersResult.status === "fulfilled") setOffers(offersResult.value.data.offers ?? []);
+
+      if ([metricsResult, requestsResult, offersResult].some((result) => result.status === "rejected")) {
+        setLoadError("Some marketplace admin data could not be loaded. Please refresh or try again.");
+      }
+      setLoading(false);
+    }
+
+    loadMarketplace();
+    return () => { cancelled = true; };
   }, []);
 
   async function inspectOffer(id: string) {
-    const res = await api.get(`/admin/marketplace/offers/${id}`);
-    setSelected({ offer: res.data.offer, history: res.data.history ?? [] });
+    try {
+      const res = await api.get(`/admin/marketplace/offers/${id}`);
+      setSelected({ offer: res.data.offer, history: res.data.history ?? [] });
+    } catch {
+      setLoadError("Could not load this negotiation. Please try again.");
+    }
   }
 
   return (
     <main style={{ padding: "2rem", maxWidth: 1180, margin: "0 auto" }}>
       <h1 style={{ fontSize: "1.8rem" }}>Marketplace Analytics</h1>
       <p style={{ color: "#64748b", margin: ".5rem 0 2rem" }}>Operational request, offer, negotiation, conversion, pricing and trust signals.</p>
-      {!metrics ? <p>Loading...</p> : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 16 }}>{Object.entries(metrics).map(([key, value]) => <article key={key} style={panel}><p style={muted}>{labels[key] || key}</p><strong style={{ fontSize: 24 }}>{formatMetric(key, value)}</strong></article>)}</div>}
+      {loadError && <p role="alert" style={{ color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: 12 }}>{loadError}</p>}
+      {loading && !metrics ? <p>Loading...</p> : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 16 }}>{Object.entries(metrics ?? {}).map(([key, value]) => <article key={key} style={panel}><p style={muted}>{labels[key] || key}</p><strong style={{ fontSize: 24 }}>{formatMetric(key, value)}</strong></article>)}</div>}
 
       <section style={{ marginTop: 28 }}>
         <h2 style={sectionTitle}>Moderation Queue</h2>
