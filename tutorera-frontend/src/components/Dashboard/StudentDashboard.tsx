@@ -368,15 +368,26 @@ function RequestCard({
   async function acceptBid(bidId: string) {
     setAccepting(bidId);
     try {
-      await axiosInstance.post(`/offers/${bidId}/accept`);
-      onBidAccepted();
+      const res = await axiosInstance.post(`/offers/${bidId}/accept`);
+      const checkoutUrl = res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        // Payment happens before the booking is created — send the browser
+        // to Rapid Gateway's hosted checkout. Don't call onBidAccepted()
+        // here: there's no booking yet, and won't be until payment confirms
+        // via webhook.
+        window.location.assign(checkoutUrl);
+      } else {
+        // Defensive fallback — should not normally happen, but avoids
+        // silently doing nothing if the backend ever responds without one.
+        console.error("Accept-offer response had no checkoutUrl:", res.data);
+        setAccepting(null);
+      }
     } catch (err) {
       console.error("Failed to accept bid:", err);
-    } finally {
       setAccepting(null);
     }
   }
-
+  
   async function counterOffer() {
     if (!countering || Number(counterAmount) <= 0) return;
     try { await axiosInstance.post(`/offers/${countering._id}/counter`, { amount: Number(counterAmount), message: counterMessage }); setCountering(null); setCounterAmount(""); setCounterMessage(""); await loadBids(true); }
