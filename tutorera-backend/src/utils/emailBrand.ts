@@ -206,7 +206,7 @@ function buildShell({
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:${COLORS.background};">
     <tr>
       <td align="center" style="padding:35px 12px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 35px rgba(2,21,80,0.10);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" data-tutorera-branded-email="true" style="width:100%;max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 35px rgba(2,21,80,0.10);">
           ${innerContent}
         </table>
         ${buildDeliverability(deliverability)}
