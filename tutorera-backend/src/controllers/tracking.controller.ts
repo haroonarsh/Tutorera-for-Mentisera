@@ -523,6 +523,11 @@ export const setHomeTuitionEligibility = async (req: AuthRequest, res: Response)
     await sendEmailSafely(() => homeTuitionActivatedEmail(user.name, ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", link: "/tutor/application-status", type: "verification" });
   }
+  if (!eligible && wasEligible) {
+    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: `Home tuition eligibility deactivated${reason ? `: ${reason}` : ""}` });
+    await sendEmailSafely(() => homeTuitionDeactivatedEmail(user.name, reason || "Your Home and In-Person Tuition eligibility has been paused.", ctaArgs(user)), user.email);
+    await notifyTutor(req, user._id.toString(), { title: "Home tuition paused", message: reason || "Your Home and In-Person Tuition eligibility has been paused.", link: "/tutor/application-status", type: "verification" });
+  }
   await logAudit({ action: `home_tuition_${eligible ? "activated" : "deactivated"}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
   res.status(200).json({ success: true, profile });
 };

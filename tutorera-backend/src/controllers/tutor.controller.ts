@@ -6,6 +6,9 @@ import TutorAvailability from "../models/TutorAvailability.model";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
+import sendEmail from "../utils/sendEmail";
+import { applicationSubmittedEmail } from "../utils/trackingEmails";
+import { sendNotification } from "../utils/socket";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
@@ -443,7 +446,8 @@ export const saveOnboardingStep = async (
         tutorUser.trackingTokenHash = t.hash;
         tutorUser.trackingTokenCreatedAt = new Date();
       }
-      if (!tutorUser.applicationSubmittedAt && updated?.onboardingComplete) {
+      const firstCompletedSubmission = !tutorUser.applicationSubmittedAt && Boolean(updated?.onboardingComplete);
+      if (firstCompletedSubmission) {
         tutorUser.applicationSubmittedAt = new Date();
       }
       await tutorUser.save();
@@ -457,6 +461,28 @@ export const saveOnboardingStep = async (
           message: "Tutor application submitted",
           isPublic: true,
         });
+        if (firstCompletedSubmission) {
+          try {
+            const { subject, html } = applicationSubmittedEmail(tutorUser.name, {
+              applicationId: tutorUser.applicationId,
+              statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+            });
+            await sendEmail({ to: tutorUser.email, subject, html });
+          } catch (emailErr) {
+            console.error("[TutorApplicationTracking] Failed to send application submitted email:", emailErr);
+          }
+          try {
+            const io = req.app.get("io");
+            await sendNotification(io, tutorUser._id.toString(), {
+              title: "Application submitted",
+              message: "Your tutor application is now in review. You can track every status update from your application page.",
+              type: "verification",
+              link: "/tutor/application-status",
+            });
+          } catch (notificationErr) {
+            console.error("[TutorApplicationTracking] Failed to send application submitted notification:", notificationErr);
+          }
+        }
         const profileForEvents = updated;
         if (profileForEvents.education?.[0]?.degreeDoc) {
           await recordStatusEvent({

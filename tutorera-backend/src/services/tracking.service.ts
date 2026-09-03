@@ -217,7 +217,7 @@ export function isMarketplaceEligible(profile: ITutorProfile): boolean {
     profile.onboardingComplete &&
     profile.demoVideoStatus === "approved" &&
     profile.cnicVerificationStatus === "approved" &&
-    (profile.degreeVerificationStatus === "approved" || profile.degreeVerificationStatus === "not_submitted") &&
+    profile.degreeVerificationStatus === "approved" &&
     profile.verificationStatus === "approved" &&
     !profile.suspendedAt &&
     !profile.reVerificationRequired

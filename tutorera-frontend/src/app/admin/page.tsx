@@ -60,11 +60,11 @@ export default function AdminDashboard() {
     { label: "Total Users", value: stats?.totalUsers, icon: <Users size={22} color={C.accent} />, bg: '#eff6ff', link: "/admin/users" },
     { label: "Total Tutors", value: stats?.totalTutors, icon: <BookOpen size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/users?role=tutor" },
     { label: "Total Students", value: stats?.totalStudents, icon: <Users size={22} color="#7c3aed" />, bg: '#f5f3ff', link: "/admin/users?role=student" },
-    { label: "Pending Verifications", value: stats?.pendingVerifications, icon: <Clock size={22} color="#d97706" />, bg: '#fffbeb', link: "/admin/verifications" },
-    { label: "Approved Tutors", value: stats?.approvedTutors, icon: <CheckCircle size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/verifications?status=approved" },
+    { label: "Pending Applications", value: stats?.pendingVerifications, icon: <Clock size={22} color="#d97706" />, bg: '#fffbeb', link: "/admin/applications?status=UNDER_REVIEW" },
+    { label: "Approved Tutors", value: stats?.approvedTutors, icon: <CheckCircle size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/applications?status=APPROVED_FOR_MARKETPLACE" },
     { label: "Total Bookings", value: stats?.totalBookings, icon: <TrendingUp size={22} color={C.accent} />, bg: '#eff6ff', link: "/admin/bookings" },
     { label: "Contact Messages", value: stats?.totalContacts, icon: <MessageSquare size={22} color="#e94560" />, bg: '#fff1f2', link: "/admin/contacts" },
-    { label: "Verifications Done", value: (stats?.approvedTutors || 0), icon: <ShieldCheck size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/verifications" },
+    { label: "Application Reviews", value: (stats?.approvedTutors || 0), icon: <ShieldCheck size={22} color="#16a34a" />, bg: '#f0fdf4', link: "/admin/applications" },
   ];
 
   const reportButtons: {
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
       <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: '700', color: C.primary, marginBottom: '1.25rem' }}>Quick Actions</h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <Link href="/admin/verifications" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#fffbeb', color: '#d97706', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #fde68a' }}>
+          <Link href="/admin/applications?status=UNDER_REVIEW" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#fffbeb', color: '#d97706', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #fde68a' }}>
             ⏳ Review Pending Tutors ({loading ? "..." : stats?.pendingVerifications ?? 0})
           </Link>
           <Link href="/admin/bookings" style={{ padding: '0.75rem 1.25rem', backgroundColor: '#eff6ff', color: C.accent, borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.875rem', border: '1px solid #bfdbfe' }}>
