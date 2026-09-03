@@ -17,6 +17,7 @@ export interface IEmailLog extends Document {
   relatedEntityType?: string;
   relatedEntityId?: string;
   providerMessageId?: string;
+  webhookEventIds: string[];
   status: EmailLogStatus;
   queuedAt: Date;
   sentAt?: Date;
@@ -39,6 +40,7 @@ const emailLogSchema = new Schema<IEmailLog>(
     relatedEntityType: { type: String, trim: true, index: true },
     relatedEntityId: { type: String, trim: true, index: true },
     providerMessageId: { type: String, trim: true, index: true },
+    webhookEventIds: [{ type: String, trim: true }],
     status: {
       type: String,
       enum: ["queued", "sent", "delivered", "opened", "bounced", "failed"],
@@ -60,5 +62,6 @@ emailLogSchema.index({ createdAt: -1 });
 emailLogSchema.index({ status: 1, createdAt: -1 });
 emailLogSchema.index({ eventType: 1, createdAt: -1 });
 emailLogSchema.index({ relatedEntityType: 1, relatedEntityId: 1 });
+emailLogSchema.index({ webhookEventIds: 1 });
 
 export default mongoose.model<IEmailLog>("EmailLog", emailLogSchema);
