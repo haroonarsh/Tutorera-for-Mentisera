@@ -6,6 +6,7 @@ import api from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
 import { calculateMarketplaceFees } from "@/lib/site";
+import { tutorProfileHref } from "@/lib/tutor-directory";
 
 type History = { _id: string; senderRole: "student" | "tutor"; amount: number; message?: string; createdAt: string; status: string; sequenceNumber: number };
 type Offer = {
@@ -197,7 +198,7 @@ function OffersContent() {
                     <p style={{ color: "#64748b", fontSize: 13 }}>Status: {o.status.replaceAll("_", " ")}</p>
                   </div>
                 </div>
-                <p>Student proposed PKR {(o.initialStudentRate ?? 0).toLocaleString()}/{o.pricingUnit}. {user?.role === "student" && <>Tutor: <Link href={`/tutors/${o.tutor._id}`}>{o.tutor.name}</Link>.</>}</p>
+                <p>Student proposed PKR {(o.initialStudentRate ?? 0).toLocaleString()}/{o.pricingUnit}. {user?.role === "student" && <>Tutor: <Link href={tutorProfileHref({ _id: o.tutor._id, user: { name: o.tutor.name }, subjects: [], city: "Pakistan" })}>{o.tutor.name}</Link>.</>}</p>
                 <p style={{ fontSize: 13, color: timeLeft === "Expired" ? "#dc2626" : "#64748b" }}>Expires in {timeLeft}</p>
                 {user?.role === "tutor" && (
                   <div style={{ background: "#fffbeb", padding: 12, borderRadius: 10, fontSize: 13 }}>

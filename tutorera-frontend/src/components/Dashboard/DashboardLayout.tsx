@@ -1,13 +1,14 @@
-"use client";
+﻿"use client";
 import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 import {
   LayoutDashboard, Bell, Settings, LogOut,
   ChevronLeft, ChevronRight, MessageSquare,
-  CreditCard, User, BookOpen, Search, Menu, TrendingUp,
+  CreditCard, User, Search, Menu, TrendingUp,
 } from "lucide-react";
 
 const C = UI_COLORS;
@@ -76,12 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         justifyContent: collapsed ? 'center' : 'space-between',
       }}>
         {!collapsed && (
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BookOpen size={22} color={C.accent} />
-            <span style={{ fontWeight: '800', color: C.primary, fontSize: '1rem' }}>
-              TUTORERA<span style={{ color: '#C81B7F' }}>®</span>
-            </span>
-          </Link>
+          <BrandLogo variant="light" size="sm" showByline={false} />
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -99,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {user?.avatar ? <img src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user?.name?.charAt(0).toUpperCase()}
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</p>
+              <p style={{ fontWeight: '700', color: '#fff', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</p>
               <p style={{ color: C.accent, fontSize: '0.7rem', fontWeight: '600', textTransform: 'capitalize' }}>{user?.role}</p>
             </div>
           </div>
@@ -121,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 backgroundColor: isActive ? '#EEF5FF' : 'transparent',
                 color: isActive ? C.accent : C.gray500,
                 fontWeight: isActive ? '600' : '400',
-                fontSize: '0.875rem', transition: 'all 0.15s',
+                fontSize: '0.875rem', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)',
               }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = C.gray50; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
@@ -150,7 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 backgroundColor: isActive ? '#EEF5FF' : 'transparent',
                 color: isActive ? C.accent : C.gray500,
                 fontWeight: isActive ? '600' : '400',
-                fontSize: '0.875rem', transition: 'all 0.15s',
+                fontSize: '0.875rem', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)',
               }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = C.gray50; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>

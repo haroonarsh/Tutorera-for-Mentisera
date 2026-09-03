@@ -1,6 +1,6 @@
 import Link from "next/link";
 import TutorCard from "@/components/Tutors/TutorCard";
-import { fetchTutors, type DirectoryKind } from "@/lib/tutor-directory";
+import { fetchTutors, type DirectoryKind, tutorProfileHref } from "@/lib/tutor-directory";
 import styles from "@/app/tutors/page.module.css";
 
 interface Props { kind: DirectoryKind; value: string; filters?: Partial<Record<DirectoryKind, string>>; title: string; description: string; canonicalPath: string; }
@@ -25,7 +25,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
   };
   const directorySchema = { "@context": "https://schema.org", "@graph": [
     breadcrumb,
-    { "@type": "ItemList", name: title, numberOfItems: result.tutors.length, itemListElement: result.tutors.map((tutor, index) => ({ "@type": "ListItem", position: index + 1, url: `https://tutorera.ac.pk/tutors/${tutor._id}`, name: tutor.user?.name })) },
+    { "@type": "ItemList", name: title, numberOfItems: result.tutors.length, itemListElement: result.tutors.map((tutor, index) => ({ "@type": "ListItem", position: index + 1, url: `https://tutorera.ac.pk${tutorProfileHref(tutor)}`, name: tutor.user?.name })) },
     { "@type": "FAQPage", mainEntity: faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) },
   ] };
 

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Bell, BriefcaseBusiness, ChevronDown, GraduationCap, LayoutDashboard, LogOut, Menu, MessageSquare, Search, ShieldCheck, User, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
+import BrandLogo from "@/components/BrandLogo";
 import s from "./Navbar.module.css";
 
 type MegaKey = "students" | "tutors" | "resources" | null;
@@ -156,13 +157,7 @@ export default function Navbar() {
   return (
     <header ref={navRef} className={s.header}>
       <nav className={s.nav} aria-label="Main navigation">
-        <Link href="/" className={s.logo} onClick={closeMenus} aria-label="TUTORERA home">
-          <img src="/tutorera-icon-192.png" alt="" width={44} height={44} className={s.logoImage} />
-          <span className={s.logoText}>
-            <strong>TUTORERA<em>®</em></strong>
-            <small>by MENTISERA</small>
-          </span>
-        </Link>
+        <BrandLogo className={s.logo} imageClassName={s.logoImage} priority />
 
         <div className={s.desktopNav}>
           {megaMenus.map((menu) => {

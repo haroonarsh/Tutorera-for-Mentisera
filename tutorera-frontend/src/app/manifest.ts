@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Post your requirement, compare tutor offers, and book online or in-person tutoring in Pakistan.",
     start_url: "/",
     display: "standalone",
-    background_color: "#F7F9FC",
+    background_color: "#F5F7FF",
     theme_color: "#0329B2",
     icons: [
       { src: "/tutorera-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

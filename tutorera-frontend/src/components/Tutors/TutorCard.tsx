@@ -6,6 +6,7 @@ import { Heart } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import StarRating from "./StarRating";
 import { useFavourites } from "@/hooks/useFavourites";
+import { tutorProfileHref } from "@/lib/tutor-directory";
 import styles from "./Tutorcard.module.css";
 
 interface TutorCardProps {
@@ -39,7 +40,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   };
   
   return (
-    <Link href={`/tutors/${tutor._id}`} className={styles.card} style={{ position: 'relative' }}>
+    <Link href={tutorProfileHref(tutor)} className={styles.card} style={{ position: 'relative' }}>
       {/* Verified badge */}
       {tutor.isVerified && (
         <span className={styles.verifiedBadge} aria-label="Verified tutor">

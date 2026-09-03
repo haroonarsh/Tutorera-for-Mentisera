@@ -13,6 +13,7 @@ import AvailabilityManager from "./AvailabilityManager";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { formatPKR } from "@/lib/site";
+import { tutorProfileHref } from "@/lib/tutor-directory";
 
 const C = UI_COLORS;
 
@@ -629,7 +630,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
               </span>
             </div>
           </div>
-          <Link href={`/tutors/${userId}`} className={s.btnOutline} 
+          <Link href={userId ? `/tutors/${userId}` : "/tutors"} className={s.btnOutline} 
             style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "#d4d5d9" }}>
             View Public Profile
           </Link>

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
+import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
 
 const routes = [
   "", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...Object.keys(LEVELS).map((slug) => `/tutors/level/${slug}`),
   ].map((path) => ({ url: `${SITE_URL}${path}`, lastModified, changeFrequency: "daily", priority: 0.8 }));
   const { tutors } = await fetchTutors({}, 500);
-  const profiles: MetadataRoute.Sitemap = tutors.map((tutor) => ({ url: `${SITE_URL}/tutors/${tutor._id}`, lastModified, changeFrequency: "weekly", priority: 0.7 }));
+  const profiles: MetadataRoute.Sitemap = tutors.map((tutor) => ({ url: `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`, lastModified, changeFrequency: "weekly", priority: 0.7 }));
   const localResults = await Promise.all(PRIMARY_CITY_SLUGS.flatMap((citySlug) => LOCAL_SUBJECT_SLUGS.map(async (subjectSlug) => {
     const city = CITIES[citySlug]; const subject = SUBJECTS[subjectSlug];
     const { total } = await fetchTutors({ city, subject }, 1);

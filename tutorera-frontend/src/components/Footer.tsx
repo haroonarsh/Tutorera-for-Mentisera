@@ -7,6 +7,7 @@ import { SiInstagram } from "react-icons/si";
 import { SlSocialLinkedin } from "react-icons/sl";
 import s from "./Footer.module.css";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import BrandLogo from "@/components/BrandLogo";
 
 const footerColumns = [
   { title: "Company", links: [
@@ -54,13 +55,7 @@ export default function Footer() {
       <div className={s.container}>
         <div className={s.top}>
           <div className={s.brand}>
-            <Link href="/" className={s.logo} aria-label="TUTORERA home">
-              <img src="/tutorera-icon-192.png" alt="" width={54} height={54} className={s.logoImage} />
-              <span>
-                <strong>TUTORERA<em>®</em></strong>
-                <small>by MENTISERA</small>
-              </span>
-            </Link>
+            <BrandLogo className={s.logo} imageClassName={s.logoImage} variant="light" size="lg" />
             <p>
               TUTORERA® by MENTISERA is Pakistan&apos;s student-led digital tutoring marketplace connecting students and parents with qualified tutors for online and in-person educational support.
             </p>

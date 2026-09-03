@@ -13,6 +13,7 @@ import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
+import { tutorProfileHref } from "@/lib/tutor-directory";
 
 const C = UI_COLORS;
 
@@ -306,7 +307,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
   return (
     <div className={s.card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-        <Link href={`/tutors/${tutor._id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', flex: 1 }}>
+        <Link href={tutorProfileHref(tutor)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', flex: 1 }}>
           <Avatar name={tutor.user.name} avatar={tutor.user.avatar} />
           <div>
             <p className={s.personName}>{tutor.user.name}</p>
@@ -471,7 +472,7 @@ function RequestCard({
                       {bid.matchScoreBreakdown && <p className={s.bidMessage}>Match breakdown: {Object.entries(bid.matchScoreBreakdown).filter(([, value]) => value > 0).map(([key, value]) => `${key.replace(/([A-Z])/g, " $1").toLowerCase()} +${value}`).join(" · ") || "insufficient matching evidence"}</p>}
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
-                        <Link href={`/tutors/${bid.tutor._id}`} className={s.btnOutline}
+                        <Link href={tutorProfileHref({ _id: bid.tutor._id, user: { name: bid.tutor.name }, subjects: [], city: "Pakistan" })} className={s.btnOutline}
                           style={{ fontSize: 12, padding: "6px 12px", textDecoration: "none",
                             display: "inline-flex", border: "1.5px solid #e5e7eb",
                             borderRadius: 8, color: "#374151", fontWeight: 500 }}>

@@ -55,7 +55,7 @@ export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24):
 
 export async function fetchTutor(id: string): Promise<TutorProfile | null> {
   try {
-    const response = await fetch(`${API_URL}/tutors/${encodeURIComponent(id)}`, { next: { revalidate: 900 } });
+    const response = await fetch(`${API_URL}/tutors/${encodeURIComponent(extractTutorId(id))}`, { next: { revalidate: 900 } });
     if (!response.ok) return null;
     const data = await response.json();
     return data.profile ?? null;
@@ -66,4 +66,20 @@ export async function fetchTutor(id: string): Promise<TutorProfile | null> {
 
 export function slugify(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+export function tutorProfileSlug(tutor: Pick<TutorProfile, "_id" | "subjects"> & { city?: string; user?: { name?: string; city?: string } }) {
+  const name = tutor.user?.name || "tutor";
+  const subject = tutor.subjects?.[0] || "tutor";
+  const city = tutor.city || tutor.user?.city || "pakistan";
+  return `${tutor._id}-${slugify(`${name} ${subject} tutor ${city}`)}`;
+}
+
+export function tutorProfileHref(tutor: Pick<TutorProfile, "_id" | "subjects"> & { city?: string; user?: { name?: string; city?: string } }) {
+  return `/tutors/${tutorProfileSlug(tutor)}`;
+}
+
+export function extractTutorId(value: string) {
+  const objectId = value.match(/[a-f\d]{24}/i)?.[0];
+  return objectId || value;
 }

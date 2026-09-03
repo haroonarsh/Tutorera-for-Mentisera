@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
+import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useState } from "react";
 
 const C = UI_COLORS;
@@ -58,9 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <>
       {/* Logo */}
       <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-        <p style={{ color: 'white', fontWeight: '800', fontSize: '1.1rem' }}>
-          TUTORERA<span style={{ color: '#C81B7F' }}>®</span>
-        </p>
+        <BrandLogo variant="light" size="sm" />
         <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.2rem' }}>Admin Panel</p>
       </div>
 
@@ -71,7 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           return (
             <Link key={item.href} href={item.href}
               onClick={() => setSidebarOpen(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '600', backgroundColor: isActive ? 'rgba(37,99,235,0.3)' : 'transparent', color: isActive ? 'white' : '#9ca3af', transition: 'all 0.2s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '600', backgroundColor: isActive ? 'rgba(3,41,178,0.32)' : 'transparent', color: isActive ? 'white' : '#cbd5e1', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)' }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
               {item.icon} {item.label}
@@ -129,9 +128,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary }}>
               <Menu size={24} />
             </button>
-            <p style={{ fontWeight: '800', color: C.primary, fontSize: '1rem' }}>
-              TUTORERA<span style={{ color: '#C81B7F' }}>®</span> Admin
-            </p>
+            <BrandLogo size="sm" showByline={false} />
+            <span style={{ fontSize: 12, fontWeight: 900, color: C.accent, letterSpacing: "0.08em", textTransform: "uppercase" }}>Admin</span>
           </div>
 
           {children}

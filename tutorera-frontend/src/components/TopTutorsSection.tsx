@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Star, MapPin } from "lucide-react";
 import api from "@/lib/axios";
 import { formatPKR } from "@/lib/site";
+import { tutorProfileHref } from "@/lib/tutor-directory";
 
 const C = UI_COLORS;
 
@@ -137,7 +138,7 @@ export default function TopTutorsSection() {
                   </div>
 
                   {/* View Profile Button */}
-                  <Link href={`/tutors/${tutor._id}`}
+                  <Link href={tutorProfileHref(tutor)}
                     style={{ display: 'block', textAlign: 'center', backgroundColor: C.accent, color: 'white', padding: '0.65rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', textDecoration: 'none' }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = C.accent)}>

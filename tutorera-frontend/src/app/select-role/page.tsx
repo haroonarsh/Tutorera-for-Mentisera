@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
 
 const C = UI_COLORS;
@@ -37,11 +37,7 @@ export default function SelectRolePage() {
       <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <BookOpen size={28} color={C.accent} />
-            <span style={{ fontSize: '1.4rem', fontWeight: '800', color: C.primary }}>TUTORERA<span style={{ color: '#C81B7F' }}>®</span></span>
-          </div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>One more step</h1>
+          <BrandLogo size="lg" /><h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>One more step</h1>
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>How do you want to use TUTORERA?</p>
         </div>
 

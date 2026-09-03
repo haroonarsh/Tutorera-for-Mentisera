@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { fetchTutor } from "@/lib/tutor-directory";
+import { fetchTutor, tutorProfileSlug } from "@/lib/tutor-directory";
 import { SITE_URL } from "@/lib/site";
 
 type Props = { children: React.ReactNode; params: Promise<{ id: string }> };
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
   const city = tutor.city || tutor.user?.city || "Pakistan";
   const title = `${name} – ${subjects} Tutor in ${city}`;
   const description = `Book ${name}, a verified ${subjects} tutor in ${city}. View experience, teaching modes, availability, student ratings, and hourly rate on TUTORERA.`;
-  const path = `/tutors/${id}`;
+  const path = `/tutors/${tutorProfileSlug(tutor)}`;
   return { title, description, alternates: { canonical: path }, openGraph: { title: `${title} | TUTORERA®`, description, url: path, type: "profile", images: tutor.user?.avatar ? [tutor.user.avatar] : ["/og-image.png"] } };
 }
 
@@ -25,7 +25,7 @@ export default async function TutorProfileLayout({ children, params }: Props) {
   if (!tutor) return children;
 
   const name = tutor.user?.name || tutor.fullName || "Tutor";
-  const url = `${SITE_URL}/tutors/${id}`;
+  const url = `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`;
   const schema = {
     "@context": "https://schema.org", "@type": "ProfilePage", "@id": `${url}/#profile`, url,
     mainEntity: {
