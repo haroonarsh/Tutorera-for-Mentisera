@@ -35,6 +35,11 @@ import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffe
 
 const router = Router();
 
+// TEMPORARY: unauthenticated test email endpoint to verify the new
+// branded email chrome in a real inbox. Rate-limited by IP and
+// logged to AuditLog. Remove after design sign-off.
+router.post("/test-email", publicTestEmailLimiter, sendTestEmail);
+
 router.use(protect, authorize("admin"));
 
 router.get("/stats", getDashboardStats);
@@ -66,11 +71,5 @@ router.patch("/guarantee-claims/:id", validateGuarantee(updateClaimStatusSchema)
 router.get("/referrals", getAllReferrals);
 router.get("/student-ratings", getAllStudentRatings);
 router.get("/student-ratings/:studentId", getStudentRatings);
-
-// TEMPORARY: unauthenticated test email endpoint to verify the new
-// branded email chrome in a real inbox. Gated by a shared secret
-// passed as a header and by an IP-based rate limiter. Remove after
-// design sign-off.
-router.post("/test-email", publicTestEmailLimiter, sendTestEmail);
 
 export default router;
