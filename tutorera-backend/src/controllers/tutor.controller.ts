@@ -5,6 +5,7 @@ import User from "../models/User.model";
 import TutorAvailability from "../models/TutorAvailability.model";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
+import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
@@ -272,7 +273,13 @@ export const saveOnboardingStep = async (
       degreeDocPublicId: degreeDocPublicId || profile.education?.[0]?.degreeDocPublicId || "",
     }];
 
-    updateData = { education, onboardingStep: 3 };
+    const wasSubmitted = !!(profile.education?.[0]?.degreeDoc);
+    updateData = {
+      education,
+      onboardingStep: 3,
+      ...(degreeDocUrl && { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() }),
+      ...(degreeDocUrl && !wasSubmitted ? { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() } : {}),
+    };
   }
 
   else if (stepNum === 3) {
@@ -406,13 +413,14 @@ export const saveOnboardingStep = async (
     }
 
     updateData = {
-      ...(cnicFrontUrl && { cnicFront: cnicFrontUrl, cnicFrontPublicId }),
+      ...(cnicFrontUrl && { cnicFront: cnicFrontUrl, cnicFrontPublicId, cnicVerificationStatus: "pending" as const, cnicSubmittedAt: new Date() }),
       ...(cnicBackUrl && { cnicBack: cnicBackUrl, cnicBackPublicId }),
-      ...(videoIntroUrl && { videoIntro: videoIntroUrl, videoIntroPublicId }),
-      ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl, policeCertificatePublicId }),
+      ...(videoIntroUrl && { videoIntro: videoIntroUrl, videoIntroPublicId, demoVideoStatus: "pending" as const, demoVideoSubmittedAt: new Date() }),
+      ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl, policeCertificatePublicId, policeVerificationStatus: "pending" as const, policeSubmittedAt: new Date() }),
       onboardingStep: 5,
       onboardingComplete: true,
       verificationStatus: "pending",
+      lastStatusChangeAt: new Date(),
     };
   }
 
@@ -422,6 +430,79 @@ export const saveOnboardingStep = async (
     updateData,
     { new: true }
   );
+
+  // ── Tutor Application Tracking: ensure applicationId + token exist ──
+  try {
+    const tutorUser = await User.findById(req.user?._id);
+    if (tutorUser && tutorUser.role === "tutor") {
+      if (!tutorUser.applicationId) {
+        tutorUser.applicationId = await allocateApplicationId();
+      }
+      if (!tutorUser.trackingTokenHash) {
+        const t = generateTrackingToken();
+        tutorUser.trackingTokenHash = t.hash;
+        tutorUser.trackingTokenCreatedAt = new Date();
+      }
+      if (!tutorUser.applicationSubmittedAt && updated?.onboardingComplete) {
+        tutorUser.applicationSubmittedAt = new Date();
+      }
+      await tutorUser.save();
+
+      if (updated?.onboardingComplete) {
+        await recordStatusEvent({
+          tutorId: tutorUser._id.toString(),
+          tutorProfileId: updated._id.toString(),
+          actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+          event: "APPLICATION_SUBMITTED",
+          message: "Tutor application submitted",
+          isPublic: true,
+        });
+        const profileForEvents = updated;
+        if (profileForEvents.education?.[0]?.degreeDoc) {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(),
+            tutorProfileId: profileForEvents._id.toString(),
+            actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+            event: "EDUCATIONAL_DOCUMENTS_SUBMITTED",
+            message: "Educational documents submitted",
+            isPublic: true,
+          });
+        }
+        if (profileForEvents.cnicFront && profileForEvents.cnicBack) {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(),
+            tutorProfileId: profileForEvents._id.toString(),
+            actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+            event: "CNIC_SUBMITTED",
+            message: "CNIC submitted for review",
+            isPublic: true,
+          });
+        }
+        if (profileForEvents.videoIntro) {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(),
+            tutorProfileId: profileForEvents._id.toString(),
+            actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+            event: "DEMO_VIDEO_SUBMITTED",
+            message: "Demo video submitted for review",
+            isPublic: true,
+          });
+        }
+        if (profileForEvents.policeCertificate) {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(),
+            tutorProfileId: profileForEvents._id.toString(),
+            actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+            event: "POLICE_VERIFICATION_SUBMITTED",
+            message: "Police verification submitted for review",
+            isPublic: true,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[TutorApplicationTracking] Failed to record step 5 events:", err);
+  }
 
   res.status(200).json({
     success: true,

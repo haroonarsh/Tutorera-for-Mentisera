@@ -80,3 +80,21 @@ export const googleAuthLimiter = rateLimit({
     legacyHeaders: false,
     message: { success: false, message: "Too many attempts. Please try again later." },
 });
+
+// Public token-based tracking lookup — cap to prevent enumeration/scraping
+export const trackingLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "Too many tracking lookups. Please try again later." },
+});
+
+// Tutor-initiated token rotation — strict, defend against stolen sessions
+export const tutorRotateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "You can only rotate your tracking link a few times per hour." },
+});

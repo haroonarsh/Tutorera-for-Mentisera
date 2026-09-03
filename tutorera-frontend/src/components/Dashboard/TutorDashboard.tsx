@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import axiosInstance from "@/lib/axios";
 import { DashRequest, DashBooking, TutorProfileData, DashDirectRequest } from "@/types/dashboard";
+import { AuthenticatedTrackingPayload } from "@/types/tracking";
 import PlaceBidModal from "./PlaceBidModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,76 @@ function timeAgo(dateStr: string): string {
   if (days < 30) return `${days} days ago`;
   return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
 }
+
+function TutorApplicationStatusCard() {
+  const [data, setData] = useState<AuthenticatedTrackingPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axiosInstance.get("/tutor/application-status");
+        if (!cancelled) setData(res.data.payload);
+      } catch {
+        if (!cancelled) setError(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading || error || !data) return null;
+
+  const isActionRequired = data.canonicalStatus === "ACTION_REQUIRED" || data.canonicalStatus === "RE_VERIFICATION_REQUIRED" || data.actionRequired != null;
+  const isSuccess = data.canonicalStatus === "APPROVED_FOR_MARKETPLACE" || data.canonicalStatus === "HOME_TUITION_ELIGIBLE";
+  const isDanger = data.canonicalStatus === "REJECTED" || data.canonicalStatus === "SUSPENDED";
+  const cardClass = `${s.dashboardCard || ""} ${isActionRequired ? s.dashboardCardWarning || "" : isDanger ? s.dashboardCardDanger || "" : isSuccess ? s.dashboardCardSuccess || "" : ""}`.trim();
+
+  return (
+    <div className={cardClass} style={{
+      background: isActionRequired ? "linear-gradient(135deg, #b45309 0%, #d97706 100%)" :
+                  isDanger ? "linear-gradient(135deg, #991b1b 0%, #dc2626 100%)" :
+                  isSuccess ? "linear-gradient(135deg, #065f46 0%, #16a34a 100%)" :
+                  "linear-gradient(135deg, #021550 0%, #0329B2 100%)",
+      color: "#fff",
+      borderRadius: 16,
+      padding: "18px 20px",
+      marginBottom: 16,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <p style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800, color: "rgba(255,255,255,0.7)", margin: "0 0 4px" }}>My tutor application</p>
+          <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#fff" }}>{data.canonicalStatusLabel}</h3>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", margin: "4px 0 0" }}>
+            Application ID: <strong>{data.applicationId}</strong> · Last updated {new Date(data.lastUpdatedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+          </p>
+        </div>
+        <div style={{ minWidth: 120, textAlign: "right" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", margin: 0 }}>Verification</p>
+          <p style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: 0 }}>{data.progress.percent}%</p>
+          <div style={{ height: 6, background: "rgba(255,255,255,0.18)", borderRadius: 999, overflow: "hidden", marginTop: 4 }}>
+            <div style={{ width: `${data.progress.percent}%`, height: "100%", background: "rgba(255,255,255,0.85)" }} />
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+        <Link href="/tutor/application-status" style={{
+          background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)",
+          borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
+        }}>Track Application →</Link>
+        {isActionRequired && (
+          <Link href={data.actionRequired?.cta.href || "/onboarding/tutor"} style={{
+            background: "#fff", color: "#b45309", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
+          }}>Complete Verification →</Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 // ─── Booking Card (tutor perspective) ────────────────────────────────────────
 
@@ -570,6 +641,9 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
       </div>
 
       <div className={s.content}>
+        {/* MY TUTOR APPLICATION — live status from /tutor/application-status */}
+        <TutorApplicationStatusCard />
+
         {/* Stats */}
         <div className={s.stats}>
           <div className={s.statCard}>

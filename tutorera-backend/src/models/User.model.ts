@@ -70,6 +70,13 @@ const userSchema = new Schema<IUser>(
       enum: ["local", "google"],
       default: "local",
     },
+
+    // ── Tutor Application Tracking ──
+    applicationId: { type: String, unique: true, sparse: true, index: true },
+    trackingTokenHash: { type: String, unique: true, sparse: true, index: true },
+    trackingTokenCreatedAt: { type: Date },
+    trackingTokenRotatedAt: { type: Date },
+    applicationSubmittedAt: { type: Date },
   },
   { timestamps: true }
 );

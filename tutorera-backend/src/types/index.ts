@@ -31,6 +31,11 @@ export interface IUser extends Document {
   referredBy?: Types.ObjectId;
   googleId?: string;
   authProvider: AuthProvider;
+  applicationId?: string;
+  trackingTokenHash?: string;
+  trackingTokenCreatedAt?: Date;
+  trackingTokenRotatedAt?: Date;
+  applicationSubmittedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;

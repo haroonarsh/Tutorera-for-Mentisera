@@ -23,6 +23,7 @@ const navItems = [
   { href: "/admin/audit-logs",       label: "Audit Logs",       icon: <ClipboardList size={18} /> },
   { href: "/admin/broadcasts",       label: "Broadcasts",       icon: <Radio size={18} /> },
   { href: "/admin/verifications",    label: "Verifications",    icon: <ShieldCheck size={18} /> },
+  { href: "/admin/applications",     label: "Applications",     icon: <ClipboardList size={18} /> },
   { href: "/admin/users",            label: "Users",            icon: <Users size={18} /> },
   { href: "/admin/referrals",        label: "Referrals",        icon: <Gift size={18} /> },
   { href: "/admin/bookings",         label: "Bookings",         icon: <BookOpen size={18} /> },

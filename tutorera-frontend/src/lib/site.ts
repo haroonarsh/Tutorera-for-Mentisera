@@ -26,3 +26,13 @@ export function timeAgo(dateStr: string): string {
   if (days < 30) return `${days} days ago`;
   return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
 }
+
+export function formatDateLong(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" });
+}
+
+export function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleString("en-PK", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
