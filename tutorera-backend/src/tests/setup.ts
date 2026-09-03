@@ -1,4 +1,5 @@
 // src/tests/setup.ts
+import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
@@ -13,7 +14,7 @@ beforeAll(async () => {
   replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const uri = replSet.getUri();
   await mongoose.connect(uri);
-}, 30000);
+}, 120000);
 
 afterEach(async () => {
   // Reset all collections between tests so one test's data never leaks into
@@ -26,5 +27,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await replSet.stop();
+  if (replSet) {
+    await replSet.stop();
+  }
 });
