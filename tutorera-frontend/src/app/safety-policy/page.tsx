@@ -11,7 +11,7 @@ export default function SafetyPolicyPage() {
           {[
             { title: "Tutor Verification", content: "All tutors must submit valid CNIC and educational certificates before being approved. Our team manually reviews every application." },
             { title: "Contact Privacy", content: "Phone numbers, WhatsApp, and email addresses are automatically filtered from chat messages to protect both students and tutors." },
-            { title: "In-Person Sessions", content: "For in-person tutoring, we recommend sessions be conducted in common areas. Parents are encouraged to be present for younger students." },
+            { title: "In-Person Sessions", content: "For in-person and home tuition, tutors must complete the required police verification before becoming eligible. Sessions involving minors should normally take place in appropriate common or observable study areas, with a parent or guardian present or reasonably accessible." },
             { title: "Reporting", content: "Users can report inappropriate behaviour through our contact form. All reports are reviewed within 24 hours." },
             { title: "Account Suspension", content: "Any user found violating our safety policies will have their account suspended immediately." },
           ].map(section => (
@@ -22,6 +22,7 @@ export default function SafetyPolicyPage() {
           ))}
           <div style={{ textAlign: 'center' }}>
             <Link href="/contact" style={{ backgroundColor: C.accent, color: 'white', padding: '0.875rem 2rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', display: 'inline-block' }}>Report an Issue</Link>
+            <Link href="/in-person-home-tuition-terms" style={{ marginLeft: '.75rem', backgroundColor: 'white', color: C.accent, padding: '0.875rem 2rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', display: 'inline-block', border: '1px solid #bfdbfe' }}>Home Tuition Terms</Link>
           </div>
         </div>
       </section>

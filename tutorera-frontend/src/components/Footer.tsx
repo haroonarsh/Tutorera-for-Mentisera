@@ -32,6 +32,7 @@ const footerColumns = [
   ] },
   { title: "Legal", links: [
     { label: "Terms & Conditions", href: "/terms" },
+    { label: "Home Tuition Terms", href: "/in-person-home-tuition-terms" },
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Refund Policy", href: "/refund-policy" },
     { label: "Cancellation Policy", href: "/cancellation-policy" },

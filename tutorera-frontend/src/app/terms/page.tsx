@@ -1,4 +1,5 @@
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
+import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 const sections = [
@@ -35,8 +36,15 @@ export default function TermsPage() {
       </section>
       <section className={s.narrow}>
         <div className={s.infoBox}>
+          <h2>In-person / home tuition terms</h2>
+          <p>Additional safety, police-verification, safeguarding, and responsibility terms apply where tutoring is delivered physically at a home or other agreed location.</p>
+          <Link className={s.cta} href="/in-person-home-tuition-terms">Read home tuition terms</Link>
+        </div>
+      </section>
+      <section className={s.narrow}>
+        <div className={s.infoBox}>
           <h2>Last updated</h2>
-          <p>September 2, 2026</p>
+          <p>September 3, 2026</p>
         </div>
       </section>
     </main>
