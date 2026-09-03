@@ -20,6 +20,7 @@ import {
   sendBroadcast,
   getSubscriptions,
   getTutorDocumentUrl,
+  sendTestEmail,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -64,5 +65,9 @@ router.patch("/guarantee-claims/:id", validateGuarantee(updateClaimStatusSchema)
 router.get("/referrals", getAllReferrals);
 router.get("/student-ratings", getAllStudentRatings);
 router.get("/student-ratings/:studentId", getStudentRatings);
+
+// TEMPORARY: admin-only test email endpoint to verify the new branded
+// email chrome in a real inbox. Remove after design sign-off.
+router.post("/test-email", protect, authorize("admin"), sendTestEmail);
 
 export default router;
