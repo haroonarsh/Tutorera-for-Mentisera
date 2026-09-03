@@ -7,6 +7,7 @@ import { initSocket } from "./utils/socket";
 import app from "./app";
 import logger from "./config/logger";
 import { processOfferExpirations } from "./utils/offerExpiry";
+import { processAbandonedJourneyRecovery } from "./utils/abandonedJourneyRecovery";
 
 dotenv.config();
 
@@ -32,7 +33,10 @@ const server = httpServer.listen(PORT, () => {
 });
 const offerExpiryTimer = setInterval(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Offer expiry processing failed")), 15 * 60 * 1000);
 offerExpiryTimer.unref();
+const abandonedJourneyTimer = setInterval(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Abandoned journey recovery failed")), 60 * 60 * 1000);
+abandonedJourneyTimer.unref();
 setTimeout(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
+setTimeout(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
@@ -49,6 +53,7 @@ async function gracefulShutdown(signal: string) {
   if (isShuttingDown) return;
   isShuttingDown = true;
   clearInterval(offerExpiryTimer);
+  clearInterval(abandonedJourneyTimer);
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 

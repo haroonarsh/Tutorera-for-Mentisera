@@ -16,6 +16,7 @@ import BookedSlot from "../models/BookedSlot.model";
 import sendEmail from "../utils/sendEmail";
 import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail } from "../utils/emailTemplates";
 import { createTransaction } from "../utils/rapidGateway";
+import AbandonedJourney from "../models/AbandonedJourney.model";
 
 // ─── Plan Limits ───────────────────────────────────────────────────────────────
 const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
@@ -64,6 +65,10 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
 
   // ── Create request ──
   const request = await Request.create({ student: req.user?._id, ...req.body });
+  await AbandonedJourney.updateMany(
+    { user: req.user?._id, type: "student_request", completedAt: { $exists: false } },
+    { $set: { completedAt: new Date() } }
+  );
 
   // ── Increment monthly counter ──
   await User.findByIdAndUpdate(req.user?._id, {
@@ -80,6 +85,37 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   await logAudit({ action: "tuition_request_published", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { subject: request.subject, level: request.level, teachingMode: request.teachingMode, notifiedTutors: matchingTutors.length } });
 
   res.status(201).json({ success: true, message: "Request created", request });
+};
+
+// @desc    Save private in-progress tuition request for abandoned-request recovery emails
+// @route   POST /api/requests/draft
+// @access  Private (student)
+export const saveRequestDraftProgress = async (req: AuthRequest, res: Response): Promise<void> => {
+  const allowed = [
+    "subject", "level", "description", "budget", "teachingMode", "city", "schedule",
+    "pricingUnit", "classGrade", "curriculum", "examType", "preferredDays", "preferredStartTime",
+    "sessionDurationMinutes", "sessionsPerWeek", "expectedStartDate",
+    "tutorId", "tutorName", "selectedDate", "selectedStartTime", "selectedEndTime",
+  ];
+  const type = req.body?.type === "direct_booking" ? "direct_booking" : "student_request";
+  const data = Object.fromEntries(
+    allowed
+      .filter((key) => req.body?.[key] !== undefined && req.body?.[key] !== "")
+      .map((key) => [key, req.body[key]])
+  );
+
+  if (Object.keys(data).length === 0) {
+    res.status(200).json({ success: true, tracked: false });
+    return;
+  }
+
+  const journey = await AbandonedJourney.findOneAndUpdate(
+    { user: req.user?._id, type, completedAt: { $exists: false } },
+    { $set: { data }, $setOnInsert: { user: req.user?._id, type, remindersSent: [] } },
+    { new: true, upsert: true }
+  );
+
+  res.status(200).json({ success: true, tracked: true, journeyId: journey._id });
 };
 
 // @desc    Get all open requests (tutors browse)
@@ -643,6 +679,11 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     isDirect: true,
   });
 
+  await AbandonedJourney.updateMany(
+    { user: req.user?._id, type: "direct_booking", completedAt: { $exists: false } },
+    { $set: { completedAt: new Date() } }
+  );
+
   const io = req.app.get("io");
   await sendNotification(io, tutorId, {
     title: "📩 New Direct Booking Request",
@@ -738,7 +779,7 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
       link: "/dashboard",
     });
 
-    try {
+   try {
       const studentUser = await User.findById(request.student).select("name email");
       if (studentUser) {
         const { subject, html } = directBookingDeclinedEmail(studentUser.name, request.subject);

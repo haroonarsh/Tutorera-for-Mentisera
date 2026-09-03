@@ -1,6 +1,6 @@
 "use client";
 // components/tutors/DirectBookingModal.tsx
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axiosInstance from "@/lib/axios";
 import SlotPicker from "@/components/Tutors/SlotPicker";
 import styles from "./PostRequestModal.module.css";
@@ -48,11 +48,35 @@ export default function DirectBookingModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalRef = useFocusTrap(true, onClose);
 
   function set(key: keyof DirectBookingForm, value: string) {
     setForm(f => ({ ...f, [key]: value }));
   }
+
+  useEffect(() => {
+    const hasMeaningfulProgress = Boolean(form.subject || form.level || form.description || form.teachingMode || selectedSlot);
+    if (!hasMeaningfulProgress || submitted) return;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      axiosInstance.post("/requests/draft", {
+        type: "direct_booking",
+        tutorId,
+        tutorName,
+        subject: form.subject,
+        level: form.level,
+        description: form.description,
+        teachingMode: form.teachingMode,
+        selectedDate: selectedSlot?.date,
+        selectedStartTime: selectedSlot?.startTime,
+        selectedEndTime: selectedSlot?.endTime,
+      }).catch(() => {});
+    }, 1500);
+    return () => {
+      if (draftTimer.current) clearTimeout(draftTimer.current);
+    };
+  }, [form, selectedSlot, submitted, tutorId, tutorName]);
 
   async function handleSubmit() {
     const { subject, level, description, teachingMode } = form;

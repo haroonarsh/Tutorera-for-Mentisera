@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "@/lib/axios";
 import { PostRequestPayload } from "@/types/dashboard";
 import styles from "./PostRequestModal.module.css";
@@ -14,8 +14,20 @@ type Props = { onClose:()=>void; onSuccess:()=>void };
 
 export default function PostRequestModal({onClose,onSuccess}:Props){
  const [form,setForm]=useState(EMPTY); const [loading,setLoading]=useState(false); const [error,setError]=useState(""); const modalRef=useFocusTrap(true,onClose);
+ const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
  const set=<K extends keyof PostRequestPayload>(key:K,value:PostRequestPayload[K])=>setForm(f=>({...f,[key]:value}));
  const field=(label:string,key:keyof PostRequestPayload,placeholder="")=><div className={styles.field}><label className={styles.label}>{label}</label><input className={styles.input} value={String(form[key] ?? "")} placeholder={placeholder} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))}/></div>;
+ useEffect(() => {
+  const hasMeaningfulProgress = Boolean(form.subject || form.level || form.description || form.budget || form.teachingMode || form.schedule);
+  if (!hasMeaningfulProgress) return;
+  if (draftTimer.current) clearTimeout(draftTimer.current);
+  draftTimer.current = setTimeout(() => {
+    api.post("/requests/draft", form).catch(() => {});
+  }, 1500);
+  return () => {
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+  };
+ }, [form]);
  async function submit(){ if(!form.subject||!form.level||!form.description||!form.budget||!form.teachingMode||!form.schedule){setError("Complete all required fields.");return} if(form.maximumBudget&&Number(form.maximumBudget)<Number(form.budget)){setError("Maximum budget cannot be below your proposed budget.");return} setLoading(true);setError(""); try{ const numeric=["maximumBudget","travelRadiusKm","minimumExperience","preferredTutorRating","sessionDurationMinutes","sessionsPerWeek"] as const; const payload:Record<string,unknown>={...form,budget:Number(form.budget),expectedStartDate:form.expectedStartDate?new Date(form.expectedStartDate).toISOString():undefined}; numeric.forEach(k=>payload[k]=form[k]?Number(form[k]):undefined); if(form.teachingMode==="online"){payload.city=undefined;payload.area=undefined;payload.travelRadiusKm=undefined} await api.post("/requests",payload);onSuccess();onClose()}catch(e:unknown){setError((e as {response?:{data?:{message?:string}}}).response?.data?.message||"Unable to publish request.")}finally{setLoading(false)} }
  return <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Post a tuition request"><div ref={modalRef} className={styles.modal} style={{maxWidth:760,maxHeight:"92vh",overflowY:"auto"}}>
   <div className={styles.modalHeader}><div><h2 className={styles.modalTitle}>Post a Tuition Request</h2><p style={{color:"#64748b",fontSize:13,marginTop:4}}>Tell verified tutors what you need and what you want to pay.</p></div><button onClick={onClose} className={styles.closeBtn} aria-label="Close">×</button></div>
