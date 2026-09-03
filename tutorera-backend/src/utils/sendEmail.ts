@@ -1,9 +1,12 @@
 import { Resend } from "resend";
+import { renderBrandedEmail } from "./emailBrand";
 
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  preheader?: string;
+  category?: string;
 }
 
 const sendEmail = async (options: EmailOptions): Promise<void> => {
@@ -13,7 +16,12 @@ const sendEmail = async (options: EmailOptions): Promise<void> => {
     from: "TUTORERA® <noreply@tutorera.ac.pk>",
     to: options.to,
     subject: options.subject,
-    html: options.html,
+    html: renderBrandedEmail({
+      subject: options.subject,
+      html: options.html,
+      preheader: options.preheader,
+      category: options.category,
+    }),
   });
 
   if (error) {
