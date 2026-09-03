@@ -23,13 +23,43 @@ const cases = [
 export default function RefundPolicyPage() {
   return (
     <main className={s.page}>
-      <section className={s.hero}><h1>Refund Policy</h1><p>Refund and dispute support for tutoring bookings made through {BRAND_NAME}.</p></section>
-      <section className={s.container}><div className={s.grid}>{cases.map(([title, body]) => <article key={title} className={s.card}><h2>{title}</h2><p>{body}</p></article>)}</div></section>
-      <section className={s.soft}><div className={s.container}><div className={s.grid}>
-        <article className={s.card}><h2>Refund request period and method</h2><p>Customers should request refund review as soon as possible after the issue occurs and include the booking reference, transaction reference, amount paid in PKR, screenshots or communication evidence where relevant, and a short explanation.</p><p>Approved refunds are processed back through the original payment method where supported, or through another documented method approved by TUTORERA support.</p></article>
-        <article className={s.card}><h2>Refund processing and disputes</h2><p>TUTORERA reviews booking records, payment verification, cancellation timing, service delivery evidence, and communications before deciding eligibility. Processing times may vary by payment provider and bank.</p><p>Refund and dispute requests: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> · {SUPPORT_PHONE}</p></article>
-      </div></div></section>
-      <section className={s.narrow}><div className={s.infoBox}><h2>Operator details</h2><p><strong>{LEGAL_OPERATOR}</strong></p><p className={s.address}>{BUSINESS_ADDRESS}</p></div></section>
+      <section className={s.hero}>
+        <h1>Refund Policy</h1>
+        <p>Refund and dispute support for tutoring bookings made through {BRAND_NAME}.</p>
+      </section>
+      <section className={s.container}>
+        <div className={s.grid}>
+          {cases.map(([title, body]) => (
+            <article key={title} className={s.card}>
+              <h2>{title}</h2>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className={s.soft}>
+        <div className={s.container}>
+          <div className={s.grid}>
+            <article className={s.card}>
+              <h2>Refund request period and method</h2>
+              <p>Customers should request refund review as soon as possible after the issue occurs and include the booking reference, transaction reference, amount paid in PKR, screenshots or communication evidence where relevant, and a short explanation.</p>
+              <p>Approved refunds are processed back through the original payment method where supported, or through another documented method approved by TUTORERA support. Because students currently pay no marketplace service fee, refund review focuses on the paid tutoring amount and any actual payment-provider deductions that cannot be reversed.</p>
+            </article>
+            <article className={s.card}>
+              <h2>Refund processing and disputes</h2>
+              <p>TUTORERA reviews booking records, payment verification, cancellation timing, service delivery evidence, and communications before deciding eligibility. Processing times may vary by payment provider and bank.</p>
+              <p>Refund and dispute requests: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> · {SUPPORT_PHONE}</p>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section className={s.narrow}>
+        <div className={s.infoBox}>
+          <h2>Operator details</h2>
+          <p><strong>{LEGAL_OPERATOR}</strong></p>
+          <p className={s.address}>{BUSINESS_ADDRESS}</p>
+        </div>
+      </section>
     </main>
   );
 }

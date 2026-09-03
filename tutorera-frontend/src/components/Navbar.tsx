@@ -103,6 +103,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMega, setActiveMega] = useState<MegaKey>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -113,12 +114,14 @@ export default function Navbar() {
       if (!navRef.current?.contains(event.target as Node)) {
         setActiveMega(null);
         setShowNotifications(false);
+        setShowAccountMenu(false);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setActiveMega(null);
         setShowNotifications(false);
+        setShowAccountMenu(false);
         setIsOpen(false);
       }
     };
@@ -133,14 +136,22 @@ export default function Navbar() {
   const closeMenus = () => {
     setActiveMega(null);
     setShowNotifications(false);
+    setShowAccountMenu(false);
     setIsOpen(false);
   };
 
   const handleLogout = async () => {
     await logout();
     closeMenus();
-    router.push("/");
+    router.replace("/");
   };
+
+  const dashboardHref = user?.role === "admin"
+    ? "/admin"
+    : user?.role === "pending"
+      ? "/select-role"
+      : "/dashboard";
+  const profileHref = user?.role === "pending" ? "/select-role" : "/profile";
 
   return (
     <header ref={navRef} className={s.header}>
@@ -202,7 +213,7 @@ export default function Navbar() {
           {user ? (
             <>
               <div className={s.notifications}>
-                <button type="button" className={s.iconButton} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} aria-expanded={showNotifications} onClick={() => { setShowNotifications(!showNotifications); setActiveMega(null); }}>
+                <button type="button" className={s.iconButton} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} aria-expanded={showNotifications} onClick={() => { setShowNotifications(!showNotifications); setActiveMega(null); setShowAccountMenu(false); }}>
                   <Bell size={20} aria-hidden="true" />
                   {unreadCount > 0 && <span className={s.badge}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
                 </button>
@@ -227,16 +238,25 @@ export default function Navbar() {
                 )}
               </div>
               <div className={s.accountMenu}>
-                <button type="button" className={s.accountButton} aria-label="Account menu">
+                <button
+                  type="button"
+                  className={s.accountButton}
+                  aria-label="Account menu"
+                  aria-expanded={showAccountMenu}
+                  aria-controls="account-menu"
+                  onClick={() => { setShowAccountMenu((open) => !open); setActiveMega(null); setShowNotifications(false); }}
+                >
                   <span className={s.avatar}>{user.avatar ? <img src={user.avatar} alt="" width={32} height={32} /> : user.name.charAt(0).toUpperCase()}</span>
                   <span>{user.name.split(" ")[0]}</span>
                 </button>
-                <div className={s.accountLinks}>
-                  <Link href={user.role === "admin" ? "/admin" : "/dashboard"} onClick={closeMenus}><LayoutDashboard size={16} /> Dashboard</Link>
-                  <Link href="/profile" onClick={closeMenus}><User size={16} /> Profile</Link>
-                  {user.role !== "admin" && <Link href="/chat" onClick={closeMenus}><MessageSquare size={16} /> Messages</Link>}
-                  <button type="button" onClick={handleLogout}><LogOut size={16} /> Logout</button>
-                </div>
+                {showAccountMenu && (
+                  <div id="account-menu" className={s.accountLinks}>
+                    <Link href={dashboardHref} onClick={closeMenus}><LayoutDashboard size={16} /> Dashboard</Link>
+                    <Link href={profileHref} onClick={closeMenus}><User size={16} /> {user.role === "pending" ? "Select role" : "Profile"}</Link>
+                    {user.role !== "admin" && user.role !== "pending" && <Link href="/chat" onClick={closeMenus}><MessageSquare size={16} /> Messages</Link>}
+                    <button type="button" onClick={handleLogout}><LogOut size={16} /> Logout</button>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -266,7 +286,7 @@ export default function Navbar() {
           <div className={s.mobileActions}>
             {user ? (
               <>
-                <Link href={user.role === "admin" ? "/admin" : "/dashboard"} onClick={closeMenus}>Dashboard</Link>
+                <Link href={dashboardHref} onClick={closeMenus}>Dashboard</Link>
                 <Link href="/notifications" onClick={closeMenus}>Notifications {unreadCount > 0 ? `(${unreadCount})` : ""}</Link>
                 <button type="button" onClick={handleLogout}>Logout</button>
               </>

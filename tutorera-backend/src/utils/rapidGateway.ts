@@ -15,7 +15,7 @@ const MERCHANT_NAME = process.env.RAPID_GATEWAY_MERCHANT_NAME || "TUTORERA";
 // Sandbox auth is a shared, publicly-documented test credential — the same
 // "client"/"secret" pair for every merchant testing on their platform. It is
 // NOT a secret specific to Mentisera, and is safe to default here since
-// Rapid Gateway's own docs publish it openly for sandbox use.
+// The gateway's own docs publish it openly for sandbox use.
 const OAUTH_CLIENT_ID = IS_SANDBOX ? "client" : MERCHANT_ID;
 const OAUTH_CLIENT_SECRET = IS_SANDBOX
   ? "secret"
@@ -66,7 +66,7 @@ interface CreateTransactionParams {
 }
 
 // Creates a transaction and returns the hosted checkout URL to redirect the
-// customer to. Rapid Gateway's API responds with an HTTP redirect (not a
+// customer to. The gateway API responds with an HTTP redirect (not a
 // JSON body) — we must NOT follow it automatically, only capture the
 // Location header, exactly like their documented PHP example
 // (CURLOPT_FOLLOWLOCATION => false + CURLINFO_REDIRECT_URL).
@@ -101,13 +101,13 @@ export async function createTransaction(params: CreateTransactionParams): Promis
 
   const redirectUrl = response.headers.location;
   if (!redirectUrl) {
-    throw { statusCode: 502, message: "Rapid Gateway did not return a checkout redirect URL." };
+    throw { statusCode: 502, message: "Payment gateway did not return a checkout redirect URL." };
   }
 
   return redirectUrl;
 }
 
-// Verifies a webhook's signature exactly per Rapid Gateway's documented
+// Verifies a webhook's signature exactly per the payment gateway's documented
 // recipe: HMAC_SHA256(secret, timestamp + "." + raw_request_body), hex,
 // uppercase, compared in constant time, with a 5-minute freshness window
 // to reject replayed/stale deliveries.

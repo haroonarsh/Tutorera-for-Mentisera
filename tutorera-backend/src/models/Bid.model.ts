@@ -16,7 +16,7 @@ export interface IBid extends Document {
   moderationReasons: string[];
   expiryReminderSentAt?: Date;
   status: "pending" | "submitted" | "viewed" | "countered" | "payment_pending" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
-  // Set when a student initiates acceptance (Rapid Gateway checkout created)
+  // Set when a student initiates acceptance (payment checkout created)
   // but payment has not yet been confirmed by webhook. Used to detect and
   // revert abandoned checkout attempts back to an acceptable bid.
   paymentPendingExpiresAt?: Date;

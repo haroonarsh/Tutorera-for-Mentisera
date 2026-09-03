@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post("/booking/:bookingId/checkout", protect, authorize("student"), createBookingCheckout);
 
-// No `protect` here — Rapid Gateway calls this directly, authenticated by
+// No `protect` here — the payment gateway calls this directly, authenticated by
 // HMAC signature (verified inside the controller), not a user session.
 router.post("/webhook", handleRapidGatewayWebhook);
 

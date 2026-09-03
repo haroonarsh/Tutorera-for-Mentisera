@@ -9,7 +9,7 @@ import logger from "../config/logger";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
-// @desc    Create a Rapid Gateway checkout session for an EXISTING booking.
+// @desc    Create an authorized payment checkout session for an EXISTING booking.
 //          (Retained for any booking that already exists without payment —
 //          the primary path now is initiateAcceptBid, which pays BEFORE the
 //          booking is created.)
@@ -53,13 +53,13 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
 
     res.status(200).json({ success: true, checkoutUrl });
   } catch (err: any) {
-    logger.error({ requestId: req.id, err }, "Failed to create Rapid Gateway checkout session");
+    logger.error({ requestId: req.id, err }, "Failed to create payment checkout session");
     const statusCode = err?.statusCode || 502;
     res.status(statusCode).json({ success: false, message: "Unable to start payment. Please try again." });
   }
 };
 
-// @desc    Receive payment confirmation webhooks from Rapid Gateway
+// @desc    Receive payment confirmation webhooks from the authorized payment gateway
 // @route   POST /api/v1/payments/webhook
 // @access  Public (verified via HMAC signature, not auth middleware)
 export const handleRapidGatewayWebhook = async (req: Request, res: Response): Promise<void> => {
@@ -76,7 +76,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
 
   const isValid = verifyWebhookSignature(rawBody, signature, timestamp);
   if (!isValid) {
-    logger.warn({ requestId: (req as any).id }, "Rejected Rapid Gateway webhook — invalid or stale signature");
+    logger.warn({ requestId: (req as any).id }, "Rejected payment webhook — invalid or stale signature");
     res.status(401).json({ success: false, message: "Invalid signature" });
     return;
   }
@@ -109,12 +109,12 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
 
         if (booking.paymentStatus !== "confirmed") {
           booking.paymentStatus = "confirmed";
-          booking.paymentNote = `Confirmed via Rapid Gateway (event ${event.eventId})`;
+          booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
           await booking.save();
         }
       }
     } else if (event.eventType === "transaction.failed") {
-      logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Rapid Gateway reported a failed transaction");
+      logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Payment gateway reported a failed transaction");
       // For BID- checkouts, we deliberately do nothing here — the bid stays
       // "payment_pending" until its 30-minute hold expires and is reverted
       // by releaseExpiredPaymentHold, rather than reverting instantly on a
@@ -124,7 +124,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
 
     res.status(200).json({ success: true });
   } catch (err) {
-    logger.error({ requestId: (req as any).id, err }, "Error processing Rapid Gateway webhook");
+    logger.error({ requestId: (req as any).id, err }, "Error processing payment gateway webhook");
     res.status(500).json({ success: false });
   }
 };

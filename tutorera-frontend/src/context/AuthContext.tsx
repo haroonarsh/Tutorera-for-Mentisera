@@ -98,16 +98,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return res.data.message;
   };
   const logout = async () => {
-    try {
-      await api.post("/auth/logout");
-    } catch (err) {
+    const token = localStorage.getItem("token");
+
+    localStorage.removeItem("token");
+    setUser(null);
+
+    void api.post(
+      "/auth/logout",
+      undefined,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        timeout: 5000,
+      },
+    ).catch((err) => {
       console.error("Logout request failed:", err);
-      // Continue clearing local state even if the request fails —
-      // the user should never appear "stuck" logged in on the frontend.
-    } finally {
-      localStorage.removeItem("token");
-      setUser(null);
-    }
+    });
   };
 
   return (

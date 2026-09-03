@@ -24,9 +24,11 @@ export default function LoginPage() {
     try {
       const loggedInUser = await login(email, password);
         if (loggedInUser.role === "admin") {
-          router.push("/admin");
+          router.replace("/admin");
+        } else if (loggedInUser.role === "pending") {
+          router.replace("/select-role");
         } else {
-          router.push("/dashboard");
+          router.replace("/dashboard");
         }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
@@ -41,11 +43,11 @@ export default function LoginPage() {
     try {
       const { user, needsRole } = await loginWithGoogle(idToken);
       if (needsRole) {
-        router.push("/select-role");
+        router.replace("/select-role");
       } else if (user.role === "admin") {
-        router.push("/admin");
+        router.replace("/admin");
       } else {
-        router.push("/dashboard");
+        router.replace("/dashboard");
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };

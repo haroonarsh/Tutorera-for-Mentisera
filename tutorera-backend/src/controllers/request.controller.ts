@@ -294,7 +294,7 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
 
 // ── Relevant excerpt: request.controller.ts ──
 // Replaces the old acceptBid. Two functions now:
-//   1. initiateAcceptBid  — route handler, reserves the bid, starts Rapid Gateway checkout
+//   1. initiateAcceptBid  — route handler, reserves the offer, starts payment checkout
 //   2. finalizeBidAcceptance — NOT a route; called only by the payment webhook once payment confirms
 
 const PAYMENT_HOLD_MINUTES = 30;
@@ -324,7 +324,7 @@ export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Prom
   );
 }
 
-// @desc    Accept a bid — reserves it and starts a Rapid Gateway checkout.
+// @desc    Accept an offer — reserves it and starts payment checkout.
 //          The booking is NOT created here; it's created by
 //          finalizeBidAcceptance once payment is confirmed via webhook.
 // @route   PATCH /api/requests/:id/bids/:bidId/accept
@@ -413,13 +413,13 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
     );
 
-    console.error("Failed to create Rapid Gateway checkout for bid acceptance:", err);
+    console.error("Failed to create payment checkout for offer acceptance:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
   }
 };
 
-// Called ONLY by the payment webhook (payment.controller.ts) once Rapid
-// Gateway confirms payment for a "BID-<id>" checkout. Runs the same
+// Called ONLY by the payment webhook (payment.controller.ts) once the
+// authorized payment gateway confirms payment for a "BID-<id>" checkout. Runs the same
 // transactional booking-creation logic the old acceptBid used to run
 // synchronously — atomic accept guard, reject other bids, create the
 // booking (now with paymentStatus already "confirmed"), lock the slot.
@@ -441,7 +441,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
 
     await session.withTransaction(async () => {
       // Atomic guard — only proceeds if this bid is still awaiting payment
-      // confirmation. Protects against Rapid Gateway's documented
+        // confirmation. Protects against documented at-least-once
       // at-least-once webhook delivery calling this twice for the same
       // event; the second call finds status already "accepted" and no-ops.
       const bid = await Bid.findOneAndUpdate(
@@ -490,10 +490,10 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         schedule: request.schedule,
         teachingMode: request.teachingMode,
         isFirstSession: existingBookingsCount === 0,
-        // Payment already succeeded via Rapid Gateway before this booking
+        // Payment already succeeded via the authorized payment gateway before this booking
         // was ever created — no manual confirmation step needed.
         paymentStatus: "confirmed",
-        paymentNote: "Paid via Rapid Gateway before booking creation",
+        paymentNote: "Paid via authorized payment gateway before booking creation",
       }], { session });
       const booking = bookingArr[0];
 
