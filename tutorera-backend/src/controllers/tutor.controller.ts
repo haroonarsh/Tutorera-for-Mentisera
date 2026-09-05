@@ -136,16 +136,20 @@ export const getAllTutors = async (
     verificationStatus: "approved",
   };
 
+  const andClauses: Record<string, unknown>[] = [];
+
   if (search) {
     const pattern = new RegExp(search as string, "i");
-    filter.$or = [
-      { fullName: pattern },
-      { subjects: pattern },
-      { bio: pattern },
-      { city: pattern },
-      { countryName: pattern },
-      { curricula: pattern },
-    ];
+    andClauses.push({
+      $or: [
+        { fullName: pattern },
+        { subjects: pattern },
+        { bio: pattern },
+        { city: pattern },
+        { countryName: pattern },
+        { curricula: pattern },
+      ],
+    });
   }
 
   if (subject) {
@@ -159,10 +163,16 @@ export const getAllTutors = async (
   const selectedCountry = countryCode || country;
   if (selectedCountry) {
     const codeUpper = String(selectedCountry).toUpperCase();
-    filter.$or = [
-      { countryCode: codeUpper },
-      { countryName: new RegExp(String(selectedCountry), "i") },
-    ];
+    andClauses.push({
+      $or: [
+        { countryCode: codeUpper },
+        { countryName: new RegExp(String(selectedCountry), "i") },
+      ],
+    });
+  }
+
+  if (andClauses.length > 0) {
+    filter.$and = andClauses;
   }
 
   if (city) {

@@ -71,6 +71,7 @@ export default function AvatarImage({
         height={size}
         sizes={`${size}px`}
         priority={size >= 96}
+        unoptimized
         onError={() => setHasError(true)}
         style={{
           width: "100%",
