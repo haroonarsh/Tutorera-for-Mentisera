@@ -286,6 +286,20 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible");
   if (!requested || !["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) { res.status(400).json({ success: false, message: "Request is not accepting offers" }); return; }
   
+  // ── Police Verification Distinction: Online vs Home Tuition ──
+  // Online Tuition: No Police Verification required.
+  // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
+  if (requested.teachingMode === "in-person") {
+    if (tutorProfile.policeVerificationStatus !== "approved") {
+      res.status(403).json({
+        success: false,
+        code: "POLICE_VERIFICATION_REQUIRED",
+        message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
+      });
+      return;
+    }
+  }
+
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
   const levelMatches = tutorProfile.levels.includes(requested.level as any);
   const modeMatches = tutorProfile.teachingMode === "both" || requested.teachingMode === "both" || tutorProfile.teachingMode === requested.teachingMode;
@@ -758,6 +772,21 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   if (!tutorProfile || tutorProfile.verificationStatus !== "approved") {
     res.status(404).json({ success: false, message: "Tutor not found or not available for booking." });
     return;
+  }
+
+  // ── Police Verification Distinction: Online vs Home Tuition ──
+  // Online Tuition: No Police Verification required.
+  // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
+  const requestedMode = teachingMode || tutorProfile.teachingMode;
+  if (requestedMode === "in-person") {
+    if (tutorProfile.policeVerificationStatus !== "approved") {
+      res.status(400).json({
+        success: false,
+        code: "HOME_TUITION_POLICE_REQUIRED",
+        message: "This tutor is currently approved for Online Tuition only. Home Tuition requires an approved Police Verification Report.",
+      });
+      return;
+    }
   }
 
   // Prevent duplicate direct requests to the same tutor while one is still pending

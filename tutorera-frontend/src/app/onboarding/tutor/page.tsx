@@ -103,8 +103,11 @@ export default function TutorOnboardingPage() {
     return availability.find(a => a.day === day)?.slots.includes(slot) || false;
   };
 
-  // Whether teaching mode requires police cert (set in Step 4)
-  const requiresPoliceCert = step4.teachingMode === "in-person" || step4.teachingMode === "both";
+  // Whether teaching mode mandates police verification report
+  const isHomeTuitionMandatory = step4.teachingMode === "in-person";
+  const isHybridTeaching = step4.teachingMode === "both";
+  const isOnlineOnly = step4.teachingMode === "online";
+  const requiresPoliceCert = isHomeTuitionMandatory;
 
   const handleNext = async () => {
     setError(""); setSaving(true);
@@ -128,7 +131,7 @@ export default function TutorOnboardingPage() {
       }
 
       else if (currentStep === 3) {
-        if (selectedSubjects.length === 0 || selectedLevels.length === 0) {
+        if (!step3.experience || selectedSubjects.length === 0 || selectedLevels.length === 0) {
           setError("Please select at least one subject and level."); setSaving(false); return;
         }
         formData.append("data", JSON.stringify({
@@ -145,6 +148,7 @@ export default function TutorOnboardingPage() {
         }
         formData.append("data", JSON.stringify({
           ...step4,
+          currency: step1.currency || step4.currency || "PKR",
           availability,
         }));
       }
@@ -153,9 +157,12 @@ export default function TutorOnboardingPage() {
         if (!cnicFront || !cnicBack) {
           setError("Please upload both CNIC front and back."); setSaving(false); return;
         }
-        // Frontend validation: if in-person or both, police cert is required
-        if (requiresPoliceCert && !policeCertificate) {
-          setError("Police clearance certificate is required for in-person tutoring."); setSaving(false); return;
+        // Online Tuition: No Police Verification required.
+        // Home Tuition (In-Person): Police Verification Report is strictly mandatory.
+        if (isHomeTuitionMandatory && !policeCertificate) {
+          setError("Police Verification Report is mandatory to offer Home Tuition. Please upload your Police Character Certificate.");
+          setSaving(false);
+          return;
         }
         formData.append("data", JSON.stringify({}));
         formData.append("cnicFront", cnicFront);
@@ -414,15 +421,44 @@ export default function TutorOnboardingPage() {
                     )}
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Teaching Mode</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Teaching Mode *</label>
                     <select title="teachingMode" value={step4.teachingMode} onChange={e => setStep4({ ...step4, teachingMode: e.target.value as "online" | "in-person" | "both" })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-                      <option value="online">Online Only</option>
-                      <option value="in-person">In-Person Only</option>
-                      <option value="both">Both</option>
+                      <option value="online">🌐 Online Tuition Only (No Police Check Required)</option>
+                      <option value="in-person">🏠 Home Tuition (In-Person — Police Report Mandatory)</option>
+                      <option value="both">🌐 + 🏠 Both (Online & Home Tuition)</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Mode distinction guidance banner */}
+                <div style={{
+                  padding: "0.85rem 1rem",
+                  borderRadius: "0.5rem",
+                  border: isOnlineOnly ? "1.5px solid #86efac" : "1.5px solid #fcd34d",
+                  backgroundColor: isOnlineOnly ? "#f0fdf4" : "#fffbeb",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.6rem"
+                }}>
+                  <span style={{ fontSize: "1.2rem" }}>{isOnlineOnly ? "🌐" : "🛡️"}</span>
+                  <div>
+                    <strong style={{ fontSize: "0.85rem", color: isOnlineOnly ? "#166534" : "#92400e" }}>
+                      {isOnlineOnly
+                        ? "Online Tuition: No Police Verification Required"
+                        : isHomeTuitionMandatory
+                        ? "Home Tuition: Police Verification Report Strictly Mandatory"
+                        : "Hybrid (Online & Home): Immediate Online Tutoring + Police Report for Home Tuition"}
+                    </strong>
+                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: isOnlineOnly ? "#15803d" : "#b45309", lineHeight: "1.4" }}>
+                      {isOnlineOnly
+                        ? "You can teach students borderless/worldwide upon standard ID and Degree verification. No police character check is required for online sessions."
+                        : isHomeTuitionMandatory
+                        ? "To safeguard families in home tuition environments, an official Police Character Certificate / Police Verification Report (issued within the last 6 months) is required in Step 5 before you can accept home tuition requests."
+                        : "You can start tutoring online as soon as your ID is verified. Home Tuition remains locked until your Police Verification Report is submitted and verified."}
+                    </p>
                   </div>
                 </div>
                 <div>
@@ -481,31 +517,80 @@ export default function TutorOnboardingPage() {
                   <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="image" style={{ display: 'none' }} />
                 </div>
 
+                {/* Mode distinction banner in Step 5 */}
+                {isOnlineOnly ? (
+                  <div style={{
+                    padding: "0.85rem 1rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #86efac",
+                    backgroundColor: "#f0fdf4",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.6rem",
+                  }}>
+                    <span style={{ fontSize: "1.2rem" }}>🟢</span>
+                    <div>
+                      <strong style={{ fontSize: "0.85rem", color: "#166534" }}>Online Tuition Selected: No Police Verification Required</strong>
+                      <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#15803d", lineHeight: "1.4" }}>
+                        As an online tutor, you only need to submit your CNIC / National ID and Degree credentials. A police character report is not required.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: "0.85rem 1rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #fdba74",
+                    backgroundColor: "#fff7ed",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.6rem",
+                  }}>
+                    <span style={{ fontSize: "1.2rem" }}>🛡️</span>
+                    <div>
+                      <strong style={{ fontSize: "0.85rem", color: "#9a3412" }}>
+                        {isHomeTuitionMandatory ? "Home Tuition: Police Verification Report Mandatory" : "Home Tuition Requirement: Police Verification Report Needed"}
+                      </strong>
+                      <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#c2410c", lineHeight: "1.4" }}>
+                        {isHomeTuitionMandatory
+                          ? "In-person home tutoring mandates an official Police Character Certificate (PKM / local police) issued within the last 6 months."
+                          : "You may submit your Police Verification Report now to unlock Home Tuition, or skip it to be approved for Online Tuition only."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* ── Police Certificate — NEW ── */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                    Police Clearance Certificate
-                    {requiresPoliceCert
-                      ? <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>
-                      : <span style={{ color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>(Optional — online tutors only)</span>}
+                    Police Verification Report / Character Certificate
+                    {isHomeTuitionMandatory
+                      ? <span style={{ color: '#ef4444', marginLeft: '4px' }}>* (Mandatory for Home Tuition)</span>
+                      : isOnlineOnly
+                      ? <span style={{ color: '#16a34a', fontWeight: '500', marginLeft: '6px' }}>(Not Required for Online Tuition)</span>
+                      : <span style={{ color: '#d97706', fontWeight: '500', marginLeft: '6px' }}>(Required to unlock Home Tuition)</span>}
                   </label>
                   <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.6rem', lineHeight: '1.5' }}>
-                    {requiresPoliceCert
-                      ? "Required for in-person tutoring. Must be issued within the last 6 months by a relevant authority (e.g. local police station or NADRA)."
-                      : "Not required for online-only tutors, but uploading one builds student trust."}
+                    {isHomeTuitionMandatory
+                      ? "Mandatory for in-person home tutoring. Must be issued within the last 6 months by a relevant authority (e.g. Police Khidmat Markaz, PKM, or local police station)."
+                      : isOnlineOnly
+                      ? "No police verification is required for online tuition. If you upload one, it remains on file in case you later opt into home tuition."
+                      : "Optional if you only wish to teach online for now. Required before you can offer or accept home tuition bookings."}
                   </p>
                   <div
                     style={{
-                      border: `2px dashed ${requiresPoliceCert && !policeCertificate ? '#fca5a5' : '#e5e7eb'}`,
+                      border: `2px dashed ${isHomeTuitionMandatory && !policeCertificate ? '#fca5a5' : '#e5e7eb'}`,
                       borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center',
-                      cursor: 'pointer', backgroundColor: requiresPoliceCert && !policeCertificate ? '#fff5f5' : C.gray50
+                      cursor: 'pointer', backgroundColor: isHomeTuitionMandatory && !policeCertificate ? '#fff5f5' : C.gray50
                     }}
                     onClick={() => document.getElementById('policeCertificate')?.click()}>
                     {policeCertificate
                       ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {policeCertificate.name}</p>
                       : (
                         <>
-                          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload Police Certificate</p>
+                          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+                            {isOnlineOnly ? "Click to upload Police Certificate (Optional)" : "Click to upload Police Verification Report"}
+                          </p>
                           <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>PDF, JPG, PNG (max 5MB)</p>
                         </>
                       )}

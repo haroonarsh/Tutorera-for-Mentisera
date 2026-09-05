@@ -111,6 +111,7 @@ export interface TutorProfile {
   totalReviews: number;
   isVerified: boolean;
   verificationStatus: string;
+  policeVerificationStatus?: string;
   education: { degree: string; institution: string; year: number; _id: string }[];
   availability: { day: string; slots: string[]; _id: string }[];
 }

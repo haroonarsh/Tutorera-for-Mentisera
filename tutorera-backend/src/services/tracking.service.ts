@@ -284,7 +284,7 @@ export function buildChecklist(profile: ITutorProfile): ChecklistItem[] {
   if (policeIsRequired(profile)) {
     items.push({
       key: "police",
-      label: "Police verification",
+      label: "Police Verification Report (Mandatory for Home Tuition)",
       status:
         profile.policeVerificationStatus === "approved" ? "done" :
         profile.policeVerificationStatus === "rejected" ? "rejected" :
@@ -296,9 +296,10 @@ export function buildChecklist(profile: ITutorProfile): ChecklistItem[] {
   } else {
     items.push({
       key: "police",
-      label: "Police verification",
+      label: "Police Verification (Not Required for Online Tuition)",
       status: "not_required",
       required: false,
+      note: "Online tuition requires standard ID and degree verification. No police character check is required.",
     });
   }
 

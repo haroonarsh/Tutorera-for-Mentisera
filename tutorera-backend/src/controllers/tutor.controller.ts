@@ -350,12 +350,21 @@ export const saveOnboardingStep = async (
   }
 
   else if (stepNum === 4) {
-    // Profile Setup, Global Pricing & Service Areas
+    // Online Tuition: No Police Verification required.
+    // In-Person / Both: Police report required for home tuition.
+    const isOnlineOnly = parsedData.teachingMode === "online";
+    const nextPoliceStatus = isOnlineOnly
+      ? ("not_required" as const)
+      : profile.policeCertificate
+        ? (profile.policeVerificationStatus && profile.policeVerificationStatus !== "not_required" ? profile.policeVerificationStatus : ("pending" as const))
+        : ("not_submitted" as const);
+
     updateData = {
       bio: parsedData.bio,
       hourlyRate: parseInt(parsedData.hourlyRate),
       currency: parsedData.currency || "PKR",
       teachingMode: parsedData.teachingMode,
+      policeVerificationStatus: nextPoliceStatus,
       serviceAreas: parsedData.serviceAreas || [],
       travelRadiusKm: parsedData.travelRadiusKm ? parseInt(parsedData.travelRadiusKm) : 10,
       availability: parsedData.availability || [],
@@ -458,12 +467,13 @@ export const saveOnboardingStep = async (
       policeCertificatePublicId = result.public_id;
     }
 
-    // Validation: in-person tutors MUST upload police certificate
+    // Validation: Home tuition (in-person) tutors MUST provide a Police Verification Report.
+    // For online-only tutors, NO police verification is required.
     const teachingMode = profile.teachingMode;
-    if ((teachingMode === "in-person" || teachingMode === "both") && !policeCertificateUrl && !profile.policeCertificate) {
+    if (teachingMode === "in-person" && !policeCertificateUrl && !profile.policeCertificate) {
       res.status(400).json({
         success: false,
-        message: "Police clearance certificate is required for in-person tutoring.",
+        message: "Police Verification Report is mandatory to offer Home Tuition.",
       });
       return;
     }
@@ -474,13 +484,21 @@ export const saveOnboardingStep = async (
     const resubmitDemo = Boolean(videoIntroUrl) && (profile.demoVideoStatus === "rejected" || profile.demoVideoStatus === "approved");
     const resubmitPolice = Boolean(policeCertificateUrl) && (profile.policeVerificationStatus === "rejected" || profile.policeVerificationStatus === "approved");
 
+    const calculatedPoliceStatus = teachingMode === "online"
+      ? ("not_required" as const)
+      : policeCertificateUrl
+        ? ("pending" as const)
+        : (profile.policeVerificationStatus && profile.policeVerificationStatus !== "not_required" ? profile.policeVerificationStatus : ("not_submitted" as const));
+
     updateData = {
       ...(cnicFrontUrl && { cnicFront: cnicFrontUrl, cnicFrontPublicId, cnicVerificationStatus: "pending" as const, cnicSubmittedAt: new Date() }),
       ...(cnicBackUrl && { cnicBack: cnicBackUrl, cnicBackPublicId }),
       ...(resubmitCnic && { cnicRejectionReason: "" }),
       ...(videoIntroUrl && { videoIntro: videoIntroUrl, videoIntroPublicId, demoVideoStatus: "pending" as const, demoVideoSubmittedAt: new Date() }),
       ...(resubmitDemo && { demoVideoRejectionReason: "" }),
-      ...(policeCertificateUrl && { policeCertificate: policeCertificateUrl, policeCertificatePublicId, policeVerificationStatus: "pending" as const, policeSubmittedAt: new Date() }),
+      ...(policeCertificateUrl
+        ? { policeCertificate: policeCertificateUrl, policeCertificatePublicId, policeVerificationStatus: "pending" as const, policeSubmittedAt: new Date() }
+        : { policeVerificationStatus: calculatedPoliceStatus }),
       ...(resubmitPolice && { policeRejectionReason: "" }),
       onboardingStep: 5,
       onboardingComplete: true,

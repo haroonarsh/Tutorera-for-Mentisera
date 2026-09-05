@@ -178,15 +178,25 @@ export default function DirectBookingModal({
               <select id="db-mode" aria-label="Teaching Mode" className={styles.select}
                 value={form.teachingMode} onChange={e => set("teachingMode", e.target.value)}>
                 <option value="">Select mode</option>
-                <option value="online">Online</option>
-                <option value="in-person">In-Person</option>
+                <option value="online">Online Tuition (Instant Borderless — No Police Check Needed)</option>
+                <option value="in-person">In-Person Home Tuition (Police Verified)</option>
               </select>
+              {form.teachingMode === "in-person" && (
+                <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#9a3412", fontWeight: 500 }}>
+                  🛡️ Home Tuition: Tutors must hold an approved Police Verification Report.
+                </p>
+              )}
+              {form.teachingMode === "online" && (
+                <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#15803d", fontWeight: 500 }}>
+                  🌐 Online Tuition: Conducted live via interactive video & screen-sharing.
+                </p>
+              )}
             </div>
           ) : (
             <div className={styles.field} style={{ marginBottom: '1rem' }}>
               <label className={styles.label}>Teaching Mode</label>
-              <div style={{ padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: '#6b7280', textTransform: 'capitalize', backgroundColor: '#F5F7FF' }}>
-                {tutorTeachingMode}
+              <div style={{ padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: '#021550', fontWeight: 600, backgroundColor: '#F5F7FF' }}>
+                {tutorTeachingMode === "online" ? "🌐 Online Tuition (Borderless — No Police Check Needed)" : "🏠 In-Person Home Tuition (Police Verified)"}
               </div>
             </div>
           )}

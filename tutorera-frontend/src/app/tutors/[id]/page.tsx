@@ -175,6 +175,44 @@ export default async function TutorProfilePage({ params }: Props) {
                 </span>
               )}
 
+              {tutor.teachingMode === "online" && (
+                <span
+                  style={{
+                    backgroundColor: "rgba(59, 130, 246, 0.2)",
+                    color: "#93c5fd",
+                    display: "inline-flex",
+                    gap: ".35rem",
+                    alignItems: "center",
+                    padding: "0.25rem 0.75rem",
+                    borderRadius: 999,
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    border: "1px solid rgba(59, 130, 246, 0.4)",
+                  }}
+                >
+                  🌐 Online Verified
+                </span>
+              )}
+
+              {tutor.policeVerificationStatus === "approved" && (
+                <span
+                  style={{
+                    backgroundColor: "rgba(16, 185, 129, 0.25)",
+                    color: "#86efac",
+                    display: "inline-flex",
+                    gap: ".35rem",
+                    alignItems: "center",
+                    padding: "0.25rem 0.75rem",
+                    borderRadius: 999,
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    border: "1px solid rgba(16, 185, 129, 0.5)",
+                  }}
+                >
+                  🛡️ Police Verified (Home Tuition)
+                </span>
+              )}
+
               {hasVideo && (
                 <span
                   style={{
@@ -493,6 +531,21 @@ export default async function TutorProfilePage({ params }: Props) {
                     ? "Online Tuition"
                     : "In-Person (Home) Tuition"}
                 </p>
+                <div style={{ marginTop: "0.5rem", fontSize: "0.76rem", fontWeight: 600 }}>
+                  {tutor.teachingMode === "online" ? (
+                    <span style={{ color: "#15803d", backgroundColor: "#f0fdf4", padding: "3px 8px", borderRadius: 4, border: "1px solid #bbf7d0", display: "inline-block" }}>
+                      🟢 Online Only — Borderless (No Police Check Required)
+                    </span>
+                  ) : tutor.policeVerificationStatus === "approved" ? (
+                    <span style={{ color: "#166534", backgroundColor: "#dcfce7", padding: "3px 8px", borderRadius: 4, border: "1px solid #86efac", display: "inline-block" }}>
+                      🛡️ Police Verified for Home Tuition
+                    </span>
+                  ) : (
+                    <span style={{ color: "#9a3412", backgroundColor: "#ffedd5", padding: "3px 8px", borderRadius: 4, border: "1px solid #fed7aa", display: "inline-block" }}>
+                      ⚠️ Home Tuition Pending Police Verification Report
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>

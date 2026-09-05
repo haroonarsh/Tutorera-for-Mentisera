@@ -347,9 +347,32 @@ export default function ProfilePage() {
                     {(["online", "in-person", "both"] as const).map(mode => (
                       <button key={mode} type="button" onClick={() => setTutorForm({ ...tutorForm, teachingMode: mode })}
                         style={{ padding: '0.5rem 1.25rem', borderRadius: '999px', border: `1.5px solid ${tutorForm.teachingMode === mode ? C.accent : '#e5e7eb'}`, backgroundColor: tutorForm.teachingMode === mode ? C.accentLight : 'white', color: tutorForm.teachingMode === mode ? C.accent : C.gray500, fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', textTransform: 'capitalize' }}>
-                        {mode}
+                        {mode === "online" ? "🌐 Online Only" : mode === "in-person" ? "🏠 Home Tuition Only" : "🌐 + 🏠 Both"}
                       </button>
                     ))}
+                  </div>
+                  <div style={{
+                    marginTop: '0.65rem',
+                    padding: '0.75rem 0.9rem',
+                    borderRadius: '0.5rem',
+                    border: tutorForm.teachingMode === 'online' ? '1.5px solid #86efac' : '1.5px solid #fcd34d',
+                    backgroundColor: tutorForm.teachingMode === 'online' ? '#f0fdf4' : '#fffbeb',
+                    fontSize: '0.8rem',
+                    lineHeight: '1.4'
+                  }}>
+                    {tutorForm.teachingMode === 'online' ? (
+                      <span style={{ color: '#166534' }}>
+                        🟢 <strong>Online Tuition:</strong> No Police Verification required. You can teach students worldwide upon standard ID and Degree approval.
+                      </span>
+                    ) : tutorForm.teachingMode === 'in-person' ? (
+                      <span style={{ color: '#92400e' }}>
+                        🛡️ <strong>Home Tuition:</strong> Police Verification Report / Character Certificate is strictly <strong>mandatory</strong> before you can accept in-person requests.
+                      </span>
+                    ) : (
+                      <span style={{ color: '#92400e' }}>
+                        ⚡ <strong>Both (Online & Home):</strong> Online tuition is available immediately upon ID approval. Home Tuition requires an approved Police Verification Report.
+                      </span>
+                    )}
                   </div>
                 </div>
 

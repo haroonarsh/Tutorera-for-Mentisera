@@ -76,6 +76,39 @@ export default function VerificationPolicyPage() {
           </div>
         </div>
 
+        {/* Distinction Banner: Online Tuition vs Home Tuition */}
+        <div style={{
+          backgroundColor: "#f8fafc",
+          border: "1.5px solid #cbd5e1",
+          borderRadius: "0.75rem",
+          padding: "1.25rem",
+          margin: "1.5rem 0",
+        }}>
+          <h3 style={{ margin: "0 0 0.75rem", color: "#021550", fontSize: "1.1rem", fontWeight: 700 }}>
+            ⚖️ Core Platform Distinction: Online vs Home Tuition Verification
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
+            <div style={{ backgroundColor: "#f0fdf4", border: "1px solid #86efac", borderRadius: "0.5rem", padding: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: "1.25rem" }}>🌐</span>
+                <strong style={{ color: "#166534", fontSize: "0.95rem" }}>Online Tuition (Borderless)</strong>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#15803d", lineHeight: 1.5 }}>
+                <strong>No Police Verification is required.</strong> Online tutors are vetted through Tier 1 Government Photo ID (CNIC / Passport / National ID), Tier 2 Academic Degrees, and Tier 3 Intro Demo Videos. Lessons are delivered digitally with built-in platform safeguards.
+              </p>
+            </div>
+            <div style={{ backgroundColor: "#fff7ed", border: "1px solid #fdba74", borderRadius: "0.5rem", padding: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: "1.25rem" }}>🏠</span>
+                <strong style={{ color: "#9a3412", fontSize: "0.95rem" }}>Home Tuition (In-Person)</strong>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#c2410c", lineHeight: 1.5 }}>
+                <strong>Police Verification Report is strictly MANDATORY.</strong> Any tutor visiting a student&apos;s home or conducting face-to-face tuition must provide an official, verifiable Police Character Certificate (issued by Police Khidmat Markaz, PKM, or statutory police registry) before receiving or accepting in-person bookings.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Section 1: The 4-Tier Verification Architecture */}
         <section className={s.section}>
           <h2 className={s.sectionTitle}>

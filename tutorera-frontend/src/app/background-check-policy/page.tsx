@@ -60,6 +60,25 @@ export default function BackgroundCheckPolicyPage() {
             physical bookings. Physical tutoring introduces unique physical safety dynamics that demand
             elevated diligence.
           </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
+            <div style={{ backgroundColor: "#f0fdf4", border: "1px solid #86efac", borderRadius: "0.5rem", padding: "0.85rem" }}>
+              <strong style={{ color: "#166534", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span>🌐</span> Online Tuition
+              </strong>
+              <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#15803d", lineHeight: "1.4" }}>
+                <strong>No Police Verification required.</strong> Online tutoring is authorized upon verifying government photo ID (CNIC / Passport) and academic credentials.
+              </p>
+            </div>
+            <div style={{ backgroundColor: "#fff7ed", border: "1px solid #fdba74", borderRadius: "0.5rem", padding: "0.85rem" }}>
+              <strong style={{ color: "#9a3412", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span>🏠</span> Home / In-Person Tuition
+              </strong>
+              <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#c2410c", lineHeight: "1.4" }}>
+                <strong>Police Verification Report is STRICTLY MANDATORY.</strong> An official Police Character Certificate / clearance report must be submitted and approved before accepting home tuition.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Section 1: Modular Jurisdiction Breakdown */}
