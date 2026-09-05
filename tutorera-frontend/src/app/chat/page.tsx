@@ -34,7 +34,7 @@ export default function ChatListPage() {
 
   useEffect(() => {
     api.get("/chat/conversations")
-      .then(res => setConversations(res.data.conversations))
+      .then(res => setConversations(res.data.conversations || []))
       .catch(console.error)
       .finally(() => setFetching(false));
   }, []);
@@ -49,7 +49,7 @@ export default function ChatListPage() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: C.gray50 }}>
+    <div style={{ minHeight: '100vh', backgroundColor: C.gray50, paddingBottom: 'calc(var(--mobile-bottom-nav-height, 64px) + 2rem + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ backgroundColor: C.primary, padding: '2rem 1.5rem' }}>
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
           <h1 style={{ color: 'white', fontSize: '1.5rem', fontWeight: '800' }}>Messages</h1>
@@ -57,9 +57,9 @@ export default function ChatListPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '700px', margin: '2rem auto', padding: '0 1.5rem' }}>
+      <div style={{ maxWidth: '700px', margin: '1.25rem auto', padding: '0 1rem' }}>
         {conversations.length === 0 ? (
-          <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2.5rem 1.25rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
             <MessageSquare size={48} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
             <h3 style={{ color: C.primary, fontWeight: '700', marginBottom: '0.5rem' }}>No conversations yet</h3>
             <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
@@ -101,12 +101,12 @@ export default function ChatListPage() {
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                        <p style={{ fontWeight: unreadCount > 0 ? '800' : '600', color: C.primary, fontSize: '0.95rem' }}>{otherUser?.name}</p>
-                        <p style={{ fontSize: '0.72rem', color: '#9ca3af', flexShrink: 0 }}>
+                        <p style={{ fontWeight: unreadCount > 0 ? '800' : '600', color: C.primary, fontSize: '0.95rem', margin: 0 }}>{otherUser?.name}</p>
+                        <p style={{ fontSize: '0.72rem', color: '#9ca3af', flexShrink: 0, margin: 0 }}>
                           {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleDateString("en-PK", { month: "short", day: "numeric" }) : ""}
                         </p>
                       </div>
-                      <p style={{ fontSize: '0.82rem', color: unreadCount > 0 ? C.primary : C.gray500, fontWeight: unreadCount > 0 ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: '0.82rem', color: unreadCount > 0 ? C.primary : C.gray500, fontWeight: unreadCount > 0 ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                         {conv.lastMessage || "No messages yet"}
                       </p>
                     </div>

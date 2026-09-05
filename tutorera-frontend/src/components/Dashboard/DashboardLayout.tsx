@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import Link from "next/link";
@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
 
 const tutorItems: NavItem[] = [
   { href: "/browse-requests", label: "Browse Requests", icon: <Search size={18} /> },
-  { href: "/profile",                label: "My Profile",      icon: <User size={18} /> },
+  { href: "/profile",         label: "My Profile",      icon: <User size={18} /> },
 ];
 
 const studentItems: NavItem[] = [
@@ -95,8 +95,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {user?.avatar ? <img src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user?.name?.charAt(0).toUpperCase()}
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontWeight: '700', color: '#fff', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</p>
-              <p style={{ color: C.accent, fontSize: '0.7rem', fontWeight: '600', textTransform: 'capitalize' }}>{user?.role}</p>
+              <p style={{ fontWeight: '700', color: '#fff', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{user?.name}</p>
+              <p style={{ color: C.accent, fontSize: '0.7rem', fontWeight: '600', textTransform: 'capitalize', margin: 0 }}>{user?.role}</p>
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
 
         {!collapsed && (
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem', margin: 0 }}>
             {user?.role === "tutor" ? "TEACHING" : "LEARNING"}
           </p>
         )}
@@ -220,8 +220,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu size={22} />
             </button>
             <div>
-              <p style={{ fontWeight: '700', color: C.primary, fontSize: '1rem' }}>{pageTitle}</p>
-              <p style={{ color: C.gray500, fontSize: '0.75rem' }}>TUTORERA® learning workspace</p>
+              <p style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', margin: 0 }}>{pageTitle}</p>
+              <p style={{ color: C.gray500, fontSize: '0.75rem', margin: 0 }}>TUTORERA® learning workspace</p>
             </div>
           </div>
 
@@ -239,7 +239,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Page Content */}
-        <div style={{ flex: 1, padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflowX: 'hidden', minWidth: 0 }}>
+        <div className="dashboard-content" style={{ flex: 1, padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflowX: 'hidden', minWidth: 0 }}>
           {children}
         </div>
       </div>
@@ -249,6 +249,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           .hidden-mobile { display: none !important; }
           .show-mobile { display: flex !important; }
           .dashboard-main { margin-left: 0 !important; width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; }
+          .dashboard-content { padding: 1rem 1rem calc(var(--mobile-bottom-nav-height, 64px) + 2rem + env(safe-area-inset-bottom, 0px)) !important; }
         }
         @media (min-width: 769px) {
           .show-mobile { display: none !important; }

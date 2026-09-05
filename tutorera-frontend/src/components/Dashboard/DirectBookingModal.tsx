@@ -5,7 +5,7 @@ import axiosInstance from "@/lib/axios";
 import SlotPicker from "@/components/Tutors/SlotPicker";
 import styles from "./PostRequestModal.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { formatPKR } from "@/lib/site";
+import { formatMoney } from "@/lib/site";
 
 const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 
@@ -18,9 +18,10 @@ interface Slot {
 
 interface Props {
   tutorId: string;
-  tutorUserId: string;    // ← NEW: the User._id (for availability lookup)
+  tutorUserId: string;
   tutorName: string;
   hourlyRate: number;
+  currency?: string;
   tutorSubjects: string[];
   tutorTeachingMode: "online" | "in-person" | "both";
   tutorCity: string;
@@ -36,7 +37,7 @@ interface DirectBookingForm {
 }
 
 export default function DirectBookingModal({
-  tutorId, tutorUserId, tutorName, hourlyRate,
+  tutorId, tutorUserId, tutorName, hourlyRate, currency = "PKR",
   tutorSubjects, tutorTeachingMode, tutorCity,
   onClose, onSuccess,
 }: Props) {
@@ -92,6 +93,7 @@ export default function DirectBookingModal({
         tutorId,
         subject, level, description, teachingMode,
         city: tutorCity,
+        currency,
         schedule: `${selectedSlot.dayName} ${selectedSlot.startTime}–${selectedSlot.endTime}`,
         selectedDate: selectedSlot.date,
         selectedStartTime: selectedSlot.startTime,
@@ -138,7 +140,7 @@ export default function DirectBookingModal({
           {/* Rate */}
           <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: '#0329B2', fontWeight: 600 }}>Tutor's Rate</span>
-            <span style={{ fontSize: '0.95rem', color: '#021550', fontWeight: 800 }}>{formatPKR(hourlyRate, "hour")}</span>
+            <span style={{ fontSize: '0.95rem', color: '#021550', fontWeight: 800 }}>{formatMoney(hourlyRate, currency, "hour")}</span>
           </div>
 
           {/* Subject + Level */}
@@ -189,7 +191,7 @@ export default function DirectBookingModal({
             </div>
           )}
 
-          {/* ── Slot Picker — replaces schedule text input ── */}
+          {/* ── Slot Picker ── */}
           <div>
             <label className={styles.label} style={{ display: 'block', marginBottom: '0.5rem' }}>
               Select Time Slot *

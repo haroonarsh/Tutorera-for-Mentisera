@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { BookOpen, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
+import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
+import { Country } from "@/lib/countries";
 
 const C = UI_COLORS;
 
-const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Other"];
-const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
-const budgetRanges = ["Rs. 500 - 1,000/hr", "Rs. 1,000 - 2,000/hr", "Rs. 2,000 - 3,500/hr", "Rs. 3,500 - 5,000/hr", "Rs. 5,000+/hr"];
-const cities = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad", "Other"];
+const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "Other"];
+const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "IB (International Baccalaureate)", "University", "Other"];
 
 const STEPS = [
-  { number: 1, title: "Personal Info" },
+  { number: 1, title: "Personal & Location" },
   { number: 2, title: "Education" },
   { number: 3, title: "Preferences" },
 ];
@@ -26,9 +26,17 @@ export default function StudentOnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Step 1 — Personal
+  // Step 1 — Personal & Global Location
   const [step1, setStep1] = useState({
-    fullName: "", phone: "", city: "", gender: "male", dateOfBirth: "",
+    fullName: "",
+    phone: "",
+    countryCode: "PK",
+    countryName: "Pakistan",
+    city: "Lahore",
+    timezone: "Asia/Karachi",
+    currency: "PKR",
+    gender: "male",
+    dateOfBirth: "",
   });
 
   // Step 2 — Education
@@ -40,6 +48,12 @@ export default function StudentOnboardingPage() {
   const [subjectsNeeded, setSubjectsNeeded] = useState<string[]>([]);
   const [budgetRange, setBudgetRange] = useState("");
   const [teachingModePreference, setTeachingModePreference] = useState<"online" | "in-person" | "both">("both");
+
+  const budgetRanges = step1.currency === "PKR"
+    ? ["Under Rs. 5,000 / mo", "Rs. 5,000 – 15,000 / mo", "Rs. 15,000 – 30,000 / mo", "Rs. 30,000+ / mo", "Custom / Flexible"]
+    : step1.currency === "AED" || step1.currency === "SAR"
+    ? [`Under ${step1.currency} 50 / hr`, `${step1.currency} 50 – 100 / hr`, `${step1.currency} 100 – 200 / hr`, `${step1.currency} 200+ / hr`, "Custom / Flexible"]
+    : [`Under ${step1.currency} 15 / hr`, `${step1.currency} 15 – 30 / hr`, `${step1.currency} 30 – 60 / hr`, `${step1.currency} 60+ / hr`, "Custom / Flexible"];
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -171,27 +185,36 @@ export default function StudentOnboardingPage() {
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
+                <div>
+                  <CountryCitySelector
+                    countryCode={step1.countryCode}
+                    city={step1.city}
+                    onCountryChange={(c: Country) => {
+                      setStep1(prev => ({
+                        ...prev,
+                        countryCode: c.code,
+                        countryName: c.name,
+                        currency: c.currency,
+                        timezone: c.defaultTimezone,
+                      }));
+                    }}
+                    onCityChange={(cityName: string) => {
+                      setStep1(prev => ({ ...prev, city: cityName }));
+                    }}
+                    showCurrency={true}
+                    showTimezone={true}
+                  />
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone *</label>
                     <input value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })}
-                      placeholder="03001234567"
+                      placeholder="e.g. +92 300 1234567"
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>City *</label>
-                    <select value={step1.city} onChange={e => setStep1({ ...step1, city: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
-                      onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-                      <option value="">Select city</option>
-                      {cities.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Gender</label>
                     <select value={step1.gender} onChange={e => setStep1({ ...step1, gender: e.target.value })}
@@ -202,13 +225,6 @@ export default function StudentOnboardingPage() {
                       <option value="female">Female</option>
                       <option value="other">Other</option>
                     </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Date of Birth</label>
-                    <input aria-label="date of birth" type="date" value={step1.dateOfBirth} onChange={e => setStep1({ ...step1, dateOfBirth: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
-                      onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                   </div>
                 </div>
               </div>

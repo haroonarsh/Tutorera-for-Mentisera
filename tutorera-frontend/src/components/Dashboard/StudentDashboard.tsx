@@ -189,10 +189,10 @@ function BookingCard({ booking, onClaimSubmitted }: {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {[
-              { label: "Tutor Session", value: formatPKR(booking.subtotal || booking.amount) },
+              { label: "Tutor Session", value: formatPKR(booking.subtotal || booking.amount || booking.totalAmount || 0) },
               { label: "Student Marketplace Fee", value: formatPKR(booking.studentFee || 0) },
               { label: "Tax", value: formatPKR(0) },
-              { label: "Total Payable", value: formatPKR(booking.studentTotal || booking.amount) },
+              { label: "Total Payable", value: formatPKR(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
               { label: "Currency", value: "PKR — Pakistani Rupees" },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>
@@ -208,7 +208,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
         </div>
       )}
 
-      <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {(booking.subtotal||booking.amount).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {(booking.studentTotal||booking.amount).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
+      <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
 
       {/* Claim submitted confirmation */}
       {claimSubmitted && (
@@ -598,28 +598,68 @@ const fetchRequests = useCallback(async () => {
   return (
     <>
       {/* Header */}
-      <div className={s.header}>
-        <div className={s.headerInner}>
-          <div className={s.headerLeft}>
-            <div className={s.avatar}>
-              {userAvatar ? <img src={userAvatar} alt={userName} /> : userName.charAt(0).toUpperCase()}
+      <div className={s.header} style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
+        <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
+          <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
+              {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className={s.greeting}>Welcome back, {userName}! 👋</h1>
-              <span className={s.roleBadge}>
-                <svg width={10} height={10} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-                </svg>
-                Student Account
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Student Marketplace Dashboard
               </span>
+              <h1 className={s.greeting} style={{ color: "white", fontSize: "1.5rem", fontWeight: 800, margin: "0.2rem 0" }}>
+                Need a Tutor, {userName.split(" ")[0]}?
+              </h1>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "rgba(255,255,255,0.8)" }}>
+                Post what you need with your budget. Matched verified tutors will send offers to you.
+              </p>
             </div>
           </div>
-          <button onClick={() => setShowModal(true)} className={s.btnPrimary}>
-            <svg width={14} height={14} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Post a Request
-          </button>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", width: "100%", maxWidth: 420 }}>
+            <button 
+              onClick={() => setShowModal(true)} 
+              style={{
+                background: "#08bffc",
+                color: "#021550",
+                border: "none",
+                padding: "0.75rem 1.5rem",
+                borderRadius: "0.625rem",
+                fontWeight: 800,
+                fontSize: "0.95rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(8, 191, 252, 0.4)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.4rem",
+                minHeight: 48,
+                flex: "1 1 180px"
+              }}
+            >
+              + Post Tuition Request
+            </button>
+            <Link
+              href="/tutors"
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.3)",
+                padding: "0.75rem 1.25rem",
+                borderRadius: "0.625rem",
+                fontWeight: 700,
+                fontSize: "0.9rem",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 48,
+                flex: "1 1 140px"
+              }}
+            >
+              Browse Tutors
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -679,19 +719,19 @@ const fetchRequests = useCallback(async () => {
         {/* Tabs */}
         <nav aria-label="Dashboard sections" className={s.tabs}>
         <button
-        onClick={() => setTab("requests")}
-        aria-current={tab === "requests" ? "true" : undefined}
+          onClick={() => setTab("requests")}
+          aria-current={tab === "requests" ? "true" : undefined}
           className={`${s.tab} ${tab === "requests" ? s.tabActive : ""}`}
-          >
-          ...My Requests
-          </button>
+        >
+          My Requests
+        </button>
 
         <button
           onClick={() => setTab("bookings")}
           aria-current={tab === "bookings" ? "true" : undefined}
           className={`${s.tab} ${tab === "bookings" ? s.tabActive : ""}`}
         >
-          ...My Bookings
+          My Bookings
         </button>
         <button
           onClick={() => setTab("favourites")}

@@ -23,7 +23,8 @@ function buildPageList(current: number, total: number): (number | "...")[] {
 }
 
 export default function Pagination({ meta, onPageChange }: PaginationProps) {
-  const pages = buildPageList(meta.page, meta.pages);
+  const totalPagesCount = meta.pages || meta.totalPages || 1;
+  const pages = buildPageList(meta.page, totalPagesCount);
 
   return (
     <nav aria-label="Tutor results pagination">

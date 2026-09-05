@@ -1,6 +1,5 @@
-"use client";
-// components/tutors/FilterSidebar.tsx
-import { FiltersState, LEVELS, TEACHING_MODES, CITIES } from "@/types/tutor";
+import { FiltersState, LEVELS, TEACHING_MODES } from "@/types/tutor";
+import { COUNTRIES, getCitiesForCountry } from "@/lib/countries";
 import StarRating from "./StarRating";
 import styles from "./Filtersidebar.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -98,6 +97,44 @@ function SidebarContent({
         </FilterSection>
 
         {/* Level */}
+        {/* Country */}
+        <FilterSection title="Country / Location">
+          <select
+            aria-label="Filter by country"
+            value={filters.country || ""}
+            onChange={(e) => {
+              onFilterChange("country", e.target.value);
+              onFilterChange("city", "");
+            }}
+            className={styles.select}
+          >
+            <option value="">Worldwide (All Countries)</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.name}
+              </option>
+            ))}
+          </select>
+        </FilterSection>
+
+        {/* City */}
+        <FilterSection title="City">
+          <select
+            aria-label="Filter by city"
+            value={filters.city}
+            onChange={(e) => onFilterChange("city", e.target.value)}
+            className={styles.select}
+          >
+            <option value="">All Cities</option>
+            {getCitiesForCountry(filters.country || "PK").map((city) => (
+              <option key={city.id} value={city.name}>
+                {city.name}
+              </option>
+            ))}
+          </select>
+        </FilterSection>
+
+        {/* Student Level */}
         <FilterSection title="Student Level">
           <select
             aria-label="Filter by student level"
@@ -114,25 +151,8 @@ function SidebarContent({
           </select>
         </FilterSection>
 
-        {/* City */}
-        <FilterSection title="City">
-          <select
-            aria-label="Filter by city"
-            value={filters.city}
-            onChange={(e) => onFilterChange("city", e.target.value)}
-            className={styles.select}
-          >
-            <option value="">All Cities</option>
-            {CITIES.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-        </FilterSection>
-
         {/* Price Range */}
-        <FilterSection title="Price Range (PKR/hr)">
+        <FilterSection title="Price Range (per hour)">
           <div className={styles.priceRow}>
             <input
               type="number"

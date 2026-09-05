@@ -19,8 +19,8 @@ const sections = [
     body: "Tutors who provide in-person or home tuition through TUTORERA act as independent service providers. They are not employees, agents, representatives, partners, or joint venture partners of TUTORERA or MENTISERA merely because they use the platform. TUTORERA provides marketplace technology, verification workflows, booking records, payment facilitation, communication tools, support, and governance; the selected tutor independently delivers the tutoring service.",
   },
   {
-    heading: "3. Mandatory police verification",
-    body: "Any tutor who wishes to offer in-person or home tuition must provide a valid Police Verification Report or Police Character Certificate before becoming eligible for in-person bookings. This applies regardless of qualifications, experience, professional status, age, gender, city, previous employment, or tutoring history.",
+    heading: "3. Mandatory background & character verification",
+    body: "Any tutor who wishes to offer in-person or home tuition must satisfy mandatory background screening requirements applicable to their jurisdiction (such as a Police Character Certificate or verified government background screening check) before becoming eligible for in-person bookings. This applies regardless of qualifications, experience, professional status, age, gender, or tutoring history.",
     items: [
       "TUTORERA may block in-person availability until satisfactory documentation is reviewed.",
       "Online-only tutors may have different verification requirements.",
@@ -29,7 +29,7 @@ const sections = [
   },
   {
     heading: "4. Verification documents and authenticity",
-    body: "TUTORERA may require CNIC, recent photograph, police verification or character certificate, permanent and current address, education documents, professional credentials, references, and other reasonable identity or safety information. Tutors are responsible for ensuring all documents are genuine, legally obtained, accurate, valid, current, unaltered, and issued by the appropriate authority.",
+    body: "TUTORERA may require government identity documents (such as CNIC, Emirates ID, Passport, or Driver's Licence), recent photograph, police verification or background certificate, verified address, education credentials, and other reasonable identity or safety information. Tutors are responsible for ensuring all documents are genuine, legally obtained, accurate, valid, current, unaltered, and issued by the appropriate authority.",
     items: [
       "False, forged, altered, stolen, or misleading documents may result in immediate suspension or permanent removal.",
       "TUTORERA may request renewal or resubmission where documents expire, appear uncertain, personal details change, a safety complaint is received, policy requires re-verification, or legal requirements change.",
@@ -37,12 +37,12 @@ const sections = [
     ],
   },
   {
-    heading: "5. Verification reduces risk but is not a guarantee",
-    body: "Police verification is a risk-management and eligibility requirement. It does not guarantee future conduct, teaching outcomes, legal compliance, or that misconduct will never occur. Tutors remain personally responsible for their behaviour, actions, omissions, statements, and activities during every in-person visit.",
+    heading: "5. Verification reduces risk but is not an absolute guarantee",
+    body: "Background verification is a risk-management and eligibility requirement. It does not guarantee future conduct, teaching outcomes, legal compliance, or that misconduct will never occur. Tutors remain personally responsible for their behaviour, actions, omissions, statements, and activities during every in-person visit.",
   },
   {
     heading: "6. Tutor conduct at student premises",
-    body: "A tutor attending a student's residence or another agreed physical location must act professionally, follow applicable Pakistani law, comply with TUTORERA policies, respect safeguarding requirements, observe reasonable household rules, and protect student privacy.",
+    body: "A tutor attending a student's residence or another agreed physical location must act professionally, follow applicable laws in their jurisdiction, comply with TUTORERA policies, respect safeguarding requirements, observe reasonable household rules, and protect student privacy.",
     items: [
       "Tutors must remain within areas reasonably designated for tutoring.",
       "Tutors must avoid unnecessary physical contact, harassment, discrimination, threats, offensive conduct, sexual conduct, intoxicants, illegal substances, unauthorized photography, and unauthorized recording.",

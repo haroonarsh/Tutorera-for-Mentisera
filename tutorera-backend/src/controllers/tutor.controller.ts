@@ -30,7 +30,7 @@ export const createOrUpdateProfile = async (
       { user: userId },
       { ...req.body },
       { new: true, runValidators: true }
-    ).populate("user", "name email avatar phone city");
+    ).populate("user", "name email avatar phone city countryCode countryName timezone currency");
 
     res.status(200).json({
       success: true,
@@ -46,7 +46,7 @@ export const createOrUpdateProfile = async (
     ...req.body,
   });
 
-  await profile.populate("user", "name email avatar phone city");
+  await profile.populate("user", "name email avatar phone city countryCode countryName timezone currency");
 
   res.status(201).json({
     success: true,
@@ -64,7 +64,7 @@ export const getMyProfile = async (
 ): Promise<void> => {
   const profile = await TutorProfile.findOne({ user: req.user?._id }).populate(
     "user",
-    "name email avatar phone city"
+    "name email avatar phone city countryCode countryName timezone currency"
   );
 
   if (!profile) {
@@ -86,11 +86,11 @@ export const getTutorById = async (
   const profile =
     (await TutorProfile.findById(id).populate(
       "user",
-      "name email avatar phone city"
+      "name email avatar phone city countryCode countryName timezone currency"
     )) ??
     (await TutorProfile.findOne({ user: id }).populate(
       "user",
-      "name email avatar phone city"
+      "name email avatar phone city countryCode countryName timezone currency"
     ));
 
   if (!profile) {
@@ -105,7 +105,7 @@ function extractObjectId(value: string): string {
   return value.match(/[a-f\d]{24}/i)?.[0] || value;
 }
 
-// @desc    Get all tutors with search & filter
+// @desc    Get all tutors with global search & filter
 // @route   GET /api/tutors
 // @access  Public
 export const getAllTutors = async (
@@ -116,11 +116,16 @@ export const getAllTutors = async (
     search,
     subject,
     level,
+    country,
+    countryCode,
     city,
     teachingMode,
+    currency,
     minPrice,
     maxPrice,
     minRating,
+    language,
+    curriculum,
     page = "1",
     limit = "10",
     sort = "-averageRating",
@@ -133,7 +138,14 @@ export const getAllTutors = async (
 
   if (search) {
     const pattern = new RegExp(search as string, "i");
-    filter.$or = [{ fullName: pattern }, { subjects: pattern }, { bio: pattern }, { city: pattern }];
+    filter.$or = [
+      { fullName: pattern },
+      { subjects: pattern },
+      { bio: pattern },
+      { city: pattern },
+      { countryName: pattern },
+      { curricula: pattern },
+    ];
   }
 
   if (subject) {
@@ -144,12 +156,33 @@ export const getAllTutors = async (
     filter.levels = { $in: [level] };
   }
 
+  const selectedCountry = countryCode || country;
+  if (selectedCountry) {
+    const codeUpper = String(selectedCountry).toUpperCase();
+    filter.$or = [
+      { countryCode: codeUpper },
+      { countryName: new RegExp(String(selectedCountry), "i") },
+    ];
+  }
+
   if (city) {
     filter.city = new RegExp(city as string, "i");
   }
 
   if (teachingMode) {
     filter.teachingMode = teachingMode;
+  }
+
+  if (currency) {
+    filter.currency = String(currency).toUpperCase();
+  }
+
+  if (language) {
+    filter["languages.language"] = new RegExp(language as string, "i");
+  }
+
+  if (curriculum) {
+    filter.curricula = { $in: [new RegExp(curriculum as string, "i")] };
   }
 
   if (minPrice || maxPrice) {
@@ -169,7 +202,7 @@ export const getAllTutors = async (
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
-    .populate("user", "name email avatar city")
+    .populate("user", "name email avatar city countryCode countryName timezone currency")
     .sort(sort as string)
     .skip(skip)
     .limit(limitNum);
@@ -193,7 +226,6 @@ export const getOnboardingStatus = async (
   let profile = await TutorProfile.findOne({ user: req.user?._id });
 
   if (!profile) {
-    // Create empty profile
     profile = await TutorProfile.create({ user: req.user?._id });
   }
 
@@ -228,24 +260,30 @@ export const saveOnboardingStep = async (
   const parsedData = typeof data === "string" ? JSON.parse(data) : data;
 
   if (stepNum === 1) {
-    // Personal Info
+    // Personal Info & Global Location
     updateData = {
       fullName: parsedData.fullName,
       phone: parsedData.phone,
+      countryCode: parsedData.countryCode || "PK",
+      countryName: parsedData.countryName || "Pakistan",
       city: parsedData.city,
+      timezone: parsedData.timezone || "Asia/Karachi",
       gender: parsedData.gender,
       dateOfBirth: parsedData.dateOfBirth,
+      languages: parsedData.languages || [{ language: "English", proficiency: "Fluent" }],
       onboardingStep: 2,
     };
-    // Update user name too
     await User.findByIdAndUpdate(req.user?._id, {
       name: parsedData.fullName,
       phone: parsedData.phone,
+      countryCode: parsedData.countryCode || "PK",
+      countryName: parsedData.countryName || "Pakistan",
       city: parsedData.city,
+      timezone: parsedData.timezone || "Asia/Karachi",
     });
   }
 
-    else if (stepNum === 2) {
+  else if (stepNum === 2) {
     // Education
     let degreeDocUrl = "";
     let degreeDocPublicId = "";
@@ -257,7 +295,6 @@ export const saveOnboardingStep = async (
         return;
       }
 
-      // Delete old degree doc if this tutor is re-uploading (education array has one entry currently)
       const oldPublicId = profile.education?.[0]?.degreeDocPublicId;
       if (oldPublicId) {
         await deleteFromCloudinary(oldPublicId).catch(() => {});
@@ -267,7 +304,7 @@ export const saveOnboardingStep = async (
         files.degreeDoc[0].buffer,
         "tutorera/degrees",
         "auto",
-        true // private — academic records are sensitive
+        true
       );
       degreeDocUrl = result.secure_url;
       degreeDocPublicId = result.public_id;
@@ -291,36 +328,37 @@ export const saveOnboardingStep = async (
   }
 
   else if (stepNum === 3) {
-    // Experience
+    // Experience & Curricula
     updateData = {
       experience: parseInt(parsedData.experience),
       previousInstitutions: parsedData.previousInstitutions || [],
       subjects: parsedData.subjects || [],
       levels: parsedData.levels || [],
+      curricula: parsedData.curricula || [],
       onboardingStep: 4,
     };
   }
 
   else if (stepNum === 4) {
-    // Profile Setup
+    // Profile Setup, Global Pricing & Service Areas
     updateData = {
       bio: parsedData.bio,
       hourlyRate: parseInt(parsedData.hourlyRate),
+      currency: parsedData.currency || "PKR",
       teachingMode: parsedData.teachingMode,
+      serviceAreas: parsedData.serviceAreas || [],
+      travelRadiusKm: parsedData.travelRadiusKm ? parseInt(parsedData.travelRadiusKm) : 10,
       availability: parsedData.availability || [],
       onboardingStep: 5,
     };
+    await User.findByIdAndUpdate(req.user?._id, { currency: parsedData.currency || "PKR" });
 
-    // ── NEW: Write to TutorAvailability in 24hr format ──
-    // Onboarding format: { day: "Monday", slots: ["5:00 PM", "6:00 PM"] }
-    // TutorAvailability format: { day: "Monday", startTime: "17:00", endTime: "18:00" }
     if (parsedData.availability?.length > 0) {
       const weeklySlots = (parsedData.availability as { day: string; slots: string[] }[])
         .flatMap(a =>
           a.slots.map(slot => {
-            // Convert "5:00 PM" → startTime: "17:00", endTime: "18:00"
             const parts = slot.split(" ");
-            const period = parts[1]; // "AM" or "PM"
+            const period = parts[1];
             const [hourStr, minStr] = parts[0].split(":");
             let hour = parseInt(hourStr);
 
@@ -328,7 +366,7 @@ export const saveOnboardingStep = async (
             if (period === "AM" && hour === 12) hour = 0;
 
             const startTime = `${String(hour).padStart(2, "0")}:${minStr}`;
-            const endHour = hour + 1 > 23 ? 23 : hour + 1; // cap at 23:00
+            const endHour = hour + 1 > 23 ? 23 : hour + 1;
             const endTime = `${String(endHour).padStart(2, "0")}:${minStr}`;
 
             return { day: a.day, startTime, endTime };
@@ -343,7 +381,7 @@ export const saveOnboardingStep = async (
     }
   }
 
-    else if (stepNum === 5) {
+  else if (stepNum === 5) {
     // Verification Docs
     let cnicFrontUrl = "";
     let cnicFrontPublicId = "";

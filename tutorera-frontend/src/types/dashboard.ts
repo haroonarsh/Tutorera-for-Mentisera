@@ -2,11 +2,12 @@
 
 export interface DashRequest {
   _id: string;
-  student: { _id: string; name: string; avatar: string };
+  student: { _id: string; name: string; avatar: string; city?: string; countryCode?: string; countryName?: string };
   subject: string;
   level: string;
   description: string;
   budget: number;
+  currency?: string;
   maximumBudget?: number;
   pricingUnit: "hour" | "session" | "month" | "course";
   allowCounterOffers: boolean;
@@ -15,65 +16,97 @@ export interface DashRequest {
   minimumQualification?: string; minimumExperience?: number; preferredLanguage?: string; preferredTutorRating?: number;
   preferredDays?: string[]; preferredStartTime?: string; sessionDurationMinutes?: number; sessionsPerWeek?: number; expectedStartDate?: string;
   teachingMode: string;
+  countryCode?: string;
+  countryName?: string;
+  timezone?: string;
+  isWorldwideEligible?: boolean;
+  preferredTutorCountries?: string[];
   city: string;
   schedule: string;
   status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "offer_accepted" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   createdAt: string;
-  bid?: Pick<DashBid, "_id" | "amount" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
+  bid?: Pick<DashBid, "_id" | "amount" | "currency" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
 }
 
 export interface DashBid {
   _id: string;
   request: string;
-  tutor: { _id: string; name: string; city: string; avatar: string };
+  tutor: { _id: string; name: string; city: string; countryCode?: string; countryName?: string; avatar: string };
   amount: number;
+  currency?: string;
+  originalAmount?: number;
+  originalCurrency?: string;
+  convertedRequestAmount?: number;
+  exchangeRate?: number;
   initialStudentRate: number;
   pricingUnit: "hour" | "session" | "month" | "course";
+  status: "pending" | "submitted" | "accepted" | "rejected" | "countered" | "counter_by_student" | "counter_by_tutor" | "withdrawn" | "expired";
+  message?: string;
   availability?: string;
   expiresAt: string;
   sequenceNumber?: number;
+  counterCounts?: { student: number; tutor: number };
+  latestSenderRole?: "student" | "tutor";
+  senderRole?: "student" | "tutor";
   matchScore?: number;
   matchScoreBreakdown?: Record<string, number>;
   completedSessions?: number;
   responseRate?: number;
-  responseSeconds?: number;
-  counterCounts?: { student: number; tutor: number };
-  latestSenderRole?: "student" | "tutor";
-  profile?: { education?: { degree: string; institution: string }[]; experience?: number; subjects?: string[]; teachingMode?: string; averageRating?: number; totalReviews?: number; isVerified?: boolean; verificationStatus?: string };
-  message: string;
-  status: "pending" | "submitted" | "viewed" | "countered" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
+  profile?: {
+    isVerified?: boolean;
+    averageRating?: number;
+    totalReviews?: number;
+    experience?: number;
+    education?: { degree: string; institution: string; year: number }[];
+    subjects?: string[];
+  };
   createdAt: string;
 }
 
 export interface DashBooking {
   _id: string;
-  student: { _id: string; name: string; avatar: string };
-  tutor:   { _id: string; name: string; avatar: string };
-  request: string | { _id: string; subject: string; level: string; status: string };
-  bid: string;
+  request: DashRequest;
+  tutor: { _id: string; name: string; avatar?: string; city?: string; countryName?: string; phone?: string; email?: string };
+  student: { _id: string; name: string; avatar?: string; city?: string; countryName?: string; phone?: string; email?: string };
+  totalAmount: number;
   amount: number;
-  finalAgreedRate?: number; pricingUnit?: "hour" | "session" | "month" | "course"; sessionCount?: number; subtotal?: number; studentFee?: number; tutorFee?: number; tax?: number; studentTotal?: number; tutorNet?: number;
-  schedule: string;
-  teachingMode: string;
-  status: "upcoming" | "ongoing" | "completed" | "cancelled";
-  paymentStatus: "pending" | "received" | "confirmed" | "refunded";
-  isFirstSession: boolean;
+  subtotal: number;
+  studentFee?: number;
+  studentTotal?: number;
+  tutorFee?: number;
+  platformFee?: number;
+  tutorNet?: number;
+  tax?: number;
+  hourlyRate?: number;
+  finalAgreedRate: number;
+  pricingUnit?: "hour" | "session" | "month" | "course";
+  sessionCount?: number;
+  currency?: string;
+  schedule?: string;
+  teachingMode?: string;
+  isFirstSession?: boolean;
+  paymentStatus?: "pending" | "paid" | "refunded" | "failed";
+  status: "pending" | "confirmed" | "upcoming" | "in_progress" | "completed" | "cancelled" | "disputed";
+  scheduledAt?: string;
   createdAt: string;
 }
 
-export interface TutorProfileData {
+export interface TutorProfile {
   _id: string;
   user: {
     _id: string; name: string; email: string;
-    phone?: string; city: string; avatar: string;
+    phone?: string; city: string; countryCode?: string; countryName?: string; avatar: string;
   };
   bio: string;
   subjects: string[];
   levels: string[];
   hourlyRate: number;
+  currency?: string;
   experience: number;
   teachingMode: string;
   city: string;
+  countryCode?: string;
+  countryName?: string;
   averageRating: number;
   totalReviews: number;
   isVerified: boolean;
@@ -82,11 +115,19 @@ export interface TutorProfileData {
   availability: { day: string; slots: string[]; _id: string }[];
 }
 
+export type TutorProfileData = TutorProfile;
+
 export interface PostRequestPayload {
   subject: string;
   level: string;
   description: string;
   budget: string;
+  currency?: string;
+  countryCode?: string;
+  countryName?: string;
+  timezone?: string;
+  isWorldwideEligible?: boolean;
+  preferredTutorCountries?: string[];
   teachingMode: string;
   city: string;
   schedule: string;
@@ -99,6 +140,7 @@ export interface PostRequestPayload {
 
 export interface PlaceBidPayload {
   amount: string;
+  currency?: string;
   message: string;
 }
 

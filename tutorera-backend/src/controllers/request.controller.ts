@@ -75,14 +75,46 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     $inc: { requestsThisMonth: 1 },
   });
 
-  // Notify a bounded set of relevant approved tutors, never the entire marketplace.
+  // Notify a bounded set of relevant approved tutors, respecting global vs local location constraints
   const TutorProfile = (await import("../models/TutorProfile.model")).default;
   const matchFilter: Record<string, unknown> = { verificationStatus: "approved", subjects: request.subject, levels: request.level };
-  if (request.teachingMode !== "online") matchFilter.$or = [{ teachingMode: "both", city: request.city }, { teachingMode: request.teachingMode, city: request.city }];
-  else matchFilter.teachingMode = { $in: ["online", "both"] };
-  const matchingTutors = await TutorProfile.find(matchFilter).select("user").limit(25).lean();
-  await Promise.all(matchingTutors.map(profile => sendNotification(req.app.get("io"), profile.user.toString(), { title: "Matching Tuition Request", message: `${request.subject} · ${request.level} · proposed PKR ${request.budget.toLocaleString()}/${request.pricingUnit}`, type: "bid", link: "/dashboard?tab=browse" })));
-  await logAudit({ action: "tuition_request_published", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { subject: request.subject, level: request.level, teachingMode: request.teachingMode, notifiedTutors: matchingTutors.length } });
+  
+  if (request.teachingMode === "online") {
+    // Online requests match tutors globally who offer online tutoring
+    matchFilter.teachingMode = { $in: ["online", "both"] };
+    if (request.preferredTutorCountries && request.preferredTutorCountries.length > 0) {
+      matchFilter.countryCode = { $in: request.preferredTutorCountries };
+    }
+  } else if (request.teachingMode === "in-person") {
+    // Home tuition strictly matches tutors in the same country & city who offer in-person tutoring
+    matchFilter.teachingMode = { $in: ["in-person", "both"] };
+    if (request.countryCode) {
+      matchFilter.countryCode = request.countryCode;
+    }
+    if (request.city) {
+      matchFilter.city = new RegExp(`^${request.city.trim()}$`, "i");
+    }
+  } else {
+    // "both" mode: match either online global tutors OR local in-person tutors
+    matchFilter.$or = [
+      { teachingMode: { $in: ["online", "both"] } },
+      {
+        teachingMode: { $in: ["in-person", "both"] },
+        ...(request.countryCode ? { countryCode: request.countryCode } : {}),
+        ...(request.city ? { city: new RegExp(`^${request.city.trim()}$`, "i") } : {}),
+      },
+    ];
+  }
+
+  const currencySymbol = request.currency || "PKR";
+  const matchingTutors = await TutorProfile.find(matchFilter).select("user").limit(30).lean();
+  await Promise.all(matchingTutors.map(profile => sendNotification(req.app.get("io"), profile.user.toString(), {
+    title: "Matching Tuition Request",
+    message: `${request.subject} · ${request.level} · Proposed ${currencySymbol} ${request.budget.toLocaleString()}/${request.pricingUnit} (${request.teachingMode === "online" ? "Online" : request.city || "In-person"})`,
+    type: "bid",
+    link: "/dashboard?tab=browse",
+  })));
+  await logAudit({ action: "tuition_request_published", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { subject: request.subject, level: request.level, teachingMode: request.teachingMode, currency: request.currency, countryCode: request.countryCode, notifiedTutors: matchingTutors.length } });
 
   res.status(201).json({ success: true, message: "Request created", request });
 };
@@ -136,12 +168,23 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
     }
   }
 
-  const { subject, level, city, page = "1", limit = "10" } = req.query;
+  const { subject, level, city, country, teachingMode, currency, page = "1", limit = "10" } = req.query;
   const filter: Record<string, unknown> = { status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } };
 
   if (subject) filter.subject = new RegExp(subject as string, "i");
   if (level) filter.level = level;
   if (city) filter.city = new RegExp(city as string, "i");
+  if (country) filter.countryCode = (country as string).toUpperCase();
+  if (teachingMode && teachingMode !== "all") {
+    if (teachingMode === "online") {
+      filter.teachingMode = { $in: ["online", "both"] };
+    } else if (teachingMode === "in_person" || teachingMode === "home") {
+      filter.teachingMode = { $in: ["in_person", "home", "both"] };
+    } else {
+      filter.teachingMode = teachingMode;
+    }
+  }
+  if (currency) filter.currency = (currency as string).toUpperCase();
 
   const pageNum = parseInt(page as string);
   const limitNum = parseInt(limit as string);
@@ -149,7 +192,7 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
 
   const total = await Request.countDocuments(filter);
   const requests = await Request.find(filter)
-    .populate("student", "name city avatar")
+    .populate("student", "name city countryName countryCode avatar")
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum);
@@ -157,7 +200,7 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   if (req.user?.role === "tutor") {
     const requestsWithOffer = await Promise.all(
       requests.map(async (request) => {
-        const bid = await Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount status expiresAt pricingUnit createdAt").lean();
+        const bid = await Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount currency status expiresAt pricingUnit createdAt").lean();
         return { ...request.toObject(), bid };
       })
     );
@@ -213,14 +256,40 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     });
     return;
   }
-  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city status budget pricingUnit allowCounterOffers isDirect targetTutor");
+  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible");
   if (!requested || !["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) { res.status(400).json({ success: false, message: "Request is not accepting offers" }); return; }
+  
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
   const levelMatches = tutorProfile.levels.includes(requested.level as any);
   const modeMatches = tutorProfile.teachingMode === "both" || requested.teachingMode === "both" || tutorProfile.teachingMode === requested.teachingMode;
-  const locationMatches = requested.teachingMode === "online" || tutorProfile.teachingMode === "online" || !requested.city || tutorProfile.city.toLowerCase() === requested.city.toLowerCase();
-  if (!subjectMatches || !levelMatches || !modeMatches || !locationMatches) { res.status(403).json({ success: false, code: "OFFER_NOT_RELEVANT", message: "This request does not match your approved subject, level, mode, or city." }); return; }
-  if (!requested.allowCounterOffers && req.body.amount !== requested.budget) { res.status(409).json({ success: false, code: "COUNTERS_DISABLED", message: `This request only accepts the proposed rate of PKR ${requested.budget.toLocaleString()}.` }); return; }
+  
+  // Dual location matching model:
+  // - Online tutoring: Borderless worldwide matching (unless student specified country preferences).
+  // - In-Person / Home tuition: Strictly matches tutors in the same country and city/service area.
+  let locationMatches = false;
+  if (requested.teachingMode === "online" || tutorProfile.teachingMode === "online") {
+    if (requested.preferredTutorCountries && requested.preferredTutorCountries.length > 0) {
+      locationMatches = requested.preferredTutorCountries.includes(tutorProfile.countryCode || "PK");
+    } else {
+      locationMatches = true; // Borderless
+    }
+  } else {
+    // In-person / home tuition
+    const countryMatch = !requested.countryCode || (tutorProfile.countryCode || "PK") === requested.countryCode;
+    const cityMatch = !requested.city || Boolean(tutorProfile.city && tutorProfile.city.toLowerCase() === requested.city.toLowerCase());
+    locationMatches = Boolean(countryMatch && cityMatch);
+  }
+
+  if (!subjectMatches || !levelMatches || !modeMatches || !locationMatches) {
+    res.status(403).json({ success: false, code: "OFFER_NOT_RELEVANT", message: "This request does not match your approved subject, level, mode, or service location." });
+    return;
+  }
+
+  const currency = requested.currency || "PKR";
+  if (!requested.allowCounterOffers && req.body.amount !== requested.budget) {
+    res.status(409).json({ success: false, code: "COUNTERS_DISABLED", message: `This request only accepts the proposed rate of ${currency} ${requested.budget.toLocaleString()}.` });
+    return;
+  }
 
   // ── Enforce bid limit ──
   const user = await User.findById(req.user?._id);
@@ -282,6 +351,11 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     request: new Types.ObjectId(req.params.id as string),
     tutor: req.user?._id,
     amount: req.body.amount,
+    currency: request.currency || tutorProfile.currency || "PKR",
+    originalAmount: req.body.amount,
+    originalCurrency: request.currency || tutorProfile.currency || "PKR",
+    convertedRequestAmount: req.body.amount,
+    exchangeRate: 1,
     message: req.body.message,
     availability: req.body.availability,
     initialStudentRate: request.budget,
@@ -291,17 +365,40 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     moderationReasons,
   });
 
-  await OfferNegotiation.create({ offer: bid._id, senderUser: req.user?._id, senderRole: "tutor", amount: bid.amount, message: bid.message, sequenceNumber: 1, expiresAt: bid.expiresAt, flaggedForModeration: containsContactInfo(bid.message) });
-  await logAudit({ action: "offer_created", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: bid.id, metadata: { requestId: request.id, amount: bid.amount, pricingUnit: bid.pricingUnit, flaggedForModeration: containsContactInfo(bid.message) } });
-  await Request.updateOne({ _id: request._id, status: { $in: ["open", "published"] } }, { status: "receiving_offers" });
+  await OfferNegotiation.create({
+    offer: bid._id,
+    senderUser: req.user?._id,
+    senderRole: "tutor",
+    amount: bid.amount,
+    message: bid.message,
+    sequenceNumber: 1,
+    expiresAt: bid.expiresAt,
+    flaggedForModeration: containsContactInfo(bid.message),
+  });
 
+  await logAudit({
+    action: "offer_created",
+    actor: req.user?.name,
+    actorId: req.user?._id?.toString(),
+    entity: "Bid",
+    targetId: bid.id,
+    metadata: {
+      requestId: request.id,
+      amount: bid.amount,
+      currency: bid.currency,
+      pricingUnit: bid.pricingUnit,
+      flaggedForModeration: containsContactInfo(bid.message),
+    },
+  });
+
+  await Request.updateOne({ _id: request._id, status: { $in: ["open", "published"] } }, { status: "receiving_offers" });
   await incrementBidCount(req.user?._id?.toString() || "");
 
   // Notify student
   const io = req.app.get("io");
   await sendNotification(io, request.student.toString(), {
     title: "📬 New Tutor Offer",
-    message: `A verified tutor sent an offer of PKR ${req.body.amount} on your tuition request.`,
+    message: `A verified tutor sent an offer of ${currency} ${req.body.amount.toLocaleString()} on your tuition request.`,
     type: "bid",
     link: "/dashboard",
   });
@@ -656,6 +753,10 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     level,
     description,
     budget: tutorProfile.hourlyRate,
+    currency: tutorProfile.currency || "PKR",
+    countryCode: req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK",
+    countryName: req.body.countryName || (req.user as any)?.countryName || tutorProfile.countryName || "Pakistan",
+    timezone: req.body.timezone || (req.user as any)?.timezone || tutorProfile.timezone || "Asia/Karachi",
     teachingMode: teachingMode || tutorProfile.teachingMode,
     city: city || tutorProfile.city,
     schedule: selectedDate && selectedStartTime
@@ -672,6 +773,11 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     request: request._id,
     tutor: tutorId,
     amount: tutorProfile.hourlyRate,
+    currency: tutorProfile.currency || "PKR",
+    originalAmount: tutorProfile.hourlyRate,
+    originalCurrency: tutorProfile.currency || "PKR",
+    convertedRequestAmount: tutorProfile.hourlyRate,
+    exchangeRate: 1,
     initialStudentRate: tutorProfile.hourlyRate,
     pricingUnit: "hour",
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),

@@ -3,12 +3,16 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export interface ITutorProfile extends Document {
   user: Types.ObjectId;
 
-  // Step 1 — Personal
+  // Step 1 — Personal & Global Location
   fullName: string;
   phone: string;
+  countryCode: string;
+  countryName: string;
   city: string;
+  timezone: string;
   gender: string;
   dateOfBirth: string;
+  languages?: { language: string; proficiency: string }[];
 
   // Step 2 — Education
   education: {
@@ -24,11 +28,15 @@ export interface ITutorProfile extends Document {
   previousInstitutions: string[];
   subjects: string[];
   levels: string[];
+  curricula?: string[];
 
   // Step 4 — Profile
   bio: string;
   hourlyRate: number;
+  currency: string;
   teachingMode: "online" | "in-person" | "both";
+  serviceAreas?: string[];
+  travelRadiusKm?: number;
   availability: {
     day: string;
     slots: string[];
@@ -96,9 +104,16 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     // Step 1
     fullName: { type: String, trim: true, default: "" },
     phone: { type: String, trim: true, default: "" },
+    countryCode: { type: String, trim: true, default: "PK" },
+    countryName: { type: String, trim: true, default: "Pakistan" },
     city: { type: String, trim: true, default: "" },
+    timezone: { type: String, trim: true, default: "Asia/Karachi" },
     gender: { type: String, enum: ["male", "female", "other"], default: "male" },
     dateOfBirth: { type: String, default: "" },
+    languages: [{
+      language: { type: String, trim: true },
+      proficiency: { type: String, enum: ["Native", "Fluent", "Professional", "Conversational"], default: "Fluent" }
+    }],
 
     // Step 2
     education: [{
@@ -117,11 +132,15 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       type: String,
       enum: ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"],
     }],
+    curricula: [{ type: String, trim: true }],
 
     // Step 4
     bio: { type: String, trim: true, default: "" },
     hourlyRate: { type: Number, default: 0 },
+    currency: { type: String, trim: true, default: "PKR" },
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
+    serviceAreas: [{ type: String, trim: true }],
+    travelRadiusKm: { type: Number, default: 10, min: 0, max: 100 },
     availability: [{
       day: { type: String, enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
       slots: [{ type: String }],

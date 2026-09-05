@@ -1,266 +1,240 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import {
-  ArrowRight,
-  BadgeCheck,
-  BookOpen,
-  CheckCircle,
-  Clock,
-  HandCoins,
-  MessageSquare,
-  Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  Users,
-} from "lucide-react";
+import type { Metadata } from "next";
+import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
+import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
+import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
+import TrustSafetySection from "@/components/marketplace/TrustSafetySection";
 import TopTutorsSection from "@/components/TopTutorsSection";
 import TopRequestsSection from "@/components/TopRequestsSection";
-import type { Metadata } from "next";
+import { ArrowRight, Star, MapPin } from "lucide-react";
 import s from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "TUTORERA | Find Tutors & Compare Tutor Offers in Pakistan",
+  title: "TUTORERA | A Global Student-Led Tutoring Marketplace",
   description:
-    "TUTORERA by MENTISERA connects students with tutors through a student-led tutoring marketplace. Post your requirement, receive tutor offers, compare PKR rates and choose your tutor.",
+    "Post your tutoring requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide. Choose online or home tuition, negotiate transparently, and book with verified confidence.",
   alternates: { canonical: "/" },
 };
 
-const trustStats = [
-  { value: "0%", label: "student marketplace fee" },
-  { value: "24h", label: "standard offer expiry" },
-  { value: "100pt", label: "transparent match score" },
+const popularSubjects = [
+  { name: "Mathematics", levels: "Matric, FSc, O/A Levels, University", href: "/tutors/subject/mathematics" },
+  { name: "Physics", levels: "FSc, Cambridge O/A Levels, MDCAT/ECAT", href: "/tutors/subject/physics" },
+  { name: "Chemistry", levels: "Matric, FSc, O/A Levels", href: "/tutors/subject/chemistry" },
+  { name: "Biology", levels: "MDCAT, O/A Levels, FSc Pre-Medical", href: "/tutors/subject/biology" },
+  { name: "English", levels: "Spoken, IELTS, Grammar, Academic", href: "/tutors/subject/english" },
+  { name: "Computer Science", levels: "Coding, Web Dev, O/A Levels, ICS", href: "/tutors/subject/computer-science" },
+  { name: "Accounting & Finance", levels: "ACCA, CA, ICOM, B.Com, O/A Levels", href: "/tutors/subject/accounting" },
+  { name: "Economics", levels: "O/A Levels, University, Business", href: "/tutors/subject/economics" },
 ];
 
-const marketplaceSteps = [
-  { icon: Search, title: "Post what you need", desc: "Share subject, class level, learning goals, location, schedule, mode, and your proposed rate." },
-  { icon: HandCoins, title: "Tutors send offers", desc: "Tutors can accept your rate or submit a counter-offer when your request allows negotiation." },
-  { icon: SlidersHorizontal, title: "Compare with context", desc: "Review rate, match score, verification, qualifications, reviews, experience, response rate, and availability." },
-  { icon: ShieldCheck, title: "Accept and book", desc: "Choose the tutor and agreed rate, then continue through the structured booking and payment flow." },
-];
-
-const benefits = [
-  { icon: Users, title: "For parents and students", desc: "Define your need, compare tutor offers side-by-side, and keep decisions documented." },
-  { icon: BookOpen, title: "For serious tutors", desc: "Find real student demand, submit relevant offers, show verified strengths, and build a professional tutoring presence." },
-  { icon: ShieldCheck, title: "For safer tuition", desc: "Marketplace actions, reporting, disputes, offer expiry, and audit history keep the process clearer for both sides." },
-];
-
-const comparisonRows = [
-  ["Pricing", "Usually fixed by agent or tutor", "Student proposes rate; tutor accepts or counters"],
-  ["Choice", "One or two informal referrals", "Multiple comparable tutor offers"],
-  ["Trust", "Hard to verify claims", "Profiles, verification, reviews, and reporting"],
-  ["Decision", "Phone calls and scattered messages", "Structured request, offer, negotiation, and booking flow"],
-];
-
-const popularJourneys = [
-  { href: "/tutors", label: "Browse verified tutors", icon: Users },
-  { href: "/dashboard?tab=requests", label: "Post a tuition request", icon: MessageSquare },
-  { href: "/browse-requests", label: "Tutor: view open requests", icon: Clock },
-  { href: "/student-journey", label: "See student journey", icon: ShieldCheck },
-  { href: "/how-tutor-offers-work", label: "Learn how offers work", icon: Sparkles },
+const popularCities = [
+  { name: "Lahore", areas: "DHA, Gulberg, Model Town, Johar Town, Bahria", href: "/tutors/city/lahore" },
+  { name: "Islamabad & Rawalpindi", areas: "F-6 to F-11, Bahria Town, DHA, Saddar", href: "/tutors/city/islamabad" },
+  { name: "Karachi", areas: "DHA, Clifton, Gulshan, PECHS, Nazimabad", href: "/tutors/city/karachi" },
+  { name: "Faisalabad", areas: "Kohinoor, Peoples Colony, D Ground", href: "/tutors/city/faisalabad" },
 ];
 
 const blogPosts = [
-  { title: "How to Find a Trusted Tutor in Pakistan", desc: "A practical guide for parents who want structure, safety, and better tutor-fit decisions.", slug: "how-to-find-a-trusted-tutor-in-pakistan" },
-  { title: "Online Tutoring vs. Home Tuition", desc: "Compare mode, cost, flexibility, and accountability before choosing your learning setup.", slug: "online-vs-home-tuition-in-pakistan" },
-  { title: "What to Check Before Hiring a Tutor", desc: "A parent-friendly checklist for qualifications, communication, availability, and trial expectations.", slug: "what-to-look-for-before-hiring-a-tutor-pakistan" },
+  {
+    title: "How to Find a Trusted Home Tutor in Pakistan",
+    desc: "A practical guide for parents who want verification, safety, and better tutor-fit decisions.",
+    slug: "how-to-find-a-trusted-tutor-in-pakistan"
+  },
+  {
+    title: "Online Tutoring vs. Home Tuition in Pakistan",
+    desc: "Compare mode, cost, flexibility, and accountability before choosing your learning setup.",
+    slug: "online-vs-home-tuition-in-pakistan"
+  },
+  {
+    title: "Understanding Tutor Rates & Negotiation in Pakistan",
+    desc: "How student-proposed budgets and transparent counter-offers ensure fair market pricing.",
+    slug: "what-to-look-for-before-hiring-a-tutor-pakistan"
+  }
 ];
 
 export default function Home() {
   return (
     <main className={s.page}>
-      <section className={s.hero} aria-labelledby="home-hero-title">
-        <div className={s.heroGlow} aria-hidden="true" />
-        <div className={s.container}>
-          <div className={s.heroGrid}>
-            <div className={s.heroCopy}>
-              <p className={s.eyebrow}>
-                <BadgeCheck size={18} aria-hidden="true" />
-                TUTORERA by MENTISERA
-              </p>
-              <h1 id="home-hero-title" className={s.heroTitle}>
-                A New Era of Tutoring
-              </h1>
-              <p className={s.heroText}>
-                You Set the Need. Tutors Make Offers. You Choose. Tell us what you want to learn, your preferred schedule, learning mode, and budget. Qualified tutors respond with offers, then you compare rates, experience, qualifications and availability before choosing.
-              </p>
-              <div className={s.heroActions} aria-label="Primary actions">
-                <Link className={s.primaryCta} href="/dashboard?tab=requests">
-                  Post Your Requirement <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-                <Link className={s.secondaryCta} href="/tutors">Browse Tutors</Link>
-                <Link className={s.secondaryCta} href="/register?role=tutor">Become a Tutor</Link>
-              </div>
-              <div className={s.trustRow} aria-label="Marketplace highlights">
-                {trustStats.map((stat) => (
-                  <div key={stat.label} className={s.trustPill}>
-                    <strong>{stat.value}</strong>
-                    <span>{stat.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* 1. Marketplace Hero & 2. Quick Request Composer */}
+      <HeroMarketplace />
 
-            <div className={s.heroPanel} aria-label="Tutor offer comparison preview">
-              <div className={s.panelHeader}>
-                <span>Live request</span>
-                <strong>Mathematics · O-Level</strong>
-              </div>
-              <div className={s.requestCard}>
-                <div>
-                  <p className={s.mutedLabel}>Student proposed rate</p>
-                  <strong>PKR 1,500/hour</strong>
-                </div>
-                <span className={s.statusBadge}>Receiving offers</span>
-              </div>
-              <div className={s.offerStack}>
-                {[
-                  ["92% match", "Verified tutor", "PKR 1,500/hour"],
-                  ["86% match", "8 years exp.", "PKR 1,800/hour"],
-                  ["78% match", "Fast response", "PKR 1,300/hour"],
-                ].map(([match, detail, price]) => (
-                  <div key={detail} className={s.offerPreview}>
-                    <div className={s.avatarDot} aria-hidden="true" />
-                    <div>
-                      <strong>{match}</strong>
-                      <span>{detail}</span>
-                    </div>
-                    <em>{price}</em>
-                  </div>
-                ))}
-              </div>
-              <div className={s.panelFooter}>
-                <CheckCircle size={17} aria-hidden="true" />
-                Compare rate, verification, reviews, availability, and response speed.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 3. Dedicated Home Tuition & Online Tuition Direct Action Cards */}
+      <HomeOnlineTuitionCards />
 
-      <section className={s.journeyBand} aria-labelledby="journey-title">
-        <div className={s.container}>
-          <div className={s.sectionHeader}>
-            <p className={s.eyebrow}>Student-led reverse marketplace</p>
-            <h2 id="journey-title">You Set the Need. Tutors Make Offers. You Choose.</h2>
-            <p>Tell us what you want to learn, when you need tutoring, and your preferred budget. Qualified tutors can respond with their offers. Compare tutor profiles, experience, ratings, availability and PKR pricing, then choose the tutor who works best for you.</p>
-          </div>
-          <div className={s.journeyGrid}>
-            {popularJourneys.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  className={`${s.journeyCard} ${s.revealItem}`}
-                  style={{ "--delay": `${index * 75}ms` } as CSSProperties}
-                  href={item.href}
-                >
-                  <Icon size={22} aria-hidden="true" />
-                  <span>{item.label}</span>
-                  <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
+      {/* 4. Live Reverse-Marketplace Demand / Open Tuition Requests */}
       <TopRequestsSection />
 
-      <section className={s.section} aria-labelledby="how-title">
-        <div className={s.container}>
-          <div className={s.sectionHeader}>
-            <p className={s.eyebrow}>Reverse-auction marketplace</p>
-            <h2 id="how-title">How tutor offers work</h2>
-            <p>A clearer marketplace loop: student demand first, tutor offers second, transparent comparison before commitment.</p>
-          </div>
-          <div className={s.stepsGrid}>
-            {marketplaceSteps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <article key={step.title} className={`${s.stepCard} ${s.revealItem}`} style={{ "--delay": `${index * 55}ms` } as CSSProperties}>
-                  <span className={s.stepNumber}>0{index + 1}</span>
-                  <div className={s.iconBox}><Icon size={24} aria-hidden="true" /></div>
-                  <h3>{step.title}</h3>
-                  <p>{step.desc}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* 5. How TUTORERA Works (5-Step Visual Marketplace Loop) */}
+      <MarketplaceFlow />
 
-      <section className={s.softSection} aria-labelledby="trust-title">
-        <div className={s.container}>
-          <div className={s.splitGrid}>
+      {/* 6. Popular Academic Subjects in Pakistan */}
+      <section style={{ padding: "4rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
             <div>
-              <p className={s.eyebrow}>Trust, fit, and fairness</p>
-              <h2 id="trust-title">Designed for decisions parents can actually understand</h2>
-              <p className={s.lead}>
-                A low price alone is not a good tutor decision. TUTORERA® brings pricing, availability, reviews, verification, qualifications, teaching mode, and match score into one view.
-              </p>
-              <Link className={s.textLink} href="/how-tutor-offers-work">
-                See the offer workflow <ArrowRight size={16} aria-hidden="true" />
+              <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0329b2", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Browse by Subject
+              </span>
+              <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>
+                Popular Subjects Demanded by Students
+              </h2>
+            </div>
+            <Link href="/subjects" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>
+              View all subjects →
+            </Link>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "1rem" }}>
+            {popularSubjects.map((sub) => (
+              <Link
+                key={sub.name}
+                href={sub.href}
+                style={{
+                  background: "white",
+                  borderRadius: "0.875rem",
+                  padding: "1.25rem",
+                  border: "1px solid #e2e8f0",
+                  textDecoration: "none",
+                  transition: "all 0.15s ease",
+                  display: "block"
+                }}
+              >
+                <strong style={{ display: "block", color: "#021550", fontSize: "1rem", marginBottom: "0.25rem" }}>
+                  {sub.name}
+                </strong>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{sub.levels}</span>
               </Link>
-            </div>
-            <div className={s.benefitGrid}>
-              {benefits.map((benefit, index) => {
-                const Icon = benefit.icon;
-                return (
-                  <article key={benefit.title} className={`${s.benefitCard} ${s.revealItem}`} style={{ "--delay": `${index * 75}ms` } as CSSProperties}>
-                    <Icon size={24} aria-hidden="true" />
-                    <h3>{benefit.title}</h3>
-                    <p>{benefit.desc}</p>
-                  </article>
-                );
-              })}
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className={s.section} aria-labelledby="compare-title">
-        <div className={s.containerNarrow}>
-          <div className={s.sectionHeader}>
-            <p className={s.eyebrow}>Why it feels different</p>
-            <h2 id="compare-title">A smarter alternative to informal tuition hunting</h2>
-          </div>
-          <div className={s.comparisonTable} role="table" aria-label="Traditional tuition compared with TUTORERA">
-            <div className={s.tableHead} role="row">
-              <span role="columnheader">Area</span>
-              <span role="columnheader">Traditional</span>
-              <span role="columnheader">TUTORERA®</span>
+      {/* 7. Popular Cities Coverage in Pakistan */}
+      <section style={{ padding: "4rem 1.5rem", background: "white", borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+            <div>
+              <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#016ef8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Cities & Localities
+              </span>
+              <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>
+                Home Tuition Across Major Pakistani Cities
+              </h2>
             </div>
-            {comparisonRows.map(([area, oldWay, tutoreraWay], index) => (
-              <div key={area} className={`${s.tableRow} ${s.revealItem}`} style={{ "--delay": `${index * 75}ms` } as CSSProperties} role="row">
-                <strong role="cell">{area}</strong>
-                <span role="cell">{oldWay}</span>
-                <span role="cell">{tutoreraWay}</span>
+            <Link href="/locations" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>
+              All locations →
+            </Link>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem" }}>
+            {popularCities.map((city) => (
+              <div
+                key={city.name}
+                style={{
+                  background: "#f8faff",
+                  borderRadius: "1rem",
+                  padding: "1.5rem",
+                  border: "1px solid #e2e8f0"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#0329b2", marginBottom: "0.5rem" }}>
+                  <MapPin size={18} />
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>{city.name}</h3>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>
+                  Top areas: {city.areas}
+                </p>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <Link
+                    href={`/post-home-tuition-request?city=${city.name}`}
+                    style={{
+                      background: "#0329b2",
+                      color: "white",
+                      padding: "0.45rem 0.85rem",
+                      borderRadius: "0.5rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      textDecoration: "none"
+                    }}
+                  >
+                    Post in {city.name}
+                  </Link>
+                  <Link
+                    href={city.href}
+                    style={{
+                      color: "#475569",
+                      padding: "0.45rem 0.75rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      textDecoration: "none"
+                    }}
+                  >
+                    Browse tutors
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* 8. Featured Verified Tutors */}
       <TopTutorsSection />
 
-      <section className={s.softSection} aria-labelledby="blog-title">
-        <div className={s.container}>
-          <div className={s.sectionHeader}>
-            <p className={s.eyebrow}>Expert guidance</p>
-            <h2 id="blog-title">Helpful reading before you choose</h2>
-            <p>Clear, practical guides for Pakistani parents, students, and tutors.</p>
+      {/* 9. Trust & Safety Standards */}
+      <TrustSafetySection />
+
+      {/* 10. Educational Guidance & Reading */}
+      <section style={{ padding: "4rem 1.5rem", background: "white" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", maxWidth: 600, margin: "0 auto 3rem" }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#0329b2", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Expert Guides
+            </span>
+            <h2 style={{ fontSize: "1.875rem", fontWeight: 800, color: "#021550", margin: "0.35rem 0 0.5rem" }}>
+              Helpful Advice for Parents & Students
+            </h2>
+            <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+              Clear, transparent insights on tutor rates, screening, and academic excellence in Pakistan.
+            </p>
           </div>
-          <div className={s.blogGrid}>
-            {blogPosts.map((post, index) => (
-                <article key={post.slug} className={`${s.blogCard} ${s.revealItem}`} style={{ "--delay": `${index * 75}ms` } as CSSProperties}>
-                <div className={s.blogArt} aria-hidden="true"><Star size={28} /></div>
-                <div className={s.blogBody}>
-                  <h3>{post.title}</h3>
-                  <p>{post.desc}</p>
-                  <Link className={s.textLink} href={`/blog/${post.slug}`}>
-                    Read guide <ArrowRight size={16} aria-hidden="true" />
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
+            {blogPosts.map((post) => (
+              <article
+                key={post.slug}
+                style={{
+                  background: "#f8faff",
+                  borderRadius: "1rem",
+                  padding: "1.75rem",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  flexDirection: "column"
+                }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: "0.5rem", background: "#eef5ff", color: "#0329b2", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
+                  <Star size={18} />
+                </div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
+                  {post.title}
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1.25rem" }}>
+                  {post.desc}
+                </p>
+                <div style={{ marginTop: "auto" }}>
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      fontSize: "0.825rem",
+                      fontWeight: 700,
+                      color: "#0329b2",
+                      textDecoration: "none"
+                    }}
+                  >
+                    Read guide <ArrowRight size={14} />
                   </Link>
                 </div>
               </article>
@@ -269,20 +243,53 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={s.ctaSection} aria-labelledby="final-cta-title">
-        <div className={s.container}>
-          <div className={s.ctaCard}>
-            <div>
-              <p className={s.eyebrow}>Ready when you are</p>
-              <h2 id="final-cta-title">Start with the need, not the noise.</h2>
-              <p>Post a request in minutes, or browse tutors directly if you already know what you want.</p>
-            </div>
-            <div className={s.ctaActions}>
-              <Link className={s.primaryCta} href="/dashboard?tab=requests">
-                Post Request <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-              <Link className={s.secondaryCtaDark} href="/register?role=tutor">Join as Tutor</Link>
-            </div>
+      {/* 11. Final High-Impact Marketplace CTA */}
+      <section style={{ padding: "4rem 1.5rem 5rem", background: "#021550", color: "white" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
+          <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Ready to Start?
+          </span>
+          <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", fontWeight: 900, margin: "0.5rem 0 1rem" }}>
+            Stop Searching. Let Tutors Come to You.
+          </h2>
+          <p style={{ color: "#94a3b8", fontSize: "1rem", maxWidth: 540, margin: "0 auto 2.5rem", lineHeight: 1.6 }}>
+            Post your tuition requirement with your target budget in 2 minutes. Receive competitive offers from verified tutors and start learning.
+          </p>
+
+          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <Link
+              href="/post-tuition-request"
+              style={{
+                background: "#016ef8",
+                color: "white",
+                padding: "0.95rem 2rem",
+                borderRadius: "0.75rem",
+                fontWeight: 800,
+                fontSize: "1rem",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                boxShadow: "0 8px 24px rgba(1, 110, 248, 0.4)"
+              }}
+            >
+              Post Tuition Request <ArrowRight size={18} />
+            </Link>
+            <Link
+              href="/become-a-tutor"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                color: "white",
+                padding: "0.95rem 1.75rem",
+                borderRadius: "0.75rem",
+                fontWeight: 700,
+                fontSize: "0.95rem",
+                border: "1px solid rgba(255,255,255,0.2)",
+                textDecoration: "none"
+              }}
+            >
+              Become a Verified Tutor
+            </Link>
           </div>
         </div>
       </section>

@@ -46,13 +46,13 @@ export async function processAbandonedJourneyRecovery() {
     const prior = await EmailLog.find({
       relatedEntityType: "TutorProfile",
       relatedEntityId: profile._id.toString(),
-      eventType: /^tutor\.application\.abandoned_reminder_/,
+      eventType: /^profile_abandoned_/,
     }).select("eventType").lean();
     const sentDays = daysFromEvents(prior);
     const day = milestoneFor(now.getTime() - profile.updatedAt.getTime(), sentDays);
     if (!day) continue;
 
-    const eventType = `tutor.application.abandoned_reminder_${day}d`;
+    const eventType = `profile_abandoned_${day}d`;
     if (await alreadyLogged(eventType, "TutorProfile", profile._id.toString())) continue;
 
     const { subject, html } = tutorApplicationAbandonedEmail(user.name, day, profile.onboardingStep as number);
@@ -84,7 +84,7 @@ export async function processAbandonedJourneyRecovery() {
     if (!day) continue;
 
     const isDirectBooking = journey.type === "direct_booking";
-    const eventType = `${isDirectBooking ? "student.direct_booking" : "student.request"}.abandoned_reminder_${day}d`;
+    const eventType = `${isDirectBooking ? "student_direct_booking" : "student_request"}_abandoned_${day}d`;
     if (await alreadyLogged(eventType, "AbandonedJourney", journey._id.toString())) continue;
 
     const data = journey.data || {};
@@ -116,7 +116,7 @@ export async function processAbandonedJourneyRecovery() {
     const prior = await EmailLog.find({
       relatedEntityType: "Booking",
       relatedEntityId: booking._id.toString(),
-      eventType: /^booking\.payment\.abandoned_reminder_/,
+      eventType: /^payment_abandoned_/,
     }).select("eventType").lean();
     const sentDays = daysFromEvents(prior);
     const day = milestoneFor(now.getTime() - booking.createdAt.getTime(), sentDays);
@@ -125,7 +125,7 @@ export async function processAbandonedJourneyRecovery() {
     const student = booking.student as any;
     if (!student?.email) continue;
 
-    const eventType = `booking.payment.abandoned_reminder_${day}d`;
+    const eventType = `payment_abandoned_${day}d`;
     if (await alreadyLogged(eventType, "Booking", booking._id.toString())) continue;
 
     const tutor = booking.tutor as any;

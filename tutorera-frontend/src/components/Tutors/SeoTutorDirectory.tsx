@@ -36,6 +36,25 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
         <div className={styles.heroInner}>
           <h1 className={styles.heroTitle}>{title}</h1>
           <p className={styles.heroSubtitle}>{description}</p>
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.25rem", flexWrap: "wrap" }}>
+            <Link
+              href="/post-tuition-request"
+              style={{
+                background: "white",
+                color: "#021550",
+                padding: "0.75rem 1.5rem",
+                borderRadius: "0.625rem",
+                fontWeight: 800,
+                fontSize: "0.9rem",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.15)"
+              }}
+            >
+              + Post Tuition Request & Receive Offers
+            </Link>
+          </div>
         </div>
       </div>
       <main className={styles.main} style={{ maxWidth: 1180, margin: "0 auto", padding: "3rem 1.5rem" }}>
@@ -43,10 +62,17 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
         {result.tutors.length ? (
           <div className={styles.grid}>{result.tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} />)}</div>
         ) : (
-          <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
-            <h2 style={{ marginBottom: ".75rem" }}>No matching tutors are currently listed</h2>
-            <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>Browse all verified tutors or post a request for this requirement.</p>
-            <Link href="/tutors" style={{ color: "#0329B2", fontWeight: 700 }}>Browse all tutors</Link>
+          <div style={{ textAlign: "center", padding: "4rem 1rem", background: "white", borderRadius: "1rem", border: "1px solid #e2e8f0" }}>
+            <h2 style={{ marginBottom: ".75rem", color: "#021550" }}>No matching tutors listed right now</h2>
+            <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Tell us your exact requirements and let verified tutors send offers directly to you.</p>
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+              <Link href="/post-tuition-request" style={{ background: "#0329B2", color: "white", padding: "0.75rem 1.5rem", borderRadius: "0.5rem", fontWeight: 800, textDecoration: "none" }}>
+                Post Tuition Request
+              </Link>
+              <Link href="/tutors" style={{ color: "#0329B2", fontWeight: 700, padding: "0.75rem 1rem", textDecoration: "none" }}>
+                Browse all tutors →
+              </Link>
+            </div>
           </div>
         )}
       </main>

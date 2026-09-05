@@ -4,7 +4,21 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BriefcaseBusiness, ChevronDown, GraduationCap, LayoutDashboard, LogOut, Menu, MessageSquare, Search, ShieldCheck, User, X } from "lucide-react";
+import { 
+  Bell, 
+  BriefcaseBusiness, 
+  ChevronDown, 
+  GraduationCap, 
+  LayoutDashboard, 
+  LogOut, 
+  Menu, 
+  MessageSquare, 
+  PlusCircle, 
+  ShieldCheck, 
+  User, 
+  X,
+  Briefcase
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import BrandLogo from "@/components/BrandLogo";
@@ -15,81 +29,68 @@ type MegaKey = "students" | "tutors" | "resources" | null;
 const megaMenus = [
   {
     key: "students" as MegaKey,
-    label: "For students",
-    eyebrow: "Find learning support",
-    title: "Start with your need, then compare tutor offers.",
+    label: "For Students",
+    eyebrow: "Global Student-Led Marketplace",
+    title: "Post your need, receive offers worldwide or locally, compare & choose.",
     icon: GraduationCap,
-    featured: { label: "Post a tuition request", href: "/dashboard?tab=requests", desc: "Set subject, schedule, mode, and proposed rate." },
+    featured: { label: "Post a Tuition Request", href: "/post-tuition-request", desc: "Set subject, schedule, mode, and your proposed budget in any currency." },
     groups: [
-      { title: "Discover tutors", links: [
-        { label: "Browse tutors", href: "/tutors", desc: "Search verified tutor profiles." },
-        { label: "Tutors by city", href: "/locations", desc: "Explore coverage across Pakistan." },
-        { label: "Subjects", href: "/subjects", desc: "Maths, sciences, languages, skills." },
-        { label: "Levels", href: "/levels", desc: "Matric, FSc, O/A-Level, university." },
+      { title: "Learning Modes", links: [
+        { label: "Home Tuition Requests", href: "/post-home-tuition-request", desc: "Verified tutors near your neighborhood." },
+        { label: "Online Tuition Requests", href: "/post-online-tuition-request", desc: "1-on-1 live sessions with top global tutors." },
+        { label: "Browse Tutors Directory", href: "/tutors", desc: "Search across verified profiles worldwide." },
+        { label: "Tutors by Location", href: "/locations", desc: "Dubai, London, Lahore, New York & more." },
       ] },
-      { title: "Choose safely", links: [
-        { label: "How offers work", href: "/how-tutor-offers-work", desc: "Understand offers, counters, and booking." },
-        { label: "Student journey", href: "/student-journey", desc: "See request, offer, payment, and lesson flow." },
-        { label: "Services", href: "/services", desc: "Review tutoring services and PKR pricing." },
-        { label: "Parent guide", href: "/help/for-parents", desc: "Practical help for families." },
-        { label: "First-session guarantee", href: "/first-session-guarantee", desc: "Know what happens after booking." },
-        { label: "Pricing", href: "/pricing", desc: "Platform pricing and fee clarity." },
+      { title: "Transparency & Trust", links: [
+        { label: "How Tutor Offers Work", href: "/how-tutor-offers-work", desc: "Understanding offers, counters & locking." },
+        { label: "First-Session Guarantee", href: "/first-session-guarantee", desc: "Session quality protection policy." },
+        { label: "Parent Safety Guide", href: "/help/for-parents", desc: "Safety & verification checks." },
+        { label: "Pricing & Fee Clarity", href: "/pricing", desc: "0% student marketplace fee." },
       ] },
     ],
   },
   {
     key: "tutors" as MegaKey,
-    label: "For tutors",
-    eyebrow: "Grow professionally",
-    title: "Find real requests and send relevant tutor offers.",
+    label: "For Tutors",
+    eyebrow: "Global Teaching Opportunities",
+    title: "Discover real student demand and send offers across borders or locally.",
     icon: BriefcaseBusiness,
-    featured: { label: "Become a tutor", href: "/become-a-tutor", desc: "Create your profile and start receiving demand." },
+    featured: { label: "Browse Open Requests", href: "/browse-requests", desc: "Review student budgets and send counter-offers." },
     groups: [
-      { title: "Tutor marketplace", links: [
-        { label: "Browse open requests", href: "/browse-requests", desc: "See student demand and send offers." },
-        { label: "Tutor guide", href: "/help/for-tutors", desc: "How to work well on TUTORERA." },
-        { label: "Earnings", href: "/earnings", desc: "Understand tutor earning flow." },
-        { label: "Verification standards", href: "/tutor-verification-standards", desc: "Build credibility with verification." },
+      { title: "Tutor Marketplace", links: [
+        { label: "Browse Student Requests", href: "/browse-requests", desc: "View real-time tutoring requirements worldwide." },
+        { label: "Become a Verified Tutor", href: "/become-a-tutor", desc: "Join TUTORERA's global network." },
+        { label: "Tutor Earnings Flow", href: "/earnings", desc: "Multi-currency payouts & net earnings." },
+        { label: "Verification Standards", href: "/tutor-verification-standards", desc: "Identity & credential screening." },
       ] },
-      { title: "Quality expectations", links: [
-        { label: "Tutor screening policy", href: "/tutor-screening-policy", desc: "How profiles are reviewed." },
-        { label: "Academic standards", href: "/academic-standards", desc: "Teaching and conduct standards." },
-        { label: "Safety policy", href: "/safety-policy", desc: "Platform safety expectations." },
-        { label: "Review policy", href: "/review-policy", desc: "How reviews should be used." },
+      { title: "Teaching Standards", links: [
+        { label: "Screening Policy", href: "/tutor-screening-policy", desc: "How tutor profiles are approved." },
+        { label: "Academic Standards", href: "/academic-standards", desc: "Professional conduct guidelines." },
+        { label: "Safety Policy", href: "/safety-policy", desc: "In-person & online safety rules." },
       ] },
     ],
   },
   {
     key: "resources" as MegaKey,
-    label: "Resources",
-    eyebrow: "Learn and verify",
-    title: "Policies, research, and help pages in one place.",
+    label: "How It Works",
+    eyebrow: "Guides & Policies",
+    title: "Everything you need to know about TUTORERA.",
     icon: ShieldCheck,
-    featured: { label: "Help center", href: "/help", desc: "Find answers for students, parents, and tutors." },
+    featured: { label: "How TUTORERA Works", href: "/how-it-works", desc: "The global student-led reverse marketplace loop." },
     groups: [
-      { title: "Guides and research", links: [
-        { label: "Blog", href: "/blog", desc: "Practical education guides." },
-        { label: "Pakistan tutoring rates", href: "/research/pakistan-tutoring-rates", desc: "Original tutoring-rate research." },
-        { label: "Research methodology", href: "/research-methodology", desc: "How research pages are produced." },
-        { label: "How it works", href: "/how-it-works", desc: "Platform overview." },
-        { label: "Student journey", href: "/student-journey", desc: "Customer path from request to tutoring." },
-        { label: "How payments work", href: "/payment-process", desc: "Checkout, PKR totals, and verification." },
+      { title: "Guides & Research", links: [
+        { label: "Global Tutoring Index", href: "/research/pakistan-tutoring-rates", desc: "Tutoring market rate benchmarks." },
+        { label: "Student Journey", href: "/student-journey", desc: "From posting need to completed session." },
+        { label: "Payment Process", href: "/payment-process", desc: "Secure multi-currency escrow & checkout." },
+        { label: "Help Center", href: "/help", desc: "FAQs & support documentation." },
       ] },
-      { title: "Company and trust", links: [
-        { label: "About", href: "/about", desc: "TUTORERA and MENTISERA." },
-        { label: "Team", href: "/team", desc: "Meet leadership and product team." },
-        { label: "Business model", href: "/business-model", desc: "Student-led marketplace model." },
-        { label: "Coverage", href: "/coverage", desc: "Where TUTORERA operates." },
-        { label: "Contact", href: "/contact", desc: "Reach the support team." },
-        { label: "Complaint process", href: "/complaint-process", desc: "Report and escalation route." },
+      { title: "Company & Trust", links: [
+        { label: "About TUTORERA", href: "/about", desc: "Mission & global team." },
+        { label: "Safety & Privacy Policy", href: "/safety-policy", desc: "Address & identity protections." },
+        { label: "Contact Support", href: "/contact", desc: "Direct 24/7 team assistance." },
       ] },
     ],
   },
-];
-
-const quickLinks = [
-  { label: "Find tutors", href: "/tutors", icon: Search },
-  { label: "Post request", href: "/dashboard?tab=requests", icon: MessageSquare },
 ];
 
 function notificationIcon(type: string) {
@@ -159,13 +160,24 @@ export default function Navbar() {
       <nav className={s.nav} aria-label="Main navigation">
         <BrandLogo className={s.logo} imageClassName={s.logoImage} priority />
 
+        {/* Desktop Main Links */}
         <div className={s.desktopNav}>
+          <Link href="/tutors" className={s.navLink} onClick={closeMenus}>
+            Find Tutors
+          </Link>
+
           {megaMenus.map((menu) => {
             const Icon = menu.icon;
             const open = activeMega === menu.key;
             return (
               <div key={menu.key} className={s.megaWrap}>
-                <button type="button" className={s.navButton} aria-expanded={open} aria-controls={`${menu.key}-mega-menu`} onClick={() => { setActiveMega(open ? null : menu.key); setShowNotifications(false); }}>
+                <button
+                  type="button"
+                  className={s.navButton}
+                  aria-expanded={open}
+                  aria-controls={`${menu.key}-mega-menu`}
+                  onClick={() => { setActiveMega(open ? null : menu.key); setShowNotifications(false); }}
+                >
                   {menu.label}
                   <ChevronDown size={15} aria-hidden="true" />
                 </button>
@@ -198,17 +210,70 @@ export default function Navbar() {
               </div>
             );
           })}
+
+          <Link href="/pricing" className={s.navLink} onClick={closeMenus}>
+            Pricing
+          </Link>
+          <Link href="/support" className={s.navLink} onClick={closeMenus}>
+            Support
+          </Link>
         </div>
 
+        {/* Actions / CTA Header Button */}
         <div className={s.desktopActions}>
-          {quickLinks.map((item) => {
-            const Icon = item.icon;
-            return <Link key={item.href} href={item.href} className={s.quickLink}><Icon size={16} aria-hidden="true" />{item.label}</Link>;
-          })}
+          {/* Marketplace Hero CTA in Navbar */}
+          {user?.role === "tutor" ? (
+            <Link
+              href="/browse-requests"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                background: "#0329b2",
+                color: "white",
+                padding: "0.6rem 1.15rem",
+                borderRadius: "0.5rem",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                textDecoration: "none",
+                boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)"
+              }}
+            >
+              <Briefcase size={16} />
+              <span>Matching Requests</span>
+            </Link>
+          ) : (
+            <Link
+              href="/post-tuition-request"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                background: "#0329b2",
+                color: "white",
+                padding: "0.6rem 1.15rem",
+                borderRadius: "0.5rem",
+                fontWeight: 800,
+                fontSize: "0.85rem",
+                textDecoration: "none",
+                boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)"
+              }}
+            >
+              <PlusCircle size={16} />
+              <span>{user ? "+ Post Request" : "Post Tuition Request"}</span>
+            </Link>
+          )}
+
           {user ? (
             <>
               <div className={s.notifications}>
-                <button type="button" className={s.iconButton} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} aria-expanded={showNotifications} onClick={() => { setShowNotifications(!showNotifications); setActiveMega(null); setShowAccountMenu(false); }}>
+                <button
+                  type="button"
+                  className={s.iconButton}
+                  aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+                  aria-expanded={showNotifications}
+                  onClick={() => { setShowNotifications(!showNotifications); setActiveMega(null); setShowAccountMenu(false); }}
+                >
                   <Bell size={20} aria-hidden="true" />
                   {unreadCount > 0 && <span className={s.badge}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
                 </button>
@@ -222,16 +287,24 @@ export default function Navbar() {
                       {notifications.length === 0 ? (
                         <p className={s.emptyState}>No notifications yet</p>
                       ) : notifications.slice(0, 8).map((notif) => (
-                        <button key={notif._id} type="button" className={notif.isRead ? s.notificationItem : `${s.notificationItem} ${s.unread}`} onClick={() => { markAsRead(notif._id); closeMenus(); if (notif.link) router.push(notif.link); }}>
+                        <button
+                          key={notif._id}
+                          type="button"
+                          className={notif.isRead ? s.notificationItem : `${s.notificationItem} ${s.unread}`}
+                          onClick={() => { markAsRead(notif._id); closeMenus(); if (notif.link) router.push(notif.link); }}
+                        >
                           <span aria-hidden="true">{notificationIcon(notif.type)}</span>
                           <span><strong>{notif.title}</strong><em>{notif.message}</em></span>
                         </button>
                       ))}
                     </div>
-                    <Link href="/notifications" onClick={closeMenus} className={s.panelFooterLink}>View all notifications</Link>
+                    <Link href="/notifications" onClick={closeMenus} className={s.panelFooterLink}>
+                      View all notifications
+                    </Link>
                   </div>
                 )}
               </div>
+
               <div className={s.accountMenu}>
                 <button
                   type="button"
@@ -241,7 +314,9 @@ export default function Navbar() {
                   aria-controls="account-menu"
                   onClick={() => { setShowAccountMenu((open) => !open); setActiveMega(null); setShowNotifications(false); }}
                 >
-                  <span className={s.avatar}>{user.avatar ? <img src={user.avatar} alt="" width={32} height={32} /> : user.name.charAt(0).toUpperCase()}</span>
+                  <span className={s.avatar}>
+                    {user.avatar ? <img src={user.avatar} alt="" width={32} height={32} /> : user.name.charAt(0).toUpperCase()}
+                  </span>
                   <span>{user.name.split(" ")[0]}</span>
                 </button>
                 {showAccountMenu && (
@@ -262,13 +337,45 @@ export default function Navbar() {
           )}
         </div>
 
-        <button type="button" className={s.mobileToggle} aria-label={isOpen ? "Close menu" : "Open menu"} aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
+        <button
+          type="button"
+          className={s.mobileToggle}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen(!isOpen)}
+        >
           {isOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
       </nav>
 
       {isOpen && (
         <div className={s.mobilePanel}>
+          <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #f1f5f9" }}>
+            <Link
+              href="/post-tuition-request"
+              onClick={closeMenus}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                background: "#0329b2",
+                color: "white",
+                padding: "0.75rem",
+                borderRadius: "0.5rem",
+                fontWeight: 800,
+                fontSize: "0.95rem",
+                textDecoration: "none"
+              }}
+            >
+              <PlusCircle size={18} /> Post Tuition Request
+            </Link>
+          </div>
+
+          <Link href="/tutors" onClick={closeMenus} style={{ padding: "0.75rem 1rem", fontWeight: 700, display: "block" }}>
+            Browse Verified Tutors
+          </Link>
+
           {megaMenus.map((menu) => (
             <details key={menu.key} className={s.mobileGroup}>
               <summary>{menu.label}</summary>
@@ -278,6 +385,7 @@ export default function Navbar() {
               ))}
             </details>
           ))}
+
           <div className={s.mobileActions}>
             {user ? (
               <>

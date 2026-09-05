@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { renderBrandedEmail } from "./emailBrand";
 import EmailLog from "../models/EmailLog.model";
+import { normalizeEmailEventName } from "./emailEvents";
 
 interface EmailOptions {
   to: string;
@@ -18,7 +19,7 @@ interface EmailOptions {
 
 const sendEmail = async (options: EmailOptions): Promise<void> => {
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const eventType = options.eventType || options.category || inferEventType(options.subject);
+  const eventType = normalizeEmailEventName(options.eventType || options.category || inferEventType(options.subject));
   const templateId = options.templateId || inferTemplateId(options.subject);
   const log = await EmailLog.create({
     user: options.userId,
@@ -72,21 +73,20 @@ const sendEmail = async (options: EmailOptions): Promise<void> => {
 
 function inferEventType(subject: string): string {
   const normalized = subject.toLowerCase();
-  if (normalized.includes("registered") || normalized.includes("welcome")) return "auth.user.registered";
-  if (normalized.includes("password") && normalized.includes("reset")) return "auth.password.reset_requested";
-  if (normalized.includes("password")) return "auth.password.changed";
-  if (normalized.includes("application") || normalized.includes("profile submitted")) return "tutor.profile.submitted";
-  if (normalized.includes("verification") || normalized.includes("verified")) return "tutor.verification.approved";
-  if (normalized.includes("offer")) return "offer.updated";
-  if (normalized.includes("booking")) return "booking.confirmed";
-  if (normalized.includes("payment") && normalized.includes("failed")) return "payment.failed";
-  if (normalized.includes("payment") && normalized.includes("confirmed")) return "payment.succeeded";
-  if (normalized.includes("payment")) return "payment.pending";
-  if (normalized.includes("payout") && normalized.includes("failed")) return "payout.failed";
-  if (normalized.includes("payout")) return "payout.processing";
-  if (normalized.includes("review")) return "review.requested";
-  if (normalized.includes("support") || normalized.includes("contact")) return "support.ticket.created";
-  if (normalized.includes("suspended")) return "account.suspended";
+  if (normalized.includes("registered") || normalized.includes("welcome")) return "user_registered";
+  if (normalized.includes("password") && normalized.includes("reset")) return "password_reset_requested";
+  if (normalized.includes("password")) return "password_changed";
+  if (normalized.includes("application") || normalized.includes("profile submitted")) return "profile_submitted";
+  if (normalized.includes("verification") || normalized.includes("verified")) return "profile_approved";
+  if (normalized.includes("offer")) return "offer_updated";
+  if (normalized.includes("booking")) return "booking_confirmed";
+  if (normalized.includes("payment") && normalized.includes("failed")) return "payment_failed";
+  if (normalized.includes("payment") && normalized.includes("confirmed")) return "payment_successful";
+  if (normalized.includes("payment")) return "payment_pending";
+  if (normalized.includes("payout")) return "tutor_payout_processing";
+  if (normalized.includes("review")) return "review_requested";
+  if (normalized.includes("support") || normalized.includes("contact")) return "support_ticket_created";
+  if (normalized.includes("suspended")) return "account_suspended";
   return "email.generic";
 }
 

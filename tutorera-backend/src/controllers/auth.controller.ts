@@ -7,6 +7,12 @@ import { AuthRequest } from "../types";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail";
 import { welcomeEmail, tutorPendingEmail, planUpgradedEmail } from "../utils/emailTemplates";
+import StudentProfile from "../models/StudentProfile.model";
+import TutorProfile from "../models/TutorProfile.model";
+import RequestModel from "../models/Request.model";
+import Bid from "../models/Bid.model";
+import Booking from "../models/Booking.model";
+import Review from "../models/Review.model";
 import {
   allocateApplicationId,
   generateTrackingToken,
@@ -113,6 +119,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
   if (!user.isActive) {
     res.status(403).json({ success: false, message: "Your account has been deactivated" });
+    return;
+  }
+
+  if (user.isDeleted) {
+    res.status(403).json({ success: false, message: "This account has been deleted upon request." });
     return;
   }
 
@@ -505,4 +516,199 @@ export const upgradePlan = async (
     message: `Plan updated to ${plan}`,
     user,
   });
+};
+
+// @desc    Export all user data (GDPR / Data Rights)
+// @route   GET /api/v1/auth/me/export
+// @access  Private
+export const exportData = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Not authorized" });
+      return;
+    }
+
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    const [studentProfile, tutorProfile, requests, bids, bookings, reviews] = await Promise.all([
+      StudentProfile.findOne({ user: userId }),
+      TutorProfile.findOne({ user: userId }),
+      RequestModel.find({ student: userId }),
+      Bid.find({ tutor: userId }),
+      Booking.find({ $or: [{ student: userId }, { tutor: userId }] }),
+      Review.find({ $or: [{ student: userId }, { tutor: userId }] }),
+    ]);
+
+    await logAudit({
+      action: "data_export",
+      actor: user.name,
+      entity: "User",
+      targetId: userId.toString(),
+      targetName: user.name,
+    });
+
+    res.status(200).json({
+      success: true,
+      exportGeneratedAt: new Date().toISOString(),
+      platform: "TUTORERA by MENTISERA",
+      data: {
+        account: user,
+        studentProfile,
+        tutorProfile,
+        requests,
+        bids,
+        bookings,
+        reviews,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to generate data export" });
+  }
+};
+
+// @desc    Self-serve account deletion (GDPR / Right to be Forgotten)
+// @route   POST /api/v1/auth/me/delete-account
+// @access  Private
+export const deleteAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?._id;
+    const { password, reason } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Not authorized" });
+      return;
+    }
+
+    const user = await User.findById(userId).select("+password");
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    // If local auth, verify password before deletion
+    if (user.authProvider === "local" && user.password) {
+      if (!password) {
+        res.status(400).json({ success: false, message: "Password is required to confirm account deletion" });
+        return;
+      }
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        res.status(401).json({ success: false, message: "Invalid password" });
+        return;
+      }
+    }
+
+    // Check for active or ongoing bookings
+    const activeBookings = await Booking.find({
+      $or: [{ student: userId }, { tutor: userId }],
+      status: { $in: ["upcoming", "ongoing"] },
+    });
+
+    if (activeBookings.length > 0) {
+      res.status(400).json({
+        success: false,
+        message: "Cannot delete account while you have active or upcoming tutoring sessions. Please complete or cancel sessions before requesting deletion.",
+      });
+      return;
+    }
+
+    // Anonymize user identifying information
+    const anonymizedId = userId.toString().slice(-6);
+    user.name = `Deleted User (${anonymizedId})`;
+    user.email = `deleted_${userId}@deleted.tutorera.ac.pk`;
+    user.phone = undefined;
+    user.avatar = undefined;
+    user.isDeleted = true;
+    user.isActive = false;
+    user.deletedAt = new Date();
+    user.deletionReason = reason || "User-initiated self-serve deletion";
+    await user.save({ validateBeforeSave: false });
+
+    // Cancel open requests
+    await RequestModel.updateMany(
+      { student: userId, status: { $in: ["open", "draft", "receiving_offers", "negotiating"] } },
+      { status: "cancelled" }
+    );
+
+    // Deactivate tutor profile if tutor
+    await TutorProfile.findOneAndUpdate(
+      { user: userId },
+      { isActive: false, isVerified: false, bio: "[Account Deleted]" }
+    );
+
+    await logAudit({
+      action: "account_deletion",
+      actor: user.name,
+      entity: "User",
+      targetId: userId.toString(),
+      targetName: user.name,
+    });
+
+    res.cookie("token", "none", {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Your account and personal identifying data have been successfully deleted in accordance with our retention policy.",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to process account deletion" });
+  }
+};
+
+// @desc    Update privacy, cookie and marketing consent preferences
+// @route   PATCH /api/v1/auth/me/consent
+// @access  Private
+export const updateConsent = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?._id;
+    const { legalTermsVersionAccepted, privacyVersionAccepted, marketingConsent, cookieConsent } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Not authorized" });
+      return;
+    }
+
+    const updates: Record<string, any> = {};
+    if (legalTermsVersionAccepted) {
+      updates.legalTermsVersionAccepted = legalTermsVersionAccepted;
+      updates.legalAcceptedAt = new Date();
+    }
+    if (privacyVersionAccepted) {
+      updates.privacyVersionAccepted = privacyVersionAccepted;
+    }
+    if (typeof marketingConsent === "boolean") {
+      updates.marketingConsent = marketingConsent;
+    }
+    if (cookieConsent && typeof cookieConsent === "object") {
+      updates.cookieConsent = {
+        necessary: true,
+        analytics: Boolean(cookieConsent.analytics),
+        marketing: Boolean(cookieConsent.marketing),
+        updatedAt: new Date(),
+      };
+    }
+
+    const user = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: "Consent preferences updated successfully",
+      consent: {
+        legalTermsVersionAccepted: user?.legalTermsVersionAccepted,
+        privacyVersionAccepted: user?.privacyVersionAccepted,
+        marketingConsent: user?.marketingConsent,
+        cookieConsent: user?.cookieConsent,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update consent preferences" });
+  }
 };

@@ -141,7 +141,6 @@
   transition: all 0.15s;
 }
 
-.cancelBtn:hover { border-color: #9ca3af; }
 
 .submitBtn {
   padding: 9px 24px;
@@ -158,3 +157,15 @@
 
 .submitBtn:hover:not(:disabled) { background: #3b82f6; }
 .submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-height: 96vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}

@@ -8,16 +8,19 @@ export interface IRequest extends Document {
   budget: number;
   maximumBudget?: number;
   pricingUnit: "hour" | "session" | "month" | "course";
+  currency: string;
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
   learningObjectives?: string;
+  countryCode?: string; countryName?: string; city?: string; timezone?: string;
   area?: string; travelRadiusKm?: number;
+  isWorldwideEligible?: boolean;
+  preferredTutorCountries?: string[];
   tutorGenderPreference?: "male" | "female" | "none";
   minimumQualification?: string; minimumExperience?: number; preferredLanguage?: string; preferredTutorRating?: number;
   preferredDays?: string[]; preferredStartTime?: string; sessionDurationMinutes?: number;
   sessionsPerWeek?: number; expectedStartDate?: Date;
   teachingMode: "online" | "in-person" | "both";
-  city?: string;
   schedule: string;
   status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "offer_accepted" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   acceptedOffer?: Types.ObjectId;
@@ -48,9 +51,18 @@ const requestSchema = new Schema<IRequest>(
     budget: { type: Number, required: true, min: 0 },
     maximumBudget: { type: Number, min: 0, select: false },
     pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },
+    currency: { type: String, trim: true, default: "PKR" },
     allowCounterOffers: { type: Boolean, default: true },
     classGrade: { type: String, trim: true }, curriculum: { type: String, trim: true }, examType: { type: String, trim: true }, studentLevel: { type: String, trim: true },
-    learningObjectives: { type: String, trim: true }, area: { type: String, trim: true }, travelRadiusKm: { type: Number, min: 0, max: 100 },
+    learningObjectives: { type: String, trim: true }, 
+    countryCode: { type: String, trim: true, default: "PK" },
+    countryName: { type: String, trim: true, default: "Pakistan" },
+    city: { type: String, trim: true },
+    timezone: { type: String, trim: true, default: "Asia/Karachi" },
+    area: { type: String, trim: true }, 
+    travelRadiusKm: { type: Number, min: 0, max: 100 },
+    isWorldwideEligible: { type: Boolean, default: true },
+    preferredTutorCountries: [{ type: String, trim: true }],
     tutorGenderPreference: { type: String, enum: ["male", "female", "none"], default: "none" },
     minimumQualification: { type: String, trim: true }, minimumExperience: { type: Number, min: 0, max: 50 }, preferredLanguage: { type: String, trim: true }, preferredTutorRating: { type: Number, min: 0, max: 5 },
     preferredDays: [{ type: String }], preferredStartTime: { type: String }, sessionDurationMinutes: { type: Number, min: 15, max: 480 }, sessionsPerWeek: { type: Number, min: 1, max: 14 }, expectedStartDate: { type: Date },
@@ -59,7 +71,6 @@ const requestSchema = new Schema<IRequest>(
       enum: ["online", "in-person", "both"],
       default: "both",
     },
-    city: { type: String, trim: true },
     schedule: { type: String, required: true },
     status: {
       type: String,

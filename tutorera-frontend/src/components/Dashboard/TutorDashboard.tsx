@@ -614,26 +614,61 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   return (
     <>
       {/* Header */}
-      <div className={s.header}>
-        <div className={s.headerInner}>
-          <div className={s.headerLeft}>
-            <div className={s.avatar}>
-              {userAvatar ? <img src={userAvatar} alt={userName} /> : userName.charAt(0).toUpperCase()}
+      <div className={s.header} style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
+        <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
+          <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
+              {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className={s.greeting}>Welcome back, {userName}! 👋</h1>
-              <span className={s.roleBadge}>
-                <svg width={10} height={10} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
-                </svg>
-                Tutor Account
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Tutor Opportunity Marketplace
               </span>
+              <h1 className={s.greeting} style={{ color: "white", fontSize: "1.5rem", fontWeight: 800, margin: "0.2rem 0" }}>
+                Student Requests Match Your Profile!
+              </h1>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "rgba(255,255,255,0.8)" }}>
+                Browse live student requirements, accept student proposed rates, or send transparent counter-offers.
+              </p>
             </div>
           </div>
-          <Link href={userId ? `/tutors/${userId}` : "/tutors"} className={s.btnOutline} 
-            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, color: "#d4d5d9" }}>
-            View Public Profile
-          </Link>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Link
+              href="/browse-requests"
+              style={{
+                background: "#08bffc",
+                color: "#021550",
+                padding: "0.75rem 1.5rem",
+                borderRadius: "0.625rem",
+                fontWeight: 800,
+                fontSize: "0.9rem",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                boxShadow: "0 4px 14px rgba(8, 191, 252, 0.4)"
+              }}
+            >
+              View Matching Requests →
+            </Link>
+            <Link 
+              href={userId ? `/tutors/${userId}` : "/tutors"} 
+              style={{ 
+                background: "rgba(255,255,255,0.15)",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.3)",
+                padding: "0.75rem 1.25rem",
+                borderRadius: "0.625rem",
+                fontWeight: 700,
+                fontSize: "0.9rem",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center"
+              }}
+            >
+              View Public Profile
+            </Link>
+          </div>
         </div>
       </div>
 

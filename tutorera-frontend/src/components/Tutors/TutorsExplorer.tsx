@@ -63,6 +63,47 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       <aside className={styles.sidebar} aria-label="Filter tutors"><FilterSidebar {...sidebarProps} /></aside>
       <MobileFilterSidebar {...sidebarProps} isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <main className={styles.main}>
+        {/* Marketplace Demand Banner */}
+        <div style={{
+          background: "linear-gradient(135deg, #eef5ff 0%, #ffffff 100%)",
+          border: "1.5px solid #bfdbfe",
+          borderRadius: "0.875rem",
+          padding: "1rem 1.25rem",
+          marginBottom: "1.25rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.75rem"
+        }}>
+          <div>
+            <strong style={{ color: "#021550", fontSize: "0.95rem", display: "block" }}>
+              Can&apos;t find the exact tutor or schedule you need?
+            </strong>
+            <span style={{ color: "#64748b", fontSize: "0.8rem" }}>
+              Post your requirement and preferred budget. Verified tutors will send offers to you.
+            </span>
+          </div>
+          <a
+            href="/post-tuition-request"
+            style={{
+              background: "#0329b2",
+              color: "white",
+              padding: "0.6rem 1.15rem",
+              borderRadius: "0.5rem",
+              fontSize: "0.85rem",
+              fontWeight: 800,
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)"
+            }}
+          >
+            + Post Tuition Request
+          </a>
+        </div>
+
         <div className={styles.resultsHeader}>
           <p className={styles.resultsCount} aria-live="polite"><span className={styles.resultsCountAccent}>{pagination.total}</span> tutors found</p>
           <div className={styles.headerRight}>
@@ -71,7 +112,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
           </div>
         </div>
         {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} />)}</div> : <EmptyState onReset={reset} />}
-        {!loading && pagination.pages > 1 && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>}
+        {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>}
       </main>
     </div>
   </div>;

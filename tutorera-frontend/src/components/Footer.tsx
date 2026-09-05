@@ -10,36 +10,52 @@ import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "
 import BrandLogo from "@/components/BrandLogo";
 
 const footerColumns = [
-  { title: "Company", links: [
-    { label: "About", href: "/about" },
-    { label: "How It Works", href: "/how-it-works" },
-    { label: "Business Model", href: "/business-model" },
-    { label: "Contact", href: "/contact" },
-    { label: "Ownership & Governance", href: "/governance" },
-    { label: "Team", href: "/team" },
-  ] },
-  { title: "Students", links: [
-    { label: "Find a Tutor", href: "/tutors" },
-    { label: "Post Tuition Requirement", href: "/dashboard?tab=requests" },
-    { label: "Subjects", href: "/subjects" },
-    { label: "Services", href: "/services" },
-    { label: "Levels", href: "/levels" },
-    { label: "Pricing", href: "/pricing" },
-  ] },
-  { title: "Payments", links: [
-    { label: "How Payments Work", href: "/payment-process" },
-    { label: "Refund Policy", href: "/refund-policy" },
-    { label: "Cancellation Policy", href: "/cancellation-policy" },
-  ] },
-  { title: "Legal", links: [
-    { label: "Terms & Conditions", href: "/terms" },
-    { label: "Home Tuition Terms", href: "/in-person-home-tuition-terms" },
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Refund Policy", href: "/refund-policy" },
-    { label: "Cancellation Policy", href: "/cancellation-policy" },
-    { label: "Complaint & Dispute Resolution", href: "/complaint-process" },
-    { label: "Disclaimer", href: "/disclaimer" },
-  ] },
+  {
+    title: "Company",
+    links: [
+      { label: "About TUTORERA", href: "/about" },
+      { label: "How It Works", href: "/how-it-works" },
+      { label: "Business Model", href: "/business-model" },
+      { label: "Pricing & 0% Student Fee", href: "/pricing" },
+      { label: "Ownership & Governance", href: "/governance" },
+      { label: "Contact & Support", href: "/contact" },
+    ],
+  },
+  {
+    title: "Marketplace",
+    links: [
+      { label: "Find a Tutor", href: "/tutors" },
+      { label: "Post Tuition Requirement", href: "/dashboard?tab=requests" },
+      { label: "Online Tutoring Terms", href: "/terms/online-tutoring" },
+      { label: "Home Tuition Terms", href: "/terms/home-tuition" },
+      { label: "Tutor Agreement", href: "/terms/tutors" },
+      { label: "Student & Parent Terms", href: "/terms/students" },
+    ],
+  },
+  {
+    title: "Trust & Safety",
+    links: [
+      { label: "Trust & Safety Center", href: "/safety" },
+      { label: "Child Safeguarding", href: "/child-safety" },
+      { label: "Tutor Verification Standards", href: "/verification-policy" },
+      { label: "Background Check Policy", href: "/background-check-policy" },
+      { label: "Academic Integrity Code", href: "/academic-integrity" },
+      { label: "Dispute & Complaint Process", href: "/complaint-process" },
+    ],
+  },
+  {
+    title: "Legal & Privacy",
+    links: [
+      { label: "Global Legal Center", href: "/legal" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Cookie Policy", href: "/cookies" },
+      { label: "Subprocessors Directory", href: "/legal/subprocessors" },
+      { label: "AI & Algorithm Transparency", href: "/legal/ai-transparency" },
+      { label: "Privacy Rights & Data Export", href: "/privacy-center" },
+      { label: "Delete Account", href: "/account/delete" },
+    ],
+  },
 ];
 
 const socialLinks = [
@@ -57,7 +73,7 @@ export default function Footer() {
           <div className={s.brand}>
             <BrandLogo className={s.logo} imageClassName={s.logoImage} variant="light" size="lg" />
             <p>
-              TUTORERA® by MENTISERA is Pakistan&apos;s student-led digital tutoring marketplace connecting students and parents with qualified tutors for online and in-person educational support.
+              TUTORERA® by MENTISERA is a global student-led tutoring marketplace connecting students and parents with qualified tutors for online sessions worldwide and verified in-person home tuition locally.
             </p>
             <div className={s.contactList} aria-label="Contact information">
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>

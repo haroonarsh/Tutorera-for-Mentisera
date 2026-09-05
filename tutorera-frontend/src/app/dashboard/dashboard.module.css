@@ -559,7 +559,44 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
+  .page { padding-bottom: calc(var(--mobile-bottom-nav-height, 64px) + 24px + env(safe-area-inset-bottom, 0px)); }
+  .header { padding: 20px 16px; }
+  .content { padding: 16px 12px 0; }
   .profileGrid { grid-template-columns: 1fr; }
-  .stats { grid-template-columns: 1fr 1fr; }
-  .tab  { padding: 8px 12px; font-size: 12px; }
+  .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .statCard { padding: 12px 10px; gap: 8px; }
+  .statIcon { width: 36px; height: 36px; }
+  .statValue { font-size: 1.25rem; }
+  .tabs { gap: 6px; padding: 6px; }
+  .tab  { padding: 9px 14px; font-size: 13px; min-height: 44px; }
+  .bidActions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  .bidActions > * {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  .btnOutline, .btnSuccess, .btnDanger, .btnPrimary {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
 }
+
+@media (max-width: 360px) {
+  .stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .statCard { padding: 10px 8px; gap: 6px; }
+  .statIcon { width: 32px; height: 32px; border-radius: 8px; }
+  .statValue { font-size: 1.15rem; }
+  .statLabel { font-size: 0.7rem; }
+}
+

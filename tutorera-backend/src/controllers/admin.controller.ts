@@ -19,6 +19,7 @@ import EmailLog from "../models/EmailLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import sendEmail from "../utils/sendEmail";
+import { EMAIL_EVENTS } from "../utils/emailEvents";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail } from "../utils/emailTemplates";
 import { getSignedViewUrl } from "../utils/uploadToCloudinary";
 import {
@@ -855,6 +856,7 @@ export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<voi
     logs,
     filters: {
       eventTypes: eventTypes.sort(),
+      plannedEvents: EMAIL_EVENTS,
       statusCounts: statusCounts.reduce((acc: Record<string, number>, row: { _id: string; count: number }) => {
         acc[row._id] = row.count;
         return acc;

@@ -5,6 +5,8 @@ export interface TutorUser {
   name: string;
   avatar?: string;
   city: string;
+  countryCode?: string;
+  countryName?: string;
   phone: string;
 }
 
@@ -13,6 +15,14 @@ export interface TutorProfile {
   user: TutorUser;
   subjects: string[];
   city: string;
+  countryCode?: string;
+  countryName?: string;
+  timezone?: string;
+  currency?: string;
+  serviceAreas?: string[];
+  travelRadiusKm?: number;
+  languages?: string[];
+  curricula?: string[];
   teachingMode: "online" | "in-person" | "both";
   levels: string[];           // API returns "levels" not "level"
   hourlyRate: number;
@@ -28,25 +38,18 @@ export interface TutorProfile {
   fullName?: string;
 }
 
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  pages: number;
-  limit: number;
-}
-
 export interface FiltersState {
   search: string;
+  country?: string;
   city: string;
   level: string;
   teachingMode: string;
+  currency?: string;
   minPrice: string;
   maxPrice: string;
   minRating: string;
   sortBy: string;
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 export const LEVELS = [
   "Primary",
@@ -88,6 +91,7 @@ export const SORT_OPTIONS = [
 
 export const INITIAL_FILTERS: FiltersState = {
   search: "",
+  country: "",
   city: "",
   level: "",
   teachingMode: "",
@@ -97,11 +101,20 @@ export const INITIAL_FILTERS: FiltersState = {
   sortBy: "rating",
 };
 
-
 export interface Review {
   _id: string;
   student: { name: string; avatar: string; };
   rating: number;
   comment: string;
   createdAt: string;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pages?: number;
+  totalPages?: number;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
 }

@@ -31,6 +31,7 @@ import earningsRoutes from "./routes/earnings.routes";
 import paymentRoutes from "./routes/payment.routes";
 import trackingRoutes from "./routes/tracking.routes";
 import webhookRoutes from "./routes/webhook.routes";
+import geoRoutes from "./routes/geo.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -113,6 +114,7 @@ apiRouter.use("/payments", paymentRoutes);
 apiRouter.use("/webhooks", webhookRoutes);
 apiRouter.use("/track", trackingRoutes);
 apiRouter.use("/tracking", trackingRoutes);
+apiRouter.use("/geo", geoRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
