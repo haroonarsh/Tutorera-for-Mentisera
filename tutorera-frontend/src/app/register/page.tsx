@@ -71,9 +71,13 @@ function RegisterForm() {
   const handleGoogleToken = async (idToken: string) => {
     setError("");
     try {
-      const { user, needsRole } = await loginWithGoogle(idToken);
+      const { user, needsRole } = await loginWithGoogle(idToken, form.role);
       if (needsRole) {
         router.push("/select-role");
+      } else if (user.role === "tutor") {
+        router.push("/onboarding/tutor");
+      } else if (user.role === "student") {
+        router.push("/onboarding/student");
       } else if (user.role === "admin") {
         router.push("/admin");
       } else {
@@ -81,7 +85,7 @@ function RegisterForm() {
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Google sign-in failed. Please try again.");
+      setError(error.response?.data?.message || "Google sign-up failed. Please try again.");
     }
   };
 
@@ -211,7 +215,7 @@ function RegisterForm() {
           <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
         </div>
 
-        <GoogleButton onToken={handleGoogleToken} text="signin_with" />
+        <GoogleButton onToken={handleGoogleToken} text="signup_with" roleLabel={form.role === "tutor" ? "Tutor" : "Student"} />
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: C.gray500 }}>
           Already have an account?{" "}

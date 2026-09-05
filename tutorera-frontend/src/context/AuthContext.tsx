@@ -1,4 +1,5 @@
 "use client";
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import api from "@/lib/axios";
 
@@ -11,23 +12,15 @@ interface User {
   plan: string;
   isVerified: boolean;
   isApproved: boolean;
+  phone?: string;
+  city?: string;
+  countryCode?: string;
+  currency?: string;
 }
 
 interface GoogleAuthResult {
   user: User;
   needsRole: boolean;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  register: (data: RegisterData) => Promise<User>;
-  loginWithGoogle: (idToken: string) => Promise<GoogleAuthResult>;
-  selectRole: (role: "student" | "tutor") => Promise<User>;
-  forgotPassword: (email: string) => Promise<string>;
-  resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
-  logout: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -39,6 +32,18 @@ interface RegisterData {
   city?: string;
 }
 
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<User>;
+  register: (data: RegisterData) => Promise<User>;
+  loginWithGoogle: (idToken: string, role?: "student" | "tutor") => Promise<GoogleAuthResult>;
+  selectRole: (role: "student" | "tutor") => Promise<User>;
+  forgotPassword: (email: string) => Promise<string>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
+  logout: () => Promise<void>;
+}
+
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -48,7 +53,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      api.get("/auth/me")
+      api
+        .get("/auth/me")
         .then((res) => setUser(res.data.user))
         .catch(() => {
           localStorage.removeItem("token");
@@ -74,8 +80,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return res.data.user;
   };
 
-  const loginWithGoogle = async (idToken: string): Promise<GoogleAuthResult> => {
-    const res = await api.post("/auth/google", { idToken });
+  const loginWithGoogle = async (
+    idToken: string,
+    role?: "student" | "tutor"
+  ): Promise<GoogleAuthResult> => {
+    const res = await api.post("/auth/google", { idToken, role });
     localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
     return { user: res.data.user, needsRole: res.data.needsRole };
@@ -93,30 +102,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return res.data.message;
   };
 
-  const resetPassword = async (email: string, otp: string, newPassword: string): Promise<string> => {
+  const resetPassword = async (
+    email: string,
+    otp: string,
+    newPassword: string
+  ): Promise<string> => {
     const res = await api.post("/auth/reset-password", { email, otp, newPassword });
     return res.data.message;
   };
+
   const logout = async () => {
     const token = localStorage.getItem("token");
 
     localStorage.removeItem("token");
     setUser(null);
 
-    void api.post(
-      "/auth/logout",
-      undefined,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        timeout: 5000,
-      },
-    ).catch((err) => {
-      console.error("Logout request failed:", err);
-    });
+    void api
+      .post(
+        "/auth/logout",
+        undefined,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          timeout: 5000,
+        }
+      )
+      .catch((err) => {
+        console.error("Logout request failed:", err);
+      });
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, selectRole, forgotPassword, resetPassword, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        loginWithGoogle,
+        selectRole,
+        forgotPassword,
+        resetPassword,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

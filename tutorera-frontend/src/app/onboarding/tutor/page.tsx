@@ -7,6 +7,7 @@ import { BookOpen } from "lucide-react";
 import api from "@/lib/axios";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { Country } from "@/lib/countries";
+import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const C = UI_COLORS;
 
@@ -18,17 +19,23 @@ const STEPS = [
   { number: 5, title: "Verification" },
 ];
 
-const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"];
-const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Test Prep", "Other"];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const timeSlots = ["8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"];
 
 export default function TutorOnboardingPage() {
   const { user, loading } = useAuth();
+  const geo = useGeoData();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
+    "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"
+  ];
+  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
+    "Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Test Prep", "Other"
+  ];
 
   // Step 1
   const [step1, setStep1] = useState({
@@ -393,11 +400,18 @@ export default function TutorOnboardingPage() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Hourly Rate (Rs.) *</label>
-                    <input type="number" value={step4.hourlyRate} onChange={e => setStep4({ ...step4, hourlyRate: e.target.value })} placeholder="e.g. 2000"
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                      Hourly Rate ({step1.currency || "PKR"}) *
+                    </label>
+                    <input type="number" value={step4.hourlyRate} onChange={e => setStep4({ ...step4, hourlyRate: e.target.value })} placeholder={step1.currency === "PKR" ? "e.g. 2000" : "e.g. 50"}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                    {step1.currency !== "PKR" && Number(step4.hourlyRate) > 0 && (
+                      <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
+                        ≈ Rs. {convertToPKR(Number(step4.hourlyRate), step1.currency).amountPKR.toLocaleString()} PKR/hr (Settled in PKR)
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Teaching Mode</label>

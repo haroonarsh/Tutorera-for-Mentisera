@@ -253,3 +253,101 @@ export const directBookingDeclinedEmail = (studentName: string, subject: string)
   });
   return { subject: "TUTORERA® — Booking Request Declined", html };
 };
+
+export const adminNewUserSignupEmail = (data: {
+  name: string;
+  email: string;
+  role: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  authProvider?: string;
+  applicationId?: string;
+}) => {
+  const roleLabel = (data.role || "user").toUpperCase();
+  const html = renderTransactionalEmail({
+    subject: `[TUTORERA Admin] New ${roleLabel} Sign Up: ${data.name}`,
+    emailCategory: "Platform Alert",
+    emailHeading: `New ${roleLabel} Registered`,
+    emailSubheading: `A new ${data.role} has joined TUTORERA.`,
+    firstName: "Admin Team",
+    openingMessage: `A new user registration event occurred on the TUTORERA platform.`,
+    mainMessage: `User Details:
+• Name: ${data.name}
+• Email: ${data.email}
+• Role: ${roleLabel}
+• Phone: ${data.phone || "Not provided"}
+• Location: ${data.city || "Not specified"}${data.country ? `, ${data.country}` : ""}
+• Signup Method: ${data.authProvider === "google" ? "Google OAuth" : "Email & Password"}
+${data.applicationId ? `• Tutor Application ID: ${data.applicationId}` : ""}`,
+    transaction: {
+      referenceId: data.applicationId || `USR-${Date.now()}`,
+      date: today(),
+      status: "Registered",
+      amount: roleLabel,
+    },
+    cta: { label: "Open Admin Panel", url: "https://tutorera.ac.pk/admin" },
+    additionalInformation: "Notification dispatched automatically to mentiserapk@gmail.com.",
+    includeSecurityNotice: true,
+  });
+  return { subject: `[TUTORERA Admin] New ${roleLabel} Sign Up: ${data.name}`, html };
+};
+
+export const adminNewTuitionRequestEmail = (data: {
+  studentName: string;
+  studentEmail: string;
+  studentPhone?: string;
+  subject: string;
+  level: string;
+  teachingMode: string;
+  countryName?: string;
+  countryCode?: string;
+  city?: string;
+  area?: string;
+  budget: number;
+  currency: string;
+  budgetPKR: number;
+  pricingUnit: string;
+  schedule?: string;
+  description?: string;
+  curriculum?: string;
+}) => {
+  const isHome = data.teachingMode === "in-person";
+  const modeLabel = isHome ? "Home / In-Person Tuition" : data.teachingMode === "online" ? "Online Tuition" : "Hybrid (Online & Home)";
+  const locationLabel = isHome
+    ? `${data.city || "City N/A"}, ${data.area ? data.area + ", " : ""}${data.countryName || "Pakistan"}`
+    : `${data.countryName || "Global"} (${data.city || "Online"})`;
+
+  const budgetDisplay = data.currency !== "PKR"
+    ? `${data.currency} ${data.budget.toLocaleString()} / ${data.pricingUnit} (~PKR ${data.budgetPKR.toLocaleString()} / ${data.pricingUnit})`
+    : `PKR ${data.budget.toLocaleString()} / ${data.pricingUnit}`;
+
+  const html = renderTransactionalEmail({
+    subject: `[TUTORERA Alert] New ${isHome ? "🏠 Home Tuition" : "🌐 Tuition"} Request: ${data.subject} (${data.city || data.countryName || "Global"})`,
+    emailCategory: "Tuition Request Alert",
+    emailHeading: `New ${isHome ? "Home Tuition" : "Tuition"} Request Posted`,
+    emailSubheading: `${data.subject} · ${data.level} · ${modeLabel}`,
+    firstName: "Admin Team",
+    openingMessage: `A student has just posted a new tuition requirement on TUTORERA.`,
+    mainMessage: `Tuition Requirement Summary:
+• Subject: ${data.subject}
+• Academic Level: ${data.level}
+• Curriculum: ${data.curriculum || "Standard"}
+• Learning Mode: ${modeLabel}
+• Target Location: ${locationLabel}
+• Proposed Budget: ${budgetDisplay} (Charged in PKR)
+• Preferred Schedule: ${data.schedule || "Flexible"}
+• Student: ${data.studentName} (${data.studentEmail} · ${data.studentPhone || "No phone"})
+${data.description ? `• Details: "${data.description}"` : ""}`,
+    transaction: {
+      referenceId: `REQ-${Date.now()}`,
+      date: today(),
+      status: "Published",
+      amount: `PKR ${data.budgetPKR.toLocaleString()}`,
+    },
+    cta: { label: "Review in Marketplace", url: "https://tutorera.ac.pk/browse-requests" },
+    additionalInformation: "Notification dispatched automatically to mentiserapk@gmail.com.",
+    includeSecurityNotice: true,
+  });
+  return { subject: `[TUTORERA Alert] New ${isHome ? "🏠 Home Tuition" : "🌐 Tuition"} Request: ${data.subject} (${data.city || data.countryName || "Global"})`, html };
+};

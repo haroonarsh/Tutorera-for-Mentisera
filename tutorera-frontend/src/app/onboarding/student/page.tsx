@@ -7,11 +7,9 @@ import { BookOpen, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { Country } from "@/lib/countries";
+import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const C = UI_COLORS;
-
-const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "Other"];
-const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "IB (International Baccalaureate)", "University", "Other"];
 
 const STEPS = [
   { number: 1, title: "Personal & Location" },
@@ -21,10 +19,18 @@ const STEPS = [
 
 export default function StudentOnboardingPage() {
   const { user, loading } = useAuth();
+  const geo = useGeoData();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
+    "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "Other"
+  ];
+  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
+    "Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "IB (International Baccalaureate)", "University", "Other"
+  ];
 
   // Step 1 — Personal & Global Location
   const [step1, setStep1] = useState({

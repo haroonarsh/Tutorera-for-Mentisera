@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
+
 import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { BookOpen, GraduationCap, CheckCircle2, ArrowRight } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
 
@@ -34,11 +36,16 @@ export default function SelectRolePage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F5F7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
-      <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '1.25rem', padding: '2.5rem', width: '100%', maxWidth: '480px', boxShadow: '0 12px 36px rgba(2, 21, 80, 0.08)', border: '1px solid #e2e8f0' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <BrandLogo size="lg" /><h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>One more step</h1>
-          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>How do you want to use TUTORERA?</p>
+          <BrandLogo size="lg" />
+          <h1 style={{ fontSize: '1.45rem', fontWeight: '800', color: '#021550', marginBottom: '0.4rem', marginTop: '0.75rem' }}>
+            Choose Your TUTORERA Journey
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
+            Select how you would like to participate in the marketplace:
+          </p>
         </div>
 
         {error && (
@@ -47,18 +54,88 @@ export default function SelectRolePage() {
           </div>
         )}
 
-        <div style={{ display: 'flex', backgroundColor: '#f3f4f6', borderRadius: '0.625rem', padding: '0.25rem', marginBottom: '1.5rem' }}>
-          {(["student", "tutor"] as const).map((r) => (
-            <button key={r} type="button" onClick={() => setRole(r)}
-              style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', transition: 'all 0.2s', backgroundColor: role === r ? 'white' : 'transparent', color: role === r ? C.primary : C.gray500, boxShadow: role === r ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
-              I'm a {r}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+          {/* Student Card */}
+          <div
+            onClick={() => setRole("student")}
+            style={{
+              padding: '1.25rem',
+              borderRadius: '1rem',
+              border: role === "student" ? '2px solid #0329b2' : '1px solid #e2e8f0',
+              backgroundColor: role === "student" ? '#f0f5ff' : 'white',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: '0.75rem', backgroundColor: role === "student" ? '#0329b2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: role === "student" ? 'white' : '#64748b', flexShrink: 0 }}>
+              <BookOpen size={22} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#021550' }}>I am a Student / Parent</h3>
+                {role === "student" && <CheckCircle2 size={20} color="#0329b2" />}
+              </div>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
+                Find verified tutors, post home tuition or online tuition requirements, and set your own budget in PKR or local currency.
+              </p>
+            </div>
+          </div>
+
+          {/* Tutor Card */}
+          <div
+            onClick={() => setRole("tutor")}
+            style={{
+              padding: '1.25rem',
+              borderRadius: '1rem',
+              border: role === "tutor" ? '2px solid #0329b2' : '1px solid #e2e8f0',
+              backgroundColor: role === "tutor" ? '#f0f5ff' : 'white',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: '0.75rem', backgroundColor: role === "tutor" ? '#0329b2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: role === "tutor" ? 'white' : '#64748b', flexShrink: 0 }}>
+              <GraduationCap size={22} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#021550' }}>I am a Tutor / Educator</h3>
+                {role === "tutor" && <CheckCircle2 size={20} color="#0329b2" />}
+              </div>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
+                Create a verified profile, receive targeted student requirements in your subject & city, and send direct tuition offers.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <button onClick={handleSubmit} disabled={loading}
-          style={{ width: '100%', backgroundColor: loading ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer' }}>
-          {loading ? "Saving..." : "Continue"}
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{
+            width: '100%',
+            backgroundColor: loading ? '#93c5fd' : '#0329b2',
+            color: 'white',
+            padding: '0.95rem 1.5rem',
+            borderRadius: '0.75rem',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '1rem',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            boxShadow: '0 4px 14px rgba(3, 41, 178, 0.25)',
+          }}
+        >
+          <span>{loading ? "Setting up profile..." : `Continue as ${role === "tutor" ? "Tutor" : "Student"}`}</span>
+          <ArrowRight size={18} />
         </button>
       </div>
     </div>

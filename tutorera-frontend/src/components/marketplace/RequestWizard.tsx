@@ -17,23 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { COUNTRIES, getCountryByCode, Country } from "@/lib/countries";
-
-const SUBJECTS = [
-  "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", 
-  "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", 
-  "Accounting", "MDCAT", "ECAT", "IELTS", "Business Studies", "Sociology"
-];
-
-const LEVELS = [
-  "Primary (Class 1-5)", "Middle (Class 6-8)", "Matric (9th & 10th)", 
-  "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", 
-  "University / Degree", "Test Preparation"
-];
-
-const CITIES = [
-  "Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", 
-  "Quetta", "Faisalabad", "Multan", "Sialkot", "Gujranwala", "Hyderabad"
-];
+import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -54,6 +38,7 @@ export default function RequestWizard({
 }: RequestWizardProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const geo = useGeoData();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
@@ -386,7 +371,7 @@ export default function RequestWizard({
                 style={inputStyle}
               >
                 <option value="">Choose subject...</option>
-                {SUBJECTS.map((sub) => (
+                {(geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Computer Science"]).map((sub) => (
                   <option key={sub} value={sub}>{sub}</option>
                 ))}
               </select>
@@ -400,7 +385,7 @@ export default function RequestWizard({
                 style={inputStyle}
               >
                 <option value="">Choose class / qualification...</option>
-                {LEVELS.map((lvl) => (
+                {(geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level"]).map((lvl) => (
                   <option key={lvl} value={lvl}>{lvl}</option>
                 ))}
               </select>
@@ -411,11 +396,17 @@ export default function RequestWizard({
                 <label style={labelStyle}>Curriculum / Board (optional)</label>
                 <input 
                   type="text" 
+                  list="curriculum-suggestions"
                   value={form.curriculum} 
                   onChange={(e) => update("curriculum", e.target.value)} 
-                  placeholder="e.g. Cambridge, FBISE, Punjab Board"
+                  placeholder="e.g. Cambridge, FBISE, Punjab Board, Edexcel"
                   style={inputStyle}
                 />
+                <datalist id="curriculum-suggestions">
+                  {(geo.countries?.find(c => c.code === form.countryCode)?.curricula || geo.curricula || []).map((cur) => (
+                    <option key={cur} value={cur} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label style={labelStyle}>Exam / Target (optional)</label>
@@ -643,6 +634,22 @@ export default function RequestWizard({
                   </select>
                 </div>
               </div>
+
+              {form.currency && form.currency !== "PKR" && Number(form.budget) > 0 && (
+                <div style={{ marginTop: "0.85rem", padding: "0.75rem 1rem", background: "white", borderRadius: "0.625rem", border: "1.5px solid #bfdbfe", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div>
+                    <span style={{ fontSize: "0.85rem", color: "#1e3a8a", fontWeight: 700, display: "block" }}>
+                      Marketplace Escrow Charge:
+                    </span>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                      All TUTORERA tuition payments are charged in PKR.
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "1.05rem", color: "#0329b2", fontWeight: 800 }}>
+                    ≈ Rs. {convertToPKR(Number(form.budget), form.currency).amountPKR.toLocaleString()} PKR / {form.pricingUnit}
+                  </span>
+                </div>
+              )}
 
               <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #bfdbfe" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "#021550", fontWeight: 600, cursor: "pointer" }}>

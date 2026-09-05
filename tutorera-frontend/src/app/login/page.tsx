@@ -1,9 +1,10 @@
 "use client";
+
 import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, BookOpen } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import GoogleButton from "@/components/GoogleButton";
 import BrandLogo from "@/components/BrandLogo";
@@ -11,6 +12,7 @@ import BrandLogo from "@/components/BrandLogo";
 const C = UI_COLORS;
 
 export default function LoginPage() {
+  const [role, setRole] = useState<"student" | "tutor">("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -25,13 +27,15 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const loggedInUser = await login(email, password);
-        if (loggedInUser.role === "admin") {
-          router.replace("/admin");
-        } else if (loggedInUser.role === "pending") {
-          router.replace("/select-role");
-        } else {
-          router.replace("/dashboard");
-        }
+      if (loggedInUser.role === "admin") {
+        router.replace("/admin");
+      } else if (loggedInUser.role === "pending") {
+        router.replace("/select-role");
+      } else if (loggedInUser.role === "tutor") {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/dashboard");
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || "Invalid email or password");
@@ -43,11 +47,13 @@ export default function LoginPage() {
   const handleGoogleToken = async (idToken: string) => {
     setError("");
     try {
-      const { user, needsRole } = await loginWithGoogle(idToken);
+      const { user, needsRole } = await loginWithGoogle(idToken, role);
       if (needsRole) {
         router.replace("/select-role");
       } else if (user.role === "admin") {
         router.replace("/admin");
+      } else if (user.role === "tutor") {
+        router.replace("/dashboard");
       } else {
         router.replace("/dashboard");
       }
@@ -61,9 +67,66 @@ export default function LoginPage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#F5F7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
 
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <BrandLogo size="lg" /><h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>Welcome back</h1>
-          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Log in to your account</p>
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+          <BrandLogo size="lg" />
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem', marginTop: '0.75rem' }}>
+            Welcome back to TUTORERA
+          </h1>
+          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+            Sign in as a {role === "tutor" ? "Tutor" : "Student / Parent"}
+          </p>
+        </div>
+
+        {/* Role Selector Tabs */}
+        <div style={{ display: 'flex', backgroundColor: '#f1f5f9', borderRadius: '0.625rem', padding: '0.25rem', marginBottom: '1.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setRole("student")}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem',
+              padding: '0.6rem 0.5rem',
+              borderRadius: '0.5rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              backgroundColor: role === "student" ? 'white' : 'transparent',
+              color: role === "student" ? '#0329b2' : '#64748b',
+              boxShadow: role === "student" ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            <BookOpen size={16} />
+            <span>Student</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole("tutor")}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem',
+              padding: '0.6rem 0.5rem',
+              borderRadius: '0.5rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              backgroundColor: role === "tutor" ? 'white' : 'transparent',
+              color: role === "tutor" ? '#0329b2' : '#64748b',
+              boxShadow: role === "tutor" ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            <GraduationCap size={16} />
+            <span>Tutor</span>
+          </button>
         </div>
 
         {error && (
@@ -72,7 +135,22 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* Google Sign In First / Prominent */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <GoogleButton
+            onToken={handleGoogleToken}
+            text="signin_with"
+            roleLabel={role === "tutor" ? "Tutor" : "Student"}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.25rem 0' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+          <span style={{ fontSize: '0.8rem', color: C.gray500 }}>or continue with email</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Email address</label>
             <input
@@ -106,21 +184,15 @@ export default function LoginPage() {
 
           <button type="submit" disabled={loading}
             style={{ backgroundColor: loading ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}>
-            {loading ? "Logging in..." : "Log in"}
+            {loading ? "Signing in..." : `Sign in as ${role === "tutor" ? "Tutor" : "Student"}`}
           </button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.5rem 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
-          <span style={{ fontSize: '0.8rem', color: C.gray500 }}>or</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
-        </div>
-
-        <GoogleButton onToken={handleGoogleToken} text="signin_with" />
-
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: C.gray500 }}>
           Don't have an account?{" "}
-          <Link href="/register" style={{ color: C.accent, fontWeight: '600', textDecoration: 'none' }}>Sign up</Link>
+          <Link href="/register" style={{ color: C.accent, fontWeight: '600', textDecoration: 'none' }}>
+            Sign up
+          </Link>
         </p>
       </div>
     </div>

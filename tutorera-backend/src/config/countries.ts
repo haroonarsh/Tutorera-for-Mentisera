@@ -319,6 +319,44 @@ export function getCitiesForCountry(countryCode?: string): CityData[] {
   return country ? country.cities : [];
 }
 
+export const MASTER_SUBJECTS = [
+  "Mathematics",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "English",
+  "Computer Science",
+  "Economics",
+  "Accounting",
+  "Business Studies",
+  "Urdu",
+  "Islamiyat",
+  "Pakistan Studies",
+  "Statistics",
+  "Sociology",
+  "Psychology",
+  "History",
+  "Geography",
+  "MDCAT",
+  "ECAT",
+  "SAT",
+  "IELTS",
+  "Quran & Arabic",
+  "General Science",
+];
+
+export const MASTER_LEVELS = [
+  "Primary (Grades 1-5)",
+  "Middle (Grades 6-8)",
+  "Matric (9th & 10th)",
+  "Intermediate / FSc",
+  "O-Level (Cambridge / Edexcel)",
+  "A-Level (Cambridge / Edexcel)",
+  "IB (Middle Years / Diploma)",
+  "University / Degree",
+  "Test Preparation",
+];
+
 export function formatCurrencyAmount(amount: number, currencyCode = "PKR", pricingUnit?: string): string {
   const code = (currencyCode || "PKR").toUpperCase();
   const meta = SUPPORTED_CURRENCIES[code] || { symbol: code, code };
@@ -335,4 +373,12 @@ export function convertCurrencyRate(amount: number, fromCurrency = "PKR", toCurr
   const converted = toMeta.rateToUSD > 0 ? amountInUSD / toMeta.rateToUSD : amount;
   const rate = toMeta.rateToUSD > 0 ? fromMeta.rateToUSD / toMeta.rateToUSD : 1;
   return { converted: Math.round(converted), rate };
+}
+
+export function convertToPKR(amount: number, fromCurrency = "PKR"): { amountPKR: number; rateToPKR: number } {
+  const pkrUSD = SUPPORTED_CURRENCIES.PKR?.rateToUSD || 0.0036;
+  const fromMeta = SUPPORTED_CURRENCIES[fromCurrency?.toUpperCase()] || { rateToUSD: pkrUSD };
+  const rateToPKR = fromMeta.rateToUSD / pkrUSD;
+  const amountPKR = Math.round(amount * rateToPKR);
+  return { amountPKR, rateToPKR: Number(rateToPKR.toFixed(4)) };
 }

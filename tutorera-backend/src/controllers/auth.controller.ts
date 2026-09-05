@@ -6,7 +6,7 @@ import { sendTokenResponse } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail";
-import { welcomeEmail, tutorPendingEmail, planUpgradedEmail } from "../utils/emailTemplates";
+import { welcomeEmail, tutorPendingEmail, planUpgradedEmail, adminNewUserSignupEmail } from "../utils/emailTemplates";
 import StudentProfile from "../models/StudentProfile.model";
 import TutorProfile from "../models/TutorProfile.model";
 import RequestModel from "../models/Request.model";
@@ -85,6 +85,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       const { subject, html } = welcomeEmail(user.name);
       await sendEmail({ to: user.email, subject, html });
     }
+
+    try {
+      // Platform admin notification to mentiserapk@gmail.com
+      const adminEmail = adminNewUserSignupEmail({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        city: user.city,
+        authProvider: "local",
+        applicationId: user.applicationId,
+      });
+      await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html });
+    } catch (adminErr) {
+      console.error("Failed to send admin signup alert email:", adminErr);
+    }
   } catch (err) {
     console.error("Failed to send registration email:", err);
   }
@@ -133,7 +149,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 // @desc    Google Sign-In / Sign-Up
 // @route   POST /api/auth/google
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
-  const { idToken } = req.body;
+  const { idToken, role } = req.body;
 
   let payload;
   try {
@@ -168,18 +184,30 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
   }
 
   let isNewUser = false;
+  let trackingToken: string | undefined;
 
-  // 3. No existing user at all — create one, role undecided
+  // 3. No existing user at all — create one with selected role or pending
   if (!user) {
     isNewUser = true;
+    const assignedRole = role === "student" || role === "tutor" ? role : "pending";
     user = await User.create({
       name: name || email.split("@")[0],
       email,
       googleId,
       authProvider: "google",
-      role: "pending",
+      role: assignedRole,
       avatar: picture || "",
     });
+
+    if (user.role === "tutor") {
+      user.applicationId = await allocateApplicationId();
+      const t = generateTrackingToken();
+      user.trackingTokenHash = t.hash;
+      user.trackingTokenCreatedAt = new Date();
+      user.applicationSubmittedAt = new Date();
+      await user.save();
+      trackingToken = t.plaintext;
+    }
 
     await logAudit({
       action: "user_registered",
@@ -189,6 +217,43 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       targetName: user.name,
       metadata: { role: user.role, email: user.email, via: "google" },
     });
+
+    if (user.role === "tutor") {
+      await recordStatusEvent({
+        tutorId: user._id.toString(),
+        actor: { name: user.name, role: "system" },
+        event: "APPLICATION_CREATED",
+        message: "Tutor application created via Google Sign-Up",
+        isPublic: true,
+      });
+    }
+
+    try {
+      if (user.role === "tutor") {
+        const { subject, html } = tutorPendingEmail(user.name);
+        await sendEmail({ to: user.email, subject, html });
+        if (user.applicationId && trackingToken) {
+          const trackingUrl = `${TRACKING_BASE_URL}/track/tutor/${trackingToken}`;
+          const welcome = trackingWelcomeEmail(user.name, { applicationId: user.applicationId, trackingUrl, statusUrl: `${TRACKING_BASE_URL}/tutor/application-status` });
+          await sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html });
+        }
+      } else if (user.role === "student") {
+        const { subject, html } = welcomeEmail(user.name);
+        await sendEmail({ to: user.email, subject, html });
+      }
+
+      // Platform admin notification to mentiserapk@gmail.com
+      const adminEmail = adminNewUserSignupEmail({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        authProvider: "google",
+        applicationId: user.applicationId,
+      });
+      await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html });
+    } catch (err) {
+      console.error("Failed to send Google signup email:", err);
+    }
   }
 
   if (!user.isActive) {
@@ -277,6 +342,28 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     } catch (err) {
       console.error("Failed to send tutor welcome email:", err);
     }
+  } else if (role === "student") {
+    try {
+      const { subject, html } = welcomeEmail(user.name);
+      await sendEmail({ to: user.email, subject, html });
+    } catch (err) {
+      console.error("Failed to send student welcome email:", err);
+    }
+  }
+
+  try {
+    const adminEmail = adminNewUserSignupEmail({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      city: user.city,
+      authProvider: user.authProvider || "google",
+      applicationId: user.applicationId,
+    });
+    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html });
+  } catch (adminErr) {
+    console.error("Failed to send admin role selection alert email:", adminErr);
   }
 
   sendTokenResponse(user, 200, res);

@@ -14,31 +14,12 @@ import {
   DollarSign
 } from "lucide-react";
 import { COUNTRIES, getCountryByCode, Country } from "@/lib/countries";
+import { useGeoData, convertToPKR } from "@/lib/geoService";
 import CountryCityPickerModal from "./CountryCityPickerModal";
-
-const POPULAR_SUBJECTS = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "English",
-  "Computer Science",
-  "Economics",
-  "O / A Level",
-];
-
-const POPULAR_LEVELS = [
-  "Primary",
-  "Middle (6-8)",
-  "Matric",
-  "FSc / Inter",
-  "O-Level",
-  "A-Level",
-  "University",
-];
 
 export default function QuickRequestComposer() {
   const router = useRouter();
+  const geo = useGeoData();
   const [mode, setMode] = useState<"in-person" | "online" | "both">("online");
   const [subject, setSubject] = useState("");
   const [level, setLevel] = useState("O-Level");
@@ -48,7 +29,13 @@ export default function QuickRequestComposer() {
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
 
-  const currentCountry = getCountryByCode(countryCode) || COUNTRIES[0];
+  const currentCountry = (geo.countries && geo.countries.find((c) => c.code === countryCode)) || getCountryByCode(countryCode) || COUNTRIES[0];
+  const popularSubjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
+    "Mathematics", "Physics", "Chemistry", "Biology", "English", "Computer Science", "Economics", "O / A Level"
+  ];
+  const popularLevels = geo.levels && geo.levels.length > 0 ? geo.levels : [
+    "Primary", "Middle (6-8)", "Matric", "FSc / Inter", "O-Level", "A-Level", "University"
+  ];
 
   const handleLocationSelect = (country: Country, pickedCity: string) => {
     setCountryCode(country.code);
@@ -229,7 +216,7 @@ export default function QuickRequestComposer() {
               onChange={(e) => setLevel(e.target.value)}
               style={inputStyle}
             >
-              {POPULAR_LEVELS.map((lvl) => (
+              {popularLevels.map((lvl) => (
                 <option key={lvl} value={lvl}>
                   {lvl}
                 </option>
@@ -294,13 +281,18 @@ export default function QuickRequestComposer() {
                 {currentCountry.currency}
               </span>
             </div>
+            {currentCountry.currency !== "PKR" && Number(budget) > 0 && (
+              <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
+                ≈ Rs. {convertToPKR(Number(budget), currentCountry.currency).amountPKR.toLocaleString()} PKR/hr (Platform settlement in PKR)
+              </p>
+            )}
           </div>
         </div>
 
         {/* Popular Subject Quick Pills */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
           <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>Suggestions:</span>
-          {POPULAR_SUBJECTS.slice(0, 6).map((sub) => (
+          {popularSubjects.slice(0, 8).map((sub) => (
             <button
               key={sub}
               type="button"

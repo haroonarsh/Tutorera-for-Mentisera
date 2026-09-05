@@ -14,7 +14,8 @@ import { logAudit } from "../utils/logAudit";
 import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
 import sendEmail from "../utils/sendEmail";
-import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail } from "../utils/emailTemplates";
+import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
+import { convertToPKR } from "../config/countries";
 import { createTransaction } from "../utils/rapidGateway";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 
@@ -115,6 +116,32 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     link: "/dashboard?tab=browse",
   })));
   await logAudit({ action: "tuition_request_published", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { subject: request.subject, level: request.level, teachingMode: request.teachingMode, currency: request.currency, countryCode: request.countryCode, notifiedTutors: matchingTutors.length } });
+
+  try {
+    const { amountPKR } = convertToPKR(request.budget, request.currency);
+    const adminAlert = adminNewTuitionRequestEmail({
+      studentName: user.name || req.user?.name || "Student",
+      studentEmail: user.email || req.user?.email || "",
+      studentPhone: user.phone || req.user?.phone,
+      subject: request.subject,
+      level: request.level,
+      teachingMode: request.teachingMode,
+      countryName: request.countryName,
+      countryCode: request.countryCode,
+      city: request.city,
+      area: request.area,
+      budget: request.budget,
+      currency: request.currency || "PKR",
+      budgetPKR: amountPKR,
+      pricingUnit: request.pricingUnit || "hour",
+      schedule: request.schedule,
+      description: request.description || request.learningObjectives,
+      curriculum: request.curriculum,
+    });
+    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminAlert.subject, html: adminAlert.html });
+  } catch (alertErr) {
+    console.error("Failed to send admin tuition request alert email:", alertErr);
+  }
 
   res.status(201).json({ success: true, message: "Request created", request });
 };
@@ -804,8 +831,30 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
       const { subject: emailSubject, html } = directBookingRequestEmail(tutorUser.name, req.user?.name || "A student", subject);
       await sendEmail({ to: tutorUser.email, subject: emailSubject, html });
     }
+
+    const { amountPKR } = convertToPKR(request.budget, request.currency);
+    const adminAlert = adminNewTuitionRequestEmail({
+      studentName: req.user?.name || "Student",
+      studentEmail: req.user?.email || "",
+      studentPhone: req.user?.phone,
+      subject: request.subject,
+      level: request.level || "Standard",
+      teachingMode: request.teachingMode || "direct",
+      countryName: request.countryName,
+      countryCode: request.countryCode,
+      city: request.city,
+      area: request.area,
+      budget: request.budget,
+      currency: request.currency || "PKR",
+      budgetPKR: amountPKR,
+      pricingUnit: request.pricingUnit || "hour",
+      schedule: request.schedule,
+      description: `Direct booking with tutor ID: ${tutorId}`,
+      curriculum: request.curriculum,
+    });
+    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminAlert.subject, html: adminAlert.html });
   } catch (err) {
-    console.error("Failed to send direct booking request email:", err);
+    console.error("Failed to send direct booking request email / admin alert:", err);
   }
 
   res.status(201).json({

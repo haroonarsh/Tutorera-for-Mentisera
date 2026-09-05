@@ -6,17 +6,19 @@ import { useAuth } from "@/context/AuthContext";
 import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
+import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const C = UI_COLORS;
 
-const cities = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad", "Other"];
-const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
-const levels = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
-
 export default function ProfilePage() {
   const { user, loading } = useAuth();
+  const geo = useGeoData();
   const guardStatus = useAppGuard();
   const router = useRouter();
+
+  const cities = (geo.countries?.find(c => c.code === "PK")?.cities?.map(ct => ct.name)) || ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad", "Other"];
+  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
+  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 
   const [activeTab, setActiveTab] = useState<"personal" | "tutor">("personal");
   const [saving, setSaving] = useState(false);
@@ -38,7 +40,12 @@ export default function ProfilePage() {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
-  const [tutorProfile, setTutorProfile] = useState<{verificationStatus?: string; isVerified?: boolean} | null>(null);
+  const [tutorProfile, setTutorProfile] = useState<{
+    verificationStatus?: string;
+    isVerified?: boolean;
+    currency?: string;
+    countryCode?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !user) { router.push("/login"); return; }
@@ -309,12 +316,19 @@ export default function ProfilePage() {
                 {/* Rate + Experience */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Hourly Rate (Rs.)</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                      Hourly Rate ({tutorProfile?.currency || 'PKR'})
+                    </label>
                     <input type="number" value={tutorForm.hourlyRate} onChange={e => setTutorForm({ ...tutorForm, hourlyRate: e.target.value })}
-                      placeholder="e.g. 2000"
+                      placeholder={tutorProfile?.currency === "PKR" ? "e.g. 2000" : "e.g. 50"}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                    {tutorProfile?.currency && tutorProfile.currency !== "PKR" && Number(tutorForm.hourlyRate) > 0 && (
+                      <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
+                        ≈ Rs. {convertToPKR(Number(tutorForm.hourlyRate), tutorProfile.currency).amountPKR.toLocaleString()} PKR/hr (Settled in PKR)
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Years of Experience</label>
