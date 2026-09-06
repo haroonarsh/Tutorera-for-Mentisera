@@ -28,7 +28,7 @@ const journey = [
 
 export default function StudentJourneyPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>Student Journey on TUTORERA</h1>
         <p>{BRAND_NAME} is a student-led demand marketplace: students set the requirement, tutors respond with offers, and the student chooses.</p>
@@ -54,6 +54,6 @@ export default function StudentJourneyPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

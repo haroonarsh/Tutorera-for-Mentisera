@@ -68,7 +68,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
     <div className={styles.layout}>
       <aside className={styles.sidebar} aria-label="Filter tutors"><FilterSidebar {...sidebarProps} /></aside>
       <MobileFilterSidebar {...sidebarProps} isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <main className={styles.main}>
+      <section className={styles.main} aria-label="Tutor search results">
         {/* Marketplace Demand Banner */}
         <div style={{
           background: "linear-gradient(135deg, #eef5ff 0%, #ffffff 100%)",
@@ -119,7 +119,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
         </div>
         {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} />)}</div> : <EmptyState onReset={reset} />}
         {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>}
-      </main>
+      </section>
     </div>
   </div>;
 }

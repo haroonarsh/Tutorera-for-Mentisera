@@ -94,7 +94,7 @@ export default function CookiePolicyPage() {
   };
 
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <header className={s.hero}>
         <h1>TUTORERA Cookie & Tracking Policy</h1>
         <p>
@@ -245,6 +245,6 @@ export default function CookiePolicyPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

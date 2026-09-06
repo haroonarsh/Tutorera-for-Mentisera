@@ -95,7 +95,7 @@ Circumvention deprives both parties of escrow protection, first-session guarante
 
 export default function TutorTermsPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <header className={s.hero}>
         <h1>Tutor Marketplace Agreement</h1>
         <p>
@@ -110,7 +110,7 @@ export default function TutorTermsPage() {
             <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#021550", margin: "0 0 0.25rem" }}>
               Independent Educator Partnership
             </h2>
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "#475569", lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: "0.92rem", color: "#334155", lineHeight: 1.65 }}>
               TUTORERA empowers independent tutors with pricing autonomy and global student demand, backed by verified credentials, transparent service fees, and professional safeguarding standards.
             </p>
           </div>
@@ -122,7 +122,7 @@ export default function TutorTermsPage() {
               <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.5rem" }}>
                 {clause.title}
               </h2>
-              <div style={{ fontSize: "0.92rem", color: "#334155", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+              <div style={{ fontSize: "0.95rem", color: "#1e293b", lineHeight: 1.8, whiteSpace: "pre-line" }}>
                 {clause.content}
               </div>
             </article>
@@ -133,7 +133,7 @@ export default function TutorTermsPage() {
           <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
             Tutor Verification & Guidance Resources
           </h2>
-          <p style={{ color: "#475569", lineHeight: 1.6, fontSize: "0.88rem", marginBottom: "1rem" }}>
+          <p style={{ color: "#334155", lineHeight: 1.7, fontSize: "0.92rem", marginBottom: "1rem" }}>
             Review our complete screening guidelines and fee structure:
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
@@ -144,6 +144,6 @@ export default function TutorTermsPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

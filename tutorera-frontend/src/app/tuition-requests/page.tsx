@@ -158,7 +158,10 @@ export default function TuitionRequestsPage() {
       {/* Main Container */}
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "2.5rem 1.5rem" }}>
         {/* Filters Box */}
-        <div 
+        <form
+          role="search"
+          aria-label="Filter active student tuition requests"
+          onSubmit={(e) => e.preventDefault()}
           style={{ 
             background: "white", 
             borderRadius: "1rem", 
@@ -168,134 +171,174 @@ export default function TuitionRequestsPage() {
             marginBottom: "2rem" 
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", color: "#021550", fontWeight: 700, fontSize: "0.9rem" }}>
-            <Filter size={16} color="#0329b2" />
-            <span>Filter Active Requests</span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
-            {/* Subject input */}
-            <div style={{ position: "relative" }}>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Search subject (e.g. Mathematics)..."
-                style={{
-                  width: "100%",
-                  padding: "0.65rem 0.85rem 0.65rem 2.2rem",
-                  borderRadius: "0.5rem",
-                  border: "1.5px solid #cbd5e1",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  color: "#021550",
-                }}
-              />
-              <Search size={15} color="#94a3b8" style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }} />
+          <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
+            <legend className="sr-only">Filter active student tuition requests</legend>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", color: "#021550", fontWeight: 700, fontSize: "0.9rem" }}>
+              <Filter size={16} color="#0329b2" aria-hidden="true" />
+              <span>Filter Active Requests</span>
             </div>
 
-            {/* Level select */}
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.65rem 0.85rem",
-                borderRadius: "0.5rem",
-                border: "1.5px solid #cbd5e1",
-                fontSize: "0.85rem",
-                outline: "none",
-                background: "white",
-                color: level ? "#021550" : "#64748b",
-              }}
-            >
-              <option value="">All Academic Levels</option>
-              {LEVELS.map((lvl) => (
-                <option key={lvl} value={lvl}>{lvl}</option>
-              ))}
-            </select>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+              {/* Subject input */}
+              <div style={{ position: "relative" }}>
+                <label htmlFor="tuition-subject-search" className="sr-only">
+                  Subject search
+                </label>
+                <input
+                  id="tuition-subject-search"
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Search subject (e.g. Mathematics)..."
+                  aria-label="Search by subject"
+                  style={{
+                    width: "100%",
+                    padding: "0.65rem 0.85rem 0.65rem 2.2rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    color: "#021550",
+                  }}
+                />
+                <Search size={15} color="#94a3b8" aria-hidden="true" style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }} />
+              </div>
 
-            {/* Teaching Mode */}
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.65rem 0.85rem",
-                borderRadius: "0.5rem",
-                border: "1.5px solid #cbd5e1",
-                fontSize: "0.85rem",
-                outline: "none",
-                background: "white",
-                color: mode ? "#021550" : "#64748b",
-              }}
-            >
-              <option value="">All Modes (Online & Home)</option>
-              <option value="online">Online Tuition</option>
-              <option value="in-person">Home Tuition (In-Person)</option>
-            </select>
+              {/* Level select */}
+              <div>
+                <label htmlFor="tuition-level-select" className="sr-only">
+                  Filter by academic level
+                </label>
+                <select
+                  id="tuition-level-select"
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  aria-label="Filter by academic level"
+                  style={{
+                    width: "100%",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    background: "white",
+                    color: level ? "#021550" : "#475569",
+                  }}
+                >
+                  <option value="">All Academic Levels</option>
+                  {LEVELS.map((lvl) => (
+                    <option key={lvl} value={lvl}>{lvl}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Country */}
-            <select
-              value={country}
-              onChange={(e) => {
-                setCountry(e.target.value);
-                setCity("");
-              }}
-              style={{
-                width: "100%",
-                padding: "0.65rem 0.85rem",
-                borderRadius: "0.5rem",
-                border: "1.5px solid #cbd5e1",
-                fontSize: "0.85rem",
-                outline: "none",
-                background: "white",
-                color: country ? "#021550" : "#64748b",
-              }}
-            >
-              <option value="">All Countries</option>
-              {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>{c.name}</option>
-              ))}
-            </select>
+              {/* Teaching Mode */}
+              <div>
+                <label htmlFor="tuition-mode-select" className="sr-only">
+                  Filter by teaching mode
+                </label>
+                <select
+                  id="tuition-mode-select"
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value)}
+                  aria-label="Filter by teaching mode"
+                  style={{
+                    width: "100%",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    background: "white",
+                    color: mode ? "#021550" : "#475569",
+                  }}
+                >
+                  <option value="">All Modes (Online & Home)</option>
+                  <option value="online">Online Tuition</option>
+                  <option value="in-person">Home Tuition (In-Person)</option>
+                </select>
+              </div>
 
-            {/* City (if country selected) */}
-            {availableCities.length > 0 && (
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.65rem 0.85rem",
-                  borderRadius: "0.5rem",
-                  border: "1.5px solid #cbd5e1",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  background: "white",
-                  color: city ? "#021550" : "#64748b",
-                }}
-              >
-                <option value="">All Cities</option>
-                {availableCities.map((ct) => (
-                  <option key={ct.id} value={ct.name}>{ct.name}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
+              {/* Country */}
+              <div>
+                <label htmlFor="tuition-country-select" className="sr-only">
+                  Filter by country
+                </label>
+                <select
+                  id="tuition-country-select"
+                  value={country}
+                  onChange={(e) => {
+                    setCountry(e.target.value);
+                    setCity("");
+                  }}
+                  aria-label="Filter by country"
+                  style={{
+                    width: "100%",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    background: "white",
+                    color: country ? "#021550" : "#475569",
+                  }}
+                >
+                  <option value="">All Countries</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
 
-        {/* Requests Count Bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", color: "#64748b", fontSize: "0.85rem" }}>
+              {/* City (if country selected) */}
+              {availableCities.length > 0 && (
+                <div>
+                  <label htmlFor="tuition-city-select" className="sr-only">
+                    Filter by city
+                  </label>
+                  <select
+                    id="tuition-city-select"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    aria-label="Filter by city"
+                    style={{
+                      width: "100%",
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "0.5rem",
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                      background: "white",
+                      color: city ? "#021550" : "#475569",
+                    }}
+                  >
+                    <option value="">All Cities</option>
+                    {availableCities.map((ct) => (
+                      <option key={ct.id} value={ct.name}>{ct.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </fieldset>
+        </form>
+
+        {/* Requests Count Bar with Accessible Screen Reader Announcements */}
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", color: "#334155", fontSize: "0.875rem" }}
+        >
           <span>Showing <strong>{requests.length}</strong> active student requirements</span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-            <ShieldCheck size={14} color="#10b981" /> 100% Privacy Protected & Anonymous Cards
+            <ShieldCheck size={14} color="#10b981" aria-hidden="true" /> 100% Privacy Protected & Anonymous Cards
           </span>
         </div>
 
         {/* Requests Grid */}
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: "1.25rem" }}>
+          <div aria-busy="true" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: "1.25rem" }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={{ background: "white", borderRadius: "1rem", padding: "1.5rem", border: "1px solid #e2e8f0", minHeight: "220px", animation: "pulse 1.5s infinite" }}>
                 <div style={{ width: "60%", height: "18px", background: "#e2e8f0", borderRadius: "4px", marginBottom: "1rem" }} />

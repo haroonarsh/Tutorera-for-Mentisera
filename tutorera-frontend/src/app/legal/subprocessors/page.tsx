@@ -75,7 +75,7 @@ const SUBPROCESSORS: SubprocessorItem[] = [
     purpose: "Local digital wallet and interbank fund transfer processing for domestic Pakistani students and tutors.",
     category: "Payment Processing",
     location: "Pakistan",
-    safeguard: "State Bank of Pakistan Oversight, Direct Escrow Settlement",
+    safeguard: "State Bank of Pakistan Oversight, SBP Authorized Platform Settlement",
   },
   {
     name: "Resend / SendGrid (Twilio Inc.)",

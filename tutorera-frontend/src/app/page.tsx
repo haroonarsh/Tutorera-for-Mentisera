@@ -55,7 +55,7 @@ const blogPosts = [
 
 export default function Home() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       {/* 1. Marketplace Hero & 2. Quick Request Composer */}
       <HeroMarketplace />
 
@@ -297,6 +297,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

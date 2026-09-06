@@ -45,3 +45,49 @@ export const STATUS_COLORS = {
   neutral: { bg: "#F8FAFC", color: "#475569", border: "#E2E8F0" },
   purple: { bg: "#F5F3FF", color: "#6D28D9", border: "#DDD6FE" },
 } as const;
+
+export const TEXT_COLORS = {
+  primary: "#021550", // Headings & brand text (very high contrast)
+  body: "#0f172a", // Slate 900 primary body reading text (>13:1 AAA)
+  secondary: "#334155", // Slate 700 readable secondary text (>9:1)
+  muted: "#475569", // Slate 600 verified WCAG AA accessible muted text (>4.8:1)
+  link: "#0329B2", // Royal blue interactive links (10.7:1)
+  success: "#15803D",
+  warning: "#92400E",
+  danger: "#B91C1C",
+} as const;
+
+export const SPACING = {
+  space1: "4px",
+  space2: "8px",
+  space3: "12px",
+  space4: "16px",
+  space5: "20px",
+  space6: "24px",
+  space8: "32px",
+  space10: "40px",
+  space12: "48px",
+  space16: "64px",
+  space20: "80px",
+  space24: "96px",
+} as const;
+
+export const CONTAINERS = {
+  wide: "1280px",
+  default: "1180px",
+  reading: "780px",
+} as const;
+
+export const TYPOGRAPHY = {
+  displayXl: "clamp(2.5rem, 5vw, 4rem)",
+  display: "clamp(2rem, 4vw, 3rem)",
+  h1: "clamp(1.75rem, 3.5vw, 2.35rem)",
+  h2: "clamp(1.35rem, 2.5vw, 1.75rem)",
+  h3: "1.25rem",
+  h4: "1.1rem",
+  bodyLg: "1.125rem",
+  body: "1rem",
+  bodySm: "0.875rem",
+  caption: "0.75rem",
+} as const;
+

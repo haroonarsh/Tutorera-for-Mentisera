@@ -33,7 +33,7 @@ const services = [
 
 export default function ServicesPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>TUTORERA Tutoring Services & Curricula</h1>
         <p>Tutoring categories span international and national curricula. Rates are student-proposed or tutor-offered, tailored to subject difficulty, academic level, and learning mode (online worldwide or home tuition locally). Final rates are agreed in your preferred currency with secure platform payment before session commencement.</p>
@@ -65,6 +65,6 @@ export default function ServicesPage() {
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

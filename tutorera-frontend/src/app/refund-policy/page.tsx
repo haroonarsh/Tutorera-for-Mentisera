@@ -22,7 +22,7 @@ const cases = [
 
 export default function RefundPolicyPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>Refund Policy</h1>
         <p>Refund and dispute support for tutoring bookings made through {BRAND_NAME}.</p>
@@ -60,6 +60,6 @@ export default function RefundPolicyPage() {
           <p className={s.address}>{BUSINESS_ADDRESS}</p>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

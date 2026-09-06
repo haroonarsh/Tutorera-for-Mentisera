@@ -20,7 +20,7 @@ const sections = [
 
 export default function CancellationPolicyPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>Cancellation Policy</h1>
         <p>Rules for cancelling or rescheduling tutor bookings created through the student-led offer marketplace.</p>
@@ -35,6 +35,6 @@ export default function CancellationPolicyPage() {
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

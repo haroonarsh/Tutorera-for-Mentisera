@@ -14,10 +14,58 @@
   --color-card: #f8faff;
   --color-soft-blue: #eef5ff;
   --color-border: #e2e8f0;
-  --color-muted: #64748b;
-  --color-body: #1f2937;
+  --color-muted: #475569;
+  --color-body: #0f172a;
   --color-heading: #021550;
   --color-dark: #010b2c;
+
+  /* Semantic Text Colors (All verified >= 4.5:1 AA / 7:1 AAA contrast on light backgrounds) */
+  --color-text-primary: #021550;
+  --color-text-body: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #475569;
+  --color-text-link: #0329b2;
+  --color-text-success: #15803d;
+  --color-text-warning: #92400e;
+  --color-text-danger: #b91c1c;
+
+  /* Governed Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Governed Container Width System */
+  --container-wide: 1280px;
+  --container-default: 1180px;
+  --container-reading: 780px;
+
+  /* Governed Typography Scale */
+  --font-display-xl: clamp(2.5rem, 5vw, 4rem);
+  --font-display: clamp(2rem, 4vw, 3rem);
+  --font-h1: clamp(1.75rem, 3.5vw, 2.35rem);
+  --font-h2: clamp(1.35rem, 2.5vw, 1.75rem);
+  --font-h3: 1.25rem;
+  --font-h4: 1.1rem;
+  --font-body-lg: 1.125rem;
+  --font-body: 1rem;
+  --font-body-sm: 0.875rem;
+  --font-caption: 0.75rem;
+
+  /* Line Heights for Readability & WCAG SC 1.4.12 */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  --line-height-loose: 1.85;
+
   --shadow-card: 0 8px 30px rgba(2, 21, 80, 0.08);
   --shadow-card-hover: 0 12px 40px rgba(2, 21, 80, 0.12);
   --radius-sm: 8px;
@@ -26,6 +74,7 @@
   --radius-xl: 24px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
   --background: var(--color-background);
   --foreground: var(--color-body);
   --card: var(--color-surface);
@@ -36,8 +85,8 @@
   --primary-foreground: #ffffff;
   --secondary: var(--color-soft-blue);
   --secondary-foreground: var(--color-heading);
-  --muted: var(--color-soft-blue);
-  --muted-foreground: var(--color-muted);
+  --muted: #f1f5f9;
+  --muted-foreground: var(--color-text-muted);
   --accent: var(--color-soft-blue);
   --accent-foreground: var(--color-heading);
   --destructive: #dc2626;
@@ -291,5 +340,57 @@ body {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* ── Accessibility Skip Navigation Link ── */
+.skip-link {
+  position: absolute;
+  top: -9999px;
+  left: 1rem;
+  z-index: 999999;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-royal-blue);
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 0.95rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: top 160ms var(--ease-out);
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 3px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+/* ── Screen-Reader-Only Utility (WCAG 2.2 Compliant) ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Governed Container Utility Classes ── */
+.container-wide {
+  width: min(var(--container-wide), calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.container-default {
+  width: min(var(--container-default), calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.container-reading {
+  width: min(var(--container-reading), calc(100% - 2rem));
+  margin-inline: auto;
 }
 

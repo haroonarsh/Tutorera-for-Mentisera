@@ -27,7 +27,7 @@ const steps = [
 
 export default function PaymentProcessPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>How Payments Work on TUTORERA</h1>
         <p>{BRAND_NAME} uses payments only for genuine tutoring bookings created after student selection and final price acceptance.</p>
@@ -67,6 +67,6 @@ export default function PaymentProcessPage() {
           </article>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

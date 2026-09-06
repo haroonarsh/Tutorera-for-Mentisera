@@ -31,7 +31,7 @@ const tutorSteps = [
 
 export default function HowItWorksPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works</h1>
         <p>A complete public walkthrough of how students post requirements, receive tutor offers, lock a final PKR rate, pay, receive confirmation, and complete tutoring services.</p>
@@ -73,6 +73,6 @@ export default function HowItWorksPage() {
           </article>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

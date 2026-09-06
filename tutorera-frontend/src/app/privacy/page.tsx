@@ -156,7 +156,7 @@ Support: ${SUPPORT_EMAIL}`
 
 export default function GlobalPrivacyPolicyPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <header className={s.hero}>
         <h1>TUTORERA Global Privacy Policy</h1>
         <p>
@@ -242,7 +242,7 @@ export default function GlobalPrivacyPolicyPage() {
               <h2 style={{ fontSize: "1.18rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.5rem" }}>
                 {sec.title}
               </h2>
-              <div style={{ fontSize: "0.92rem", color: "#334155", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+              <div style={{ fontSize: "0.95rem", color: "#1e293b", lineHeight: 1.8, whiteSpace: "pre-line" }}>
                 {sec.content}
               </div>
             </article>
@@ -254,11 +254,11 @@ export default function GlobalPrivacyPolicyPage() {
           <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
             Jurisdiction-Specific Privacy Rights
           </h2>
-          <p style={{ color: "#475569", lineHeight: 1.7, fontSize: "0.9rem" }}>
+          <p style={{ color: "#334155", lineHeight: 1.75, fontSize: "0.925rem" }}>
             Residents of the European Economic Area (EEA), the United Kingdom, the United Arab Emirates, and California/other US states possess specific statutory privacy rights detailed in our <Link href="/legal" style={{ color: "#0329B2", fontWeight: 700 }}>Country Legal Schedules</Link>. If you have questions regarding our cross-border safeguards or wish to contact our Data Protection Officer, please email <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#0329B2", fontWeight: 700 }}>{PRIVACY_CONTACT_EMAIL}</a>.
           </p>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

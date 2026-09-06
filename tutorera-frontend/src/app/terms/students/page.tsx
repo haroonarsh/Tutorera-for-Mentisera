@@ -87,7 +87,7 @@ Any such requests violate academic integrity and result in immediate cancellatio
 
 export default function StudentTermsPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <header className={s.hero}>
         <h1>Student & Parent Platform Terms</h1>
         <p>
@@ -102,7 +102,7 @@ export default function StudentTermsPage() {
             <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#166534", margin: "0 0 0.25rem" }}>
               Student-Led Learning with Guardian Protection
             </h2>
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "#15803d", lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: "0.92rem", color: "#14532d", lineHeight: 1.65 }}>
               TUTORERA puts students and parents in control: propose your budget, choose your tutor, learn securely online or locally, and enjoy 100% first-session satisfaction protection.
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function StudentTermsPage() {
               <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.5rem" }}>
                 {clause.title}
               </h2>
-              <div style={{ fontSize: "0.92rem", color: "#334155", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+              <div style={{ fontSize: "0.95rem", color: "#1e293b", lineHeight: 1.8, whiteSpace: "pre-line" }}>
                 {clause.content}
               </div>
             </article>
@@ -125,7 +125,7 @@ export default function StudentTermsPage() {
           <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
             Helpful Student & Parent Resources
           </h2>
-          <p style={{ color: "#475569", lineHeight: 1.6, fontSize: "0.88rem", marginBottom: "1rem" }}>
+          <p style={{ color: "#334155", lineHeight: 1.7, fontSize: "0.92rem", marginBottom: "1rem" }}>
             Learn more about our safety standards, guarantee policies, and academic rules:
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
@@ -136,6 +136,6 @@ export default function StudentTermsPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

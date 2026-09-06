@@ -203,6 +203,10 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={inter.className}>
+        {/* WCAG 2.2 SC 2.4.1 Skip to Main Content Landmark */}
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe

@@ -92,7 +92,7 @@ const safeguardingClauses = [
 
 export default function ChildSafetyPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <header className={s.hero}>
         <h1>Child Safeguarding & Minor Protection Policy</h1>
         <p>
@@ -160,7 +160,7 @@ export default function ChildSafetyPage() {
               <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.5rem" }}>
                 {clause.title}
               </h2>
-              <div style={{ fontSize: "0.92rem", color: "#334155", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+              <div style={{ fontSize: "0.95rem", color: "#1e293b", lineHeight: 1.8, whiteSpace: "pre-line" }}>
                 {clause.content}
               </div>
             </article>
@@ -172,7 +172,7 @@ export default function ChildSafetyPage() {
           <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
             Related Safety Frameworks
           </h2>
-          <p style={{ color: "#475569", lineHeight: 1.6, fontSize: "0.88rem", marginBottom: "1rem" }}>
+          <p style={{ color: "#334155", lineHeight: 1.7, fontSize: "0.92rem", marginBottom: "1rem" }}>
             Learn more about our verified tutor screening and general marketplace safety rules:
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
@@ -183,6 +183,6 @@ export default function ChildSafetyPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

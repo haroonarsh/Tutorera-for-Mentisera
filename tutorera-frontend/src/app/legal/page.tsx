@@ -108,7 +108,7 @@ const legalCategories = [
 
 export default function GlobalLegalHubPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <header className={s.hero}>
         <h1>TUTORERA Legal & Compliance Center</h1>
         <p>
@@ -123,7 +123,7 @@ export default function GlobalLegalHubPage() {
             <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", margin: "0 0 0.35rem" }}>
               Contracting Platform Entity
             </h2>
-            <p style={{ margin: 0, fontSize: "0.9rem", color: "#475569", lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: "0.92rem", color: "#334155", lineHeight: 1.65 }}>
               <strong>{LEGAL_ENTITY_NAME}</strong> trading as <strong>{TRADING_NAME}</strong><br />
               Registered Address: {BUSINESS_ADDRESS}<br />
               Legal & Privacy Inquiries: <a href={`mailto:${LEGAL_CONTACT_EMAIL}`} style={{ color: "#0329B2", fontWeight: 600 }}>{LEGAL_CONTACT_EMAIL}</a>
@@ -133,7 +133,7 @@ export default function GlobalLegalHubPage() {
             <span style={{ display: "inline-block", backgroundColor: "#EEF5FF", color: "#0329B2", padding: "0.3rem 0.8rem", borderRadius: 999, fontSize: "0.8rem", fontWeight: 700, border: "1px solid #bfdbfe", marginBottom: "0.4rem" }}>
               Active Framework: {TERMS_VERSION}
             </span>
-            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+            <div style={{ fontSize: "0.8rem", color: "#475569" }}>
               Last Updated: {LAST_LEGAL_UPDATE}
             </div>
           </div>
@@ -141,10 +141,10 @@ export default function GlobalLegalHubPage() {
 
         {/* Global Architecture Statement */}
         <div style={{ borderLeft: "4px solid #0329B2", paddingLeft: "1.25rem", marginBottom: "3.5rem" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", margin: "0 0 0.4rem" }}>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", margin: "0 0 0.4rem" }}>
             The TUTORERA Regulatory Principle: One Global Framework, Local Compliance
           </h3>
-          <p style={{ color: "#5f6b7a", fontSize: "0.95rem", lineHeight: 1.7, margin: 0 }}>
+          <p style={{ color: "#1e293b", fontSize: "0.95rem", lineHeight: 1.75, margin: 0 }}>
             TUTORERA provides technology enabling students, parents, and tutors to discover one another, communicate, negotiate tutoring arrangements, book sessions, and process payments. Online tutoring connects users across international borders, while in-person home tuition is strictly constrained to local communities and service areas. TUTORERA operates subject to applicable laws in the jurisdictions where its services are provided.
           </p>
         </div>
@@ -163,7 +163,7 @@ export default function GlobalLegalHubPage() {
                     {cat.title}
                   </h3>
                 </div>
-                <p style={{ fontSize: "0.85rem", color: "#64748b", lineHeight: 1.6, marginBottom: "1.25rem" }}>
+                <p style={{ fontSize: "0.9rem", color: "#334155", lineHeight: 1.65, marginBottom: "1.25rem" }}>
                   {cat.description}
                 </p>
 
@@ -185,7 +185,7 @@ export default function GlobalLegalHubPage() {
                       <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#0329B2", marginBottom: "0.15rem" }}>
                         {link.label} →
                       </div>
-                      <div style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
+                      <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.5 }}>
                         {link.desc}
                       </div>
                     </Link>
@@ -196,6 +196,6 @@ export default function GlobalLegalHubPage() {
           })}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

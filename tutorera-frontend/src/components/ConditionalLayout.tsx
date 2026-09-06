@@ -37,7 +37,9 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
       <>
         {/* On non-dashboard authenticated screens, provide MobileTopBar for context & back navigation */}
         {!isDashboardPage && !pathname.startsWith("/admin") && <MobileTopBar />}
-        <div className={isChatRoom ? "" : "has-bottom-nav"}>{children}</div>
+        <main id="main-content" className={isChatRoom ? "" : "has-bottom-nav"}>
+          {children}
+        </main>
         <MobileBottomNav />
       </>
     );
@@ -47,7 +49,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
     <>
       <MobileTopBar />
       <Navbar />
-      <main className="has-bottom-nav" style={{ minHeight: "80vh" }}>
+      <main id="main-content" className="has-bottom-nav" style={{ minHeight: "80vh" }}>
         {children}
       </main>
       <Footer />

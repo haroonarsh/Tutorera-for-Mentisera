@@ -66,7 +66,7 @@ const tutorItems = [
 
 export default function BusinessModelPage() {
   return (
-    <main className={s.page}>
+    <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works – Our Business Model</h1>
         <p>{BRAND_NAME} is operated by {LEGAL_OPERATOR} as a global education technology marketplace.</p>
@@ -94,6 +94,6 @@ export default function BusinessModelPage() {
           </article>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
