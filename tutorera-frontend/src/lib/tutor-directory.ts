@@ -22,7 +22,7 @@ export const CITIES = {
 
 export const LEVELS = {
   primary: "Primary (Grades 1-5)", middle: "Middle (Grades 6-8)", matric: "Matric (9th & 10th)", intermediate: "Intermediate / FSc",
-  "o-level": "O-Level (Cambridge / Edexcel)", "a-level": "A-Level (Cambridge / Edexcel)", university: "University / Dergee",
+  "o-level": "O-Level (Cambridge / Edexcel)", "a-level": "A-Level (Cambridge / Edexcel)", university: "University / Degree",
 } as const;
 
 export const PRIMARY_CITY_SLUGS = ["lahore", "karachi", "islamabad", "rawalpindi", "faisalabad"] as const;

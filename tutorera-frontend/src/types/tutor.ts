@@ -61,7 +61,7 @@ export const LEVELS = [
   "O-Level (Cambridge / Edexcel)", 
   "A-Level (Cambridge / Edexcel)", 
   "IB (Middle Years / Diploma)", 
-  "University / Dergee", 
+  "University / Degree", 
   "Test Preparation", 
   "Other"
 ];
