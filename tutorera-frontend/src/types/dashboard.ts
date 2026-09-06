@@ -49,6 +49,8 @@ export interface DashBid {
   latestSenderRole?: "student" | "tutor";
   senderRole?: "student" | "tutor";
   matchScore?: number;
+  matchTier?: "excellent" | "great" | "good" | "fair";
+  matchReasons?: string[];
   matchScoreBreakdown?: Record<string, number>;
   completedSessions?: number;
   responseRate?: number;

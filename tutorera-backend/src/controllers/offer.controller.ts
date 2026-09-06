@@ -16,6 +16,8 @@ import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
 import { createTransaction } from "../utils/rapidGateway";
 import { releaseExpiredPaymentHold } from "./request.controller";
+import { MatchingService } from "../services/matching.service";
+import MatchLog from "../models/MatchLog.model";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
@@ -202,31 +204,88 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 };
 
 export const getRequestOffers = async (req: AuthRequest, res: Response): Promise<void> => {
-  const request = await Request.findOne({ _id: req.params.requestId, student: req.user?._id }); if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
+  const request = await Request.findOne({ _id: req.params.requestId, student: req.user?._id });
+  if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
   await Bid.updateMany({ request: request._id, expiresAt: { $lte: new Date() }, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" });
-  const offers = await Bid.find({ request: request._id }).populate("tutor", "name avatar city").lean();
+  const offers = await Bid.find({ request: request._id }).populate("tutor", "name avatar city countryCode countryName phone averageRating").lean();
+
   const enriched = await Promise.all(offers.map(async offer => {
     const tutorId = (offer.tutor as any)._id;
     const [profile, completedSessions, offerStats, counterRows, latestNegotiation] = await Promise.all([
-      TutorProfile.findOne({ user: tutorId }).select("education experience subjects levels teachingMode city availability averageRating totalReviews isVerified verificationStatus").lean(),
+      TutorProfile.findOne({ user: tutorId }).lean(),
       Booking.countDocuments({ tutor: tutorId, status: "completed" }),
-      Bid.aggregate([{ $match: { tutor: tutorId } }, { $group: { _id: null, total: { $sum: 1 }, responded: { $sum: { $cond: [{ $in: ["$status", ["viewed", "countered", "accepted", "rejected", "not_selected"]] }, 1, 0] } }, averageResponseMs: { $avg: { $subtract: ["$createdAt", "$createdAt"] } } } }]),
-      OfferNegotiation.aggregate([{ $match: { offer: offer._id, sequenceNumber: { $gt: 1 } } }, { $group: { _id: "$senderRole", count: { $sum: 1 } } }]),
+      Bid.aggregate([
+        { $match: { tutor: tutorId } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            responded: {
+              $sum: {
+                $cond: [
+                  { $in: ["$status", ["viewed", "countered", "accepted", "rejected", "not_selected"]] },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]),
+      OfferNegotiation.aggregate([
+        { $match: { offer: offer._id, sequenceNumber: { $gt: 1 } } },
+        { $group: { _id: "$senderRole", count: { $sum: 1 } } }
+      ]),
       OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").lean(),
     ]);
-    const responseRate = offerStats[0]?.total ? Math.round(offerStats[0].responded / offerStats[0].total * 100) : 0;
+    const responseRate = offerStats[0]?.total ? Math.round(offerStats[0].responded / offerStats[0].total * 100) : 100;
     const counterCounts = { student: 0, tutor: 0 };
     counterRows.forEach(row => {
       const key = row._id as "student" | "tutor";
       if (key === "student" || key === "tutor") counterCounts[key] = row.count;
     });
-    const requestedDays = request.preferredDays || []; const availableDays = profile?.availability?.map(a => a.day) || [];
-    const {score:matchScore,breakdown}=calculateMatchScore({subject:!!profile?.subjects?.some(s=>s.toLowerCase()===request.subject.toLowerCase()),academicLevel:!!profile?.levels?.includes(request.level as any),availability:requestedDays.length>0&&requestedDays.every(day=>availableDays.includes(day)),location:request.teachingMode==="online"||!!(request.city&&profile?.city?.toLowerCase()===request.city.toLowerCase()),teachingMode:!!profile&&(profile.teachingMode==="both"||request.teachingMode==="both"||profile.teachingMode===request.teachingMode),withinPreferredBudget:offer.amount<=request.budget,rating:profile?.averageRating,experience:profile?.experience,responseRate});
-    const created = new Date((offer as any).createdAt).getTime(); const responseSeconds = Math.max(0, Math.round((created - request.createdAt.getTime()) / 1000));
-    return { ...offer, profile, completedSessions, responseRate, responseSeconds, matchScore, matchScoreBreakdown: breakdown, counterCounts, latestSenderRole: latestNegotiation?.senderRole };
+
+    const match = profile ? await MatchingService.calculateMatchScore(request, profile as any) : null;
+    const matchScore = match?.score || 65;
+    const matchTier = match?.tier || "good";
+    const matchReasons = match?.reasons || [`Offer submitted for ${request.subject}`];
+    const breakdown = match?.scoreBreakdown || {};
+
+    const created = new Date((offer as any).createdAt).getTime();
+    const responseSeconds = Math.max(0, Math.round((created - request.createdAt.getTime()) / 1000));
+
+    // Update match log asynchronously
+    MatchLog.updateOne({ request: request._id, tutor: tutorId }, { $set: { offerReceivedAt: new Date(), offerViewedAt: new Date() } }).exec().catch(() => undefined);
+
+    return {
+      ...offer,
+      profile,
+      completedSessions,
+      responseRate,
+      responseSeconds,
+      matchScore,
+      matchTier,
+      matchReasons,
+      matchScoreBreakdown: breakdown,
+      counterCounts,
+      latestSenderRole: latestNegotiation?.senderRole,
+    };
   }));
+
   const sort = String(req.query.sort || "best_match");
-  const sorted=sortMarketplaceOffers(enriched,sort);
+  let sorted = enriched;
+  if (sort === "best_match") {
+    sorted = enriched.sort((a, b) => {
+      const aPriceFit = a.amount <= request.budget ? 100 : Math.max(20, 100 - ((a.amount - request.budget) / request.budget) * 100);
+      const bPriceFit = b.amount <= request.budget ? 100 : Math.max(20, 100 - ((b.amount - request.budget) / request.budget) * 100);
+      const aRank = (a.matchScore * 0.6) + (aPriceFit * 0.25) + (Math.max(0, 100 - a.responseSeconds / 60) * 0.15);
+      const bRank = (b.matchScore * 0.6) + (bPriceFit * 0.25) + (Math.max(0, 100 - b.responseSeconds / 60) * 0.15);
+      return bRank - aRank;
+    });
+  } else {
+    sorted = sortMarketplaceOffers(enriched, sort);
+  }
+
   res.json({ success: true, total: sorted.length, sort, request, offers: sorted });
 };
 

@@ -14,6 +14,8 @@ import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
+import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
+import { Sparkles } from "lucide-react";
 
 const C = UI_COLORS;
 
@@ -250,9 +252,17 @@ function BookingCard({ booking }: { booking: DashBooking }) {
 function OpenRequestCard({
   request,
   onBidPlaced,
+  matchScore,
+  matchTier,
+  matchReasons,
+  matchBreakdown,
 }: {
   request: DashRequest;
   onBidPlaced: () => void;
+  matchScore?: number;
+  matchTier?: "excellent" | "great" | "good" | "fair";
+  matchReasons?: string[];
+  matchBreakdown?: Record<string, number>;
 }) {
   const [showBidModal, setShowBidModal] = useState(false);
 
@@ -261,7 +271,18 @@ function OpenRequestCard({
       <div className={s.card}>
         <div className={s.cardHeader}>
           <div style={{ flex: 1 }}>
-            <h3 className={s.cardTitle}>{request.subject}</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+              <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
+              {matchScore ? (
+                <MatchScoreBadge
+                  score={matchScore}
+                  tier={matchTier}
+                  reasons={matchReasons}
+                  breakdown={matchBreakdown}
+                  showBreakdown={true}
+                />
+              ) : null}
+            </div>
             <div className={s.cardMeta}>
               <span>{request.level}</span>
               <span>·</span>
@@ -274,6 +295,29 @@ function OpenRequestCard({
         </div>
 
         <p className={s.cardDesc}>{request.description}</p>
+
+        {matchReasons && matchReasons.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 0 12px" }}>
+            {matchReasons.slice(0, 3).map((r, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 11,
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  background: "#f0fdf4",
+                  color: "#166534",
+                  border: "1px solid #bbf7d0",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4
+                }}
+              >
+                ✓ {r}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className={s.infoRow}>
           <span className={s.infoChip}>
@@ -509,7 +553,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
 
 // ─── Tutor Dashboard ──────────────────────────────────────────────────────────
 
-type Tab = "bookings" | "browse" | "profile";
+type Tab = "bookings" | "recommended" | "browse" | "profile";
 
 interface Props {
   userId: string;
@@ -520,6 +564,8 @@ interface Props {
 export default function TutorDashboard({ userName, userAvatar, userId }: Props) {
   const [tab, setTab]               = useState<Tab>("bookings");
   const [bookings, setBookings]     = useState<DashBooking[]>([]);
+  const [recommended, setRecommended] = useState<any[]>([]);
+  const [loadingRec, setLoadingRec] = useState(false);
   const [requests, setRequests]     = useState<DashRequest[]>([]);
   const [directRequests, setDirectRequests] = useState<DashDirectRequest[]>([]);
   const [loadingD, setLoadingD]     = useState(false);
@@ -534,8 +580,8 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
-    if (requestedTab === "bookings" || requestedTab === "browse" || requestedTab === "profile") {
-      setTab(requestedTab);
+    if (requestedTab === "bookings" || requestedTab === "recommended" || requestedTab === "browse" || requestedTab === "profile") {
+      setTab(requestedTab as Tab);
     }
   }, []);
 
@@ -548,6 +594,18 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
       setBookingsPage(1);
     } catch { setBookings([]); }
     finally { setLoadingB(false); }
+  }, []);
+
+  const fetchRecommended = useCallback(async () => {
+    setLoadingRec(true);
+    try {
+      const res = await axiosInstance.get("/matching/tutors/recommended-requests?limit=15");
+      setRecommended(res.data.recommendations ?? []);
+    } catch {
+      setRecommended([]);
+    } finally {
+      setLoadingRec(false);
+    }
   }, []);
 
   const loadMoreBookings = async () => {
@@ -600,10 +658,12 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   useEffect(() => {
     fetchBookings();
     fetchProfile();
-  }, [fetchBookings, fetchProfile]);
+    fetchRecommended();
+  }, [fetchBookings, fetchProfile, fetchRecommended]);
 
   // Lazy load on tab switch
   useEffect(() => {
+    if (tab === "recommended" && recommended.length === 0) fetchRecommended();
     if (tab === "browse" && requests.length === 0) fetchRequests();
     if (tab === "browse") fetchDirectRequests();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -748,6 +808,21 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   </button>
 
   <button
+    onClick={() => setTab("recommended")}
+    aria-current={tab === "recommended" ? "true" : undefined}
+    className={`${s.tab} ${tab === "recommended" ? s.tabActive : ""}`}
+    style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+  >
+    <Sparkles size={14} style={{ color: tab === "recommended" ? "#08bffc" : "#f59e0b" }} />
+    ✨ Matched For You
+    {recommended.length > 0 && (
+      <span className={`${s.tabBadge} ${tab === "recommended" ? s.tabActiveBadge : ""}`} style={{ background: "#f59e0b", color: "#fff" }}>
+        {recommended.length}
+      </span>
+    )}
+  </button>
+
+  <button
     onClick={() => setTab("browse")}
     aria-current={tab === "browse" ? "true" : undefined}
     className={`${s.tab} ${tab === "browse" ? s.tabActive : ""}`}
@@ -802,6 +877,64 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
                   </div>
                 )}
               </>
+            )}
+          </section>
+        )}
+
+        {/* Tab: Recommended Requests */}
+        {tab === "recommended" && (
+          <section aria-label="Smart matched student requests">
+            <div className={s.sectionHeader}>
+              <div>
+                <h2 className={s.sectionTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: "#f59e0b" }}>✨</span>
+                  Smart Matched Student Requests
+                </h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+                  Ranked by your subject specializations, teaching mode, location feasibility, and schedule compatibility.
+                </p>
+              </div>
+              <button onClick={fetchRecommended} className={s.btnOutline}>↻ Refresh</button>
+            </div>
+
+            {bidSuccess && (
+              <div style={{
+                background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
+                color: "#059669", borderRadius: 10, padding: "12px 16px", fontSize: 13,
+                fontWeight: 500, marginBottom: 16,
+              }}>
+                ✓ Offer sent successfully. The student will review it shortly.
+              </div>
+            )}
+
+            {loadingRec ? (
+              <div className={s.spinner} />
+            ) : recommended.length === 0 ? (
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>🎯</div>
+                <p className={s.emptyTitle}>No personalized matches right now</p>
+                <p className={s.emptyDesc}>
+                  As students post requests matching your subjects and teaching mode, they will appear here with high match scores. You can also browse all open requests.
+                </p>
+                <button onClick={() => setTab("browse")} className={s.btnPrimary}>Browse All Requests</button>
+              </div>
+            ) : (
+              recommended.map((item) => (
+                <OpenRequestCard
+                  key={item.request._id}
+                  request={item.request}
+                  matchScore={item.score}
+                  matchTier={item.tier}
+                  matchReasons={item.reasons}
+                  matchBreakdown={item.scoreBreakdown}
+                  onBidPlaced={() => {
+                    setBidSuccess(true);
+                    fetchRecommended();
+                    fetchRequests();
+                    setTimeout(() => setBidSuccess(false), 5000);
+                  }}
+                />
+              ))
             )}
           </section>
         )}

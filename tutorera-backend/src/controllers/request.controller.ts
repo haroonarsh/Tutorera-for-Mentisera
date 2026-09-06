@@ -18,6 +18,7 @@ import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequ
 import { convertToPKR } from "../config/countries";
 import { createTransaction } from "../utils/rapidGateway";
 import AbandonedJourney from "../models/AbandonedJourney.model";
+import { MatchingService } from "../services/matching.service";
 
 // ─── Plan Limits ───────────────────────────────────────────────────────────────
 const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
@@ -76,46 +77,24 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     $inc: { requestsThisMonth: 1 },
   });
 
-  // Notify a bounded set of relevant approved tutors, respecting global vs local location constraints
-  const TutorProfile = (await import("../models/TutorProfile.model")).default;
-  const matchFilter: Record<string, unknown> = { verificationStatus: "approved", subjects: request.subject, levels: request.level };
-  
-  if (request.teachingMode === "online") {
-    // Online requests match tutors globally who offer online tutoring
-    matchFilter.teachingMode = { $in: ["online", "both"] };
-    if (request.preferredTutorCountries && request.preferredTutorCountries.length > 0) {
-      matchFilter.countryCode = { $in: request.preferredTutorCountries };
-    }
-  } else if (request.teachingMode === "in-person") {
-    // Home tuition strictly matches tutors in the same country & city who offer in-person tutoring
-    matchFilter.teachingMode = { $in: ["in-person", "both"] };
-    if (request.countryCode) {
-      matchFilter.countryCode = request.countryCode;
-    }
-    if (request.city) {
-      matchFilter.city = new RegExp(`^${request.city.trim()}$`, "i");
-    }
-  } else {
-    // "both" mode: match either online global tutors OR local in-person tutors
-    matchFilter.$or = [
-      { teachingMode: { $in: ["online", "both"] } },
-      {
-        teachingMode: { $in: ["in-person", "both"] },
-        ...(request.countryCode ? { countryCode: request.countryCode } : {}),
-        ...(request.city ? { city: new RegExp(`^${request.city.trim()}$`, "i") } : {}),
-      },
-    ];
-  }
-
-  const currencySymbol = request.currency || "PKR";
-  const matchingTutors = await TutorProfile.find(matchFilter).select("user").limit(30).lean();
-  await Promise.all(matchingTutors.map(profile => sendNotification(req.app.get("io"), profile.user.toString(), {
-    title: "Matching Tuition Request",
-    message: `${request.subject} · ${request.level} · Proposed ${currencySymbol} ${request.budget.toLocaleString()}/${request.pricingUnit} (${request.teachingMode === "online" ? "Online" : request.city || "In-person"})`,
-    type: "bid",
-    link: "/dashboard?tab=browse",
-  })));
-  await logAudit({ action: "tuition_request_published", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { subject: request.subject, level: request.level, teachingMode: request.teachingMode, currency: request.currency, countryCode: request.countryCode, notifiedTutors: matchingTutors.length } });
+  // Progressive Tiered Notification Dispatch via Smart Matching Engine
+  const { notifiedCount, tier1Count } = await MatchingService.dispatchProgressiveNotifications(request, req.app.get("io"));
+  await logAudit({
+    action: "tuition_request_published",
+    actor: req.user?.name,
+    actorId: req.user?._id?.toString(),
+    entity: "Request",
+    targetId: request.id,
+    metadata: {
+      subject: request.subject,
+      level: request.level,
+      teachingMode: request.teachingMode,
+      currency: request.currency,
+      countryCode: request.countryCode,
+      notifiedTutors: notifiedCount,
+      tier1Matches: tier1Count,
+    },
+  });
 
   try {
     const { amountPKR } = convertToPKR(request.budget, request.currency);

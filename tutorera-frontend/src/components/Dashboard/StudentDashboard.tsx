@@ -14,6 +14,8 @@ import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
+import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
+import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
 
 const C = UI_COLORS;
 
@@ -339,6 +341,7 @@ function RequestCard({
   onBidAccepted: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showMatchedTutors, setShowMatchedTutors] = useState(false);
   const [bids, setBids] = useState<DashBid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
@@ -368,14 +371,8 @@ function RequestCard({
       const res = await axiosInstance.post(`/offers/${bidId}/accept`);
       const checkoutUrl = res.data?.checkoutUrl;
       if (checkoutUrl) {
-        // Payment happens before the booking is created — send the browser
-        // to Rapid Gateway's hosted checkout. Don't call onBidAccepted()
-        // here: there's no booking yet, and won't be until payment confirms
-        // via webhook.
         window.location.assign(checkoutUrl);
       } else {
-        // Defensive fallback — should not normally happen, but avoids
-        // silently doing nothing if the backend ever responds without one.
         console.error("Accept-offer response had no checkoutUrl:", res.data);
         setAccepting(null);
       }
@@ -429,22 +426,46 @@ function RequestCard({
         <span className={s.infoChip}>{request.schedule}</span>
       </div>
 
-      {/* Expand tutor offers for active and accepted-payment request states */}
+      {/* Action triggers: Expand tutor offers & Smart matched tutors */}
       {["open", "published", "receiving_offers", "negotiating", "offer_accepted", "awaiting_payment", "booked", "closed"].includes(request.status) && (
         <>
-          <button
-          onClick={() => loadBids()}
-            className={s.expandBtn}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem", alignItems: "center" }}>
+            <button
+              onClick={() => loadBids()}
+              className={s.expandBtn}
+              style={{ margin: 0 }}
             >
-          <svg
-            width={12} height={12} viewBox="0 0 20 20" fill="currentColor"
-            style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
-            aria-hidden="true"
-           >
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-            {expanded ? "Hide Tutor Offers" : "View Tutor Offers"}
-          </button>
+              <svg
+                width={12} height={12} viewBox="0 0 20 20" fill="currentColor"
+                style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
+                aria-hidden="true"
+              >
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              {expanded ? "Hide Tutor Offers" : "View Tutor Offers"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowMatchedTutors(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.5rem 0.85rem",
+                backgroundColor: "#eff6ff",
+                color: "#1d4ed8",
+                border: "1px solid #bfdbfe",
+                borderRadius: "0.5rem",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              ⚡ View AI Matched Tutors
+            </button>
+          </div>
 
           {expanded && (
             <div className={s.bidsSection}>
@@ -464,12 +485,25 @@ function RequestCard({
                         : bid.tutor.name.charAt(0).toUpperCase()}
                     </div>
                     <div className={s.bidBody}>
-                      <p className={s.bidTutorName}>{bid.tutor.name}</p>
-                      <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/{bid.pricingUnit || "hour"}{bid.matchScore ? ` · ${bid.matchScore}% Match` : ""}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 6 }}>
+                        <div>
+                          <p className={s.bidTutorName}>{bid.tutor.name}</p>
+                          <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/{bid.pricingUnit || "hour"}</p>
+                        </div>
+                        {bid.matchScore ? (
+                          <MatchScoreBadge
+                            score={bid.matchScore}
+                            tier={bid.matchTier as any}
+                            reasons={bid.matchReasons}
+                            breakdown={bid.matchScoreBreakdown}
+                            showBreakdown={true}
+                          />
+                        ) : null}
+                      </div>
+
                       <p className={s.bidMessage}>{bid.profile?.isVerified ? "✓ Fully Verified · " : ""}{bid.profile?.averageRating?.toFixed(1) || "New"} rating ({bid.profile?.totalReviews || 0} reviews) · {bid.profile?.experience || 0} years · {bid.completedSessions || 0} completed · {bid.responseRate || 0}% response</p>
                       {!!bid.profile?.education?.length && <p className={s.bidMessage}>{bid.profile.education[0].degree} · {bid.profile.subjects?.join(", ")}</p>}
                       {bid.availability && <p className={s.bidMessage}>Availability: {bid.availability}</p>}
-                      {bid.matchScoreBreakdown && <p className={s.bidMessage}>Match breakdown: {Object.entries(bid.matchScoreBreakdown).filter(([, value]) => value > 0).map(([key, value]) => `${key.replace(/([A-Z])/g, " $1").toLowerCase()} +${value}`).join(" · ") || "insufficient matching evidence"}</p>}
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
                         <Link href={tutorProfileHref({ _id: bid.tutor._id, user: { name: bid.tutor.name }, subjects: [], city: "Pakistan" })} className={s.btnOutline}
@@ -506,6 +540,18 @@ function RequestCard({
         </>
       )}
       {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
+
+      {/* AI Matched Tutors Drawer Modal */}
+      {showMatchedTutors && (
+        <MatchedTutorsModal
+          isOpen={showMatchedTutors}
+          onClose={() => setShowMatchedTutors(false)}
+          requestId={request._id}
+          subject={request.subject}
+          teachingMode={request.teachingMode}
+          budget={request.budget}
+        />
+      )}
     </div>
   );
 }

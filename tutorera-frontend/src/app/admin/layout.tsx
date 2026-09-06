@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +9,7 @@ import {
   Radio,
   Layers,
   Mail,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/admin",                  label: "Dashboard",        icon: <LayoutDashboard size={18} /> },
   { href: "/admin/analytics",        label: "Analytics",        icon: <BarChart2 size={18} /> },
   { href: "/admin/marketplace",      label: "Marketplace",      icon: <ClipboardList size={18} /> },
+  { href: "/admin/matching",         label: "Smart Matching",   icon: <Sparkles size={18} /> },
   { href: "/admin/subscriptions",    label: "Subscriptions",    icon: <Layers size={18} /> },
   { href: "/admin/audit-logs",       label: "Audit Logs",       icon: <ClipboardList size={18} /> },
   { href: "/admin/email-logs",       label: "Email Logs",       icon: <Mail size={18} /> },
