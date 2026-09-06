@@ -76,8 +76,8 @@ export default function ProfilePage() {
               bio: p.bio || "",
               hourlyRate: p.hourlyRate?.toString() || "",
               experience: p.experience?.toString() || "",
-              subjects: p.subjects || [],
-              levels: p.levels || [],
+              subjects: (p.subjects || []).filter((s: string) => subjects.includes(s)),
+              levels: (p.levels || []).filter((l: string) => levels.includes(l)),
               teachingMode: p.teachingMode || "both",
               city: p.city || "",
             });
