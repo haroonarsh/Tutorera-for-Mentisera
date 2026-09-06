@@ -513,13 +513,6 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
   res.status(200).json({ success: true, total: bids.length, bids });
 };
 
-// ── Relevant excerpt: request.controller.ts ──
-// Replaces the old acceptBid. Two functions now:
-//   1. initiateAcceptBid  — route handler, reserves the offer, starts payment checkout
-//   2. finalizeBidAcceptance — NOT a route; called only by the payment webhook once payment confirms
-
-const PAYMENT_HOLD_MINUTES = 30;
-
 // If a previous accept attempt's payment reservation has expired (student
 // abandoned checkout), revert the request/bid back to an acceptable state
 // so the bid isn't stuck in limbo forever. Called defensively at the start
@@ -545,99 +538,7 @@ export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Prom
   );
 }
 
-// @desc    Accept an offer — reserves it and starts payment checkout.
-//          The booking is NOT created here; it's created by
-//          finalizeBidAcceptance once payment is confirmed via webhook.
-// @route   PATCH /api/requests/:id/bids/:bidId/accept
-// @access  Private (student)
-export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
-  const requestId = new Types.ObjectId(req.params.id as string);
-  const bidId = new Types.ObjectId(req.params.bidId as string);
 
-  await releaseExpiredPaymentHold(requestId);
-
-  const request = await Request.findById(requestId);
-  if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
-    res.status(400).json({ success: false, message: "Request not available" });
-    return;
-  }
-
-  const bid = await Bid.findOne({
-    _id: bidId,
-    request: requestId,
-    status: { $in: ["pending", "submitted", "viewed", "countered"] },
-  });
-
-  if (!bid) {
-    res.status(404).json({ success: false, message: "Offer not found or does not belong to this request" });
-    return;
-  }
-
-  if (bid.expiresAt && bid.expiresAt.getTime() <= Date.now()) {
-    res.status(410).json({ success: false, message: "This offer has expired." });
-    return;
-  }
-
-  const isOwner = request.student.toString() === req.user?._id?.toString();
-  const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
-  if (!isOwner && !isDirectTutorAccept) {
-    res.status(403).json({ success: false, message: "Not authorized to accept this offer" });
-    return;
-  }
-
-  // Atomic guard — identical purpose to the original: only one accept
-  // attempt can win this transition, so two concurrent accept clicks can't
-  // both proceed. Everything downstream is safe BECAUSE this succeeded.
-  const reservedRequest = await Request.findOneAndUpdate(
-    { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-    { status: "awaiting_payment" },
-    { new: true }
-  );
-
-  if (!reservedRequest) {
-    res.status(409).json({ success: false, message: "This request was just accepted or is no longer available." });
-    return;
-  }
-
-  const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-  bid.status = "payment_pending";
-  bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
-  await bid.save();
-
-  try {
-    const student = await User.findById(req.user?._id).select("name email phone");
-    const checkoutUrl = await createTransaction({
-      amount: bid.amount,
-      customerMobileNo: student?.phone || "03000000000",
-      customerEmail: student?.email || "",
-      // "BID-" prefix lets the webhook handler tell this apart from a
-      // plain booking-id checkout (see payment.controller.ts).
-      basketId: `BID-${bid._id.toString()}`,
-      description: `TUTORERA offer acceptance ${bid._id.toString()}`,
-      successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
-      failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
-      checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
-      checkoutUrl,
-    });
-  } catch (err: any) {
-    // Checkout creation failed — roll back the reservation immediately so
-    // the request/bid aren't stranded in "awaiting_payment" until the next
-    // lazy cleanup happens to run.
-    await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
-    await Bid.updateOne(
-      { _id: bid._id, status: "payment_pending" },
-      { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-    );
-
-    console.error("Failed to create payment checkout for offer acceptance:", err);
-    res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
-  }
-};
 
 // Called ONLY by the payment webhook (payment.controller.ts) once the
 // authorized payment gateway confirms payment for a "BID-<id>" checkout. Runs the same
