@@ -385,7 +385,7 @@ export default function RequestWizard({
                 style={inputStyle}
               >
                 <option value="">Choose class / qualification...</option>
-                {(geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level"]).map((lvl) => (
+                {(geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Dergee", "Test Preparation", "Other"]).map((lvl) => (
                   <option key={lvl} value={lvl}>{lvl}</option>
                 ))}
               </select>

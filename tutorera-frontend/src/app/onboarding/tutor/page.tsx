@@ -34,7 +34,7 @@ export default function TutorOnboardingPage() {
     "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"
   ];
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
-    "Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Test Prep", "Other"
+    "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Dergee", "Test Preparation", "Other"
   ];
 
   // Step 1

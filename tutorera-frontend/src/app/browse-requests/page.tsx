@@ -30,7 +30,7 @@ interface RequestItem {
   bid?: { _id: string; amount: number; currency?: string; status: string; expiresAt: string; pricingUnit?: "hour" | "session" | "month" | "course"; createdAt: string } | null;
 }
 
-const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
+const LEVELS = ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Dergee", "Test Preparation", "Other"];
 
 export default function BrowseRequestsPage() {
   const [requests, setRequests] = useState<RequestItem[]>([]);

@@ -16,6 +16,7 @@ const levels = [
   { name: "A-Levels", grades: "Cambridge AS & A2", age: "Ages 16–18", desc: "Advanced Cambridge A-Level preparation for university entrance.", color: "#EEF5FF", textColor: "#0329B2" },
   { name: "University Level", grades: "Bachelor's / Master's", age: "Ages 18+", desc: "University-level tutoring for engineering, medicine, business, CS, and more.", color: "#f0fdf4", textColor: "#16a34a" },
   { name: "Test Preparation", grades: "Entry Tests", age: "All Ages", desc: "MDCAT, ECAT, NTS, IELTS, SAT, and other competitive exam preparation.", color: "#fffbeb", textColor: "#d97706" },
+  { name: "Other", grades: "All Levels", age: "All Ages", desc: "Tutoring for any other subjects or levels not listed above.", color: "#fdf4ff", textColor: "#7c3aed" },
 ];
 
 function tutorHref(levelName: string) {
