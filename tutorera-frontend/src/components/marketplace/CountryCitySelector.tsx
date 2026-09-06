@@ -19,6 +19,7 @@ interface CountryCitySelectorProps {
   className?: string;
   cityLabel?: string;
   countryLabel?: string;
+  countries?: Country[];
 }
 
 export default function CountryCitySelector({
@@ -35,9 +36,18 @@ export default function CountryCitySelector({
   className = "",
   cityLabel = "City",
   countryLabel = "Country",
+  countries: countriesProp,
 }: CountryCitySelectorProps) {
-  const currentCountry = useMemo(() => getCountryByCode(countryCode) || COUNTRIES[0], [countryCode]);
-  const availableCities = useMemo(() => getCitiesForCountry(currentCountry.code), [currentCountry]);
+  const currentCountry = useMemo(() => {
+    const list = countriesProp || COUNTRIES;
+    const found = list.find((c) => c.code === countryCode);
+    return found || list[0];
+  }, [countryCode, countriesProp]);
+  const availableCities = useMemo(() => {
+    const list = countriesProp || COUNTRIES;
+    const country = list.find((c) => c.code === currentCountry.code);
+    return country ? country.cities.map((ct) => ct.name) : [];
+  }, [currentCountry.code, countriesProp]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"country_and_city" | "country_only" | "city_only">("country_and_city");
@@ -134,6 +144,7 @@ export default function CountryCitySelector({
         selectedCity={city}
         onSelect={handleModalSelect}
         mode={modalMode}
+        countries={countriesProp}
       />
     </div>
   );

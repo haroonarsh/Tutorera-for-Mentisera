@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CheckCircle, Sparkles, ShieldCheck } from "lucide-react";
 import QuickRequestComposer from "./QuickRequestComposer";
+import AskTutoreraInput from "./AskTutoreraInput";
 
 export default function HeroMarketplace() {
   return (
@@ -258,7 +259,12 @@ export default function HeroMarketplace() {
           </div>
         </div>
 
-        {/* 2. Embedded Quick Request Composer */}
+        {/* Ask Tutorera Natural Language Input */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <AskTutoreraInput />
+        </div>
+
+        {/* 2. Embedded Quick Request Composer (Form-based alternative) */}
         <QuickRequestComposer />
       </div>
     </section>

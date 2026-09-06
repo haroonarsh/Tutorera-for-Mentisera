@@ -451,6 +451,7 @@ export default function TutorOnboardingPage() {
                     }}
                     showCurrency={true}
                     showTimezone={true}
+                    countries={geo.countries}
                   />
                 </div>
 

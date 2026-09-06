@@ -244,9 +244,12 @@ export default function DashboardPage() {
     const fetchStatus = async () => {
       setCheckingStatus(true);
       try {
-        const res = await api.get("/tutors/onboarding/status");
-        setVerificationStatus(res.data.verificationStatus);
-        setRejectionReason(res.data.rejectionReason || "");
+        const res = await api.get("/tutor/application-status");
+        const payload = res.data?.payload;
+        const eligible = payload?.marketplaceEligibility?.eligible;
+        const canonicalStatus = payload?.canonicalStatus;
+        setVerificationStatus(eligible ? "approved" : (canonicalStatus === "REJECTED" || canonicalStatus === "SUSPENDED" ? "rejected" : "pending"));
+        setRejectionReason(payload?.marketplaceEligibility?.reasonIfBlocked || payload?.actionRequired?.body || "");
       } catch {
         setVerificationStatus("error");
         setRejectionReason("Unable to load verification status. Please try again later or contact support.");

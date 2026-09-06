@@ -207,3 +207,14 @@ export const trackingWelcomeEmail = (
     <p style="color:#6b7280;font-size:12px;">You are signed in to your account, so you can also view your application status at any time from your Tutorera dashboard.</p>
   `,
 });
+
+export const documentResubmittedEmail = (tutorName: string, documentType: string, args: CtaArgs) => ({
+  subject: `TUTORERA® — ${documentType} re-submitted for review`,
+  html: `
+    <h2 style="color:#1a1a2e;margin:0 0 12px;">${documentType} re-submitted ✅</h2>
+    <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
+    <p style="color:#374151;">We have received your updated ${documentType}. Our team will review it shortly and update your verification status.</p>
+    <p style="color:#374151;">You can track the status of your application at any time using the link below.</p>
+    ${trackingCta(args)}
+  `,
+});

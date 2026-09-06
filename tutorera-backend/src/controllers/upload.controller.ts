@@ -4,6 +4,8 @@ import { verifyFileSignature } from "../middlewares/upload.middleware";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { uploadToCloudinary, deleteFromCloudinary, getSignedViewUrl } from "../utils/uploadToCloudinary";
+import sendEmail from "../utils/sendEmail";
+import { documentResubmittedEmail } from "../utils/trackingEmails";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -64,7 +66,8 @@ export const uploadVerificationDocs = async (
     return;
   }
 
-  const updateData: Record<string, string> = {};
+  const updateData: Record<string, any> = {};
+  const resubmittedDocs: string[] = [];
 
   // ── CNIC Front (private — sensitive identity document) ──
   if (files.cnicFront?.[0]) {
@@ -79,6 +82,12 @@ export const uploadVerificationDocs = async (
     const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
     updateData.cnicFront = result.secure_url;
     updateData.cnicFrontPublicId = result.public_id;
+    updateData.cnicSubmittedAt = new Date();
+    if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
+      updateData.cnicVerificationStatus = "pending";
+      updateData.cnicRejectionReason = "";
+      resubmittedDocs.push("CNIC");
+    }
   }
 
   // ── CNIC Back (private) ──
@@ -94,6 +103,11 @@ export const uploadVerificationDocs = async (
     const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
     updateData.cnicBack = result.secure_url;
     updateData.cnicBackPublicId = result.public_id;
+    if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
+      updateData.cnicVerificationStatus = "pending";
+      updateData.cnicRejectionReason = "";
+      if (!resubmittedDocs.includes("CNIC")) resubmittedDocs.push("CNIC");
+    }
   }
 
   // ── Police Certificate (private) ──
@@ -109,6 +123,12 @@ export const uploadVerificationDocs = async (
     const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
     updateData.policeCertificate = result.secure_url;
     updateData.policeCertificatePublicId = result.public_id;
+    updateData.policeSubmittedAt = new Date();
+    if (existingProfile.policeVerificationStatus === "approved" || existingProfile.policeVerificationStatus === "rejected") {
+      updateData.policeVerificationStatus = "pending";
+      updateData.policeRejectionReason = "";
+      resubmittedDocs.push("Police verification");
+    }
   }
 
   // ── Video Intro (public — not sensitive, students need to view it) ──
@@ -124,6 +144,12 @@ export const uploadVerificationDocs = async (
     const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/verification/videos", "video", false);
     updateData.videoIntro = result.secure_url;
     updateData.videoIntroPublicId = result.public_id;
+    updateData.demoVideoSubmittedAt = new Date();
+    if (existingProfile.demoVideoStatus === "approved" || existingProfile.demoVideoStatus === "rejected") {
+      updateData.demoVideoStatus = "pending";
+      updateData.demoVideoRejectionReason = "";
+      resubmittedDocs.push("Demo video");
+    }
   }
 
   if (Object.keys(updateData).length === 0) {
@@ -131,11 +157,28 @@ export const uploadVerificationDocs = async (
     return;
   }
 
-  await TutorProfile.findOneAndUpdate(
+  updateData.verificationStatus = "pending";
+  updateData.lastStatusChangeAt = new Date();
+
+  const updated = await TutorProfile.findOneAndUpdate(
     { user: req.user?._id },
-    { ...updateData, verificationStatus: "pending" },
+    updateData,
     { new: true }
   );
+
+  if (resubmittedDocs.length > 0) {
+    const tutorUser = await User.findById(req.user?._id).select("name email applicationId");
+    if (tutorUser) {
+      const cta = {
+        applicationId: tutorUser.applicationId || "TUT-PENDING",
+        statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+      };
+      for (const docType of resubmittedDocs) {
+        const { subject, html } = documentResubmittedEmail(tutorUser.name, docType, cta);
+        await sendEmail({ to: tutorUser.email, subject, html });
+      }
+    }
+  }
 
   res.status(200).json({
     success: true,

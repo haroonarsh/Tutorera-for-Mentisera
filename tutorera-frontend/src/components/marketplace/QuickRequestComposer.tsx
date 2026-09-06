@@ -349,6 +349,7 @@ export default function QuickRequestComposer() {
         selectedCity={city}
         onSelect={handleLocationSelect}
         mode={mode === "online" ? "country_only" : "country_and_city"}
+        countries={geo.countries}
       />
     </div>
   );

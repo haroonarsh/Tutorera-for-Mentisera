@@ -7,7 +7,7 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloud
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
-import { applicationSubmittedEmail } from "../utils/trackingEmails";
+import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/trackingEmails";
 import { sendNotification } from "../utils/socket";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -284,6 +284,7 @@ export const saveOnboardingStep = async (
       countryName: parsedData.countryName || "Pakistan",
       city: parsedData.city,
       timezone: parsedData.timezone || "Asia/Karachi",
+      currency: parsedData.currency || "PKR",
       gender: parsedData.gender,
       dateOfBirth: parsedData.dateOfBirth,
       languages: parsedData.languages || [{ language: "English", proficiency: "Fluent" }],
@@ -296,6 +297,7 @@ export const saveOnboardingStep = async (
       countryName: parsedData.countryName || "Pakistan",
       city: parsedData.city,
       timezone: parsedData.timezone || "Asia/Karachi",
+      currency: parsedData.currency || "PKR",
     });
   }
 
@@ -335,12 +337,24 @@ export const saveOnboardingStep = async (
     }];
 
     const wasSubmitted = !!(profile.education?.[0]?.degreeDoc);
+    const resubmitDegree = Boolean(degreeDocUrl) && (profile.degreeVerificationStatus === "rejected" || profile.degreeVerificationStatus === "approved");
     updateData = {
       education,
       onboardingStep: 3,
       ...(degreeDocUrl && { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() }),
-      ...(degreeDocUrl && !wasSubmitted ? { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() } : {}),
+      ...(resubmitDegree && { degreeRejectionReason: "" }),
     };
+
+    if (resubmitDegree) {
+      const tutorUser = await User.findById(req.user?._id).select("name email applicationId");
+      if (tutorUser) {
+        const { subject, html } = documentResubmittedEmail(tutorUser.name, "Educational documents", {
+          applicationId: tutorUser.applicationId || "TUT-PENDING",
+          statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+        });
+        await sendEmail({ to: tutorUser.email, subject, html });
+      }
+    }
   }
 
   else if (stepNum === 3) {
@@ -511,6 +525,28 @@ export const saveOnboardingStep = async (
       verificationStatus: "pending",
       lastStatusChangeAt: new Date(),
     };
+
+    if (resubmitCnic || resubmitDemo || resubmitPolice) {
+      const tutorUser = await User.findById(req.user?._id).select("name email applicationId");
+      if (tutorUser) {
+        const cta = {
+          applicationId: tutorUser.applicationId || "TUT-PENDING",
+          statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+        };
+        if (resubmitCnic) {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, "CNIC", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }
+        if (resubmitDemo) {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, "Demo video", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }
+        if (resubmitPolice) {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, "Police verification", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }
+      }
+    }
   }
 
   // Save to DB
