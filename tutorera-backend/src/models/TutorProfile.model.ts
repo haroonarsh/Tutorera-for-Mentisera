@@ -130,7 +130,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     subjects: [{ type: String, trim: true }],
     levels: [{
       type: String,
-      enum: ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"],
+      enum: ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Dergee", "Test Preparation", "Other"],
     }],
     curricula: [{ type: String, trim: true }],
 
