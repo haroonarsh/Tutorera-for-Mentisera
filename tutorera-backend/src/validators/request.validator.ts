@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 
 export const createRequestSchema = z.object({
     subject: z.string().min(2, "Subject is required").max(100),
-    level: z.enum(["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Dergee", "Test Preparation", "Other"]),
+    level: z.enum(["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"]),
     description: z.string().min(10, "Description must be at least 10 characters").max(1000),
     budget: z.number().positive("Budget must be a positive number"),
     maximumBudget: z.number().positive().optional(),
@@ -29,7 +29,7 @@ export const createRequestSchema = z.object({
 export const createDirectBookingRequestSchema = z.object({
     tutorId: z.string().min(1, "Tutor ID is required"),
     subject: z.string().min(2, "Subject is required").max(100),
-    level: z.enum(["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Dergee", "Test Preparation", "Other"]),
+    level: z.enum(["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"]),
     description: z.string().min(10, "Description must be at least 10 characters").max(1000),
     teachingMode: z.enum(["online", "in-person", "both"]).optional(),
     city: z.string().max(100).optional(),
