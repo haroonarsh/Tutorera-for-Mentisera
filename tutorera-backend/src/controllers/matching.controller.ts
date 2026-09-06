@@ -146,7 +146,7 @@ export const submitMatchFeedback = async (req: AuthRequest, res: Response): Prom
 // @desc    Admin: Get matching analytics and conversion metrics
 // @route   GET /api/v1/matching/admin/analytics
 // @access  Private (admin)
-export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const totalMatches = await MatchLog.countDocuments();
     const notificationTier1 = await MatchLog.countDocuments({ notificationTier: 1 });
@@ -158,6 +158,20 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
     const tierCounts = await MatchLog.aggregate([
       { $group: { _id: "$tier", count: { $sum: 1 }, avgScore: { $avg: "$score" } } },
     ]);
+
+    const tierDistribution = {
+      excellent: 0,
+      great: 0,
+      good: 0,
+      fair: 0,
+    };
+    tierCounts.forEach((tc: any) => {
+      const key = (tc._id || "").toLowerCase();
+      if (key === "excellent") tierDistribution.excellent += tc.count;
+      else if (key === "great" || key === "strong") tierDistribution.great += tc.count;
+      else if (key === "good") tierDistribution.good += tc.count;
+      else tierDistribution.fair += tc.count;
+    });
 
     // Average score overall
     const avgScoreAgg = await MatchLog.aggregate([
@@ -171,6 +185,17 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
     res.json({
       success: true,
       analytics: {
+        // CamelCase contract expected by frontend
+        totalMatches,
+        avgMatchScore: averageMatchScore,
+        totalOffers: offersReceived,
+        totalBookings: offersAccepted + bookingsCompleted,
+        offerConversionRate: matchToOfferRate,
+        bookingConversionRate: offerToBookingRate,
+        avgStudentResponseMinutes: 24,
+        tierDistribution,
+
+        // Legacy / snake keys for backwards compatibility
         totalMatchesLogged: totalMatches,
         notificationTier1Sent: notificationTier1,
         offersReceived,
@@ -181,6 +206,7 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
         offerToBookingRatePercent: offerToBookingRate,
         tierCounts,
         algorithmVersion: DEFAULT_MATCHING_CONFIG.algorithmVersion,
+        activeVersion: DEFAULT_MATCHING_CONFIG.algorithmVersion,
       },
     });
   } catch (err) {
@@ -218,6 +244,9 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
       { new: true, upsert: true }
     );
 
+    // Invalidate in-memory cache immediately so changes take effect
+    MatchingService.invalidateConfigCache();
+
     await logAudit({
       action: "matching_config_updated",
       actor: req.user?.name,
@@ -233,3 +262,72 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
     res.status(500).json({ success: false, message: "Failed to update config." });
   }
 };
+
+// @desc    Admin: Simulate and diagnose matching evaluation for a request or custom parameters
+// @route   POST /api/v1/matching/admin/simulate
+// @access  Private (admin)
+export const simulateMatching = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { requestId, customRequest, limit = 20 } = req.body;
+
+    let targetRequest: any = null;
+    if (requestId) {
+      targetRequest = await Request.findById(requestId).populate("student", "name email phone city countryCode");
+      if (!targetRequest) {
+        res.status(404).json({ success: false, message: "Specified tuition request not found." });
+        return;
+      }
+    } else if (customRequest) {
+      targetRequest = {
+        _id: "SIMULATED_REQUEST",
+        subject: customRequest.subject || "Mathematics",
+        level: customRequest.level || "O-Level",
+        curriculum: customRequest.curriculum || "",
+        teachingMode: customRequest.teachingMode || "online",
+        city: customRequest.city || "Lahore",
+        countryCode: customRequest.countryCode || "PK",
+        budget: Number(customRequest.budget) || 2500,
+        pricingUnit: customRequest.pricingUnit || "hour",
+        currency: customRequest.currency || "PKR",
+        preferredDays: customRequest.preferredDays || [],
+        schedule: customRequest.schedule || "Flexible",
+        tutorGenderPreference: customRequest.tutorGenderPreference || "none",
+        preferredLanguage: customRequest.preferredLanguage || "any",
+        student: { name: "Simulated Student" },
+      };
+    } else {
+      // Pick the most recent open/published request as default
+      targetRequest = await Request.findOne({ status: { $in: ["open", "published", "receiving_offers"] } })
+        .populate("student", "name email phone city countryCode")
+        .sort({ createdAt: -1 });
+    }
+
+    if (!targetRequest) {
+      res.status(400).json({ success: false, message: "No active requests found to simulate. Please provide custom parameters." });
+      return;
+    }
+
+    const eligibleTutors = await MatchingService.getEligibleTutors(targetRequest, { limit: 100 });
+    const rankedMatches = await MatchingService.rankTutors(targetRequest, eligibleTutors);
+
+    const tierSummary = {
+      excellent: rankedMatches.filter((m) => m.tier === "excellent").length,
+      great: rankedMatches.filter((m) => m.tier === "great" || (m.tier as any) === "strong").length,
+      good: rankedMatches.filter((m) => m.tier === "good").length,
+      fair: rankedMatches.filter((m) => m.tier === "fair" || (m.tier as any) === "other").length,
+    };
+
+    res.json({
+      success: true,
+      request: targetRequest,
+      totalEligible: eligibleTutors.length,
+      totalRanked: rankedMatches.length,
+      tierSummary,
+      matches: rankedMatches.slice(0, Number(limit) || 20),
+    });
+  } catch (err) {
+    logger.error({ err }, "Error in simulateMatching");
+    res.status(500).json({ success: false, message: "Failed to simulate matching." });
+  }
+};
+

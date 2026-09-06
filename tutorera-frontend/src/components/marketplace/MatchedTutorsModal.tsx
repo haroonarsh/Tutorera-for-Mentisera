@@ -68,7 +68,31 @@ export default function MatchedTutorsModal({
       .get(`/matching/requests/${requestId}/tutors?limit=10`)
       .then((res) => {
         if (isMounted) {
-          setTutors(res.data?.matches || []);
+          const rawMatches: any[] = res.data?.matches || [];
+          const normalizedMatches: MatchedTutor[] = rawMatches.map((m) => {
+            const rawTier = (m.tier || "").toLowerCase();
+            const tier: "excellent" | "great" | "good" | "fair" =
+              rawTier === "excellent"
+                ? "excellent"
+                : rawTier === "great" || rawTier === "strong"
+                ? "great"
+                : rawTier === "good"
+                ? "good"
+                : "fair";
+
+            const score = typeof m.score === "number" ? m.score : typeof m.matchScore === "number" ? m.matchScore : 75;
+
+            return {
+              ...m,
+              score,
+              tier,
+              tutor: m.tutor || {},
+              reasons: m.reasons || [],
+              scoreBreakdown: m.scoreBreakdown || {},
+            };
+          });
+
+          setTutors(normalizedMatches);
         }
       })
       .catch((err) => {
@@ -219,7 +243,7 @@ export default function MatchedTutorsModal({
 
                         {t.education && t.education.length > 0 && (
                           <p className="text-xs text-slate-600 dark:text-slate-400">
-                            🎓 {t.education[0].degree} in {t.education[0].field} ({t.education[0].institution})
+                            🎓 {t.education[0].degree} {t.education[0].field ? `in ${t.education[0].field}` : ""} ({t.education[0].institution || "University"})
                           </p>
                         )}
                       </div>

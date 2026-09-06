@@ -13,6 +13,7 @@ import { containsContactInfo } from "../utils/contentFilter";
 import { logAudit } from "../utils/logAudit";
 import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
+import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
 import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
 import { convertToPKR } from "../config/countries";
@@ -179,11 +180,11 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   if (req.user?.role === "tutor") {
     const TutorProfile = (await import("../models/TutorProfile.model")).default;
     const profile = await TutorProfile.findOne({ user: req.user._id });
-    if (!profile || profile.verificationStatus !== "approved") {
+    if (!profile || !isMarketplaceEligible(profile)) {
       res.status(403).json({
         success: false,
         code: "TUTOR_NOT_APPROVED",
-        message: "Your profile must be approved before you can browse requests.",
+        message: "Your profile must be fully verified before you can browse requests.",
       });
       return;
     }
@@ -280,28 +281,29 @@ export const cancelRequest = async (req: AuthRequest, res: Response): Promise<vo
 // @route   POST /api/requests/:id/bids
 // @access  Private (tutor)
 export const placeBid = async (req: AuthRequest, res: Response): Promise<void> => {
-  // Block unapproved tutors
   const TutorProfile = (await import("../models/TutorProfile.model")).default;
   const tutorProfile = await TutorProfile.findOne({ user: req.user?._id });
-  if (!tutorProfile || tutorProfile.verificationStatus !== "approved") {
+  if (!tutorProfile || !isMarketplaceEligible(tutorProfile)) {
     res.status(403).json({
       success: false,
       code: "TUTOR_NOT_APPROVED",
-      message: "Your profile must be approved before you can send offers.",
+      message: "Your profile must be fully verified before you can send offers.",
     });
     return;
   }
-  if (tutorProfile.suspendedAt || tutorProfile.reVerificationRequired) {
-    res.status(403).json({
-      success: false,
-      code: "TUTOR_SUSPENDED",
-      message: "Your profile is currently suspended or requires re-verification. Please check your application status.",
-    });
-    return;
-  }
+
   const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible expiresAt");
   if (!requested) {
     res.status(404).json({ success: false, message: "Request not found." });
+    return;
+  }
+
+  if (!isHomeTuitionEligible(tutorProfile) && requested.teachingMode === "in-person") {
+    res.status(403).json({
+      success: false,
+      code: "HOME_TUITION_POLICE_REQUIRED",
+      message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
+    });
     return;
   }
   if (requested.status === "expired" || (requested.expiresAt && requested.expiresAt.getTime() <= Date.now())) {
@@ -873,7 +875,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
 
   const TutorProfile = (await import("../models/TutorProfile.model")).default;
   const tutorProfile = await TutorProfile.findOne({ user: tutorId });
-  if (!tutorProfile || tutorProfile.verificationStatus !== "approved") {
+  if (!tutorProfile || !isMarketplaceEligible(tutorProfile)) {
     res.status(404).json({ success: false, message: "Tutor not found or not available for booking." });
     return;
   }
@@ -882,15 +884,13 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   // Online Tuition: No Police Verification required.
   // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
   const requestedMode = teachingMode || tutorProfile.teachingMode;
-  if (requestedMode === "in-person") {
-    if (tutorProfile.policeVerificationStatus !== "approved") {
-      res.status(400).json({
-        success: false,
-        code: "HOME_TUITION_POLICE_REQUIRED",
-        message: "This tutor is currently approved for Online Tuition only. Home Tuition requires an approved Police Verification Report.",
-      });
-      return;
-    }
+  if (requestedMode === "in-person" && !isHomeTuitionEligible(tutorProfile)) {
+    res.status(400).json({
+      success: false,
+      code: "HOME_TUITION_POLICE_REQUIRED",
+      message: "This tutor is currently approved for Online Tuition only. Home Tuition requires an approved Police Verification Report.",
+    });
+    return;
   }
 
   // Prevent duplicate direct requests to the same tutor while one is still pending

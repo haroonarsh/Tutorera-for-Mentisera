@@ -12,7 +12,7 @@ type GuardStatus = "loading" | "ok" | "blocked";
  * - Logged-out visitors → redirected to /login
  * - Admins → redirected away (not meant for admin pages)
  * - Students → allowed through immediately
- * - Tutors → must be an approved tutor; pending/rejected are redirected to /dashboard
+ * - Tutors → must be a fully verified tutor; pending/rejected are redirected to /dashboard
  * - Network/API errors while checking tutor status → fail closed (blocked), not silently approved
  */
 export function useAppGuard() {
@@ -40,9 +40,10 @@ export function useAppGuard() {
 
         if (user.role === "tutor") {
         setStatus("loading");
-        api.get("/tutors/onboarding/status", { timeout: 8000 })
+        api.get("/tutor/application-status", { timeout: 8000 })
             .then(res => {
-            if (res.data.verificationStatus === "approved") {
+            const eligible = res.data?.payload?.marketplaceEligibility?.eligible;
+            if (eligible) {
                 setStatus("ok");
             } else {
                 setStatus("blocked");
@@ -50,7 +51,6 @@ export function useAppGuard() {
             }
             })
             .catch(() => {
-            // Fail closed — don't assume approved on a network error.
             setStatus("blocked");
             router.replace("/dashboard");
             });

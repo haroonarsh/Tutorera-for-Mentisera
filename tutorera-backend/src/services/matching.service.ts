@@ -17,8 +17,10 @@ import {
   MatchingConfigData,
   SUBJECT_ALIASES,
   LEVEL_HIERARCHY,
+  normalizeLevel,
 } from "../config/matchingConfig";
 import { convertCurrencyRate } from "../config/countries";
+import { isMarketplaceEligible, isHomeTuitionEligible } from "./tracking.service";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 
@@ -29,7 +31,7 @@ export interface MatchReason {
 
 export interface MatchScoreResult {
   score: number;
-  tier: "excellent" | "strong" | "good" | "other";
+  tier: "excellent" | "great" | "good" | "fair" | "strong" | "other";
   scoreBreakdown: Record<string, number>;
   reasons: string[];
   algorithmVersion: string;
@@ -46,8 +48,9 @@ export interface MatchScoreResult {
 export interface RankedTutorMatch {
   tutor: any;
   tutorProfile: any;
+  score: number;
   matchScore: number;
-  tier: "excellent" | "strong" | "good" | "other";
+  tier: "excellent" | "great" | "good" | "fair" | "strong" | "other";
   scoreBreakdown: Record<string, number>;
   reasons: string[];
   isColdStartExploration: boolean;
@@ -55,15 +58,55 @@ export interface RankedTutorMatch {
 
 export interface RankedRequestMatch {
   request: any;
+  score: number;
   matchScore: number;
-  tier: "excellent" | "strong" | "good" | "other";
+  tier: "excellent" | "great" | "good" | "fair" | "strong" | "other";
   scoreBreakdown: Record<string, number>;
   reasons: string[];
+}
+
+export function buildSubjectSearchPatterns(subject: string): RegExp[] {
+  const clean = (subject || "").trim().toLowerCase();
+  if (!clean) return [];
+  const patterns: RegExp[] = [];
+  patterns.push(new RegExp(`^${escapeRegExp(clean)}$`, "i"));
+  if (clean.length >= 3) {
+    patterns.push(new RegExp(`\\b${escapeRegExp(clean)}\\b`, "i"));
+  }
+
+  // Alias lookup
+  const alias = SUBJECT_ALIASES[clean];
+  if (alias) {
+    patterns.push(new RegExp(`^${escapeRegExp(alias.primary)}$`, "i"));
+    patterns.push(new RegExp(`\\b${escapeRegExp(alias.primary.toLowerCase())}\\b`, "i"));
+    alias.related.forEach((rel) => {
+      patterns.push(new RegExp(`^${escapeRegExp(rel)}$`, "i"));
+      patterns.push(new RegExp(`\\b${escapeRegExp(rel.toLowerCase())}\\b`, "i"));
+    });
+  }
+
+  // Reverse alias lookup
+  for (const [key, val] of Object.entries(SUBJECT_ALIASES)) {
+    if (val.primary.toLowerCase() === clean || val.related.some((r) => r.toLowerCase() === clean)) {
+      patterns.push(new RegExp(`^${escapeRegExp(key)}$`, "i"));
+      patterns.push(new RegExp(`^${escapeRegExp(val.primary)}$`, "i"));
+    }
+  }
+
+  return patterns;
 }
 
 export class MatchingService {
   private static cachedConfig: MatchingConfigData | null = null;
   private static configCacheTime = 0;
+
+  /**
+   * Clears in-memory cached matching weights and thresholds immediately
+   */
+  public static invalidateConfigCache(): void {
+    this.cachedConfig = null;
+    this.configCacheTime = 0;
+  }
 
   /**
    * Retrieves active matching weights and thresholds from DB or fallback
@@ -123,21 +166,28 @@ export class MatchingService {
     request: IRequest,
     options: { limit?: number; skip?: number } = {}
   ): Promise<ITutorProfile[]> {
+    const isOnline = request.teachingMode === "online";
+    const isHome = request.teachingMode === "in-person" || (request.teachingMode as string) === "home";
+
     const query: Record<string, any> = {
-      verificationStatus: "approved",
+      isVerified: true,
       onboardingComplete: true,
+      demoVideoStatus: "approved",
+      cnicVerificationStatus: "approved",
+      degreeVerificationStatus: "approved",
+      verificationStatus: "approved",
       suspendedAt: { $exists: false },
+      reVerificationRequired: { $exists: false },
     };
 
     // Teaching Mode & Safety Filter
-    if (request.teachingMode === "online") {
+    if (isOnline) {
       query.teachingMode = { $in: ["online", "both"] };
       if (request.preferredTutorCountries && request.preferredTutorCountries.length > 0) {
         query.countryCode = { $in: request.preferredTutorCountries };
       }
-    } else if (request.teachingMode === "in-person") {
-      query.teachingMode = { $in: ["in-person", "both"] };
-      // Police verification is strictly required for in-person home tutoring
+    } else if (isHome) {
+      query.teachingMode = { $in: ["in-person", "both", "home"] };
       query.policeVerificationStatus = "approved";
       if (request.countryCode) {
         query.countryCode = request.countryCode;
@@ -146,11 +196,14 @@ export class MatchingService {
         query.city = new RegExp(`^${request.city.trim()}$`, "i");
       }
     } else {
-      // "both" mode
+      // "both" mode: show online-capable tutors everywhere, and in-person tutors only where police + location match
       query.$or = [
-        { teachingMode: { $in: ["online", "both"] } },
         {
-          teachingMode: { $in: ["in-person", "both"] },
+          teachingMode: { $in: ["online", "both"] },
+          ...(request.preferredTutorCountries ? { countryCode: { $in: request.preferredTutorCountries } } : {}),
+        },
+        {
+          teachingMode: { $in: ["in-person", "both", "home"] },
           policeVerificationStatus: "approved",
           ...(request.countryCode ? { countryCode: request.countryCode } : {}),
           ...(request.city ? { city: new RegExp(`^${request.city.trim()}$`, "i") } : {}),
@@ -158,20 +211,16 @@ export class MatchingService {
       ];
     }
 
-    // Subject Filtering (case-insensitive and domain alias)
-    const normalizedSub = request.subject.trim().toLowerCase();
-    const aliasInfo = SUBJECT_ALIASES[normalizedSub];
-    const subjectPatterns = [new RegExp(`^${escapeRegExp(request.subject.trim())}$`, "i")];
-    if (aliasInfo) {
-      aliasInfo.related.forEach((rel) => {
-        subjectPatterns.push(new RegExp(`^${escapeRegExp(rel)}$`, "i"));
-      });
+    // Subject Filtering (case-insensitive, synonym alias and token patterns)
+    const subjectPatterns = buildSubjectSearchPatterns(request.subject);
+    if (subjectPatterns.length > 0) {
+      query.subjects = { $in: subjectPatterns };
     }
-    query.subjects = { $in: subjectPatterns };
 
-    // Level Compatibility
+    // Level Compatibility (normalized)
     if (request.level) {
-      query.levels = { $in: [request.level, "Other"] };
+      const normLevel = normalizeLevel(request.level);
+      query.levels = { $in: [request.level, normLevel, "Other", "Any"] };
     }
 
     // Gender preference if explicitly chosen by student
@@ -207,7 +256,7 @@ export class MatchingService {
     if (isHomeTuition && !hasPoliceClearance) {
       return {
         score: 0,
-        tier: "other",
+        tier: "fair",
         scoreBreakdown: { verification: 0 },
         reasons: ["Police certificate verification required for home tuition."],
         algorithmVersion: cfg.algorithmVersion,
@@ -220,19 +269,23 @@ export class MatchingService {
 
     // ── 1. Subject Match ──
     const maxSub = weights.subject;
-    const reqSubLower = request.subject.trim().toLowerCase();
-    const tutorSubsLower = (tutor.subjects || []).map((s) => s.trim().toLowerCase());
+    const reqSubLower = (request.subject || "").trim().toLowerCase();
+    const tutorSubsLower = (tutor.subjects || []).map((s) => (s || "").trim().toLowerCase());
 
     const isExactSub = tutorSubsLower.includes(reqSubLower);
     const alias = SUBJECT_ALIASES[reqSubLower];
-    const isRelatedSub = !isExactSub && alias && alias.related.some((r) => tutorSubsLower.includes(r.toLowerCase()));
+    const isRelatedSub = !isExactSub && alias && alias.related.some((r) => tutorSubsLower.some((ts) => ts === r.toLowerCase() || ts.includes(r.toLowerCase())));
+    const isTokenOverlap = !isExactSub && !isRelatedSub && tutorSubsLower.some((ts) => ts.includes(reqSubLower) || reqSubLower.includes(ts));
 
     if (isExactSub) {
       breakdown.subject = maxSub;
       reasons.push(`Exact ${request.subject} specialist`);
     } else if (isRelatedSub) {
-      breakdown.subject = Math.round(maxSub * 0.82);
+      breakdown.subject = Math.round(maxSub * 0.88);
       reasons.push(`Specialized knowledge in related ${request.subject} domain`);
+    } else if (isTokenOverlap) {
+      breakdown.subject = Math.round(maxSub * 0.75);
+      reasons.push(`Teaches matching curriculum in ${request.subject}`);
     } else {
       breakdown.subject = Math.round(maxSub * 0.5);
     }
@@ -240,23 +293,25 @@ export class MatchingService {
     // ── 2. Level & Curriculum Match ──
     const maxLvl = weights.levelCurriculum;
     const reqLvl = request.level;
+    const normReqLvl = normalizeLevel(reqLvl);
     const reqCurriculum = (request.curriculum || "").trim().toLowerCase();
-    const tutorLevels = tutor.levels || [];
-    const tutorCurricula = (tutor.curricula || []).map((c) => c.trim().toLowerCase());
+    const tutorLevels = (tutor.levels || []).map((l) => (l || "").trim());
+    const tutorNormLevels = tutorLevels.map((l) => normalizeLevel(l));
+    const tutorCurricula = (tutor.curricula || []).map((c) => (c || "").trim().toLowerCase());
 
-    const hasExactLevel = tutorLevels.includes(reqLvl);
-    const hasCurriculum = reqCurriculum ? tutorCurricula.includes(reqCurriculum) : true;
+    const hasExactLevel = tutorLevels.includes(reqLvl) || tutorNormLevels.includes(normReqLvl);
+    const hasCurriculum = reqCurriculum ? tutorCurricula.some((c) => c.includes(reqCurriculum) || reqCurriculum.includes(c)) : true;
 
     if (hasExactLevel && hasCurriculum && reqCurriculum) {
       breakdown.levelCurriculum = maxLvl;
       reasons.push(`${request.curriculum} & ${reqLvl} syllabus certified`);
     } else if (hasExactLevel) {
-      breakdown.levelCurriculum = Math.round(maxLvl * 0.85);
+      breakdown.levelCurriculum = Math.round(maxLvl * 0.88);
       reasons.push(`Teaches ${reqLvl} students`);
     } else {
       // Check level hierarchy adjacency
-      const reqRank = LEVEL_HIERARCHY[reqLvl] || 3;
-      const hasAdjacent = tutorLevels.some((lvl) => Math.abs((LEVEL_HIERARCHY[lvl] || 3) - reqRank) <= 1);
+      const reqRank = LEVEL_HIERARCHY[normReqLvl] || 3;
+      const hasAdjacent = tutorNormLevels.some((lvl) => Math.abs((LEVEL_HIERARCHY[lvl] || 3) - reqRank) <= 1);
       breakdown.levelCurriculum = hasAdjacent ? Math.round(maxLvl * 0.6) : Math.round(maxLvl * 0.35);
     }
 
@@ -274,9 +329,12 @@ export class MatchingService {
 
     // ── 4. Teaching Mode Match ──
     const maxMode = weights.mode;
-    if (request.teachingMode === "both" || tutor.teachingMode === "both" || request.teachingMode === tutor.teachingMode) {
+    const reqMode = (request.teachingMode as string) === "home" ? "in-person" : (request.teachingMode || "online");
+    const tutMode = (tutor.teachingMode as string) === "home" ? "in-person" : (tutor.teachingMode || "online");
+
+    if (reqMode === "both" || tutMode === "both" || reqMode === tutMode) {
       breakdown.mode = maxMode;
-      if (tutor.teachingMode === "both") {
+      if (tutMode === "both") {
         reasons.push(`Offers both online and in-person sessions`);
       }
     } else {
@@ -298,6 +356,17 @@ export class MatchingService {
       exchangeRate = conv.rate;
     }
 
+    let comparableTutorRate = convertedTutorRate;
+    let budgetDisplayLabel = `${reqCurrency} ${convertedTutorRate.toLocaleString()}/hr`;
+
+    if (request.pricingUnit === "month") {
+      const sessionsPerWeek = request.sessionsPerWeek || 3;
+      const durationHours = request.sessionDurationMinutes ? request.sessionDurationMinutes / 60 : 1;
+      const monthlyHours = Math.max(4, Math.round(sessionsPerWeek * 4 * durationHours));
+      comparableTutorRate = Math.round(convertedTutorRate * monthlyHours);
+      budgetDisplayLabel = `~${reqCurrency} ${comparableTutorRate.toLocaleString()}/mo (${reqCurrency} ${convertedTutorRate.toLocaleString()}/hr)`;
+    }
+
     const conversionMeta = {
       originalRate: tutorRate,
       originalCurrency: tutorCurrency,
@@ -307,20 +376,22 @@ export class MatchingService {
     };
 
     // Check hard maximum budget if specified by student
-    if (request.maximumBudget && convertedTutorRate > request.maximumBudget) {
+    if (request.maximumBudget && comparableTutorRate > request.maximumBudget) {
       return null; // Excluded by student's private maximum budget
     }
 
     const reqBudget = request.budget || 0;
     if (reqBudget > 0) {
-      if (convertedTutorRate <= reqBudget) {
+      if (convertedTutorRate <= 0) {
+        breakdown.budget = Math.round(maxBudget * 0.5); // Neutral score for unpriced tutors
+      } else if (comparableTutorRate <= reqBudget) {
         breakdown.budget = maxBudget;
-        reasons.push(`Within your preferred budget (${reqCurrency} ${convertedTutorRate.toLocaleString()}/${request.pricingUnit})`);
+        reasons.push(`Within your preferred budget (${budgetDisplayLabel})`);
       } else {
-        const ratio = (convertedTutorRate - reqBudget) / reqBudget;
+        const ratio = (comparableTutorRate - reqBudget) / reqBudget;
         if (ratio <= 0.1) {
           breakdown.budget = Math.round(maxBudget * 0.9);
-          reasons.push(`Competitive rate close to your budget`);
+          reasons.push(`Competitive rate close to your budget (${budgetDisplayLabel})`);
         } else if (ratio <= 0.2) {
           breakdown.budget = Math.round(maxBudget * 0.7);
         } else if (ratio <= 0.35) {
@@ -422,7 +493,7 @@ export class MatchingService {
     const maxVer = weights.verification;
     let verPoints = 0;
     if (tutor.isVerified || tutor.verificationStatus === "approved") verPoints += maxVer * 0.6;
-    if (tutor.policeVerificationStatus === "approved") {
+    if (tutor.policeVerificationStatus === "approved" || (tutor as any).policeCertificateVerified === true) {
       verPoints += maxVer * 0.4;
       if (!isOnline) reasons.push(`Police character verified for home tuition`);
     } else {
@@ -434,9 +505,9 @@ export class MatchingService {
     const rawTotal = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
     const score = Math.min(100, Math.max(0, Math.round(rawTotal)));
 
-    let tier: "excellent" | "strong" | "good" | "other" = "other";
+    let tier: "excellent" | "great" | "good" | "fair" = "fair";
     if (score >= cfg.thresholds.excellent) tier = "excellent";
-    else if (score >= cfg.thresholds.strong) tier = "strong";
+    else if (score >= cfg.thresholds.strong) tier = "great";
     else if (score >= cfg.thresholds.good) tier = "good";
 
     return {
@@ -461,9 +532,36 @@ export class MatchingService {
     const scoredPromises = tutors.map(async (t) => {
       const match = await this.calculateMatchScore(request, t, config);
       if (!match) return null;
+
+      const tutorUser = (t as any).user || {};
+      const tutorHydrated = {
+        _id: tutorUser._id || (t as any)._id,
+        profileId: (t as any)._id,
+        name: tutorUser.name || (t as any).fullName || "Tutor",
+        email: tutorUser.email,
+        avatar: tutorUser.avatar,
+        city: (t as any).city || tutorUser.city,
+        countryCode: (t as any).countryCode || tutorUser.countryCode,
+        countryName: (t as any).countryName || tutorUser.countryName,
+        phone: tutorUser.phone || (t as any).phone,
+        hourlyRate: (t as any).hourlyRate,
+        currency: (t as any).currency || "PKR",
+        experience: (t as any).experience || 0,
+        education: (t as any).education || [],
+        subjects: (t as any).subjects || [],
+        levels: (t as any).levels || [],
+        curricula: (t as any).curricula || [],
+        teachingMode: (t as any).teachingMode || "online",
+        teachingModes: (t as any).teachingMode === "both" ? ["online", "in-person"] : [(t as any).teachingMode || "online"],
+        policeCertificateVerified: (t as any).policeVerificationStatus === "approved" || (t as any).policeCertificateVerified === true,
+        averageRating: (t as any).averageRating || 0,
+        totalReviews: (t as any).totalReviews || 0,
+      };
+
       return {
-        tutor: (t as any).user || t,
+        tutor: tutorHydrated,
         tutorProfile: t,
+        score: match.score,
         matchScore: match.score,
         tier: match.tier,
         scoreBreakdown: match.scoreBreakdown,
@@ -745,8 +843,9 @@ function calculateLocationScore(
     return { ratio: 0.85, reason: `Located in ${request.city}` };
   }
 
-  if (request.countryCode && tutor.countryCode && request.countryCode === tutor.countryCode) {
-    return { ratio: 0.5, reason: `Within ${request.countryName || "region"}` };
+  // If tutor explicitly listed the requested city in service areas
+  if (reqCity && tutorAreas.includes(reqCity)) {
+    return { ratio: 0.8, reason: `Provides home tutoring in ${request.city}` };
   }
 
   return { ratio: 0 };

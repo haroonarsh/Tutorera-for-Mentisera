@@ -7,7 +7,7 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloud
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
-import { applicationSubmittedEmail } from "../utils/trackingEmails";
+import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/trackingEmails";
 import { sendNotification } from "../utils/socket";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -335,11 +335,12 @@ export const saveOnboardingStep = async (
     }];
 
     const wasSubmitted = !!(profile.education?.[0]?.degreeDoc);
+    const resubmitDegree = Boolean(degreeDocUrl) && (profile.degreeVerificationStatus === "rejected" || profile.degreeVerificationStatus === "approved");
     updateData = {
       education,
       onboardingStep: 3,
       ...(degreeDocUrl && { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() }),
-      ...(degreeDocUrl && !wasSubmitted ? { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() } : {}),
+      ...(resubmitDegree && { degreeRejectionReason: "" }),
     };
   }
 
