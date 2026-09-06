@@ -513,13 +513,6 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
   res.status(200).json({ success: true, total: bids.length, bids });
 };
 
-// ── Relevant excerpt: request.controller.ts ──
-// Replaces the old acceptBid. Two functions now:
-//   1. initiateAcceptBid  — route handler, reserves the offer, starts payment checkout
-//   2. finalizeBidAcceptance — NOT a route; called only by the payment webhook once payment confirms
-
-const PAYMENT_HOLD_MINUTES = 30;
-
 // If a previous accept attempt's payment reservation has expired (student
 // abandoned checkout), revert the request/bid back to an acceptable state
 // so the bid isn't stuck in limbo forever. Called defensively at the start
@@ -545,11 +538,14 @@ export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Prom
   );
 }
 
+
+const PAYMENT_HOLD_MINUTES = 30;
+
 // @desc    Accept an offer — reserves it and starts payment checkout.
 //          The booking is NOT created here; it's created by
 //          finalizeBidAcceptance once payment is confirmed via webhook.
 // @route   PATCH /api/requests/:id/bids/:bidId/accept
-// @access  Private (student)
+// @access  Private (student or direct tutor)
 export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
   const requestId = new Types.ObjectId(req.params.id as string);
   const bidId = new Types.ObjectId(req.params.bidId as string);
@@ -661,9 +657,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Atomic guard — identical purpose to the original: only one accept
-  // attempt can win this transition, so two concurrent accept clicks can't
-  // both proceed. Everything downstream is safe BECAUSE this succeeded.
+  // Atomic guard — only one accept attempt can win this transition
   const reservedRequest = await Request.findOneAndUpdate(
     { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
     { status: "awaiting_payment" },
@@ -686,8 +680,6 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       amount: bid.amount,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
-      // "BID-" prefix lets the webhook handler tell this apart from a
-      // plain booking-id checkout (see payment.controller.ts).
       basketId: `BID-${bid._id.toString()}`,
       description: `TUTORERA offer acceptance ${bid._id.toString()}`,
       successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
@@ -701,9 +693,6 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       checkoutUrl,
     });
   } catch (err: any) {
-    // Checkout creation failed — roll back the reservation immediately so
-    // the request/bid aren't stranded in "awaiting_payment" until the next
-    // lazy cleanup happens to run.
     await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
     await Bid.updateOne(
       { _id: bid._id, status: "payment_pending" },

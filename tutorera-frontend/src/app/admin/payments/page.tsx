@@ -73,7 +73,7 @@ export default function PaymentsPage() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-          Track student payments and tutor payouts. All transfers are manual via NayaPay.
+          Track student payments and tutor payouts. Payments are processed automatically via Rapid Gateway.
         </p>
       </div>
 
@@ -94,25 +94,6 @@ export default function PaymentsPage() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* NayaPay Account Info */}
-      <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.875rem', padding: '1.25rem', marginBottom: '2rem' }}>
-        <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.9rem', marginBottom: '0.75rem' }}>💳 Company NayaPay Account</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
-          {[
-            { label: "Bank",           value: "NayaPay" },
-            { label: "Account Title",  value: "MENTISERA (SMC-PRIVATE) LIMITED" },
-            { label: "NayaPay ID",     value: "mentisera@nayapay" },
-            { label: "Account Number", value: "7556428306882526" },
-            { label: "IBAN",           value: "PK27NAYA7556428306882526" },
-          ].map(item => (
-            <div key={item.label}>
-              <p style={{ fontSize: '0.72rem', color: '#9ca3af', marginBottom: '0.2rem' }}>{item.label}</p>
-              <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, fontFamily: 'monospace' }}>{item.value}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Fee info banner */}

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   createRequest, getAllRequests, getMyRequests,
-  cancelRequest, placeBid, getBidsForRequest, initiateAcceptBid,
+  cancelRequest, placeBid, getBidsForRequest,
   createDirectBookingRequest, getMyDirectRequests, rejectBid,
   getPublicRequestsPreview,
   saveRequestDraftProgress,
@@ -29,6 +29,6 @@ router.post("/:id/extend", protect, authorize("student"), extendRequest);
 router.post("/:id/repost", protect, authorize("student"), repostRequest);
 router.post("/:id/bids", protect, authorize("tutor"), checkBidLimit, validate(placeBidSchema), placeBid);
 router.get("/:id/bids", protect, authorize("student"), getBidsForRequest);
-router.patch("/:id/bids/:bidId/accept", protect, initiateAcceptBid);
+// router.patch("/:id/bids/:bidId/accept", protect, initiateAcceptBid);
 
 export default router;
