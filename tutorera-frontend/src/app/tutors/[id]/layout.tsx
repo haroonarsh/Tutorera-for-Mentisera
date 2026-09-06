@@ -1,16 +1,24 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { fetchTutor, tutorProfileSlug } from "@/lib/tutor-directory";
 import { SITE_URL } from "@/lib/site";
 
 type Props = { children: React.ReactNode; params: Promise<{ id: string }> };
+
+function formatName(raw?: string): string {
+  if (!raw) return "Tutor";
+  return raw
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export async function generateMetadata({ params }: Omit<Props, "children">): Promise<Metadata> {
   const { id } = await params;
   const tutor = await fetchTutor(id);
   if (!tutor) return { title: "Tutor Profile", robots: { index: false, follow: true } };
 
-  const name = tutor.user?.name || tutor.fullName || "Tutor";
+  const name = formatName(tutor.user?.name || tutor.fullName);
   const subjects = tutor.subjects?.slice(0, 2).join(" & ") || "Academic";
   const country = tutor.countryName || tutor.user?.countryName || (tutor.countryCode === "PK" ? "Pakistan" : tutor.countryCode) || "Verified Educator";
   const city = tutor.city || tutor.user?.city;
@@ -40,7 +48,7 @@ export default async function TutorProfileLayout({ children, params }: Props) {
   const tutor = await fetchTutor(id);
   if (!tutor) return children;
 
-  const name = tutor.user?.name || tutor.fullName || "Tutor";
+  const name = formatName(tutor.user?.name || tutor.fullName);
   const url = `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`;
   const countryCode = tutor.countryCode || tutor.user?.countryCode || "PK";
   const countryName = tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode);
@@ -98,49 +106,12 @@ export default async function TutorProfileLayout({ children, params }: Props) {
     },
   };
 
-  const modeLabel = tutor.teachingMode === "both"
-    ? "online worldwide and in-person"
-    : tutor.teachingMode === "online"
-    ? "online worldwide"
-    : "in-person";
-
-  const locationDisplay = city ? `${city}, ${countryName}` : countryName;
-
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
-      <nav
-        aria-label="Breadcrumb"
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          padding: "1rem 1.5rem 0",
-          color: "#6b7280",
-          fontSize: ".875rem",
-        }}
-      >
-        <Link href="/tutors" style={{ color: "#0329B2" }}>
-          Tutors
-        </Link>{" "}
-        {countryCode && countryName && (
-          <>
-            <span aria-hidden="true">/</span>{" "}
-            <Link
-              href={`/${countryCode.toLowerCase()}/tutors`}
-              style={{ color: "#0329B2" }}
-            >
-              {countryName}
-            </Link>{" "}
-          </>
-        )}
-        <span aria-hidden="true">/</span> {name}
-        <p style={{ marginTop: ".5rem" }}>
-          {name} teaches {tutor.subjects?.join(", ") || "academic subjects"} ({locationDisplay}) and offers {modeLabel} lessons.
-        </p>
-      </nav>
       {children}
     </>
   );
