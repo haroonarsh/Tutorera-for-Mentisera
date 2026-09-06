@@ -2,7 +2,7 @@ import { Request } from "express";
 import { Document, Types } from "mongoose";
 
 // User Roles
-export type UserRole = "student" | "tutor" | "admin" | "pending";
+export type UserRole = "student" | "tutor" | "admin" | "pending" | "parent";
 export type UserPlan = "free" | "standard" | "premium";
 export type AuthProvider = "local" | "google";
 
@@ -51,10 +51,12 @@ export interface IUser extends Document {
   parentConsentVerified?: boolean;
   parentGuardianEmail?: string;
   parentGuardianName?: string;
+  children?: Types.ObjectId[];
   dateOfBirth?: Date;
   isMinor?: boolean;
   marketingConsent?: boolean;
   cookieConsent?: { necessary: boolean; analytics: boolean; marketing: boolean; updatedAt: Date };
+  notificationPreferences?: INotificationPreferences;
   isDeleted?: boolean;
   deletedAt?: Date;
   deletionReason?: string;
@@ -62,6 +64,17 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;
+}
+
+export interface INotificationPreferences {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  bookingUpdates: boolean;
+  bidNotifications: boolean;
+  chatMessages: boolean;
+  paymentUpdates: boolean;
+  securityAlerts: boolean;
+  platformUpdates: boolean;
 }
 
 // Extend Express Request to include user

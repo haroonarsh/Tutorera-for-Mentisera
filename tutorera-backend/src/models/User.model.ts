@@ -29,7 +29,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["student", "tutor", "admin", "pending"],
+      enum: ["student", "tutor", "admin", "pending", "parent"],
       default: "student",
     },
     adminRole: {
@@ -108,6 +108,7 @@ const userSchema = new Schema<IUser>(
     parentConsentVerified: { type: Boolean, default: false },
     parentGuardianEmail: { type: String, trim: true },
     parentGuardianName: { type: String, trim: true },
+    children: [{ type: Schema.Types.ObjectId, ref: "User" }],
     dateOfBirth: { type: Date },
     isMinor: { type: Boolean, default: false },
     marketingConsent: { type: Boolean, default: false },
@@ -116,6 +117,16 @@ const userSchema = new Schema<IUser>(
       analytics: { type: Boolean, default: false },
       marketing: { type: Boolean, default: false },
       updatedAt: { type: Date, default: Date.now },
+    },
+    notificationPreferences: {
+      emailNotifications: { type: Boolean, default: true },
+      pushNotifications: { type: Boolean, default: true },
+      bookingUpdates: { type: Boolean, default: true },
+      bidNotifications: { type: Boolean, default: true },
+      chatMessages: { type: Boolean, default: true },
+      paymentUpdates: { type: Boolean, default: true },
+      securityAlerts: { type: Boolean, default: true },
+      platformUpdates: { type: Boolean, default: false },
     },
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date },
@@ -126,8 +137,8 @@ const userSchema = new Schema<IUser>(
 
 // Hash password before saving
 userSchema.pre("save", async function () {
-  if (!this.isModified("password") || !this.password) return;
-  this.password = await bcrypt.hash(this.password as string, 12);
+  if (!this.isModified("password") || !(this as any).password) return;
+  (this as any).password = await bcrypt.hash((this as any).password, 12);
 });
 
 // Compare password
