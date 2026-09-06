@@ -13,6 +13,8 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   role: UserRole;
+  adminRole?: string;
+  adminPermissions?: string[];
   plan: UserPlan;
   bidsThisMonth: number;
   bidsResetDate: Date;

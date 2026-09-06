@@ -1,49 +1,111 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen,
   CreditCard, MessageSquare, Menu, FileText, Shield, Gift,
   Star, Banknote, BarChart2, ClipboardList,
-  Radio,
-  Layers,
-  Mail,
-  Sparkles,
+  Radio, Layers, Mail, Sparkles, AlertTriangle, TrendingDown,
+  CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
+  KeyRound, Activity,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useState } from "react";
 
 const C = UI_COLORS;
 
-const navItems = [
-  { href: "/admin",                  label: "Dashboard",        icon: <LayoutDashboard size={18} /> },
-  { href: "/admin/analytics",        label: "Analytics",        icon: <BarChart2 size={18} /> },
-  { href: "/admin/marketplace",      label: "Marketplace",      icon: <ClipboardList size={18} /> },
-  { href: "/admin/matching",         label: "Smart Matching",   icon: <Sparkles size={18} /> },
-  { href: "/admin/subscriptions",    label: "Subscriptions",    icon: <Layers size={18} /> },
-  { href: "/admin/audit-logs",       label: "Audit Logs",       icon: <ClipboardList size={18} /> },
-  { href: "/admin/email-logs",       label: "Email Logs",       icon: <Mail size={18} /> },
-  { href: "/admin/broadcasts",       label: "Broadcasts",       icon: <Radio size={18} /> },
-  { href: "/admin/verifications",    label: "Verifications",    icon: <ShieldCheck size={18} /> },
-  { href: "/admin/applications",     label: "Applications",     icon: <ClipboardList size={18} /> },
-  { href: "/admin/users",            label: "Users",            icon: <Users size={18} /> },
-  { href: "/admin/referrals",        label: "Referrals",        icon: <Gift size={18} /> },
-  { href: "/admin/bookings",         label: "Bookings",         icon: <BookOpen size={18} /> },
-  { href: "/admin/payments",         label: "Payments",         icon: <CreditCard size={18} /> },
-  { href: "/admin/payouts",          label: "Payouts",          icon: <Banknote size={18} /> },
-  { href: "/admin/contacts",         label: "Messages",         icon: <MessageSquare size={18} /> },
-  { href: "/admin/guarantee-claims", label: "Guarantee Claims", icon: <Shield size={18} /> },
-  { href: "/admin/student-ratings",  label: "Student Ratings",  icon: <Star size={18} /> },
-  { href: "/admin/blogs",            label: "Blog Posts",       icon: <FileText size={18} /> },
+interface NavSection {
+  title: string;
+  items: { href: string; label: string; icon: React.ReactNode; badge?: string }[];
+}
+
+const navSections: NavSection[] = [
+  {
+    title: "Control Tower",
+    items: [
+      { href: "/admin", label: "Control Tower", icon: <LayoutDashboard size={17} /> },
+      { href: "/admin/marketplace", label: "Marketplace Feed", icon: <ClipboardList size={17} /> },
+    ],
+  },
+  {
+    title: "Students",
+    items: [
+      { href: "/admin/students", label: "Students", icon: <Users size={17} /> },
+      { href: "/admin/at-risk-requests", label: "At-Risk Requests", icon: <AlertTriangle size={17} />, badge: "Action" },
+      { href: "/admin/student-ratings", label: "Student Ratings", icon: <Star size={17} /> },
+    ],
+  },
+  {
+    title: "Tutors",
+    items: [
+      { href: "/admin/tutors", label: "Tutors Directory", icon: <BookOpen size={17} /> },
+      { href: "/admin/applications", label: "Applications", icon: <ClipboardList size={17} /> },
+      { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={17} /> },
+      { href: "/admin/supply-gaps", label: "Supply Gaps", icon: <TrendingDown size={17} /> },
+    ],
+  },
+  {
+    title: "Marketplace",
+    items: [
+      { href: "/admin/matching", label: "Smart Matching", icon: <Sparkles size={17} /> },
+      { href: "/admin/bookings", label: "Bookings", icon: <CheckCircle size={17} /> },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { href: "/admin/payments", label: "Payments", icon: <CreditCard size={17} /> },
+      { href: "/admin/payouts", label: "Payouts", icon: <Banknote size={17} /> },
+      { href: "/admin/reconciliation", label: "Reconciliation", icon: <Calculator size={17} /> },
+      { href: "/admin/fee-config", label: "Fee Config", icon: <Sliders size={17} /> },
+    ],
+  },
+  {
+    title: "Trust & Safety",
+    items: [
+      { href: "/admin/safety-cases", label: "Safety Cases", icon: <ShieldAlert size={17} />, badge: "Cases" },
+      { href: "/admin/guarantee-claims", label: "Guarantee Claims", icon: <Shield size={17} /> },
+    ],
+  },
+  {
+    title: "Growth",
+    items: [
+      { href: "/admin/referrals", label: "Referrals", icon: <Gift size={17} /> },
+      { href: "/admin/subscriptions", label: "Subscriptions", icon: <Layers size={17} /> },
+      { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={17} /> },
+    ],
+  },
+  {
+    title: "Global Operations",
+    items: [
+      { href: "/admin/markets", label: "Market Rules", icon: <Globe size={17} /> },
+    ],
+  },
+  {
+    title: "Communications",
+    items: [
+      { href: "/admin/broadcasts", label: "Broadcasts", icon: <Radio size={17} /> },
+      { href: "/admin/email-logs", label: "Email Logs", icon: <Mail size={17} /> },
+      { href: "/admin/contacts", label: "Inquiries", icon: <MessageSquare size={17} /> },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/admin/users", label: "Users & Accounts", icon: <Users size={17} /> },
+      { href: "/admin/roles", label: "Admin Roles (RBAC)", icon: <KeyRound size={17} /> },
+      { href: "/admin/audit-logs", label: "Audit Logs", icon: <FileText size={17} /> },
+      { href: "/admin/system-health", label: "System Health", icon: <Activity size={17} /> },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -56,99 +118,214 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [sidebarOpen]);
-  
+
   const SidebarContent = () => (
-    <>
-      {/* Logo */}
-      <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "260px" }}>
+      {/* Brand Header */}
+      <div style={{ padding: "1.25rem 1.25rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
         <BrandLogo variant="light" size="sm" />
-        <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.2rem' }}>Admin Panel</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.5rem" }}>
+          <span style={{ color: "#93c5fd", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Control Tower
+          </span>
+          <span style={{ fontSize: "0.68rem", background: "rgba(59, 130, 246, 0.2)", color: "#bfdbfe", padding: "0.15rem 0.45rem", borderRadius: "999px", border: "1px solid rgba(59,130,246,0.3)" }}>
+            v2.6 RBAC
+          </span>
+        </div>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
-        {navItems.map(item => {
-          const isActive = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '600', backgroundColor: isActive ? 'rgba(3,41,178,0.32)' : 'transparent', color: isActive ? 'white' : '#cbd5e1', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)' }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
-              {item.icon} {item.label}
-            </Link>
-          );
-        })}
+      {/* Navigation Sections */}
+      <nav style={{ flex: 1, padding: "0.75rem 0.6rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {navSections.map((sec) => (
+          <div key={sec.title}>
+            <p style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
+              {sec.title}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+              {sec.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "0.5rem",
+                      textDecoration: "none",
+                      fontSize: "0.82rem",
+                      fontWeight: isActive ? 700 : 600,
+                      backgroundColor: isActive ? "rgba(3,41,178,0.55)" : "transparent",
+                      color: isActive ? "#ffffff" : "#cbd5e1",
+                      border: isActive ? "1px solid rgba(59,130,246,0.4)" : "1px solid transparent",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                      <span style={{ color: isActive ? "#60a5fa" : "#94a3b8" }}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          fontWeight: 800,
+                          padding: "0.1rem 0.4rem",
+                          borderRadius: "999px",
+                          backgroundColor: item.badge === "Action" ? "#ef4444" : "#f59e0b",
+                          color: "white",
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Logout */}
-      <div style={{ padding: '1rem 0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-        <button onClick={async () => { await logout(); router.replace("/"); }}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 1rem', borderRadius: '0.5rem', width: '100%', border: 'none', background: 'none', color: '#9ca3af', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-          <LogOut size={18} /> Logout
+      {/* User Footer & Logout */}
+      <div style={{ padding: "0.85rem 1rem", borderTop: "1px solid rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "0.5rem" }}>
+          <div style={{ color: "white", fontSize: "0.8rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis" }}>
+            {user?.name || "Admin"}
+          </div>
+          <div style={{ color: "#94a3b8", fontSize: "0.7rem", textTransform: "capitalize" }}>
+            {(user as any)?.adminRole?.replace(/_/g, " ") || "Super Admin"}
+          </div>
+        </div>
+        <button
+          onClick={async () => {
+            await logout();
+            router.replace("/");
+          }}
+          title="Sign out of Admin Panel"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "32px",
+            height: "32px",
+            borderRadius: "0.4rem",
+            border: "1px solid rgba(255,255,255,0.15)",
+            background: "rgba(255,255,255,0.05)",
+            color: "#f87171",
+            cursor: "pointer",
+          }}
+        >
+          <LogOut size={16} />
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
     <AdminGuard>
-      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F5F7FF' }}>
-
+      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
         {/* Desktop Sidebar */}
-        <div style={{ width: '240px', backgroundColor: C.primary, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 40 }} className="admin-sidebar-desktop">
+        <aside
+          style={{
+            width: "260px",
+            backgroundColor: "#0a1128",
+            display: "none",
+            flexDirection: "column",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            zIndex: 40,
+            borderRight: "1px solid #1e293b",
+          }}
+          className="admin-desktop-sidebar"
+        >
           <SidebarContent />
-        </div>
+        </aside>
 
-        {/* Mobile Sidebar Overlay */}
-        {sidebarOpen && (
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Admin navigation menu"
+        {/* Mobile Header Bar */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <header
+            style={{
+              height: "56px",
+              backgroundColor: "#0a1128",
+              borderBottom: "1px solid #1e293b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0 1rem",
+            }}
+            className="admin-mobile-header"
           >
-            <div style={{ width: '240px', backgroundColor: C.primary, display: 'flex', flexDirection: 'column', height: '100vh' }}>
-              <SidebarContent />
-            </div>
-            <div
-              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
-              onClick={() => setSidebarOpen(false)}
-              aria-hidden="true"
-            />
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div style={{ marginLeft: '240px', flex: 1, overflow: 'auto' }} className="admin-main">
-
-          {/* Mobile Header */}
-          <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }} className="admin-mobile-header">
-            <button title="Open sidebar" onClick={() => setSidebarOpen(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary }}>
-              <Menu size={24} />
+            <BrandLogo variant="light" size="sm" />
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                padding: "0.5rem",
+              }}
+              aria-label="Toggle navigation menu"
+            >
+              <Menu size={22} />
             </button>
-            <BrandLogo size="sm" showByline={false} />
-            <span style={{ fontSize: 12, fontWeight: 900, color: C.accent, letterSpacing: "0.08em", textTransform: "uppercase" }}>Admin</span>
-          </div>
+          </header>
 
-          {children}
+          {/* Mobile Drawer */}
+          {sidebarOpen && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                backgroundColor: "rgba(0,0,0,0.65)",
+                zIndex: 50,
+                display: "flex",
+              }}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <div
+                style={{
+                  width: "280px",
+                  backgroundColor: "#0a1128",
+                  height: "100%",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <SidebarContent />
+              </div>
+            </div>
+          )}
+
+          {/* Main Content Area */}
+          <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
         </div>
       </div>
 
-      <style>{`
-        @media (min-width: 769px) {
-          .admin-mobile-header { display: none !important; }
-        }
-        @media (max-width: 768px) {
-          .admin-sidebar-desktop { display: none !important; }
-          .admin-main {
-            margin-left: 0 !important;
-            width: 100% !important;
-            max-width: 100vw !important;
-            overflow-x: hidden !important;
+      <style jsx global>{`
+        @media (min-width: 900px) {
+          .admin-desktop-sidebar {
+            display: flex !important;
+          }
+          .admin-mobile-header {
+            display: none !important;
           }
         }
       `}</style>

@@ -31,11 +31,60 @@ import { getAllStudentRatings, getStudentRatings } from "../controllers/studentR
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffers, listMarketplaceRequests } from "../controllers/marketplaceAdmin.controller";
+import {
+  getControlTowerPulse,
+  listAtRiskRequests,
+  handleAtRiskAction,
+  getSupplyGapsIntelligence,
+  getFinanceReconciliation,
+  getSystemHealth,
+  listSafetyCases,
+  createSafetyCase,
+  resolveSafetyCase,
+  getFeeConfig,
+  updateFeeConfig,
+  getMarketConfigs,
+  updateMarketConfig,
+  getAdminRolesOverview,
+  updateAdminUserRole,
+  getStudent360,
+  getTutor360,
+} from "../controllers/adminControlTower.controller";
 
 const router = Router();
 
 router.use(protect, authorize("admin"));
 
+// Control Tower & Liquidity
+router.get("/control-tower/pulse", getControlTowerPulse);
+router.get("/at-risk/requests", listAtRiskRequests);
+router.post("/at-risk/requests/:id/action", handleAtRiskAction);
+router.get("/supply-gaps", getSupplyGapsIntelligence);
+
+// Finance & Reconciliation
+router.get("/finance/reconciliation", getFinanceReconciliation);
+router.get("/finance/fee-config", getFeeConfig);
+router.put("/finance/fee-config", updateFeeConfig);
+
+// Trust & Safety Cases
+router.get("/safety/cases", listSafetyCases);
+router.post("/safety/cases", createSafetyCase);
+router.post("/safety/cases/:id/resolve", resolveSafetyCase);
+
+// Global Market Operations
+router.get("/markets", getMarketConfigs);
+router.put("/markets/:id", updateMarketConfig);
+
+// System Health & RBAC Roles
+router.get("/system/health", getSystemHealth);
+router.get("/roles/overview", getAdminRolesOverview);
+router.patch("/roles/users/:userId", updateAdminUserRole);
+
+// Customer 360°
+router.get("/customers/students/:id/360", getStudent360);
+router.get("/customers/tutors/:id/360", getTutor360);
+
+// Existing Core Endpoints (Fully Preserved)
 router.get("/stats", getDashboardStats);
 router.get("/analytics", getAnalytics);
 router.get("/marketplace-analytics", getMarketplaceAnalytics);
