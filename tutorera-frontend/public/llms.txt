@@ -1,27 +1,28 @@
-# TUTORERA
+# TUTORERA Platform Description
 
-> TUTORERA is a global student-led reverse marketplace for online tutoring worldwide and verified in-person home tuition locally, operated by MENTISERA (SMC-Private) Limited.
+TUTORERA is Pakistan's student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. The platform connects students and parents with verified tutors for online and in-person educational support across Pakistan, Saudi Arabia, UAE, and other markets.
 
-Canonical website: https://tutorera.ac.pk/
+## Core Purpose
+TUTORERA enables students to post tuition requirements and receive transparent offers from qualified tutors. The platform uses an 8-layer smart matching engine with Bayesian ratings to recommend compatible tutors. All tutor verifications—including CNIC, education credentials, demo video, and police clearance—are tracked per-component with canonical status computation.
 
-## Core Architecture & Business Model
-TUTORERA operates as a student-led reverse marketplace. Students or parents post their tuition requirements with their academic curriculum (Cambridge O/A Levels, GCSE, IB, Matric/FSc, University, Test Prep), preferred learning mode (online worldwide or home tuition locally), timezone, and proposed budget in their local currency (e.g. AED, USD, GBP, SAR, PKR).
+## Key Features
+- Student-led tuition request posting with budget and schedule preferences
+- Verified tutor directory with match scoring, availability, and structured profiles
+- Structured negotiation with max 3 counter-offers per party
+- Secure payment flow with atomic booking creation and webhook confirmation
+- Per-component tutor verification (identity, education, demo video, police)
+- Admin control tower with at-risk request rescue, supply-gap intelligence, and financial reconciliation
+- 11-role RBAC with granular permissions
+- Email webhook tracking and delivery monitoring
+- Request expiry lifecycle with archival and retention
+- Multi-country market configuration (PK, SA, AE, GB)
 
-Verified independent educators review student requirements and submit competitive offers or transparent counter-offers. Students evaluate tutor profiles, verified degrees, background and police verification reports (enforced where required by applicable jurisdiction rules and TUTORERA safety policies), and past student reviews before independently selecting their tutor. All bookings are protected by secure platform payment processing and a 100% first-session satisfaction guarantee.
+## Contact
+- Website: https://tutorera.ac.pk
+- Support: hello@mentisera.pk
+- Operator: MENTISERA (SMC-Private) Limited
 
-Important pages:
-- https://tutorera.ac.pk/online-tutors
-- https://tutorera.ac.pk/tutors
-- https://tutorera.ac.pk/how-tutor-offers-work
-- https://tutorera.ac.pk/business-model
-- https://tutorera.ac.pk/services
-- https://tutorera.ac.pk/subjects
-- https://tutorera.ac.pk/levels
-- https://tutorera.ac.pk/safety-policy
-- https://tutorera.ac.pk/tutor-verification-standards
-- https://tutorera.ac.pk/review-policy
-- https://tutorera.ac.pk/editorial-policy
-- https://tutorera.ac.pk/academic-standards
-- https://tutorera.ac.pk/about
-- https://tutorera.ac.pk/team
-- https://tutorera.ac.pk/contact
+## Legal
+- Terms: https://tutorera.ac.pk/terms
+- Privacy: https://tutorera.ac.pk/privacy
+- Refund Policy: https://tutorera.ac.pk/refund-policy

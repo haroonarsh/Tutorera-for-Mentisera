@@ -585,6 +585,82 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  // ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
+  if (isDirectTutorAccept) {
+    const existingBookingsCount = await Booking.countDocuments({
+      student: request.student,
+      tutor: bid.tutor,
+    });
+    const fees = calculateMarketplaceFees(bid.amount);
+    const bookingArr = await Booking.create([{
+      student: request.student,
+      tutor: bid.tutor,
+      request: request._id,
+      bid: bid._id,
+      amount: bid.amount,
+      finalAgreedRate: bid.amount,
+      pricingUnit: bid.pricingUnit || "hour",
+      sessionCount: 1,
+      ...fees,
+      platformFee: fees.tutorFee + fees.tax,
+      tutorPayout: fees.tutorNet,
+      schedule: request.schedule,
+      teachingMode: request.teachingMode,
+      isFirstSession: existingBookingsCount === 0,
+      paymentStatus: "pending",
+      paymentNote: "Awaiting student checkout through authorized payment gateway",
+    }]);
+    const booking = bookingArr[0];
+
+    if (request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
+      await BookedSlot.create([{
+        tutor: bid.tutor,
+        student: request.student,
+        booking: booking._id,
+        date: new Date(request.selectedDate),
+        startTime: request.selectedStartTime,
+        endTime: request.selectedEndTime,
+      }]);
+    }
+
+    bid.status = "accepted";
+    request.status = "closed";
+    request.acceptedOffer = bid._id;
+    request.finalAgreedRate = bid.amount;
+    await Promise.all([bid.save(), request.save()]);
+
+    const io = req.app.get("io");
+    if (io) {
+      await sendNotification(io, request.student.toString(), {
+        title: "✅ Direct Booking Accepted!",
+        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment on your dashboard to confirm.`,
+        type: "booking",
+        link: "/dashboard",
+      });
+    }
+
+    try {
+      const studentUser = await User.findById(request.student).select("name email");
+      if (studentUser) {
+        const { subject: emailSubject, html } = directBookingAcceptedEmail(
+          studentUser.name,
+          req.user?.name || "Your tutor",
+          request.subject
+        );
+        await sendEmail({ to: studentUser.email, subject: emailSubject, html });
+      }
+    } catch (emailErr) {
+      console.error("[DirectBooking] Failed to send acceptance email to student:", emailErr);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Direct booking accepted successfully. The booking has been scheduled and the student notified to pay.",
+      bookingId: booking._id,
+    });
+    return;
+  }
+
   // Atomic guard — identical purpose to the original: only one accept
   // attempt can win this transition, so two concurrent accept clicks can't
   // both proceed. Everything downstream is safe BECAUSE this succeeded.
@@ -605,7 +681,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   await bid.save();
 
   try {
-    const student = await User.findById(req.user?._id).select("name email phone");
+    const student = await User.findById(request.student).select("name email phone");
     const checkoutUrl = await createTransaction({
       amount: bid.amount,
       customerMobileNo: student?.phone || "03000000000",

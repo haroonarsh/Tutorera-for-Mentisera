@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export interface LiveRequestItem {
   id: string;
@@ -94,6 +95,7 @@ export default function LiveRequestPopup() {
   const [offerRate, setOfferRate] = useState<string>("200");
   const [offerMessage, setOfferMessage] = useState("");
   const [offerSent, setOfferSent] = useState(false);
+  const offerModalRef = useFocusTrap(showOfferModal, () => setShowOfferModal(false));
 
   // Initial display timer
   useEffect(() => {
@@ -346,6 +348,7 @@ export default function LiveRequestPopup() {
       {/* Direct Approach / Send Offer Modal */}
       {showOfferModal && (
         <div
+          ref={offerModalRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="approach-modal-title"

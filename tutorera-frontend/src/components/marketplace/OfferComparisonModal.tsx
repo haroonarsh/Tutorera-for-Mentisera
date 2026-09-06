@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { 
   X, 
@@ -15,6 +15,7 @@ import {
   DollarSign
 } from "lucide-react";
 import api from "@/lib/axios";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export interface TutorOfferItem {
   _id: string;
@@ -68,6 +69,7 @@ export default function OfferComparisonModal({
   const [selectedOfferId, setSelectedOfferId] = useState<string>(offers[0]?._id || "");
   const [counteringOfferId, setCounteringOfferId] = useState<string | null>(null);
   const [counterAmount, setCounterAmount] = useState<string>("");
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -99,6 +101,7 @@ export default function OfferComparisonModal({
       }}
     >
       <div
+        ref={modalRef}
         style={{
           background: "white",
           borderRadius: "1.25rem",

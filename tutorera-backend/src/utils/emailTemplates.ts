@@ -149,6 +149,29 @@ export const paymentConfirmedEmail = (studentName: string, tutorName: string, am
   return { subject: "TUTORERA® — Payment Confirmed", html };
 };
 
+export const paymentFailedEmail = (studentName: string, tutorName: string, amount: number) => {
+  const html = renderTransactionalEmail({
+    subject: "TUTORERA® — Payment Could Not Be Processed",
+    emailCategory: "Payment Update",
+    emailHeading: "Payment Not Completed",
+    emailSubheading: "We couldn't process your payment for this session.",
+    firstName: studentName,
+    openingMessage: `We were unable to complete the payment of PKR ${amount.toLocaleString()} for your session with ${tutorName}.`,
+    mainMessage: "This could be due to insufficient funds, an expired card, or a network issue. Please try again using the same or a different payment method. If the problem persists, contact your bank or our support team.",
+    transaction: {
+      referenceId: `PAY-${Date.now()}`,
+      date: today(),
+      status: "Failed",
+      amount: `PKR ${amount.toLocaleString()}`,
+    },
+    cta: { label: "Retry Payment", url: "https://tutorera.ac.pk/dashboard" },
+    additionalInformation: "If you believe this was an error or need assistance, please reply to this email or contact hello@mentisera.pk.",
+    includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent because a payment attempt on your TUTORERA booking was not successful.",
+  });
+  return { subject: "TUTORERA® — Payment Could Not Be Processed", html };
+};
+
 export const bookingCancelledEmail = (name: string, otherPartyName: string, subject?: string) => {
   const html = renderTransactionalEmail({
     subject: "TUTORERA® — Booking Cancelled",
@@ -252,6 +275,23 @@ export const directBookingDeclinedEmail = (studentName: string, subject: string)
     includeSecurityNotice: true,
   });
   return { subject: "TUTORERA® — Booking Request Declined", html };
+};
+
+export const reviewRequestEmail = (studentName: string, tutorName: string, subject: string, bookingId: string) => {
+  const html = renderTransactionalEmail({
+    subject: "TUTORERA® — How Was Your Session?",
+    emailCategory: "Review Request",
+    emailHeading: "How Was Your Session?",
+    emailSubheading: `Your session with ${tutorName} has been completed.`,
+    firstName: studentName,
+    openingMessage: `Your ${subject} session with ${tutorName} has been marked as completed. We hope you had a great learning experience!`,
+    mainMessage: "Your feedback helps other students make informed decisions and helps tutors improve their teaching. It only takes 2 minutes to share your experience.",
+    cta: { label: "Leave a Review", url: `https://tutorera.ac.pk/reviews/${bookingId}` },
+    additionalInformation: "Reviews are public and must follow our community guidelines. Thank you for being part of the TUTORERA community.",
+    includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent because you completed a tutoring session on TUTORERA.",
+  });
+  return { subject: "TUTORERA® — How Was Your Session?", html };
 };
 
 export const adminNewUserSignupEmail = (data: {

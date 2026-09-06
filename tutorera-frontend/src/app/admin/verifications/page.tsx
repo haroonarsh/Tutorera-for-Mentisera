@@ -42,6 +42,8 @@ export default function VerificationsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchTutors = async (page: number = 1) => {
     setLoading(true);
@@ -98,6 +100,44 @@ export default function VerificationsPage() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === tutors.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tutors.map(t => t._id)));
+    }
+  };
+
+  const handleBulkAction = async (status: "approved" | "rejected") => {
+    if (selectedIds.size === 0) return;
+    if (status === "rejected" && !rejectReason.trim()) {
+      showError("Please provide a rejection reason for bulk rejection.");
+      return;
+    }
+    setBulkLoading(true);
+    try {
+      await api.patch("/admin/verify/bulk", { tutorIds: Array.from(selectedIds), status, reason: rejectReason || undefined });
+      showSuccess(`Bulk ${status}: ${selectedIds.size} tutors updated`);
+      setSelectedIds(new Set());
+      setRejectReason("");
+      setRejectingId(null);
+      fetchTutors(pagination.page);
+    } catch (err) {
+      showError(err, `Failed to bulk ${status}`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const statusBadge = (status: string) => {
     const colors: Record<string, { bg: string; color: string }> = {
       pending: { bg: '#fffbeb', color: '#d97706' },
@@ -128,6 +168,27 @@ export default function VerificationsPage() {
         ))}
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary }}>
+            {selectedIds.size} selected
+          </span>
+          <button type="button" onClick={() => handleBulkAction("approved")} disabled={bulkLoading}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#16a34a', color: 'white', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>
+            Approve Selected
+          </button>
+          <button type="button" onClick={() => handleBulkAction("rejected")} disabled={bulkLoading}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#ef4444', color: 'white', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}>
+            Reject Selected
+          </button>
+          <button type="button" onClick={() => setSelectedIds(new Set())}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#475569', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+            Clear
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '4rem' }}>
           <div style={{ width: '36px', height: '36px', border: `3px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
@@ -146,6 +207,12 @@ export default function VerificationsPage() {
               {/* Header Row */}
               <div style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(tutor._id)}
+                    onChange={() => toggleSelect(tutor._id)}
+                    style={{ width: 18, height: 18, cursor: 'pointer', accentColor: C.primary }}
+                  />
                   <div style={{ width: '44px', height: '44px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '1.1rem', flexShrink: 0 }}>
                     {(tutor.fullName || tutor.user?.name || "T").charAt(0)}
                   </div>

@@ -6,8 +6,12 @@ import mongoose, { Types } from "mongoose";
 import Request, { IRequest } from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import User from "../models/User.model";
+import Review from "../models/Review.model";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
+import sendEmail from "../utils/sendEmail";
+import { reviewRequestEmail } from "../utils/emailTemplates";
 import logger from "../config/logger";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
@@ -27,6 +31,8 @@ export interface LifecycleRunResult {
   expiredCount: number;
   offersClosedCount: number;
   archivedCount: number;
+  paymentHoldsCleaned: number;
+  reviewRequestsSent: number;
   errors: string[];
 }
 
@@ -256,7 +262,6 @@ export async function processRequestArchival(): Promise<number> {
   let archivedCount = 0;
   for (const reqDoc of candidates) {
     try {
-      // Safety check: Never archive if there is any active booking or open dispute
       const activeBooking = await Booking.findOne({
         request: reqDoc._id,
         status: { $in: ["upcoming", "ongoing"] },
@@ -285,9 +290,112 @@ export async function processRequestArchival(): Promise<number> {
 }
 
 /**
+ * 5. Cleanup Stale Payment Holds
+ * Reverts requests stuck in awaiting_payment beyond the hold window (30 minutes).
+ * Prevents orphaned payment_pending bids and stuck request states.
+ */
+export async function cleanupStalePaymentHolds(): Promise<{ cleaned: number; errors: string[] }> {
+  const result = { cleaned: 0, errors: [] as string[] };
+  const now = new Date();
+  const staleThreshold = new Date(now.getTime() - 30 * 60 * 1000);
+
+  const staleRequests = await Request.find({
+    status: "awaiting_payment",
+    updatedAt: { $lte: staleThreshold },
+  }).limit(50);
+
+  for (const reqDoc of staleRequests) {
+    try {
+      const staleBid = await Bid.findOne({
+        request: reqDoc._id,
+        status: "payment_pending",
+        paymentPendingExpiresAt: { $lte: now },
+      });
+
+      if (staleBid) {
+        await Bid.updateOne(
+          { _id: staleBid._id, status: "payment_pending" },
+          { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
+        );
+      }
+
+      await Request.updateOne(
+        { _id: reqDoc._id, status: "awaiting_payment" },
+        { status: "open" }
+      );
+
+      result.cleaned++;
+    } catch (err: any) {
+      result.errors.push(`Failed to cleanup payment hold for request ${reqDoc._id}: ${err?.message}`);
+      logger.error({ err, requestId: reqDoc._id }, "Failed to cleanup stale payment hold");
+    }
+  }
+
+  return result;
+}
+
+/**
  * Master Lifecycle Worker Function
  * Executed on scheduled interval by server.ts
  */
+/**
+ * 6. Send Review Requests for Completed Bookings
+ * Identifies bookings completed >1 hour ago without a review, sends a
+ * review request email to the student.
+ */
+export async function sendReviewRequests(io?: any): Promise<number> {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+  const eligibleBookings = await Booking.find({
+    status: "completed",
+    completedAt: { $exists: true, $lte: oneHourAgo },
+  }).limit(50);
+
+  let sent = 0;
+  for (const booking of eligibleBookings) {
+    try {
+      const existingReview = await Review.findOne({ booking: booking._id });
+      if (existingReview) continue;
+
+      const [studentUser, tutorUser] = await Promise.all([
+        User.findById(booking.student).select("name email"),
+        User.findById(booking.tutor).select("name email"),
+      ]);
+
+      if (!studentUser || !tutorUser) continue;
+
+      const request = await (Booking.findById(booking._id).populate("request", "subject") as any);
+      const subject = request?.request?.subject || "your session";
+
+      const reviewMail = reviewRequestEmail(studentUser.name, tutorUser.name, subject, booking._id.toString());
+      await sendEmail({
+        to: studentUser.email,
+        subject: reviewMail.subject,
+        html: reviewMail.html,
+        eventType: "review_requested",
+        relatedEntityType: "Booking",
+        relatedEntityId: booking._id.toString(),
+      });
+
+      if (io) {
+        await sendNotification(io, studentUser._id.toString(), {
+          title: "📝 How Was Your Session?",
+          message: `Your ${subject} session with ${tutorUser.name} is complete. Share your feedback to help other students.`,
+          type: "general",
+          link: "/dashboard",
+        });
+      }
+
+      sent++;
+    } catch (err: any) {
+      logger.error({ err, bookingId: booking._id }, "Failed to send review request");
+    }
+  }
+
+  return sent;
+}
+
 export async function processRequestLifecycle(io?: any): Promise<LifecycleRunResult> {
   const result: LifecycleRunResult = {
     scanned: 0,
@@ -296,6 +404,8 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
     expiredCount: 0,
     offersClosedCount: 0,
     archivedCount: 0,
+    paymentHoldsCleaned: 0,
+    reviewRequestsSent: 0,
     errors: [],
   };
 
@@ -331,6 +441,22 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
   } catch (err: any) {
     result.errors.push(`Archival error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: archival error");
+  }
+
+  try {
+    const paymentCleanup = await cleanupStalePaymentHolds();
+    result.paymentHoldsCleaned = paymentCleanup.cleaned;
+    paymentCleanup.errors.forEach((e) => result.errors.push(e));
+  } catch (err: any) {
+    result.errors.push(`Payment hold cleanup error: ${err?.message}`);
+    logger.error({ err }, "Request lifecycle: payment hold cleanup error");
+  }
+
+  try {
+    result.reviewRequestsSent = await sendReviewRequests();
+  } catch (err: any) {
+    result.errors.push(`Review request error: ${err?.message}`);
+    logger.error({ err }, "Request lifecycle: review request error");
   }
 
   return result;

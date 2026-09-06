@@ -7,10 +7,12 @@ import StarRating from "./StarRating";
 import AvatarImage from "@/components/Common/AvatarImage";
 import { useFavourites } from "@/hooks/useFavourites";
 import { tutorProfileHref } from "@/lib/tutor-directory";
+import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import styles from "./Tutorcard.module.css";
 
 interface TutorCardProps {
   tutor: TutorProfile;
+  matchScore?: number;
 }
 
 function getModeClass(mode: TutorProfile["teachingMode"]): string {
@@ -28,12 +30,12 @@ function getModeLabel(mode: TutorProfile["teachingMode"]): string {
   return "In-Person";
 }
 
-export default function TutorCard({ tutor }: TutorCardProps) {
+export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
   const { isFavourited, toggleFavourite, isStudent } = useFavourites();
   const favourited = isFavourited(tutor._id);
 
   const handleHeartClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // don't navigate to profile when clicking heart
+    e.preventDefault();
     e.stopPropagation();
     toggleFavourite(tutor._id);
   };
@@ -75,6 +77,12 @@ export default function TutorCard({ tutor }: TutorCardProps) {
               />
             </svg>
             Verified
+          </span>
+        )}
+
+        {typeof matchScore === "number" && (
+          <span style={{ position: "relative", zIndex: 1 }}>
+            <MatchScoreBadge score={matchScore} compact />
           </span>
         )}
       </div>

@@ -103,45 +103,79 @@ function PendingApprovalScreen() {
 // ─── Rejected screen ──────────────────────────────────────────────────────────
 
 function RejectedScreen({ reason }: { reason?: string }) {
-  const router = useRouter();
-  return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F7FF", padding: "2rem" }}>
-        <div style={{ backgroundColor: "white", borderRadius: "1.25rem", border: "1px solid #fecaca", padding: "3rem 2.5rem", maxWidth: "500px", width: "100%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+   const router = useRouter();
+   return (
+       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F7FF", padding: "2rem" }}>
+         <div style={{ backgroundColor: "white", borderRadius: "1.25rem", border: "1px solid #fecaca", padding: "3rem 2.5rem", maxWidth: "500px", width: "100%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
 
-          <div style={{ width: 72, height: 72, backgroundColor: "#fef2f2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", fontSize: "2rem" }}>
-            ❌
-          </div>
+           <div style={{ width: 72, height: 72, backgroundColor: "#fef2f2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", fontSize: "2rem" }}>
+             ❌
+           </div>
 
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem" }}>
-            Profile Not Approved
-          </h2>
-          <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
-            Unfortunately, your tutor profile was not approved. Please review the reason below and contact our support team to resolve the issue.
-          </p>
+           <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem" }}>
+             Profile Not Approved
+           </h2>
+           <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+             Unfortunately, your tutor profile was not approved. Please review the reason below and contact our support team to resolve the issue.
+           </p>
 
-          {/* Rejection reason from admin */}
-          {reason && (
-            <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.75rem", padding: "1rem", marginBottom: "1.5rem", textAlign: "left" }}>
-              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#ef4444", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Reason from admin:</p>
-              <p style={{ fontSize: "0.875rem", color: "#b91c1c", lineHeight: 1.6, margin: 0 }}>{reason}</p>
-            </div>
-          )}
+           {/* Rejection reason from admin */}
+           {reason && (
+             <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.75rem", padding: "1rem", marginBottom: "1.5rem", textAlign: "left" }}>
+               <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#ef4444", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Reason from admin:</p>
+               <p style={{ fontSize: "0.875rem", color: "#b91c1c", lineHeight: 1.6, margin: 0 }}>{reason}</p>
+             </div>
+           )}
 
-          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <a href={`mailto:${SUPPORT_EMAIL}`}
-              style={{ padding: "0.75rem 1.5rem", backgroundColor: "#021550", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
-              Contact Support
-            </a>
-            <button
-              onClick={() => router.push("/onboarding/tutor")}
-              style={{ padding: "0.75rem 1.5rem", backgroundColor: "white", color: "#021550", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
-              Re-submit Profile
-            </button>
-          </div>
-        </div>
-      </div>
-  );
-}
+           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+             <a href={`mailto:${SUPPORT_EMAIL}`}
+               style={{ padding: "0.75rem 1.5rem", backgroundColor: "#021550", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
+               Contact Support
+             </a>
+             <button
+               onClick={() => router.push("/onboarding/tutor")}
+               style={{ padding: "0.75rem 1.5rem", backgroundColor: "white", color: "#021550", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
+               Re-submit Profile
+             </button>
+           </div>
+         </div>
+       </div>
+   );
+ }
+
+ // ─── Error screen ─────────────────────────────────────────────────────────────
+
+ function ErrorScreen({ message }: { message?: string }) {
+   return (
+       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F7FF", padding: "2rem" }}>
+         <div style={{ backgroundColor: "white", borderRadius: "1.25rem", border: "1px solid #fecaca", padding: "3rem 2.5rem", maxWidth: "500px", width: "100%", textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+
+           <div style={{ width: 72, height: 72, backgroundColor: "#fef2f2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem", fontSize: "2rem" }}>
+             ⚠️
+           </div>
+
+           <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem" }}>
+             Unable to Load Status
+           </h2>
+           <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+             {message || "We couldn't load your verification status. Please check your connection and try again."}
+           </p>
+
+           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+             <a href={`mailto:${SUPPORT_EMAIL}`}
+               style={{ padding: "0.75rem 1.5rem", backgroundColor: "#021550", color: "white", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, textDecoration: "none" }}>
+               Contact Support
+             </a>
+             <button
+               onClick={() => window.location.reload()}
+               style={{ padding: "0.75rem 1.5rem", backgroundColor: "white", color: "#021550", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
+               Retry
+             </button>
+           </div>
+         </div>
+       </div>
+   );
+ }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -176,8 +210,8 @@ export default function DashboardPage() {
         setVerificationStatus(res.data.verificationStatus);
         setRejectionReason(res.data.rejectionReason || "");
       } catch {
-        // If fetch fails, don't block them — let dashboard load
-        setVerificationStatus("approved");
+        setVerificationStatus("error");
+        setRejectionReason("Unable to load verification status. Please try again later or contact support.");
       } finally {
         setCheckingStatus(false);
       }
@@ -192,14 +226,17 @@ export default function DashboardPage() {
   }
 
    // Tutor-specific verification gates
-  if (user.role === "tutor") {
-    if (verificationStatus === "pending") {
-      return <PendingApprovalScreen />;
-    }
-    if (verificationStatus === "rejected") {
-      return <RejectedScreen reason={rejectionReason} />;
-    }
-  }
+   if (user.role === "tutor") {
+     if (verificationStatus === "pending") {
+       return <PendingApprovalScreen />;
+     }
+     if (verificationStatus === "rejected") {
+       return <RejectedScreen reason={rejectionReason} />;
+     }
+     if (verificationStatus === "error") {
+       return <ErrorScreen message={rejectionReason} />;
+     }
+   }
 
    // Approved tutor or student — show dashboard
   if (user.role === "tutor") {

@@ -8,13 +8,13 @@ export const uploadToCloudinary = async (
   isPrivate: boolean = false
 ): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
+    const moderation = process.env.CLOUDINARY_MODERATION;
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: resourceType,
-        // Sensitive documents (CNIC, degree certs) use "authenticated" delivery —
-        // the resulting URL is not publicly viewable without a signed token.
         type: isPrivate ? "authenticated" : "upload",
+        ...(moderation ? { moderation } : {}),
       },
       (error, result) => {
         if (error || !result) return reject(error);

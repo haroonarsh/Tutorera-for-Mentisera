@@ -11,7 +11,11 @@ import mongoose from "mongoose";
 let replSet: MongoMemoryReplSet;
 
 beforeAll(async () => {
-  replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  process.env.MONGOMS_DISABLE_MD5_CHECK = "1";
+  replSet = await MongoMemoryReplSet.create({
+    replSet: { count: 1 },
+    binary: { skipMD5: true },
+  });
   const uri = replSet.getUri();
   await mongoose.connect(uri);
 }, 120000);

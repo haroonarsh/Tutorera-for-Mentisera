@@ -20,7 +20,7 @@ import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import sendEmail from "../utils/sendEmail";
 import { EMAIL_EVENTS } from "../utils/emailEvents";
-import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail } from "../utils/emailTemplates";
+import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail, reviewRequestEmail } from "../utils/emailTemplates";
 import { getSignedViewUrl } from "../utils/uploadToCloudinary";
 import {
   isMarketplaceEligible,
@@ -229,6 +229,11 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     profile.marketplaceEligibleAt = undefined as any;
     await profile.save();
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
+    try {
+      const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
+    } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
+    await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
   if (htEligible && !profile.homeTuitionEligible) {
     profile.homeTuitionEligible = true;
@@ -245,12 +250,183 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     profile.homeTuitionEligibleAt = undefined as any;
     await profile.save();
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
+    try {
+      const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
+    } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
+    await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
+  }
+
+   res.status(200).json({
+    success: true,
+    message: `Tutor ${status} successfully`,
+    profile,
+  });
+};
+
+// @desc    Bulk verify tutors
+// @route   PATCH /api/admin/verify/bulk
+// @access  Private (admin)
+export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { tutorIds, status, reason } = req.body;
+
+  if (!Array.isArray(tutorIds) || tutorIds.length === 0) {
+    res.status(400).json({ success: false, message: "tutorIds must be a non-empty array" });
+    return;
+  }
+
+  if (!["approved", "rejected"].includes(status)) {
+    res.status(400).json({ success: false, message: "Status must be approved or rejected" });
+    return;
+  }
+
+  const actor = {
+    name: req.user?.name || "Admin",
+    role: "admin" as const,
+    id: req.user?._id?.toString(),
+  };
+  const io = req.app.get("io");
+  const now = new Date();
+
+  const results = { approved: 0, rejected: 0, failed: 0, errors: [] as string[] };
+
+  for (const tutorId of tutorIds) {
+    try {
+      const profile = await TutorProfile.findById(tutorId);
+      if (!profile) {
+        results.failed++;
+        results.errors.push(`Profile not found: ${tutorId}`);
+        continue;
+      }
+
+      const tutorUser = await User.findById(profile.user).select("name email applicationId");
+      if (!tutorUser) {
+        results.failed++;
+        results.errors.push(`User not found: ${profile.user}`);
+        continue;
+      }
+
+      const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
+        (profile as any)[`${kind}VerificationStatus`] = status;
+        (profile as any)[`${kind}RejectionReason`] = status === "rejected" ? (reason || "") : "";
+        (profile as any)[`${kind}ReviewedAt`] = now;
+      };
+      component("cnic");
+      component("degree");
+      component("demoVideo");
+      if (profile.policeVerificationStatus !== "not_required") {
+        component("police");
+      }
+
+      profile.verificationStatus = status;
+      profile.isVerified = status === "approved";
+      profile.rejectionReason = status === "rejected" ? (reason || "") : "";
+      profile.lastStatusChangeAt = now;
+      await profile.save();
+
+      await recordStatusEvent({
+        tutorId: tutorUser._id.toString(),
+        tutorProfileId: profile._id.toString(),
+        actor,
+        event: status === "approved" ? "PROFILE_APPROVED" : "PROFILE_REJECTED",
+        message:
+          status === "approved"
+            ? "Tutor profile approved (bulk verify)"
+            : `Tutor profile rejected (bulk verify)${reason ? `: ${reason}` : ""}`,
+        statusAfter: status,
+      });
+
+      try {
+        const { subject, html } = status === "approved"
+          ? tutorApprovedEmail(tutorUser.name)
+          : tutorRejectedEmail(tutorUser.name, reason);
+        await sendEmail({ to: tutorUser.email, subject, html });
+      } catch (err) {
+        console.error(`Failed to send verification email to ${tutorUser.email}:`, err);
+      }
+
+      await logAudit({
+        action: status === "approved" ? "tutor_approved" : "tutor_rejected",
+        actor: actor.name,
+        actorId: actor.id,
+        entity: "TutorProfile",
+        targetId: profile._id.toString(),
+        targetName: tutorUser.name,
+        metadata: status === "rejected" ? { reason } : undefined,
+      });
+
+      await sendNotification(io, tutorUser._id.toString(), {
+        title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
+        message:
+          status === "approved"
+            ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
+            : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
+        type: "verification",
+        link: "/tutor/application-status",
+      });
+
+      const mpEligible = isMarketplaceEligible(profile);
+      const htEligible = isHomeTuitionEligible(profile);
+      const cta = { applicationId: tutorUser.applicationId || "TUT-PENDING" };
+      if (mpEligible && !profile.marketplaceEligible) {
+        profile.marketplaceEligible = true;
+        profile.marketplaceEligibleAt = now;
+        await profile.save();
+        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
+        try {
+          const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
+        await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/tutor/application-status" });
+      } else if (!mpEligible && profile.marketplaceEligible) {
+        profile.marketplaceEligible = false;
+        profile.marketplaceEligibleAt = undefined as any;
+        await profile.save();
+        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
+        try {
+          const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
+        await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
+      }
+      if (htEligible && !profile.homeTuitionEligible) {
+        profile.homeTuitionEligible = true;
+        profile.homeTuitionEligibleAt = now;
+        await profile.save();
+        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
+        try {
+          const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
+        await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
+      } else if (!htEligible && profile.homeTuitionEligible) {
+        profile.homeTuitionEligible = false;
+        profile.homeTuitionEligibleAt = undefined as any;
+        await profile.save();
+        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
+        try {
+          const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
+        await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
+      }
+
+      if (status === "approved") {
+        results.approved++;
+      } else {
+        results.rejected++;
+      }
+    } catch (err: any) {
+      results.failed++;
+      results.errors.push(`Failed to process ${tutorId}: ${err?.message || "unknown error"}`);
+      console.error(`Bulk verify error for ${tutorId}:`, err);
+    }
   }
 
   res.status(200).json({
     success: true,
-    message: `Tutor ${status} successfully`,
-    profile,
+    message: `Bulk verification complete: ${results.approved} approved, ${results.rejected} rejected, ${results.failed} failed`,
+    results,
   });
 };
 
@@ -487,8 +663,9 @@ export const updateBookingStatus = async (
   }
 
   const booking = await Booking.findById(req.params.id)
-    .populate("student", "name")
-    .populate("tutor", "name");
+    .populate("student", "name email")
+    .populate("tutor", "name email")
+    .populate("request", "subject");
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
     return;
@@ -509,9 +686,24 @@ export const updateBookingStatus = async (
   });
 
    // ── Trigger referral credit when admin marks booking as completed ──
-  if (status === "completed" && previousStatus !== "completed" && booking.isFirstSession) {
-    await creditReferrerOnFirstBooking(booking.student.toString());
-  }
+   if (status === "completed" && previousStatus !== "completed" && booking.isFirstSession) {
+     await creditReferrerOnFirstBooking(booking.student.toString());
+   }
+
+   // ── Send review request to student after session completion ──
+   if (status === "completed" && previousStatus !== "completed") {
+     try {
+       const studentUser = await User.findById(booking.student).select("name email");
+       const tutorUser = await User.findById(booking.tutor).select("name email");
+       const requestSubject = (booking.request as any)?.subject || "your session";
+       if (studentUser && tutorUser) {
+         const reviewMail = reviewRequestEmail(studentUser.name, tutorUser.name, requestSubject, booking._id.toString());
+         await sendEmail({ to: studentUser.email, subject: reviewMail.subject, html: reviewMail.html, eventType: "review_requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
+       }
+     } catch (err) {
+       console.error("Failed to send review request email:", err);
+     }
+   }
   
   // Notify both parties
   const io = req.app.get("io");

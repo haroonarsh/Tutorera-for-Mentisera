@@ -60,6 +60,7 @@ app.set("trust proxy", 1);
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
+    "https://tutorera-frontend.pakstudy.workers.dev",
     "https://tutorera-frontend.vercel.app",
     "https://tutorera.ac.pk",
     "http://localhost:3000",
@@ -96,6 +97,7 @@ app.use(hpp());
 const apiRouter = express.Router();
 apiRouter.use("/auth", authRoutes);
 apiRouter.use("/tutors", tutorRoutes);
+apiRouter.use("/tutor", trackingRoutes);
 apiRouter.use("/students", studentRoutes);
 apiRouter.use("/requests", requestRoutes);
 apiRouter.use("/offers", offerRoutes);
