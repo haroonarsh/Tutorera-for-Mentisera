@@ -11,7 +11,13 @@ import Pagination from "./Pagination";
 import { FilterSidebar, MobileFilterSidebar } from "./FilterSidebar";
 import styles from "@/app/tutors/page.module.css";
 
-interface Props { initialTutors: TutorProfile[]; initialPagination: PaginationMeta; initialFilters?: Partial<FiltersState>; }
+interface Props {
+  initialTutors: TutorProfile[];
+  initialPagination: PaginationMeta;
+  initialFilters?: Partial<FiltersState>;
+  title?: string;
+  subtitle?: string;
+}
 
 function query(filters: FiltersState, page: number) {
   const params = new URLSearchParams({ page: String(page), limit: "12" });
@@ -20,7 +26,7 @@ function query(filters: FiltersState, page: number) {
   return params.toString();
 }
 
-export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {} }: Props) {
+export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {}, title, subtitle }: Props) {
   const [tutors, setTutors] = useState(initialTutors);
   const [pagination, setPagination] = useState(initialPagination);
   const [filters, setFilters] = useState<FiltersState>({ ...INITIAL_FILTERS, ...initialFilters });
@@ -51,8 +57,8 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
 
   return <div className={styles.page}>
     <div className={styles.hero}><div className={styles.heroInner}>
-      <h1 className={styles.heroTitle}>Find Verified Tutors in Pakistan</h1>
-      <p className={styles.heroSubtitle}>{pagination.total ? `${pagination.total} verified tutors available online and in person` : "Browse verified tutors across Pakistan"}</p>
+      <h1 className={styles.heroTitle}>{title || "Find Verified Tutors Online & In-Person"}</h1>
+      <p className={styles.heroSubtitle}>{subtitle || (pagination.total ? `${pagination.total} verified tutors available worldwide and locally` : "Browse qualified tutors for online and in-person sessions")}</p>
       <div className={styles.searchBar} role="search">
         <div className={styles.searchField}><input type="search" placeholder="Search by subject or tutor name..." aria-label="Search tutors" value={filters.search} onChange={(event) => change("search", event.target.value)} className={styles.searchInput} /></div>
         <div className={styles.cityField}><select aria-label="Filter tutors by city" value={filters.city} onChange={(event) => change("city", event.target.value)} className={styles.citySelect}><option value="">All Cities</option>{CITIES.map((city) => <option key={city}>{city}</option>)}</select></div>

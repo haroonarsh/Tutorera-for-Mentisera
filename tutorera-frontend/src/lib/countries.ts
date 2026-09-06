@@ -373,3 +373,4 @@ export function convertToPKR(amount: number, fromCurrency = "PKR"): { amountPKR:
   const amountPKR = Math.round(amount * rateToPKR);
   return { amountPKR, rateToPKR: Number(rateToPKR.toFixed(4)) };
 }
+

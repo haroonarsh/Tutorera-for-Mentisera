@@ -236,7 +236,7 @@ export default function RequestWizard({
           Your Tuition Request is Live!
         </h2>
         <p style={{ color: "#64748b", fontSize: "1rem", lineHeight: 1.6, maxWidth: 520, margin: "0 auto 2rem" }}>
-          Relevant verified tutors in Pakistan are now being notified. You will start receiving tutor offers with their accepted price or transparent counter-offers.
+          Relevant verified tutors matching your subject and mode are now being notified. You will start receiving tutor offers with their accepted price or transparent counter-offers.
         </p>
 
         <div style={{

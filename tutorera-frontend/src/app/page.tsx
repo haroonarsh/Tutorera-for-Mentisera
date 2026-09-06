@@ -118,7 +118,7 @@ export default function Home() {
                 Cities & Localities
               </span>
               <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>
-                Home Tuition Across Major Pakistani Cities
+                Home Tuition Hubs & Verified Local Tutors
               </h2>
             </div>
             <Link href="/locations" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>
@@ -195,7 +195,7 @@ export default function Home() {
               Helpful Advice for Parents & Students
             </h2>
             <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-              Clear, transparent insights on tutor rates, screening, and academic excellence in Pakistan.
+              Clear, transparent insights on tutor rates, screening, and academic excellence worldwide and locally.
             </p>
           </div>
 

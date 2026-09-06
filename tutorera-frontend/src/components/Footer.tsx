@@ -25,6 +25,7 @@ const footerColumns = [
     title: "Marketplace",
     links: [
       { label: "Find a Tutor", href: "/tutors" },
+      { label: "Online Tutors Worldwide", href: "/online-tutors" },
       { label: "Post Tuition Requirement", href: "/dashboard?tab=requests" },
       { label: "Online Tutoring Terms", href: "/terms/online-tutoring" },
       { label: "Home Tuition Terms", href: "/terms/home-tuition" },

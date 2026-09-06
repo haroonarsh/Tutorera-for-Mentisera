@@ -7,7 +7,7 @@ import { BRAND_NAME, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Team | TUTORERA by MENTISERA",
-  description: "Meet the TUTORERA by MENTISERA leadership and product team behind Pakistan's student-led tutoring marketplace.",
+  description: "Meet the TUTORERA by MENTISERA leadership and engineering team behind the global student-led reverse tutoring marketplace.",
   alternates: { canonical: "/team" },
 };
 
@@ -46,7 +46,7 @@ export default function TeamPage() {
             <p style={{ color: C.accent, fontSize: "0.78rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.45rem" }}>Chief Executive Officer</p>
             <h2 style={{ color: C.primary, fontSize: "1.55rem", fontWeight: 850, marginBottom: "0.75rem" }}>Miss Saba Noor</h2>
             <p style={{ color: C.gray500, lineHeight: 1.75 }}>
-              Saba Noor leads TUTORERA&apos;s education vision and marketplace direction. She is an educator and EdTech expert focused on making tutoring more transparent, structured, and accessible for Pakistani students and parents.
+              Saba Noor leads TUTORERA&apos;s education vision and marketplace direction. She is an educator and EdTech leader focused on making tutoring transparent, structured, and accessible for students and parents worldwide and locally.
             </p>
             <div style={{ marginTop: "1.25rem", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
               {["Education strategy", "Tutor quality", "Student success", "EdTech leadership"].map((item) => (

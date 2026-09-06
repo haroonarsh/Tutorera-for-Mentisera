@@ -12,20 +12,24 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "TUTORERA | Find Tutors & Compare Tutor Offers in Pakistan",
+    default: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
     template: "%s | TUTORERA",
   },
-  description: "TUTORERA by MENTISERA connects students with tutors through a student-led tutoring marketplace. Post your requirement, receive tutor offers, compare PKR rates and choose your tutor.",
+  description: "Connect with verified tutors worldwide and locally. Post your tuition requirement with your preferred budget and currency, receive competitive tutor offers, and book with verified confidence.",
   keywords: [
-    "tutors in Pakistan",
-    "online tutoring Pakistan",
-    "find tutor Islamabad",
-    "find tutor Lahore",
-    "find tutor Karachi",
-    "Matric tutor",
+    "online tutors worldwide",
+    "find verified tutors",
+    "reverse tutoring marketplace",
+    "home tuition",
     "O Level tutor",
-    "FSc tutor",
-    "home tutor Pakistan",
+    "A Level tutor",
+    "GCSE IGCSE tutors",
+    "IB tutors",
+    "Matric FSc tutor",
+    "private tutors",
+    "tutors in UAE",
+    "tutors in UK",
+    "tutors in Pakistan",
     "TUTORERA",
   ],
   authors: [{ name: "MENTISERA (SMC-Private) Limited" }],
@@ -51,11 +55,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   openGraph: {
     type: "website",
-    locale: "en_PK",
+    locale: "en_US",
     url: "https://tutorera.ac.pk",
     siteName: "TUTORERA",
-    title: "TUTORERA | Find Tutors & Compare Tutor Offers in Pakistan",
-    description: "Post a requirement, compare tutor offers, and book online or in-person tutoring in Pakistan.",
+    title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
+    description: "Post your tuition requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide.",
     images: [
       {
         url: "/tutorera-logo-transparent.png",
@@ -67,8 +71,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "TUTORERA | Find Tutors & Compare Tutor Offers in Pakistan",
-    description: "Post your requirement, receive tutor offers, compare PKR rates and choose your tutor.",
+    title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
+    description: "Post your requirement, receive tutor offers, compare rates in your currency, and choose your verified tutor.",
     images: ["/tutorera-logo-transparent.png"],
   },
   robots: {
@@ -82,22 +86,97 @@ export const metadata: Metadata = {
     },
   },
 };
+
 export const viewport: Viewport = {
   themeColor: "#0329B2",
   width: "device-width",
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const structuredData = [
-    { "@context": "https://schema.org", "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "MENTISERA", legalName: LEGAL_OPERATOR, url: SITE_URL, logo: `${SITE_URL}/tutorera-logo-transparent.png`, email: SUPPORT_EMAIL, telephone: SUPPORT_PHONE, address: { "@type": "PostalAddress", streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town", addressLocality: "Islamabad", addressRegion: "Islamabad Capital Territory", addressCountry: "PK" }, description: BUSINESS_ADDRESS, areaServed: { "@type": "Country", name: "Pakistan" }, brand: { "@type": "Brand", name: PLATFORM_NAME, slogan: "A New Era of Tutoring" } },
-    { "@context": "https://schema.org", "@type": "Service", "@id": `${SITE_URL}/#tutoring-marketplace`, name: "TUTORERA", serviceType: "Student-led tutoring marketplace", provider: { "@id": `${SITE_URL}/#organization` }, areaServed: { "@type": "Country", name: "Pakistan" } },
-    { "@context": "https://schema.org", "@type": "WebSite", "@id": `${SITE_URL}/#website`, url: SITE_URL, name: PLATFORM_NAME, publisher: { "@id": `${SITE_URL}/#organization` }, potentialAction: { "@type": "SearchAction", target: `${SITE_URL}/tutors?search={search_term_string}`, "query-input": "required name=search_term_string" } },
-  ];
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "EducationalOrganization",
+        "@id": `${SITE_URL}/#organization`,
+        name: PLATFORM_NAME,
+        legalName: LEGAL_OPERATOR,
+        url: SITE_URL,
+        logo: `${SITE_URL}/tutorera-logo-transparent.png`,
+        description: "Global student-led reverse marketplace for online and in-person tutoring. Students post requirements with preferred budgets; verified tutors compete with offers.",
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town",
+          addressLocality: "Islamabad",
+          addressRegion: "Islamabad Capital Territory",
+          postalCode: "44000",
+          addressCountry: "PK",
+        },
+        contactPoint: [
+          {
+            "@type": "ContactPoint",
+            telephone: SUPPORT_PHONE,
+            contactType: "customer service",
+            email: SUPPORT_EMAIL,
+            availableLanguage: ["English", "Urdu", "Arabic"],
+          },
+        ],
+        areaServed: [
+          { "@type": "Place", name: "Worldwide" },
+          { "@type": "Country", name: "Pakistan" },
+          { "@type": "Country", name: "United Arab Emirates" },
+          { "@type": "Country", name: "United Kingdom" },
+          { "@type": "Country", name: "Saudi Arabia" },
+          { "@type": "Country", name: "United States" },
+          { "@type": "Country", name: "Canada" },
+        ],
+        sameAs: [
+          "https://mentisera.com",
+        ],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        url: SITE_URL,
+        name: PLATFORM_NAME,
+        description: "Global student-led reverse tutoring marketplace connecting learners and verified educators worldwide and locally.",
+        publisher: {
+          "@id": `${SITE_URL}/#organization`,
+        },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${SITE_URL}/tutors?q={search_term_string}`,
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Service",
+        "@id": `${SITE_URL}/#service`,
+        serviceType: "Online & In-Person Tutoring Marketplace",
+        provider: {
+          "@id": `${SITE_URL}/#organization`,
+        },
+        description: "Reverse tutoring marketplace where students post requirements in their local currency and verified tutors respond with customized offers.",
+        areaServed: {
+          "@type": "Place",
+          name: "Worldwide",
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="en">
       <head>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </head>
       <body className={inter.className}>
         <AuthProvider>

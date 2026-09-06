@@ -131,7 +131,7 @@ export default function HomeOnlineTuitionCards() {
             Need an Online Tutor?
           </h3>
           <p style={{ color: "#475569", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-            Post your requirement and receive competitive offers from top verified online tutors across Pakistan and overseas.
+            Post your requirement and receive competitive offers from top verified online tutors worldwide and locally.
           </p>
 
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "grid", gap: "0.5rem", fontSize: "0.825rem", color: "#334155" }}>
@@ -165,7 +165,7 @@ export default function HomeOnlineTuitionCards() {
               Post Online Tuition Request <ArrowRight size={15} />
             </Link>
             <Link
-              href="/tutors?mode=online"
+              href="/online-tutors"
               style={{
                 color: "#475569",
                 fontSize: "0.825rem",

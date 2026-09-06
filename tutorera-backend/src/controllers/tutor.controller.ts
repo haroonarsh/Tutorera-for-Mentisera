@@ -180,7 +180,13 @@ export const getAllTutors = async (
   }
 
   if (teachingMode) {
-    filter.teachingMode = teachingMode;
+    if (teachingMode === "online") {
+      filter.teachingMode = { $in: ["online", "both"] };
+    } else if (teachingMode === "in-person") {
+      filter.teachingMode = { $in: ["in-person", "both"] };
+    } else {
+      filter.teachingMode = teachingMode;
+    }
   }
 
   if (currency) {

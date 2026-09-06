@@ -52,7 +52,7 @@ export default function TrustSafetySection() {
             Built for Safe, Transparent Tutoring
           </h2>
           <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: 1.6 }}>
-            TUTORERA eliminates informal tuition uncertainties by establishing verified standards for both home and online learning across Pakistan.
+            TUTORERA eliminates informal tuition uncertainties by establishing verified standards for both in-person and online learning worldwide and locally.
           </p>
         </div>
 
