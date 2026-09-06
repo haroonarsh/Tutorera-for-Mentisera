@@ -22,7 +22,7 @@ export class AtRiskRequestService {
   /**
    * Scans all active requests and returns those requiring operational attention.
    */
-  public static async getAtRiskRequests(limit = 100): Promise<AtRiskRequestItem[]> {
+  public static async getAtRiskRequests(limit = 100, io?: any): Promise<AtRiskRequestItem[]> {
     const now = new Date();
     const activeRequests = await Request.find({
       status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
@@ -66,12 +66,18 @@ export class AtRiskRequestService {
       if (offersCount === 0 && hoursSinceCreated >= 24) {
         riskReasons.push("Zero offers received after 24h");
         urgencyScore += 40;
+
+        // Auto-expand matching for zero-offer requests with high urgency
+        await AtRiskRequestService.autoExpandMatchingForZeroOffer(req._id.toString(), io);
       }
 
       // 2. Zero offers after 48h
       if (offersCount === 0 && hoursSinceCreated >= 48) {
         riskReasons.push("Severe liquidity failure: Zero offers after 48h");
         urgencyScore += 30;
+
+        // Auto-expand matching for zero-offer requests with high urgency
+        await AtRiskRequestService.autoExpandMatchingForZeroOffer(req._id.toString(), io);
       }
 
       // 3. Expiring critical (<24h left with <2 offers)
@@ -136,6 +142,31 @@ export class AtRiskRequestService {
     // Sort by urgency score descending
     atRiskItems.sort((a, b) => b.urgencyScore - a.urgencyScore);
     return atRiskItems.slice(0, limit);
+  }
+
+  /**
+   * Automatically expands matching for zero-offer requests with high urgency.
+   * Called automatically when scanning at-risk requests.
+   */
+  public static async autoExpandMatchingForZeroOffer(
+    requestId: string,
+    io?: any
+  ): Promise<{ success: boolean; message: string }> {
+    const reqDoc = await Request.findById(requestId).populate("student", "name email");
+    if (!reqDoc) {
+      return { success: false, message: "Request not found." };
+    }
+
+    const studentId = reqDoc.student?._id ? reqDoc.student._id.toString() : reqDoc.student.toString();
+
+    // Trigger expanded matching dispatch
+    if (io) {
+      await MatchingService.dispatchProgressiveNotifications(reqDoc, io);
+    }
+    return {
+      success: true,
+      message: `Auto-expanded tutor matching for '${reqDoc.subject}'.`,
+    };
   }
 
   /**
@@ -214,3 +245,5 @@ export class AtRiskRequestService {
     return { success: false, message: "Unknown action." };
   }
 }
+
+export const AtRiskRequestServiceAlias = AtRiskRequestService;

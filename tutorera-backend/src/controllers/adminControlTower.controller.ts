@@ -55,7 +55,7 @@ export const getControlTowerPulse = async (_req: AuthRequest, res: Response): Pr
     }),
     Booking.countDocuments({ paymentStatus: "failed" }),
     SafetyCase.countDocuments({ status: { $in: ["open", "under_investigation"] } }),
-    AtRiskRequestService.getAtRiskRequests(15),
+    AtRiskRequestService.getAtRiskRequests(15, _req.app.get("io")),
   ]);
 
   // Compile "Requires Action Now" list
@@ -142,7 +142,8 @@ export const getControlTowerPulse = async (_req: AuthRequest, res: Response): Pr
 
 export const listAtRiskRequests = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const items = await AtRiskRequestService.getAtRiskRequests(100);
+    const io = _req.app.get("io");
+    const items = await AtRiskRequestService.getAtRiskRequests(100, io);
     res.json({ success: true, count: items.length, items });
   } catch (err: any) {
     logger.error({ err }, "Failed to load at-risk requests");

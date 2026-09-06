@@ -16,6 +16,7 @@ import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
+import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 
 const C = UI_COLORS;
@@ -448,6 +449,9 @@ function RequestCard({
   const [extending, setExtending] = useState(false);
   const [reposting, setReposting] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [selectedBids, setSelectedBids] = useState<string[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
+  const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
 
   async function handleExtend() {
     setExtending(true);
@@ -710,7 +714,14 @@ function RequestCard({
 
           {expanded && (
             <div className={s.bidsSection}>
-              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><p className={s.bidsSectionTitle}>Tutor Offers ({bids.length})</p><label style={{fontSize:12}}>Sort by <select value={offerSort} onChange={e=>{setOfferSort(e.target.value);loadBids(true,e.target.value)}}><option value="best_match">Best Match</option><option value="lowest_rate">Lowest Rate</option><option value="highest_rated">Highest Rated</option><option value="most_experienced">Most Experienced</option><option value="fastest_response">Fastest Response</option><option value="most_sessions">Most Sessions Completed</option></select></label></div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><p className={s.bidsSectionTitle}>Tutor Offers ({bids.length})</p><label style={{fontSize:12}}>Sort by <select value={offerSort} onChange={e=>{setOfferSort(e.target.value);loadBids(true,e.target.value)}}><option value="best_match">Best Match</option><option value="lowest_rate">Lowest Rate</option><option value="highest_rated">Highest Rated</option><option value="most_experienced">Most Experienced</option><option value="fastest_response">Fastest Response</option><option value="most_sessions">Most Sessions Completed</option></select></label>{selectedBids.length >= 2 && (
+              <button
+                onClick={() => setShowCompare(true)}
+                style={{padding:"0.35rem 0.85rem",background:"#0329b2",color:"white",border:"none",borderRadius:"0.4rem",fontWeight:700,fontSize:"0.8rem",cursor:"pointer"}}
+              >
+                Compare ({selectedBids.length}) Offers
+              </button>
+            )}</div>
               {bidsLoading ? (
                 <div className={s.spinner} />
               ) : bids.length === 0 ? (
@@ -720,6 +731,21 @@ function RequestCard({
               ) : (
                 bids.map((bid) => (
                   <div key={bid._id} className={s.bidCard}>
+                    {["pending", "submitted", "viewed", "countered"].includes(bid.status) && (
+                      <input
+                        type="checkbox"
+                        checked={selectedBids.includes(bid._id)}
+                        onChange={(e) => {
+                          setSelectedBids(prev =>
+                            e.target.checked
+                              ? [...prev, bid._id]
+                              : prev.filter(id => id !== bid._id)
+                          );
+                        }}
+                        aria-label={`Select ${bid.tutor.name} for comparison`}
+                        style={{marginTop:4,cursor:"pointer",width:16,height:16,accentColor:"#0329b2"}}
+                      />
+                    )}
                     <div className={s.bidAvatar}>
                       {bid.tutor.avatar
                         ? <img src={bid.tutor.avatar} alt={bid.tutor.name} />
@@ -789,6 +815,30 @@ function RequestCard({
           subject={request.subject}
           teachingMode={request.teachingMode}
           budget={request.budget}
+        />
+      )}
+
+      {/* Offer Comparison Modal */}
+      {showCompare && (
+        <OfferComparisonModal
+          offers={bids}
+          selected={selectedBids}
+          onClose={() => setShowCompare(false)}
+          onAccept={async (id) => {
+            setAcceptingCompare(id);
+            try {
+              const res = await axiosInstance.post(`/offers/${id}/accept`);
+              const checkoutUrl = res.data?.checkoutUrl;
+              if (checkoutUrl) {
+                window.location.assign(checkoutUrl);
+              }
+            } catch (err) {
+              console.error("Failed to accept bid:", err);
+            } finally {
+              setAcceptingCompare(null);
+            }
+          }}
+          acceptingId={acceptingCompare}
         />
       )}
     </div>

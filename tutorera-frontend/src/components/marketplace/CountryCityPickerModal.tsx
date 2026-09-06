@@ -27,6 +27,7 @@ interface CountryCityPickerModalProps {
   onSelect: (country: Country, city: string) => void;
   mode?: "country_and_city" | "country_only" | "city_only";
   title?: string;
+  countries?: Country[];
 }
 
 const POPULAR_COUNTRY_CODES = ["PK", "AE", "GB", "US", "SA", "CA", "AU"];
@@ -39,12 +40,14 @@ export default function CountryCityPickerModal({
   onSelect,
   mode = "country_and_city",
   title = "Select Country & City",
+  countries: countriesProp,
 }: CountryCityPickerModalProps) {
   const [activeTab, setActiveTab] = useState<"country" | "city">(
     mode === "city_only" ? "city" : "country"
   );
   const [tempCountry, setTempCountry] = useState<Country>(() => {
-    return getCountryByCode(selectedCountryCode) || COUNTRIES[0];
+    const list = countriesProp || COUNTRIES;
+    return list.find((c) => c.code === selectedCountryCode) || list[0];
   });
   const [tempCity, setTempCity] = useState(selectedCity || "");
   const [countryQuery, setCountryQuery] = useState("");
@@ -52,32 +55,38 @@ export default function CountryCityPickerModal({
   const [customCityInput, setCustomCityInput] = useState("");
 
   const filteredCountries = useMemo(() => {
-    if (!countryQuery.trim()) return COUNTRIES;
+    const list = countriesProp || COUNTRIES;
+    if (!countryQuery.trim()) return list;
     const q = countryQuery.toLowerCase();
-    return COUNTRIES.filter(
+    return list.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.code.toLowerCase().includes(q) ||
         c.currency.toLowerCase().includes(q)
     );
-  }, [countryQuery]);
+  }, [countryQuery, countriesProp]);
 
   const availableCities = useMemo(() => {
-    return getCitiesForCountry(tempCountry.code);
-  }, [tempCountry.code]);
+    const list = countriesProp || COUNTRIES;
+    const country = list.find((c) => c.code === tempCountry.code);
+    if (!country) return [];
+    return country.cities.map((ct) => typeof ct === "string" ? ct : ct.name);
+  }, [tempCountry.code, countriesProp]);
 
   const filteredCities = useMemo(() => {
     if (!cityQuery.trim()) return availableCities;
     const q = cityQuery.toLowerCase();
-    return availableCities.filter((c) => c.name.toLowerCase().includes(q));
+    return availableCities.filter((c) => c.toLowerCase().includes(q));
   }, [cityQuery, availableCities]);
 
   if (!isOpen) return null;
 
   const handleCountryPick = (country: Country) => {
     setTempCountry(country);
-    const cities = getCitiesForCountry(country.code);
-    const defaultCity = cities.length > 0 ? cities[0].name : "";
+    const list = countriesProp || COUNTRIES;
+    const found = list.find((c) => c.code === country.code);
+    const cities = found ? found.cities.map((ct) => typeof ct === "string" ? ct : ct.name) : [];
+    const defaultCity = cities.length > 0 ? cities[0] : "";
     setTempCity(defaultCity);
 
     if (mode === "country_only") {
@@ -245,7 +254,8 @@ export default function CountryCityPickerModal({
             </span>
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.4rem" }}>
               {POPULAR_COUNTRY_CODES.map((code) => {
-                const c = getCountryByCode(code);
+                const list = countriesProp || COUNTRIES;
+                const c = list.find(country => country.code === code);
                 if (!c) return null;
                 const isSelected = tempCountry.code === c.code;
                 return (
@@ -323,13 +333,13 @@ export default function CountryCityPickerModal({
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {/* Filtered Pre-defined Cities */}
-              {filteredCities.map((ct) => {
-                const isSelected = tempCity.toLowerCase() === ct.name.toLowerCase();
+              {filteredCities.map((cityName) => {
+                const isSelected = tempCity.toLowerCase() === cityName.toLowerCase();
                 return (
                   <button
-                    key={ct.name}
+                    key={cityName}
                     type="button"
-                    onClick={() => handleCityPick(ct.name)}
+                    onClick={() => handleCityPick(cityName)}
                     style={{
                       width: "100%",
                       padding: "0.75rem 1rem",
@@ -347,13 +357,8 @@ export default function CountryCityPickerModal({
                       <MapPin size={16} color={isSelected ? "#0329b2" : "#64748b"} />
                       <div>
                         <strong style={{ display: "block", fontSize: "0.92rem", color: isSelected ? "#0329b2" : "#021550" }}>
-                          {ct.name}
+                          {cityName}
                         </strong>
-                        {ct.areas && ct.areas.length > 0 && (
-                          <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                            Areas: {ct.areas.slice(0, 3).join(", ")}
-                          </span>
-                        )}
                       </div>
                     </div>
                     {isSelected && <Check size={18} color="#0329b2" />}

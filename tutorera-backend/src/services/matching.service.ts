@@ -65,6 +65,14 @@ export interface RankedRequestMatch {
   reasons: string[];
 }
 
+export interface RankedOffersResult {
+  offers: any[];
+  totalCount: number;
+  cappedCount: number;
+  isCapped: boolean;
+  capLimit: number;
+}
+
 export function buildSubjectSearchPatterns(subject: string): RegExp[] {
   const clean = (subject || "").trim().toLowerCase();
   if (!clean) return [];
@@ -661,12 +669,14 @@ export class MatchingService {
 
   /**
    * Intelligently re-rank received offers on a student's request
+   * Applies offer cap (default 5) from matching config to limit qualified offers shown
    */
   public static async rankOffersForRequest(
     request: IRequest,
     offers: IBid[]
-  ): Promise<any[]> {
+  ): Promise<RankedOffersResult> {
     const config = await this.getActiveConfig();
+    const maxOffers = config.thresholds.maxOffers || 5;
 
     const rankedPromises = offers.map(async (offer) => {
       const tutorProfile = await TutorProfile.findOne({ user: offer.tutor }).lean();
@@ -705,7 +715,18 @@ export class MatchingService {
 
     const ranked = await Promise.all(rankedPromises);
     ranked.sort((a, b) => b.rankScore - a.rankScore);
-    return ranked;
+
+    // Apply offer cap to limit qualified offers shown to student
+    const totalOffers = ranked.length;
+    const cappedOffers = ranked.slice(0, maxOffers);
+
+    return {
+      offers: cappedOffers,
+      totalCount: totalOffers,
+      cappedCount: cappedOffers.length,
+      isCapped: totalOffers > maxOffers,
+      capLimit: maxOffers,
+    };
   }
 
   /**

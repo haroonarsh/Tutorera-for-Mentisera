@@ -16,6 +16,24 @@ const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/users": "users.read",
 };
 
+const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
+  "/admin/bookings": "bookings.read",
+  "/admin/requests": "request.read",
+  "/admin/supply-gaps": "market.read",
+  "/admin/students": "student.read",
+  "/admin/tutors": "tutor.read",
+  "/admin/applications": "tutor.read",
+  "/admin/verifications": "tutor.verify",
+  "/admin/matching": "matching.read",
+  "/admin/analytics": "analytics.read",
+  "/admin/contacts": "support.read",
+  "/admin/notifications": "notifications.read",
+  "/admin/broadcasts": "broadcast.send",
+  "/admin/subscriptions": "subscription.read",
+  "/admin/student-ratings": "student.read",
+  "/admin/referrals": "referral.read",
+};
+
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {
   if (!required) return true;
   if (adminRole === "super_admin" || adminPermissions?.includes("*")) return true;
@@ -38,6 +56,18 @@ function hasPermission(adminRole?: string, adminPermissions?: string[], required
     if (perms.includes("*") || perms.includes(required)) return true;
   }
   return false;
+}
+
+function getRequiredPermission(pathname: string): string | undefined {
+  if (PATH_PERMISSIONS[pathname]) {
+    return PATH_PERMISSIONS[pathname];
+  }
+  for (const [prefix, permission] of Object.entries(ROUTE_PREFIX_PERMISSIONS)) {
+    if (pathname.startsWith(prefix + "/") || pathname === prefix) {
+      return permission;
+    }
+  }
+  return undefined;
 }
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -63,7 +93,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    const requiredPermission = PATH_PERMISSIONS[pathname];
+    const requiredPermission = getRequiredPermission(pathname);
     if (requiredPermission && !hasPermission(user.adminRole, user.adminPermissions, requiredPermission)) {
       router.replace("/admin");
     }

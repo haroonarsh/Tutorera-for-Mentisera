@@ -24,6 +24,7 @@ export interface MatchingConfigData {
     strong: number;
     good: number;
     notificationMinimum: number;
+    maxOffers: number; // Maximum number of qualified offers per request
   };
   bayesian: {
     globalMeanRating: number;
@@ -69,6 +70,7 @@ export const DEFAULT_MATCHING_CONFIG: MatchingConfigData = {
     strong: 80,
     good: 70,
     notificationMinimum: 60,
+    maxOffers: 5, // Maximum number of offers to process per request
   },
   bayesian: {
     globalMeanRating: 4.85,

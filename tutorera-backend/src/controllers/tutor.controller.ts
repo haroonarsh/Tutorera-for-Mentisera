@@ -284,6 +284,7 @@ export const saveOnboardingStep = async (
       countryName: parsedData.countryName || "Pakistan",
       city: parsedData.city,
       timezone: parsedData.timezone || "Asia/Karachi",
+      currency: parsedData.currency || "PKR",
       gender: parsedData.gender,
       dateOfBirth: parsedData.dateOfBirth,
       languages: parsedData.languages || [{ language: "English", proficiency: "Fluent" }],
@@ -296,6 +297,7 @@ export const saveOnboardingStep = async (
       countryName: parsedData.countryName || "Pakistan",
       city: parsedData.city,
       timezone: parsedData.timezone || "Asia/Karachi",
+      currency: parsedData.currency || "PKR",
     });
   }
 

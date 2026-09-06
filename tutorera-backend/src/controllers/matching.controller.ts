@@ -95,8 +95,11 @@ export const getRankedOffers = async (req: AuthRequest, res: Response): Promise<
 
     res.json({
       success: true,
-      totalOffers: ranked.length,
-      offers: ranked,
+      totalOffers: ranked.totalCount,
+      offers: ranked.offers,
+      isCapped: ranked.isCapped,
+      capLimit: ranked.capLimit,
+      cappedCount: ranked.cappedCount,
     });
   } catch (err) {
     logger.error({ err }, "Error in getRankedOffers");

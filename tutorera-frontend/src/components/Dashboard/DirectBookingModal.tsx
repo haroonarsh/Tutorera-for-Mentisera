@@ -25,6 +25,8 @@ interface Props {
   tutorSubjects: string[];
   tutorTeachingMode: "online" | "in-person" | "both";
   tutorCity: string;
+  initialSubject?: string;
+  initialLevel?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -39,10 +41,11 @@ interface DirectBookingForm {
 export default function DirectBookingModal({
   tutorId, tutorUserId, tutorName, hourlyRate, currency = "PKR",
   tutorSubjects, tutorTeachingMode, tutorCity,
+  initialSubject = "", initialLevel = "",
   onClose, onSuccess,
 }: Props) {
   const [form, setForm] = useState<DirectBookingForm>({
-    subject: "", level: "", description: "",
+    subject: initialSubject || "", level: initialLevel || "", description: "",
     teachingMode: tutorTeachingMode === "both" ? "" : tutorTeachingMode,
   });
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
