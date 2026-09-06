@@ -342,6 +342,17 @@ export const saveOnboardingStep = async (
       ...(degreeDocUrl && { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() }),
       ...(resubmitDegree && { degreeRejectionReason: "" }),
     };
+
+    if (resubmitDegree) {
+      const tutorUser = await User.findById(req.user?._id).select("name email applicationId");
+      if (tutorUser) {
+        const { subject, html } = documentResubmittedEmail(tutorUser.name, "Educational documents", {
+          applicationId: tutorUser.applicationId || "TUT-PENDING",
+          statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+        });
+        await sendEmail({ to: tutorUser.email, subject, html });
+      }
+    }
   }
 
   else if (stepNum === 3) {
@@ -512,6 +523,28 @@ export const saveOnboardingStep = async (
       verificationStatus: "pending",
       lastStatusChangeAt: new Date(),
     };
+
+    if (resubmitCnic || resubmitDemo || resubmitPolice) {
+      const tutorUser = await User.findById(req.user?._id).select("name email applicationId");
+      if (tutorUser) {
+        const cta = {
+          applicationId: tutorUser.applicationId || "TUT-PENDING",
+          statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+        };
+        if (resubmitCnic) {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, "CNIC", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }
+        if (resubmitDemo) {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, "Demo video", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }
+        if (resubmitPolice) {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, "Police verification", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }
+      }
+    }
   }
 
   // Save to DB
