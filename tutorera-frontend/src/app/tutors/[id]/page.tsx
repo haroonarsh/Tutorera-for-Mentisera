@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import {
   BookOpen,
@@ -11,11 +12,15 @@ import {
   Video,
   FileCheck2,
   Sparkles,
+  Home,
+  ChevronRight,
+  Zap,
 } from "lucide-react";
 import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
 import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
 import AvatarImage from "@/components/Common/AvatarImage";
 import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
+import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
 import { fetchTutor, tutorProfileHref } from "@/lib/tutor-directory";
 import { SITE_URL } from "@/lib/site";
 import type { Review } from "@/types/tutor";
@@ -25,6 +30,15 @@ const API_URL =
   "https://tutorera-backend.onrender.com/api/v1";
 
 type Props = { params: Promise<{ id: string }> };
+
+function formatName(raw?: string): string {
+  if (!raw) return "Verified Tutor";
+  return raw
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -36,14 +50,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const name = tutor.user?.name || tutor.fullName || "Verified Tutor";
+  const name = formatName(tutor.user?.name || tutor.fullName);
   const primarySubject = tutor.subjects?.[0] || "Tuition";
   const city = tutor.city || tutor.user?.city || "Pakistan";
-  const modeText = tutor.teachingMode === "both" ? "Online & In-Person" : tutor.teachingMode === "online" ? "Online" : "In-Person";
-  const rateText = tutor.hourlyRate ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString()}/hr` : "Competitive rates";
+  const modeText =
+    tutor.teachingMode === "both"
+      ? "Online & In-Person"
+      : tutor.teachingMode === "online"
+      ? "Online"
+      : "In-Person";
+  const rateText = tutor.hourlyRate
+    ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString()}/hr`
+    : "Competitive rates";
 
   const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText}) | TUTORERA`;
-  const description = `${name} is an approved, verified ${primarySubject} educator serving students in ${city} and worldwide (${modeText}). Offering ${tutor.subjects?.slice(0, 3).join(", ") || primarySubject} across ${tutor.levels?.slice(0, 3).join(", ") || "standard curricula"} at ${rateText}.`;
+  const description = `${name} is an approved, verified ${primarySubject} educator serving students in ${city} and worldwide (${modeText}). Offering ${
+    tutor.subjects?.slice(0, 3).join(", ") || primarySubject
+  } across ${tutor.levels?.slice(0, 3).join(", ") || "standard curricula"} at ${rateText}.`;
   const canonical = tutorProfileHref(tutor);
 
   return {
@@ -108,14 +131,25 @@ export default async function TutorProfilePage({ params }: Props) {
   const tutor = await fetchTutor(id);
   if (!tutor) notFound();
 
-  const name = tutor.user?.name || tutor.fullName || "Tutor";
+  const name = formatName(tutor.user?.name || tutor.fullName);
   const city = tutor.city || tutor.user?.city || "Pakistan";
+  const countryCode = tutor.countryCode || tutor.user?.countryCode || "PK";
+  const countryName =
+    tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode);
+  const locationDisplay = city ? `${city}, ${countryName}` : countryName;
   const avatarUrl = tutor.user?.avatar || null;
-  const { reviews, slots } = await extras(tutor.user._id);
+  const tutorUserId = tutor.user?._id || String(tutor.user || tutor._id);
+
+  const { reviews, slots } = await extras(tutorUserId);
 
   const hasVideo = Boolean(tutor.videoIntro);
-  const isHomeTutor =
-    tutor.teachingMode === "in-person" || tutor.teachingMode === "both";
+  const isHomeTutor = tutor.teachingMode === "in-person" || tutor.teachingMode === "both";
+  const modeLabel =
+    tutor.teachingMode === "both"
+      ? "online worldwide and in-person"
+      : tutor.teachingMode === "online"
+      ? "online worldwide"
+      : "in-person";
 
   const canonical = tutorProfileHref(tutor);
   const profileSchema = {
@@ -140,13 +174,18 @@ export default async function TutorProfilePage({ params }: Props) {
         "@id": `${SITE_URL}${canonical}#person`,
         name,
         image: avatarUrl || undefined,
-        description: tutor.bio || `${name} is a verified educator on TUTORERA.`,
+        jobTitle: `${tutor.subjects?.[0] || "Academic"} Tutor`,
+        description: tutor.bio || undefined,
         address: {
           "@type": "PostalAddress",
           addressLocality: city,
-          addressCountry: tutor.countryCode || "PK",
+          addressCountry: countryCode,
         },
-        knowsAbout: tutor.subjects || [],
+        knowsAbout: [
+          ...(tutor.subjects || []),
+          ...(tutor.curricula || []),
+          ...(tutor.levels || []),
+        ],
         alumniOf: tutor.education?.map((edu) => ({
           "@type": "EducationalOrganization",
           name: edu.institution,
@@ -173,203 +212,438 @@ export default async function TutorProfilePage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
       />
-      {/* Header Profile Hero */}
-      <header
+
+      {/* ── COVER BANNER & BREADCRUMB ── */}
+      <section
         style={{
-          background: "linear-gradient(135deg, #021550 0%, #062b8c 100%)",
-          padding: "3.5rem 1.5rem 3rem",
+          background: "linear-gradient(135deg, #021550 0%, #062b8c 45%, #021245 100%)",
+          position: "relative",
+          padding: "1.5rem 1.5rem 5.5rem",
+          overflow: "hidden",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
+        aria-label="Tutor Profile Banner"
       >
+        {/* Ambient Decorative Blurs & Mesh Pattern */}
+        <div
+          style={{
+            position: "absolute",
+            top: "-80px",
+            right: "-80px",
+            width: 420,
+            height: 420,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(200, 27, 127, 0.28) 0%, transparent 70%)",
+            filter: "blur(40px)",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "-60px",
+            left: "5%",
+            width: 380,
+            height: 380,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(3, 41, 178, 0.45) 0%, transparent 70%)",
+            filter: "blur(40px)",
+            pointerEvents: "none",
+          }}
+        />
+        <svg
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            opacity: 0.05,
+            pointerEvents: "none",
+          }}
+        >
+          <defs>
+            <pattern id="cover-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+              <path d="M0 32V.5H32" fill="none" stroke="#ffffff" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#cover-grid)" />
+        </svg>
+
         <div
           style={{
             maxWidth: 1100,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
-            gap: "2rem",
+            justifyContent: "space-between",
             flexWrap: "wrap",
+            gap: "1rem",
+            position: "relative",
+            zIndex: 2,
           }}
         >
-          {/* Avatar with fallback */}
-          <div style={{ position: "relative" }}>
-            <AvatarImage
-              src={avatarUrl}
-              alt={`${name}, tutor in ${city}`}
-              name={name}
-              size={110}
+          {/* High-contrast, Accessible Glassmorphic Breadcrumb */}
+          <nav
+            aria-label="Breadcrumb"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 1rem",
+              borderRadius: 999,
+              backgroundColor: "rgba(2, 21, 80, 0.65)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.16)",
+              fontSize: "0.82rem",
+              color: "#e2e8f0",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            }}
+          >
+            <Link
+              href="/"
               style={{
-                border: "3.5px solid rgba(255, 255, 255, 0.95)",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-              }}
-            />
-            {tutor.isVerified && (
-              <span
-                style={{
-                  position: "absolute",
-                  bottom: -2,
-                  right: -2,
-                  background: "#10b981",
-                  color: "white",
-                  borderRadius: "50%",
-                  width: 28,
-                  height: 28,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "2px solid #021550",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                }}
-                title="Verified Tutor"
-              >
-                <CheckCircle size={18} />
-              </span>
-            )}
-          </div>
-
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <div
-              style={{
-                display: "flex",
-                gap: ".75rem",
+                display: "inline-flex",
                 alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <h1
-                style={{
-                  color: "white",
-                  fontSize: "2.2rem",
-                  fontWeight: 800,
-                  margin: 0,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {name}
-              </h1>
-
-              {tutor.isVerified && (
-                <span
-                  style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.2)",
-                    color: "#86efac",
-                    display: "inline-flex",
-                    gap: ".35rem",
-                    alignItems: "center",
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: 999,
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    border: "1px solid rgba(16, 185, 129, 0.4)",
-                  }}
-                >
-                  <CheckCircle size={15} /> Verified Tutor
-                </span>
-              )}
-
-              {tutor.teachingMode === "online" && (
-                <span
-                  style={{
-                    backgroundColor: "rgba(59, 130, 246, 0.2)",
-                    color: "#93c5fd",
-                    display: "inline-flex",
-                    gap: ".35rem",
-                    alignItems: "center",
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: 999,
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    border: "1px solid rgba(59, 130, 246, 0.4)",
-                  }}
-                >
-                  🌐 Online Verified
-                </span>
-              )}
-
-              {tutor.policeVerificationStatus === "approved" && (
-                <span
-                  style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.25)",
-                    color: "#86efac",
-                    display: "inline-flex",
-                    gap: ".35rem",
-                    alignItems: "center",
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: 999,
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    border: "1px solid rgba(16, 185, 129, 0.5)",
-                  }}
-                >
-                  🛡️ Police Verified (Home Tuition)
-                </span>
-              )}
-
-              {hasVideo && (
-                <span
-                  style={{
-                    backgroundColor: "rgba(200, 27, 127, 0.25)",
-                    color: "#f472b6",
-                    display: "inline-flex",
-                    gap: ".35rem",
-                    alignItems: "center",
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: 999,
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    border: "1px solid rgba(200, 27, 127, 0.4)",
-                  }}
-                >
-                  <Video size={15} /> Video Intro Available
-                </span>
-              )}
-            </div>
-
-            <p
-              style={{
+                gap: "0.3rem",
                 color: "#93c5fd",
-                marginTop: ".5rem",
-                fontSize: "1.05rem",
+                textDecoration: "none",
                 fontWeight: 600,
               }}
             >
-              {tutor.subjects?.join(" • ") || "Academic Tutor"}
-            </p>
-
-            <div
+              <Home size={14} /> Home
+            </Link>
+            <ChevronRight size={13} color="rgba(255,255,255,0.4)" />
+            <Link
+              href="/tutors"
               style={{
-                color: "#cbd5e1",
-                marginTop: ".6rem",
-                display: "flex",
-                gap: "1.25rem",
-                flexWrap: "wrap",
-                fontSize: "0.9rem",
+                color: "#93c5fd",
+                textDecoration: "none",
+                fontWeight: 600,
               }}
             >
-              <span
-                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+              Tutors
+            </Link>
+            {countryCode && countryName && (
+              <>
+                <ChevronRight size={13} color="rgba(255,255,255,0.4)" />
+                <Link
+                  href={`/${countryCode.toLowerCase()}/tutors`}
+                  style={{
+                    color: "#93c5fd",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  {countryName}
+                </Link>
+              </>
+            )}
+            <ChevronRight size={13} color="rgba(255,255,255,0.4)" />
+            <span style={{ color: "#ffffff", fontWeight: 700 }} aria-current="page">
+              {name}
+            </span>
+          </nav>
+
+          <ShareProfileButton tutorName={name} />
+        </div>
+      </section>
+
+      {/* ── OVERLAPPING HERO PROFILE CARD ── */}
+      <section
+        style={{
+          maxWidth: 1100,
+          margin: "-4.5rem auto 0",
+          padding: "0 1.5rem",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-label="Tutor Profile Overview"
+      >
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: 20,
+            padding: "2rem",
+            boxShadow: "0 14px 38px rgba(2, 21, 80, 0.08)",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "2rem",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Avatar with Verified Badge */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <AvatarImage
+                src={avatarUrl}
+                alt={`${name}, tutor in ${city}`}
+                name={name}
+                size={124}
+                style={{
+                  border: "4px solid #ffffff",
+                  boxShadow: "0 8px 26px rgba(2, 21, 80, 0.15)",
+                }}
+              />
+              {tutor.isVerified && (
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: 2,
+                    right: 2,
+                    background: "#10b981",
+                    color: "white",
+                    borderRadius: "50%",
+                    width: 30,
+                    height: 30,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2.5px solid #ffffff",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  }}
+                  title="Verified Tutor"
+                >
+                  <CheckCircle size={18} />
+                </span>
+              )}
+            </div>
+
+            {/* Profile Identity Details */}
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.6rem",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  marginBottom: "0.35rem",
+                }}
               >
-                <MapPin size={16} color="#60a5fa" /> {city}
-              </span>
-              <span
-                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+                <h1
+                  style={{
+                    color: "#021550",
+                    fontSize: "2.2rem",
+                    fontWeight: 800,
+                    margin: 0,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {name}
+                </h1>
+
+                {tutor.isVerified && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(16, 185, 129, 0.12)",
+                      color: "#166534",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(16, 185, 129, 0.3)",
+                    }}
+                  >
+                    <CheckCircle size={14} color="#16a34a" /> Verified Tutor
+                  </span>
+                )}
+
+                {tutor.teachingMode === "online" && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(59, 130, 246, 0.1)",
+                      color: "#1d4ed8",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(59, 130, 246, 0.3)",
+                    }}
+                  >
+                    🌐 Online Worldwide
+                  </span>
+                )}
+
+                {tutor.teachingMode === "both" && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(59, 130, 246, 0.1)",
+                      color: "#1d4ed8",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(59, 130, 246, 0.3)",
+                    }}
+                  >
+                    🌐 Online & In-Person
+                  </span>
+                )}
+
+                {tutor.policeVerificationStatus === "approved" && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(147, 51, 234, 0.1)",
+                      color: "#6b21a8",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(147, 51, 234, 0.3)",
+                    }}
+                  >
+                    🛡️ Police Background Checked
+                  </span>
+                )}
+
+                {hasVideo && (
+                  <span
+                    style={{
+                      backgroundColor: "rgba(200, 27, 127, 0.1)",
+                      color: "#9d174d",
+                      display: "inline-flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: 999,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      border: "1px solid rgba(200, 27, 127, 0.3)",
+                    }}
+                  >
+                    <Video size={14} color="#db2777" /> Video Demo Verified
+                  </span>
+                )}
+              </div>
+
+              {/* Primary Subjects Headline */}
+              <p
+                style={{
+                  color: "#0329B2",
+                  margin: "0.3rem 0 0.6rem",
+                  fontSize: "1.08rem",
+                  fontWeight: 700,
+                }}
               >
-                <Star size={16} color="#fbbf24" fill="#fbbf24" />{" "}
-                <strong style={{ color: "white" }}>
-                  {tutor.averageRating?.toFixed(1) || "New"}
-                </strong>{" "}
-                ({tutor.totalReviews || 0} student reviews)
-              </span>
-              <span
-                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+                {tutor.subjects?.join(" • ") || "Academic Specialist"}
+              </p>
+
+              {/* Meta Stats Row */}
+              <div
+                style={{
+                  color: "#64748b",
+                  display: "flex",
+                  gap: "1.25rem",
+                  flexWrap: "wrap",
+                  fontSize: "0.88rem",
+                  alignItems: "center",
+                }}
               >
-                <Clock size={16} color="#60a5fa" /> {tutor.experience || 0}{" "}
-                years experience
-              </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <MapPin size={16} color="#0329B2" /> {locationDisplay}
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Star size={16} color="#fbbf24" fill="#fbbf24" />
+                  <strong style={{ color: "#021550" }}>
+                    {tutor.averageRating?.toFixed(1) || "5.0"}
+                  </strong>{" "}
+                  ({tutor.totalReviews || 0} student reviews)
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Clock size={16} color="#0329B2" /> {tutor.experience || 0} years experience
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#166534" }}>
+                  <Zap size={15} color="#16a34a" /> Fast Responder
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Pricing Badge / Desktop Direct Action */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: "0.5rem",
+                marginLeft: "auto",
+              }}
+              className="tutor-hero-rate-box"
+            >
+              <div
+                style={{
+                  fontSize: "1.45rem",
+                  fontWeight: 800,
+                  color: "#0329B2",
+                }}
+              >
+                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString()}
+                <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
+                  /hr
+                </span>
+              </div>
+              <a
+                href="#booking-card"
+                style={{
+                  backgroundColor: "#0329B2",
+                  color: "white",
+                  padding: "0.65rem 1.25rem",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  boxShadow: "0 4px 14px rgba(3, 41, 178, 0.25)",
+                }}
+              >
+                Book Session
+              </a>
             </div>
           </div>
+
+          {/* Integrated Teaching Overview Statement (replacing raw SEO paragraph) */}
+          <div
+            style={{
+              marginTop: "1.5rem",
+              padding: "0.85rem 1.25rem",
+              borderRadius: 12,
+              backgroundColor: "#F8FAFC",
+              border: "1px solid #E2E8F0",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              fontSize: "0.92rem",
+              color: "#334155",
+              lineHeight: 1.5,
+            }}
+          >
+            <BookOpen size={20} color="#0329B2" style={{ flexShrink: 0 }} />
+            <span>
+              <strong>{name}</strong> specializes in{" "}
+              <strong>{tutor.subjects?.join(", ") || "academic tutoring"}</strong> ({locationDisplay}) and
+              offers <strong>{modeLabel}</strong> lessons focused on deep conceptual clarity, past paper
+              practice, and customized student pacing.
+            </span>
+          </div>
         </div>
-      </header>
+      </section>
 
       {/* Main Container */}
       <div
@@ -386,14 +660,17 @@ export default async function TutorProfilePage({ params }: Props) {
         {/* Left Column Content */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           
-          {/* ── DEMO VIDEO PLAYER (If available) ── */}
-          {hasVideo && tutor.videoIntro && (
-            <TutorVideoPlayer
-              videoUrl={tutor.videoIntro}
-              tutorName={name}
-              posterUrl={avatarUrl || undefined}
-            />
-          )}
+          {/* ── DEMO VIDEO / TRIAL SESSION SECTION (Always rendered) ── */}
+          <TutorVideoPlayer
+            videoUrl={tutor.videoIntro}
+            tutorName={name}
+            posterUrl={avatarUrl || undefined}
+            subjects={tutor.subjects || []}
+            city={city}
+            hourlyRate={tutor.hourlyRate}
+            currency={tutor.currency || "PKR"}
+            tutorUserId={tutorUserId}
+          />
 
           {/* ── TRUST & VERIFICATION PILLARS ── */}
           <section style={card}>
@@ -441,27 +718,53 @@ export default async function TutorProfilePage({ params }: Props) {
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.6rem",
-                  padding: "0.75rem 1rem",
-                  borderRadius: 10,
-                  backgroundColor: "#eff6ff",
-                  border: "1px solid #bfdbfe",
-                }}
-              >
-                <Award size={18} color="#2563eb" />
-                <div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1e40af" }}>
-                    Degree & Credentials
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#1d4ed8" }}>
-                    Academic Document Checked
+              {tutor.education?.some((e) => e.degree) && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: 10,
+                    backgroundColor: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                  }}
+                >
+                  <Award size={18} color="#2563eb" />
+                  <div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1e40af" }}>
+                      Academic Degree
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#1d4ed8" }}>
+                      Credentials Checked
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {tutor.policeVerificationStatus === "approved" && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: 10,
+                    backgroundColor: "#faf5ff",
+                    border: "1px solid #e9d5ff",
+                  }}
+                >
+                  <ShieldCheck size={18} color="#9333ea" />
+                  <div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#6b21a8" }}>
+                      Police Character
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#7e22ce" }}>
+                      Home Tuition Safe
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {hasVideo ? (
                 <div
@@ -558,86 +861,151 @@ export default async function TutorProfilePage({ params }: Props) {
                 <span
                   key={subject}
                   style={{
-                    background: "#EEF5FF",
+                    backgroundColor: "#eef2ff",
                     color: "#0329B2",
-                    padding: ".45rem .95rem",
-                    borderRadius: 999,
+                    padding: "0.45rem 0.85rem",
+                    borderRadius: 8,
+                    fontWeight: 700,
                     fontSize: "0.9rem",
-                    fontWeight: 600,
-                    border: "1px solid #dbeafe",
+                    border: "1px solid #c7d2fe",
                   }}
                 >
                   {subject}
                 </span>
               ))}
             </div>
-            <div>
-              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Target Grade / Levels:
-              </span>
-              <p style={{ color: "#1f2937", fontWeight: 500, marginTop: "0.3rem" }}>
-                {tutor.levels?.join(" • ") || "All standard school & college levels."}
-              </p>
+
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#4b5563", marginBottom: ".6rem" }}>
+              Grade Levels Covered:
+            </h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: ".4rem" }}>
+              {tutor.levels?.length ? (
+                tutor.levels.map((lvl) => (
+                  <span
+                    key={lvl}
+                    style={{
+                      backgroundColor: "#f3f4f6",
+                      color: "#374151",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: 6,
+                      fontSize: "0.85rem",
+                      border: "1px solid #e5e7eb",
+                    }}
+                  >
+                    {lvl}
+                  </span>
+                ))
+              ) : (
+                <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>
+                  Primary, Middle, Matric, O/A Levels
+                </span>
+              )}
             </div>
           </section>
 
-          {/* Education */}
-          {tutor.education?.length > 0 && (
+          {/* Curricula & Boards */}
+          {tutor.curricula && tutor.curricula.length > 0 && (
             <section style={card}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
-                Academic Background & Education
+                Target Curricula & Examination Boards
+              </h2>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: ".6rem" }}>
+                {tutor.curricula.map((curr) => (
+                  <span
+                    key={curr}
+                    style={{
+                      backgroundColor: "#fdf2f8",
+                      color: "#C81B7F",
+                      padding: "0.45rem 0.85rem",
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      border: "1px solid #fbcfe8",
+                    }}
+                  >
+                    {curr}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Education & Degrees */}
+          {tutor.education && tutor.education.length > 0 && (
+            <section style={card}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
+                Academic Background & Degrees
               </h2>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 {tutor.education.map((edu) => (
                   <div
                     key={edu._id}
                     style={{
-                      borderLeft: "3px solid #0329B2",
-                      paddingLeft: "1rem",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.85rem",
+                      borderBottom: "1px solid #f3f4f6",
+                      paddingBottom: "0.85rem",
                     }}
                   >
-                    <strong style={{ fontSize: "1rem", color: "#021550" }}>{edu.degree}</strong>
-                    <p style={{ color: "#4b5563", fontSize: "0.9rem", margin: "0.2rem 0 0" }}>
-                      {edu.institution}
-                      {edu.year ? ` • Class of ${edu.year}` : ""}
-                    </p>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        backgroundColor: "#f0fdf4",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#16a34a",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Award size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: "#021550", fontSize: "0.95rem" }}>
+                        {edu.degree}
+                      </div>
+                      <div style={{ color: "#4b5563", fontSize: "0.85rem" }}>
+                        {edu.institution} {edu.year ? `(${edu.year})` : ""}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </section>
           )}
 
-          {/* Teaching Details */}
+          {/* Teaching Details / Summary */}
           <section style={card}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
-              Teaching Details & Methodology
+              Teaching Details
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
               <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
-                <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>MODE OF TUITION</span>
-                <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <BookOpen size={17} color="#0329B2" />
+                <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>MODE</span>
+                <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0", textTransform: "capitalize" }}>
                   {tutor.teachingMode === "both"
-                    ? "Online & In-Person (Home)"
+                    ? "Online & In-Person"
                     : tutor.teachingMode === "online"
-                    ? "Online Tuition"
-                    : "In-Person (Home) Tuition"}
+                    ? "Online Only"
+                    : "In-Person Only"}
                 </p>
-                <div style={{ marginTop: "0.5rem", fontSize: "0.76rem", fontWeight: 600 }}>
-                  {tutor.teachingMode === "online" ? (
-                    <span style={{ color: "#15803d", backgroundColor: "#f0fdf4", padding: "3px 8px", borderRadius: 4, border: "1px solid #bbf7d0", display: "inline-block" }}>
-                      🟢 Online Only — Borderless (No Police Check Required)
-                    </span>
-                  ) : tutor.policeVerificationStatus === "approved" ? (
-                    <span style={{ color: "#166534", backgroundColor: "#dcfce7", padding: "3px 8px", borderRadius: 4, border: "1px solid #86efac", display: "inline-block" }}>
-                      🛡️ Police Verified for Home Tuition
-                    </span>
-                  ) : (
-                    <span style={{ color: "#9a3412", backgroundColor: "#ffedd5", padding: "3px 8px", borderRadius: 4, border: "1px solid #fed7aa", display: "inline-block" }}>
-                      ⚠️ Home Tuition Pending Police Verification Report
-                    </span>
-                  )}
-                </div>
+              </div>
+
+              <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
+                <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>LOCATION</span>
+                <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0" }}>
+                  {locationDisplay}
+                </p>
+              </div>
+
+              <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
+                <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>LANGUAGES</span>
+                <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0" }}>
+                  {tutor.languages?.join(", ") || "English, Urdu"}
+                </p>
               </div>
 
               <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
@@ -732,7 +1100,7 @@ export default async function TutorProfilePage({ params }: Props) {
         </div>
 
         {/* Right Sticky Column: Actions & Booking / Marketplace Invite */}
-        <aside>
+        <aside id="booking-card">
           <div style={{ ...card, position: "sticky", top: 90 }}>
             <div
               style={{
@@ -781,7 +1149,7 @@ export default async function TutorProfilePage({ params }: Props) {
 
             <TutorProfileActions
               profileId={tutor._id}
-              tutorUserId={tutor.user._id}
+              tutorUserId={tutorUserId}
               tutorName={name}
               hourlyRate={tutor.hourlyRate}
               currency={tutor.currency || "PKR"}
@@ -796,7 +1164,7 @@ export default async function TutorProfilePage({ params }: Props) {
       {/* Sticky Bottom CTA for Mobile */}
       <StickyTutorProfileCTA
         tutorId={tutor._id}
-        tutorUserId={tutor.user._id}
+        tutorUserId={tutorUserId}
         tutorName={name}
         hourlyRate={tutor.hourlyRate}
         currency={tutor.currency || "PKR"}
@@ -810,6 +1178,9 @@ export default async function TutorProfilePage({ params }: Props) {
         @media(max-width:860px){
           .profile-grid {
             grid-template-columns: 1fr !important;
+          }
+          .tutor-hero-rate-box {
+            display: none !important;
           }
         }
       `}</style>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CheckCircle, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, CheckCircle, Sparkles, ShieldCheck } from "lucide-react";
 import QuickRequestComposer from "./QuickRequestComposer";
 
 export default function HeroMarketplace() {
@@ -70,6 +70,32 @@ export default function HeroMarketplace() {
             >
               Post your subject, learning mode, schedule, and preferred budget. TUTORERA matches your requirement with suitable tutors who can accept your rate or send an offer. Compare, negotiate, and choose with confidence.
             </p>
+
+            <div style={{ marginBottom: "1.25rem" }}>
+              <Link
+                href="/first-session-guarantee"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.4rem 0.85rem",
+                  borderRadius: "999px",
+                  backgroundColor: "#ecfdf5",
+                  border: "1.5px solid #a7f3d0",
+                  color: "#065f46",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <ShieldCheck size={16} color="#10b981" />
+                <span>
+                  <strong>100% Student Guarantee:</strong> First trial session refund if not satisfied
+                </span>
+                <ArrowRight size={13} color="#059669" />
+              </Link>
+            </div>
 
             <div
               style={{
@@ -205,6 +231,28 @@ export default function HeroMarketplace() {
                   <strong style={{ display: "block", color: "#021550" }}>Online Tuition</strong>
                   <span style={{ color: "#64748b" }}>Worldwide 1-on-1 tutors</span>
                 </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "0.85rem",
+                  paddingTop: "0.75rem",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: "0.78rem",
+                }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "#166534", fontWeight: 700 }}>
+                  <ShieldCheck size={15} color="#16a34a" /> 100% Risk-Free First Session
+                </span>
+                <Link
+                  href="/first-session-guarantee"
+                  style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none" }}
+                >
+                  Policy details →
+                </Link>
               </div>
             </div>
           </div>

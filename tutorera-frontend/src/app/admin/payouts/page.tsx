@@ -11,6 +11,7 @@ interface Booking {
   student: { name: string; email: string };
   tutor: { name: string; email: string; phone?: string; city?: string };
   amount: number;
+  currency?: string;
   platformFee: number;
   tutorPayout: number;
   status: string;
@@ -112,7 +113,7 @@ export default function PayoutsPage() {
             Pending Payouts
           </p>
           <p style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>
-            Rs. {(stats?.totalPendingAmount ?? 0).toLocaleString()}
+            PKR {(stats?.totalPendingAmount ?? 0).toLocaleString()}
           </p>
           <p style={{ fontSize: '0.8rem', color: C.gray500, marginTop: '0.25rem' }}>
             {stats?.pendingCount ?? 0} tutors awaiting payment
@@ -125,7 +126,7 @@ export default function PayoutsPage() {
             Total Paid Out
           </p>
           <p style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>
-            Rs. {(stats?.totalPaidAmount ?? 0).toLocaleString()}
+            PKR {(stats?.totalPaidAmount ?? 0).toLocaleString()}
           </p>
           <p style={{ fontSize: '0.8rem', color: C.gray500, marginTop: '0.25rem' }}>
             {stats?.paidCount ?? 0} payouts completed
@@ -216,16 +217,16 @@ export default function PayoutsPage() {
                 {/* Amount */}
                 <div>
                   <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, margin: 0 }}>
-                    Rs. {(booking.amount || 0).toLocaleString()}
+                    {booking.currency || "PKR"} {(booking.amount || 0).toLocaleString()}
                   </p>
                   <p style={{ fontSize: '0.7rem', color: C.gray500, margin: 0 }}>
-                    Fee: Rs. {(booking.platformFee || 0).toLocaleString()}
+                    Fee: {booking.currency || "PKR"} {(booking.platformFee || 0).toLocaleString()}
                   </p>
                 </div>
 
                 {/* Tutor Payout */}
                 <p style={{ fontSize: '0.95rem', fontWeight: '800', color: '#16a34a', margin: 0 }}>
-                  Rs. {(booking.tutorPayout || 0).toLocaleString()}
+                  {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
                 </p>
 
                 {/* Session Status */}

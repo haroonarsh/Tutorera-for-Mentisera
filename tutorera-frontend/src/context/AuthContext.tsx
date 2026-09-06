@@ -16,6 +16,8 @@ interface User {
   city?: string;
   countryCode?: string;
   currency?: string;
+  adminRole?: string;
+  adminPermissions?: string[];
 }
 
 interface GoogleAuthResult {

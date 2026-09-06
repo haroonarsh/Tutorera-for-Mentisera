@@ -9,7 +9,7 @@ const BASE_URL = "https://secure.rapid-gateway.com";
 const RAPID_GATEWAY_ENV = process.env.RAPID_GATEWAY_ENV || "sandbox";
 const IS_SANDBOX = RAPID_GATEWAY_ENV === "sandbox";
 
-const MERCHANT_ID = process.env.RAPID_GATEWAY_MERCHANT_ID as string; // real merchant id (e.g. 1442) — used in the transaction body in BOTH modes
+const MERCHANT_ID = (process.env.RAPID_GATEWAY_MERCHANT_ID as string) || (IS_SANDBOX ? "1442" : "");
 const MERCHANT_NAME = process.env.RAPID_GATEWAY_MERCHANT_NAME || "TUTORERA";
 
 // Sandbox auth is a shared, publicly-documented test credential — the same
@@ -19,7 +19,7 @@ const MERCHANT_NAME = process.env.RAPID_GATEWAY_MERCHANT_NAME || "TUTORERA";
 const OAUTH_CLIENT_ID = IS_SANDBOX ? "client" : MERCHANT_ID;
 const OAUTH_CLIENT_SECRET = IS_SANDBOX
   ? "secret"
-  : (process.env.RAPID_GATEWAY_CLIENT_SECRET as string); // real secret — required once we go live
+  : ((process.env.RAPID_GATEWAY_CLIENT_SECRET as string) || ""); // real secret — required once we go live
 
 const TRANSACTION_PATH = IS_SANDBOX ? "/sandbox/process-transaction" : "/rapid/process-transaction";
 

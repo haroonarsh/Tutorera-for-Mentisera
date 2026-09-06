@@ -3,7 +3,7 @@ import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { BookOpen } from "lucide-react";
+import { BookOpen, CheckCircle, AlertTriangle, FileText, Video, ShieldCheck, RefreshCw } from "lucide-react";
 import api from "@/lib/axios";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { Country } from "@/lib/countries";
@@ -22,6 +22,24 @@ const STEPS = [
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const timeSlots = ["8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"];
 
+interface ExistingDocsState {
+  degreeDoc?: string;
+  cnicFront?: string;
+  cnicBack?: string;
+  videoIntro?: string;
+  policeCertificate?: string;
+  cnicVerificationStatus?: string;
+  cnicRejectionReason?: string;
+  degreeVerificationStatus?: string;
+  degreeRejectionReason?: string;
+  demoVideoStatus?: string;
+  demoVideoRejectionReason?: string;
+  policeVerificationStatus?: string;
+  policeRejectionReason?: string;
+  verificationStatus?: string;
+  rejectionReason?: string;
+}
+
 export default function TutorOnboardingPage() {
   const { user, loading } = useAuth();
   const geo = useGeoData();
@@ -29,6 +47,8 @@ export default function TutorOnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [existingDocs, setExistingDocs] = useState<ExistingDocsState>({});
 
   const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
     "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"
@@ -76,9 +96,92 @@ export default function TutorOnboardingPage() {
   const [videoIntro, setVideoIntro] = useState<File | null>(null);
   const [policeCertificate, setPoliceCertificate] = useState<File | null>(null);
 
+  // Load existing profile on mount so tutors can correct mistaken info or resubmit rejected docs
   useEffect(() => {
     if (!loading && !user) router.push("/login");
     if (!loading && user && user.role !== "tutor") router.push("/dashboard");
+
+    if (!loading && user && user.role === "tutor") {
+      api.get("/tutors/profile/me")
+        .then((res) => {
+          const p = res.data?.profile;
+          if (p) {
+            setStep1({
+              fullName: p.user?.name || p.fullName || "",
+              phone: p.user?.phone || p.phone || "",
+              countryCode: p.countryCode || p.user?.countryCode || "PK",
+              countryName: p.countryName || p.user?.countryName || "Pakistan",
+              city: p.city || p.user?.city || "Lahore",
+              timezone: p.timezone || p.user?.timezone || "Asia/Karachi",
+              currency: p.currency || "PKR",
+              gender: p.gender || "male",
+              dateOfBirth: p.dateOfBirth ? p.dateOfBirth.slice(0, 10) : "",
+            });
+
+            if (p.education?.[0]) {
+              setStep2({
+                degree: p.education[0].degree || "",
+                institution: p.education[0].institution || "",
+                year: p.education[0].year ? String(p.education[0].year) : "",
+              });
+            }
+
+            setStep3({
+              experience: p.experience ? String(p.experience) : "",
+              previousInstitutions: Array.isArray(p.previousInstitutions) ? p.previousInstitutions.join(", ") : "",
+            });
+            if (Array.isArray(p.subjects) && p.subjects.length > 0) {
+              setSelectedSubjects(p.subjects);
+            }
+            if (Array.isArray(p.levels) && p.levels.length > 0) {
+              setSelectedLevels(p.levels);
+            }
+
+            setStep4({
+              bio: p.bio || "",
+              hourlyRate: p.hourlyRate ? String(p.hourlyRate) : "",
+              currency: p.currency || "PKR",
+              serviceAreas: Array.isArray(p.serviceAreas) ? p.serviceAreas.join(", ") : (p.serviceAreas || ""),
+              travelRadiusKm: p.travelRadiusKm ? String(p.travelRadiusKm) : "10",
+              teachingMode: p.teachingMode || "both",
+            });
+            if (Array.isArray(p.availability) && p.availability.length > 0) {
+              setAvailability(p.availability);
+            }
+
+            const docs: ExistingDocsState = {
+              degreeDoc: p.education?.[0]?.degreeDoc,
+              cnicFront: p.cnicFront,
+              cnicBack: p.cnicBack,
+              videoIntro: p.videoIntro,
+              policeCertificate: p.policeCertificate,
+              cnicVerificationStatus: p.cnicVerificationStatus,
+              cnicRejectionReason: p.cnicRejectionReason,
+              degreeVerificationStatus: p.degreeVerificationStatus,
+              degreeRejectionReason: p.degreeRejectionReason,
+              demoVideoStatus: p.demoVideoStatus,
+              demoVideoRejectionReason: p.demoVideoRejectionReason,
+              policeVerificationStatus: p.policeVerificationStatus,
+              policeRejectionReason: p.policeRejectionReason,
+              verificationStatus: p.verificationStatus,
+              rejectionReason: p.rejectionReason,
+            };
+            setExistingDocs(docs);
+
+            // If a specific document is rejected, jump directly to that step!
+            if (
+              p.cnicVerificationStatus === "rejected" ||
+              p.demoVideoStatus === "rejected" ||
+              p.policeVerificationStatus === "rejected"
+            ) {
+              setCurrentStep(5);
+            } else if (p.degreeVerificationStatus === "rejected") {
+              setCurrentStep(2);
+            }
+          }
+        })
+        .catch(() => {});
+    }
   }, [user, loading, router]);
 
   const toggleItem = (arr: string[], item: string, setter: (v: string[]) => void) => {
@@ -105,12 +208,12 @@ export default function TutorOnboardingPage() {
 
   // Whether teaching mode mandates police verification report
   const isHomeTuitionMandatory = step4.teachingMode === "in-person";
-  const isHybridTeaching = step4.teachingMode === "both";
   const isOnlineOnly = step4.teachingMode === "online";
-  const requiresPoliceCert = isHomeTuitionMandatory;
 
   const handleNext = async () => {
-    setError(""); setSaving(true);
+    setError("");
+    setSuccessMsg("");
+    setSaving(true);
     try {
       const formData = new FormData();
       formData.append("step", currentStep.toString());
@@ -154,19 +257,43 @@ export default function TutorOnboardingPage() {
       }
 
       else if (currentStep === 5) {
-        if (!cnicFront || !cnicBack) {
-          setError("Please upload both CNIC front and back."); setSaving(false); return;
+        const hasCnicFront = Boolean(cnicFront || existingDocs.cnicFront);
+        const hasCnicBack = Boolean(cnicBack || existingDocs.cnicBack);
+
+        if (!hasCnicFront || !hasCnicBack) {
+          setError("Please upload both CNIC front and back.");
+          setSaving(false);
+          return;
         }
-        // Online Tuition: No Police Verification required.
-        // Home Tuition (In-Person): Police Verification Report is strictly mandatory.
-        if (isHomeTuitionMandatory && !policeCertificate) {
+
+        if (existingDocs.cnicVerificationStatus === "rejected" && !cnicFront && !cnicBack) {
+          setError(`Your CNIC was rejected (${existingDocs.cnicRejectionReason || "Action required"}). Please select new, clear images of your CNIC to re-submit.`);
+          setSaving(false);
+          return;
+        }
+
+        const hasPolice = Boolean(policeCertificate || existingDocs.policeCertificate);
+        if (isHomeTuitionMandatory && !hasPolice) {
           setError("Police Verification Report is mandatory to offer Home Tuition. Please upload your Police Character Certificate.");
           setSaving(false);
           return;
         }
+
+        if (isHomeTuitionMandatory && existingDocs.policeVerificationStatus === "rejected" && !policeCertificate) {
+          setError(`Your Police Certificate was rejected (${existingDocs.policeRejectionReason || "Action required"}). Please select a new certificate to re-submit.`);
+          setSaving(false);
+          return;
+        }
+
+        if (existingDocs.demoVideoStatus === "rejected" && !videoIntro) {
+          setError(`Your Demo Video was rejected (${existingDocs.demoVideoRejectionReason || "Action required"}). Please select a replacement demo video to re-submit.`);
+          setSaving(false);
+          return;
+        }
+
         formData.append("data", JSON.stringify({}));
-        formData.append("cnicFront", cnicFront);
-        formData.append("cnicBack", cnicBack);
+        if (cnicFront) formData.append("cnicFront", cnicFront);
+        if (cnicBack) formData.append("cnicBack", cnicBack);
         if (videoIntro) formData.append("videoIntro", videoIntro);
         if (policeCertificate) formData.append("policeCertificate", policeCertificate);
       }
@@ -174,6 +301,8 @@ export default function TutorOnboardingPage() {
       await api.post("/tutors/onboarding/step", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
+
+      setSuccessMsg("Step saved successfully.");
 
       if (currentStep === 5) {
         router.push("/onboarding/tutor/complete");
@@ -203,33 +332,78 @@ export default function TutorOnboardingPage() {
           <BookOpen size={24} color="#60a5fa" />
           <span style={{ color: 'white', fontWeight: '800', fontSize: '1.2rem' }}>TUTORERA<span style={{ color: '#C81B7F' }}>®</span></span>
         </div>
-        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.3rem' }}>Tutor Registration</p>
+        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.3rem' }}>
+          Tutor Profile & Document Verification
+        </p>
       </div>
 
-      {/* Progress Steps */}
+      {/* Interactive Progress Stepper — Tutors can click any step to correct mistaken information */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1rem', overflowX: 'auto' }}>
-        <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 'fit-content', padding: '0 0.5rem' }}>
-          {STEPS.map((step, idx) => (
-            <div key={step.number} style={{ display: 'flex', alignItems: 'center', flex: idx < STEPS.length - 1 ? 1 : 'none' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', backgroundColor: step.number < currentStep ? '#16a34a' : step.number === currentStep ? C.accent : '#e5e7eb', color: step.number <= currentStep ? 'white' : '#9ca3af', transition: 'all 0.3s', flexShrink: 0 }}>
-                  {step.number < currentStep ? '✓' : step.number}
+        <div style={{ maxWidth: '750px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 'fit-content', padding: '0 0.5rem' }}>
+          {STEPS.map((step, idx) => {
+            const hasRejectionOnStep = (step.number === 2 && existingDocs.degreeVerificationStatus === "rejected") ||
+              (step.number === 5 && (existingDocs.cnicVerificationStatus === "rejected" || existingDocs.demoVideoStatus === "rejected" || existingDocs.policeVerificationStatus === "rejected"));
+
+            return (
+              <div
+                key={step.number}
+                onClick={() => { setError(""); setSuccessMsg(""); setCurrentStep(step.number); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flex: idx < STEPS.length - 1 ? 1 : 'none',
+                  cursor: 'pointer',
+                }}
+                title={`Click to review/edit ${step.title}`}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    backgroundColor: hasRejectionOnStep ? '#ef4444' : step.number < currentStep ? '#16a34a' : step.number === currentStep ? C.accent : '#e5e7eb',
+                    color: (hasRejectionOnStep || step.number <= currentStep) ? 'white' : '#9ca3af',
+                    transition: 'all 0.3s',
+                    flexShrink: 0
+                  }}>
+                    {hasRejectionOnStep ? "!" : step.number < currentStep ? "✓" : step.number}
+                  </div>
+                  <span style={{
+                    fontSize: '0.62rem',
+                    fontWeight: '600',
+                    color: hasRejectionOnStep ? '#dc2626' : step.number === currentStep ? C.accent : step.number < currentStep ? '#16a34a' : '#9ca3af',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {step.title}
+                  </span>
                 </div>
-                <span style={{ fontSize: '0.62rem', fontWeight: '600', color: step.number === currentStep ? C.accent : step.number < currentStep ? '#16a34a' : '#9ca3af', whiteSpace: 'nowrap' }}>
-                  {step.title}
-                </span>
+                {idx < STEPS.length - 1 && (
+                  <div style={{ flex: 1, height: '2px', backgroundColor: step.number < currentStep ? '#16a34a' : '#e5e7eb', margin: '0 0.25rem', marginBottom: '1rem', minWidth: '20px', transition: 'background 0.3s' }} />
+                )}
               </div>
-              {idx < STEPS.length - 1 && (
-                <div style={{ flex: 1, height: '2px', backgroundColor: step.number < currentStep ? '#16a34a' : '#e5e7eb', margin: '0 0.25rem', marginBottom: '1rem', minWidth: '20px', transition: 'background 0.3s' }} />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Form Content */}
-      <div style={{ maxWidth: '600px', margin: '1.5rem auto', padding: '0 1rem' }}>
-        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+      <div style={{ maxWidth: '640px', margin: '1.5rem auto 4rem', padding: '0 1rem' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.75rem', border: '1px solid #e5e7eb', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+
+          {/* Quick Notice about updating info anytime */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.78rem', color: '#64748b' }}>
+            <span>💡 Tip: Click any step tab above to jump and correct mistakes.</span>
+            {existingDocs.verificationStatus && (
+              <span style={{ fontWeight: 700, color: existingDocs.verificationStatus === 'approved' ? '#16a34a' : existingDocs.verificationStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
+                Status: {existingDocs.verificationStatus.toUpperCase()}
+              </span>
+            )}
+          </div>
 
           {/* Error */}
           {error && (
@@ -238,11 +412,18 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
+          {/* Success */}
+          {successMsg && (
+            <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.5rem', color: '#166534', fontSize: '0.875rem' }}>
+              {successMsg}
+            </div>
+          )}
+
           {/* ── STEP 1 ── */}
           {currentStep === 1 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Personal Information</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Tell us about yourself.</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Review or correct your personal details and location.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Full Name *</label>
@@ -282,6 +463,13 @@ export default function TutorOnboardingPage() {
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                   </div>
                   <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Date of Birth</label>
+                    <input type="date" value={step1.dateOfBirth} onChange={e => setStep1({ ...step1, dateOfBirth: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                      onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                  </div>
+                  <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Gender</label>
                     <select title="gender" value={step1.gender} onChange={e => setStep1({ ...step1, gender: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
@@ -301,7 +489,21 @@ export default function TutorOnboardingPage() {
           {currentStep === 2 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Educational Background</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Tell us about your highest qualification.</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Review or correct your qualification and degree certificate.</p>
+
+              {/* Rejection Alert for Degree if rejected */}
+              {existingDocs.degreeVerificationStatus === "rejected" && (
+                <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#b91c1c', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+                    <AlertTriangle size={18} />
+                    <span>Degree Document Rejected by Admin</span>
+                  </div>
+                  <p style={{ color: '#991b1b', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
+                    <strong>Admin feedback:</strong> {existingDocs.degreeRejectionReason || "Please upload a clear, legible copy of your degree or transcript."}
+                  </p>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Degree / Qualification *</label>
@@ -325,13 +527,25 @@ export default function TutorOnboardingPage() {
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Upload Degree Certificate</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>Upload Degree Certificate</label>
+                    {existingDocs.degreeDoc && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.degreeVerificationStatus === 'approved' ? '#16a34a' : '#d97706' }}>
+                        {existingDocs.degreeVerificationStatus === 'approved' ? '✓ Approved' : '📄 Current Doc On File'}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
                     onClick={() => document.getElementById('degreeDoc')?.click()}
                     onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = C.accent; }}
                     onDragLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
                     {degreeDoc ? (
-                      <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {degreeDoc.name}</p>
+                      <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ Selected: {degreeDoc.name}</p>
+                    ) : existingDocs.degreeDoc ? (
+                      <div>
+                        <p style={{ color: '#0329b2', fontSize: '0.875rem', fontWeight: 600 }}>📄 Document already uploaded</p>
+                        <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem' }}>Click here if you wish to upload a new replacement document</p>
+                      </div>
                     ) : (
                       <>
                         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload or drag & drop</p>
@@ -349,7 +563,7 @@ export default function TutorOnboardingPage() {
           {currentStep === 3 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Teaching Experience</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Tell us about your teaching background.</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Review or correct your teaching background.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Years of Experience</label>
@@ -360,7 +574,7 @@ export default function TutorOnboardingPage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Previous Institutions (comma separated)</label>
-                  <input value={step3.previousInstitutions} onChange={e => setStep3({ ...step3, previousInstitutions: e.target.value })} placeholder="e.g. Beaconhouse, City School, Private"
+                  <input value={step3.previousInstitutions} onChange={e => setStep3({ ...step3, previousInstitutions: e.target.value })} placeholder="e.g. Beaconhouse, LGS, KIPS"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -395,7 +609,7 @@ export default function TutorOnboardingPage() {
           {currentStep === 4 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Profile Setup</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Set up your public tutor profile.</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Review or adjust your bio, rate, and teaching mode.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Bio / Introduction *</label>
@@ -416,7 +630,7 @@ export default function TutorOnboardingPage() {
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                     {step1.currency !== "PKR" && Number(step4.hourlyRate) > 0 && (
                       <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
-                        ≈ Rs. {convertToPKR(Number(step4.hourlyRate), step1.currency).amountPKR.toLocaleString()} PKR/hr (Settled in PKR)
+                        ≈ Rs. {convertToPKR(Number(step4.hourlyRate), step1.currency).amountPKR.toLocaleString()} PKR/hr
                       </p>
                     )}
                   </div>
@@ -433,48 +647,23 @@ export default function TutorOnboardingPage() {
                   </div>
                 </div>
 
-                {/* Mode distinction guidance banner */}
-                <div style={{
-                  padding: "0.85rem 1rem",
-                  borderRadius: "0.5rem",
-                  border: isOnlineOnly ? "1.5px solid #86efac" : "1.5px solid #fcd34d",
-                  backgroundColor: isOnlineOnly ? "#f0fdf4" : "#fffbeb",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.6rem"
-                }}>
-                  <span style={{ fontSize: "1.2rem" }}>{isOnlineOnly ? "🌐" : "🛡️"}</span>
-                  <div>
-                    <strong style={{ fontSize: "0.85rem", color: isOnlineOnly ? "#166534" : "#92400e" }}>
-                      {isOnlineOnly
-                        ? "Online Tuition: No Police Verification Required"
-                        : isHomeTuitionMandatory
-                        ? "Home Tuition: Police Verification Report Strictly Mandatory"
-                        : "Hybrid (Online & Home): Immediate Online Tutoring + Police Report for Home Tuition"}
-                    </strong>
-                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: isOnlineOnly ? "#15803d" : "#b45309", lineHeight: "1.4" }}>
-                      {isOnlineOnly
-                        ? "You can teach students borderless/worldwide upon standard ID and Degree verification. No police character check is required for online sessions."
-                        : isHomeTuitionMandatory
-                        ? "To safeguard families in home tuition environments, an official Police Character Certificate / Police Verification Report (issued within the last 6 months) is required in Step 5 before you can accept home tuition requests."
-                        : "You can start tutoring online as soon as your ID is verified. Home Tuition remains locked until your Police Verification Report is submitted and verified."}
-                    </p>
-                  </div>
-                </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Availability Schedule</label>
-                  <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginBottom: '0.75rem' }}>Click on time slots to mark your availability</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Weekly Availability</label>
+                  <p style={{ color: C.gray500, fontSize: '0.78rem', marginBottom: '0.75rem' }}>Select the time slots when you are available to take classes.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {days.map(day => (
-                      <div key={day}>
-                        <p style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>{day}</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                          {timeSlots.map(slot => (
-                            <button key={slot} type="button" onClick={() => toggleAvailability(day, slot)}
-                              style={{ padding: '0.25rem 0.6rem', borderRadius: '0.3rem', border: `1px solid ${isSlotSelected(day, slot) ? C.accent : '#e5e7eb'}`, backgroundColor: isSlotSelected(day, slot) ? C.accentLight : 'white', color: isSlotSelected(day, slot) ? C.accent : '#9ca3af', fontSize: '0.7rem', cursor: 'pointer', fontWeight: isSlotSelected(day, slot) ? '700' : '400' }}>
-                              {slot}
-                            </button>
-                          ))}
+                      <div key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', width: '80px', color: C.primary }}>{day}</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                          {timeSlots.slice(0, 6).map(slot => {
+                            const sel = isSlotSelected(day, slot);
+                            return (
+                              <button key={slot} type="button" onClick={() => toggleAvailability(day, slot)}
+                                style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '4px', border: `1px solid ${sel ? C.accent : '#e5e7eb'}`, backgroundColor: sel ? C.accent : 'white', color: sel ? 'white' : C.gray500, cursor: 'pointer' }}>
+                                {slot}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -484,116 +673,129 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 5 — Verification ── */}
+          {/* ── STEP 5 ── */}
           {currentStep === 5 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Verification Documents</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>
-                Upload your documents for verification. This keeps our platform safe and trusted.
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                Upload or replace your identification and verification documents.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                {/* CNIC Front */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                {/* ── CNIC Front & Back ── */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Front *</label>
-                  <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
-                    onClick={() => document.getElementById('cnicFront')?.click()}>
-                    {cnicFront
-                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {cnicFront.name}</p>
-                      : <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload CNIC Front</p>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+                      CNIC Front & Back *
+                    </label>
+                    {existingDocs.cnicFront && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.cnicVerificationStatus === 'approved' ? '#16a34a' : existingDocs.cnicVerificationStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
+                        {existingDocs.cnicVerificationStatus === 'approved' ? '✓ Approved' : existingDocs.cnicVerificationStatus === 'rejected' ? '❌ Rejected' : '⏳ On File (Pending)'}
+                      </span>
+                    )}
                   </div>
-                  <input id="cnicFront" type="file" accept="image/*" onChange={e => setCnicFront(e.target.files?.[0] || null)} aria-label="upload" style={{ display: 'none' }} />
-                </div>
 
-                {/* CNIC Back */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Back *</label>
-                  <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
-                    onClick={() => document.getElementById('cnicBack')?.click()}>
-                    {cnicBack
-                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {cnicBack.name}</p>
-                      : <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload CNIC Back</p>}
-                  </div>
-                  <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="image" style={{ display: 'none' }} />
-                </div>
-
-                {/* Mode distinction banner in Step 5 */}
-                {isOnlineOnly ? (
-                  <div style={{
-                    padding: "0.85rem 1rem",
-                    borderRadius: "0.5rem",
-                    border: "1.5px solid #86efac",
-                    backgroundColor: "#f0fdf4",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.6rem",
-                  }}>
-                    <span style={{ fontSize: "1.2rem" }}>🟢</span>
-                    <div>
-                      <strong style={{ fontSize: "0.85rem", color: "#166534" }}>Online Tuition Selected: No Police Verification Required</strong>
-                      <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#15803d", lineHeight: "1.4" }}>
-                        As an online tutor, you only need to submit your CNIC / National ID and Degree credentials. A police character report is not required.
+                  {/* Rejection Alert for CNIC */}
+                  {existingDocs.cnicVerificationStatus === "rejected" && (
+                    <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
+                      <p style={{ color: '#b91c1c', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                        <strong>Admin rejection reason:</strong> {existingDocs.cnicRejectionReason || "Please upload fresh, clear photos of your CNIC front and back."}
                       </p>
                     </div>
-                  </div>
-                ) : (
-                  <div style={{
-                    padding: "0.85rem 1rem",
-                    borderRadius: "0.5rem",
-                    border: "1.5px solid #fdba74",
-                    backgroundColor: "#fff7ed",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.6rem",
-                  }}>
-                    <span style={{ fontSize: "1.2rem" }}>🛡️</span>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    {/* CNIC Front */}
                     <div>
-                      <strong style={{ fontSize: "0.85rem", color: "#9a3412" }}>
-                        {isHomeTuitionMandatory ? "Home Tuition: Police Verification Report Mandatory" : "Home Tuition Requirement: Police Verification Report Needed"}
-                      </strong>
-                      <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#c2410c", lineHeight: "1.4" }}>
-                        {isHomeTuitionMandatory
-                          ? "In-person home tutoring mandates an official Police Character Certificate (PKM / local police) issued within the last 6 months."
-                          : "You may submit your Police Verification Report now to unlock Home Tuition, or skip it to be approved for Online Tuition only."}
-                      </p>
+                      <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
+                        onClick={() => document.getElementById('cnicFront')?.click()}>
+                        {cnicFront ? (
+                          <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.8rem' }}>✅ Selected: {cnicFront.name}</p>
+                        ) : existingDocs.cnicFront ? (
+                          <div>
+                            <p style={{ color: '#0329b2', fontSize: '0.8rem', fontWeight: 600 }}>📄 CNIC Front on file</p>
+                            <p style={{ color: '#64748b', fontSize: '0.7rem' }}>Click to replace</p>
+                          </div>
+                        ) : (
+                          <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload CNIC Front</p>
+                        )}
+                      </div>
+                      <input id="cnicFront" type="file" accept="image/*" onChange={e => setCnicFront(e.target.files?.[0] || null)} aria-label="upload" style={{ display: 'none' }} />
+                    </div>
+
+                    {/* CNIC Back */}
+                    <div>
+                      <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
+                        onClick={() => document.getElementById('cnicBack')?.click()}>
+                        {cnicBack ? (
+                          <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.8rem' }}>✅ Selected: {cnicBack.name}</p>
+                        ) : existingDocs.cnicBack ? (
+                          <div>
+                            <p style={{ color: '#0329b2', fontSize: '0.8rem', fontWeight: 600 }}>📄 CNIC Back on file</p>
+                            <p style={{ color: '#64748b', fontSize: '0.7rem' }}>Click to replace</p>
+                          </div>
+                        ) : (
+                          <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload CNIC Back</p>
+                        )}
+                      </div>
+                      <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="image" style={{ display: 'none' }} />
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* ── Police Certificate — NEW ── */}
+                {/* ── Police Certificate ── */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                    Police Verification Report / Character Certificate
-                    {isHomeTuitionMandatory
-                      ? <span style={{ color: '#ef4444', marginLeft: '4px' }}>* (Mandatory for Home Tuition)</span>
-                      : isOnlineOnly
-                      ? <span style={{ color: '#16a34a', fontWeight: '500', marginLeft: '6px' }}>(Not Required for Online Tuition)</span>
-                      : <span style={{ color: '#d97706', fontWeight: '500', marginLeft: '6px' }}>(Required to unlock Home Tuition)</span>}
-                  </label>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.6rem', lineHeight: '1.5' }}>
-                    {isHomeTuitionMandatory
-                      ? "Mandatory for in-person home tutoring. Must be issued within the last 6 months by a relevant authority (e.g. Police Khidmat Markaz, PKM, or local police station)."
-                      : isOnlineOnly
-                      ? "No police verification is required for online tuition. If you upload one, it remains on file in case you later opt into home tuition."
-                      : "Optional if you only wish to teach online for now. Required before you can offer or accept home tuition bookings."}
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+                      Police Verification Report
+                      {isHomeTuitionMandatory ? (
+                        <span style={{ color: '#ef4444', marginLeft: '4px' }}>* (Mandatory for Home Tuition)</span>
+                      ) : (
+                        <span style={{ color: '#16a34a', fontWeight: '500', marginLeft: '6px' }}>(Optional for Online)</span>
+                      )}
+                    </label>
+                    {existingDocs.policeCertificate && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.policeVerificationStatus === 'approved' ? '#16a34a' : existingDocs.policeVerificationStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
+                        {existingDocs.policeVerificationStatus === 'approved' ? '✓ Approved' : existingDocs.policeVerificationStatus === 'rejected' ? '❌ Rejected' : '⏳ On File (Pending)'}
+                      </span>
+                    )}
+                  </div>
+
+                  {existingDocs.policeVerificationStatus === "rejected" && (
+                    <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
+                      <p style={{ color: '#b91c1c', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                        <strong>Admin rejection reason:</strong> {existingDocs.policeRejectionReason || "Please upload an official, legible Police Character Certificate."}
+                      </p>
+                    </div>
+                  )}
+
                   <div
                     style={{
-                      border: `2px dashed ${isHomeTuitionMandatory && !policeCertificate ? '#fca5a5' : '#e5e7eb'}`,
-                      borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center',
-                      cursor: 'pointer', backgroundColor: isHomeTuitionMandatory && !policeCertificate ? '#fff5f5' : C.gray50
+                      border: '2px dashed #e5e7eb',
+                      borderRadius: '0.5rem',
+                      padding: '1.25rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      backgroundColor: C.gray50
                     }}
-                    onClick={() => document.getElementById('policeCertificate')?.click()}>
-                    {policeCertificate
-                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {policeCertificate.name}</p>
-                      : (
-                        <>
-                          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-                            {isOnlineOnly ? "Click to upload Police Certificate (Optional)" : "Click to upload Police Verification Report"}
-                          </p>
-                          <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>PDF, JPG, PNG (max 5MB)</p>
-                        </>
-                      )}
+                    onClick={() => document.getElementById('policeCertificate')?.click()}
+                  >
+                    {policeCertificate ? (
+                      <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ Selected: {policeCertificate.name}</p>
+                    ) : existingDocs.policeCertificate ? (
+                      <div>
+                        <p style={{ color: '#0329b2', fontSize: '0.875rem', fontWeight: 600 }}>📄 Police Certificate currently on file</p>
+                        <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem' }}>Click to select a new replacement certificate if needed</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
+                          {isOnlineOnly ? "Click to upload Police Certificate (Optional)" : "Click to upload Police Verification Report"}
+                        </p>
+                        <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>PDF, JPG, PNG (max 5MB)</p>
+                      </>
+                    )}
                   </div>
                   <input
                     id="policeCertificate"
@@ -605,30 +807,62 @@ export default function TutorOnboardingPage() {
                   />
                 </div>
 
-                {/* Video Intro */}
+                {/* ── Video Intro ── */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                    Introduction Video <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Optional)</span>
-                  </label>
-                  <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
-                    onClick={() => document.getElementById('videoIntro')?.click()}>
-                    {videoIntro
-                      ? <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ {videoIntro.name}</p>
-                      : (
-                        <>
-                          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Upload a short intro video (max 2 min)</p>
-                          <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>MP4, MOV (max 50MB)</p>
-                        </>
-                      )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+                      Introduction / Demo Video <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Recommended)</span>
+                    </label>
+                    {existingDocs.videoIntro && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.demoVideoStatus === 'approved' ? '#16a34a' : existingDocs.demoVideoStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
+                        {existingDocs.demoVideoStatus === 'approved' ? '✓ Approved' : existingDocs.demoVideoStatus === 'rejected' ? '❌ Rejected' : '🎥 On File (Pending)'}
+                      </span>
+                    )}
+                  </div>
+
+                  {existingDocs.demoVideoStatus === "rejected" && (
+                    <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
+                      <p style={{ color: '#b91c1c', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                        <strong>Admin rejection reason:</strong> {existingDocs.demoVideoRejectionReason || "Please record a clearer video introducing your subjects and teaching approach."}
+                      </p>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      border: '2px dashed #e5e7eb',
+                      borderRadius: '0.5rem',
+                      padding: '1.25rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      backgroundColor: C.gray50
+                    }}
+                    onClick={() => document.getElementById('videoIntro')?.click()}
+                  >
+                    {videoIntro ? (
+                      <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ Selected: {videoIntro.name}</p>
+                    ) : existingDocs.videoIntro ? (
+                      <div>
+                        <p style={{ color: '#0329b2', fontSize: '0.875rem', fontWeight: 600 }}>🎥 Demo Video on file</p>
+                        <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem' }}>Click to select a new replacement video</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Upload a short intro video (max 2 min)</p>
+                        <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>MP4, MOV (max 50MB)</p>
+                      </>
+                    )}
                   </div>
                   <input id="videoIntro" type="file" accept="video/*" onChange={e => setVideoIntro(e.target.files?.[0] || null)} aria-label="Introduction Video" style={{ display: 'none' }} />
                 </div>
 
-                {/* Info box */}
-                <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '1rem' }}>
-                  <p style={{ color: '#92400e', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.3rem' }}>⏳ Review Process</p>
-                  <p style={{ color: '#a16207', fontSize: '0.8rem', lineHeight: '1.5' }}>
-                    After submission, our team will review your documents within 24–48 hours. You&apos;ll receive an email notification once approved.
+                {/* Review Info box */}
+                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '1rem' }}>
+                  <p style={{ color: '#1e40af', fontSize: '0.82rem', fontWeight: '700', marginBottom: '0.3rem' }}>
+                    🔄 Instant Re-submission & Review Queue
+                  </p>
+                  <p style={{ color: '#1d4ed8', fontSize: '0.78rem', lineHeight: '1.5', margin: 0 }}>
+                    When you submit replacement documents, your application status automatically updates to <strong>Under Review</strong> and alerts our verification team to inspect your updated files within 24–48 hours.
                   </p>
                 </div>
 
@@ -639,15 +873,30 @@ export default function TutorOnboardingPage() {
           {/* Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f3f4f6', gap: '1rem' }}>
             {currentStep > 1 ? (
-              <button onClick={() => { setError(""); setCurrentStep(prev => prev - 1); }}
-                style={{ flex: 1, padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+              <button
+                onClick={() => { setError(""); setSuccessMsg(""); setCurrentStep(prev => prev - 1); }}
+                style={{ flex: 1, padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: C.primary }}
+              >
                 ← Back
               </button>
             ) : <div style={{ flex: 1 }} />}
 
-            <button onClick={handleNext} disabled={saving}
-              style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '700' }}>
-              {saving ? "Saving..." : currentStep === 5 ? "Submit 🚀" : "Continue →"}
+            <button
+              onClick={handleNext}
+              disabled={saving}
+              style={{
+                flex: 1,
+                padding: '0.75rem 1rem',
+                backgroundColor: saving ? '#93c5fd' : C.accent,
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '700'
+              }}
+            >
+              {saving ? "Saving..." : currentStep === 5 ? "Submit Documents 🚀" : "Save & Continue →"}
             </button>
           </div>
 
@@ -655,4 +904,4 @@ export default function TutorOnboardingPage() {
       </div>
     </div>
   );
-} 
+}

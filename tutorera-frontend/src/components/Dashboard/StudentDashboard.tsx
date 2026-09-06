@@ -124,6 +124,23 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
   const router = useRouter();
+  const [paying, setPaying] = useState(false);
+
+  const handlePay = async () => {
+    setPaying(true);
+    try {
+      const res = await axiosInstance.post(`/payments/booking/${booking._id}/checkout`);
+      if (res.data?.checkoutUrl) {
+        window.location.assign(res.data.checkoutUrl);
+      } else {
+        showError("Unable to initiate checkout session. Please try again.");
+      }
+    } catch (err: unknown) {
+      showError(err, "Payment service temporarily unavailable. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const handleChatClick = async () => {
     setCreatingChat(true);
@@ -201,12 +218,12 @@ function BookingCard({ booking, onClaimSubmitted }: {
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-        <button onClick={handleChatClick} disabled={creatingChat}
+        <button type="button" onClick={handleChatClick} disabled={creatingChat}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#EEF5FF', color: creatingChat ? '#9ca3af' : '#0329B2', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600', cursor: creatingChat ? 'not-allowed' : 'pointer' }}>
           {creatingChat ? "Opening..." : "💬 Chat"}
         </button>
 
-        <button onClick={() => router.push(`/support?bookingId=${booking._id}`)}
+        <button type="button" onClick={() => router.push(`/support?bookingId=${booking._id}`)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#fff7ed', color: '#d97706', borderRadius: '0.5rem', border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
           🆘 Need Help?
         </button>
@@ -234,7 +251,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
 
         {/* ── First Session Guarantee button ── */}
         {showGuaranteeButton && (
-          <button onClick={() => setShowClaimForm(!showClaimForm)}
+          <button type="button" onClick={() => setShowClaimForm(!showClaimForm)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showClaimForm ? '#fef2f2' : '#fff1f2', color: '#C81B7F', borderRadius: '0.5rem', border: '1px solid #fecdd3', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
             😕 Not Satisfied?
           </button>
@@ -264,9 +281,25 @@ function BookingCard({ booking, onClaimSubmitted }: {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: '0.7rem', color: '#15803d', margin: 0 }}>
-            <button type="button" disabled style={{ border: 0, borderRadius: 999, padding: "0.55rem 1rem", background: "#86efac", color: "#14532d", fontWeight: 800, cursor: "not-allowed" }}>Pay Securely</button>{" "}
-            I agree to TUTORERA&apos;s <Link href="/terms">Terms & Conditions</Link>, <Link href="/refund-policy">Refund Policy</Link> and <Link href="/cancellation-policy">Cancellation Policy</Link>. Payment support: <strong>{SUPPORT_EMAIL}</strong>
+          <p style={{ fontSize: '0.7rem', color: '#15803d', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handlePay}
+              disabled={paying}
+              style={{
+                border: 0,
+                borderRadius: 999,
+                padding: "0.55rem 1.25rem",
+                background: paying ? "#86efac" : "#16a34a",
+                color: "#ffffff",
+                fontWeight: 800,
+                cursor: paying ? "wait" : "pointer",
+                boxShadow: "0 2px 4px rgba(22, 101, 52, 0.2)",
+              }}
+            >
+              {paying ? "Starting Checkout..." : "Pay Securely →"}
+            </button>{" "}
+            <span>I agree to TUTORERA&apos;s <Link href="/terms">Terms & Conditions</Link>, <Link href="/refund-policy">Refund Policy</Link> and <Link href="/cancellation-policy">Cancellation Policy</Link>. Payment support: <strong>{SUPPORT_EMAIL}</strong></span>
           </p>
         </div>
       )}
@@ -319,11 +352,11 @@ function BookingCard({ booking, onClaimSubmitted }: {
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim}
+            <button type="button" onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim}
               style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#C81B7F', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
               {submittingClaim ? "Submitting..." : "Submit Claim"}
             </button>
-            <button onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}
+            <button type="button" onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}
               style={{ padding: '0.6rem 1rem', backgroundColor: 'white', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
@@ -377,7 +410,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
             <p className={s.personSub}>{tutor.city} · {formatPKR(tutor.hourlyRate, "hour")}</p>
           </div>
         </Link>
-        <button onClick={handleRemove} disabled={removing}
+        <button type="button" onClick={handleRemove} disabled={removing}
           style={{ background: 'none', border: 'none', cursor: removing ? 'not-allowed' : 'pointer', color: '#C81B7F', padding: '0.4rem', flexShrink: 0 }}
           aria-label="Remove from favourites">
           <Trash2 size={16} />
@@ -745,7 +778,7 @@ function RequestCard({
               )}
             </div>
           )}
-      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
+      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
 
       {/* AI Matched Tutors Drawer Modal */}
       {showMatchedTutors && (

@@ -99,6 +99,11 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Relevant experience and teaching approach. Do not share private contact details."
             />
+            {Boolean(message && /(\+92|0092|92)?[\s\-]?3[0-9]{2}[\s\-]?[0-9]{7}|\b\d[\d\s\-]{8,12}\d\b|whatsapp|whatsap|watsapp|wa\.me|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(message)) && (
+              <p style={{ fontSize: 12, color: "#b45309", background: "#fef3c7", padding: "6px 10px", borderRadius: 6, margin: "6px 0 0", border: "1px solid #fde68a" }}>
+                ⚠️ <strong>Safety Warning:</strong> Sharing phone numbers, WhatsApp, or emails violates platform rules and will flag your offer for moderation.
+              </p>
+            )}
           </div>
 
           <div style={{ background: "#fffbeb", padding: 14, borderRadius: 10, fontSize: 13, lineHeight: 1.7 }}>

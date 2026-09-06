@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, UserCheck, Lock, Award, Eye, FileText, ArrowRight } from "lucide-react";
+import { ShieldCheck, UserCheck, Lock, Award, Eye, ArrowRight, Sparkles } from "lucide-react";
 
 const trustPillars = [
   {
@@ -33,10 +33,11 @@ const trustPillars = [
     link: "/safety-policy"
   },
   {
-    icon: FileText,
-    title: "First-Session Guarantee",
-    desc: "If your initial session does not meet expectations, request credit to try another tutor or receive a refund.",
-    link: "/first-session-guarantee"
+    icon: ShieldCheck,
+    title: "100% First-Session Guarantee",
+    desc: "If your initial session does not meet expectations, request credit to try another tutor or receive a full refund.",
+    link: "/first-session-guarantee",
+    isGuarantee: true
   }
 ];
 
@@ -63,25 +64,47 @@ export default function TrustSafetySection() {
         }}>
           {trustPillars.map((pillar) => {
             const Icon = pillar.icon;
+            const isHighlight = Boolean(pillar.isGuarantee);
             return (
               <div
                 key={pillar.title}
                 style={{
-                  background: "white",
+                  background: isHighlight ? "#f0fdf4" : "white",
                   borderRadius: "1rem",
                   padding: "1.75rem",
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 4px 16px rgba(2, 21, 80, 0.04)",
+                  border: isHighlight ? "1.5px solid #86efac" : "1px solid #e2e8f0",
+                  boxShadow: isHighlight ? "0 8px 24px rgba(16, 185, 129, 0.12)" : "0 4px 16px rgba(2, 21, 80, 0.04)",
                   display: "flex",
-                  flexDirection: "column"
+                  flexDirection: "column",
+                  position: "relative"
                 }}
               >
+                {isHighlight && (
+                  <div style={{
+                    position: "absolute",
+                    top: "1rem",
+                    right: "1rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                    backgroundColor: "#dcfce7",
+                    color: "#15803d",
+                    padding: "0.25rem 0.65rem",
+                    borderRadius: 999,
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    border: "1px solid #bbf7d0"
+                  }}>
+                    <Sparkles size={12} /> 100% Risk-Free
+                  </div>
+                )}
+
                 <div style={{
                   width: 44,
                   height: 44,
                   borderRadius: "0.625rem",
-                  background: "#eef5ff",
-                  color: "#0329b2",
+                  background: isHighlight ? "#dcfce7" : "#eef5ff",
+                  color: isHighlight ? "#16a34a" : "#0329b2",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -90,10 +113,10 @@ export default function TrustSafetySection() {
                   <Icon size={22} />
                 </div>
 
-                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: isHighlight ? "#14532d" : "#021550", marginBottom: "0.5rem" }}>
                   {pillar.title}
                 </h3>
-                <p style={{ fontSize: "0.85rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1.25rem" }}>
+                <p style={{ fontSize: "0.85rem", color: isHighlight ? "#166534" : "#64748b", lineHeight: 1.5, marginBottom: "1.25rem" }}>
                   {pillar.desc}
                 </p>
 
@@ -106,7 +129,7 @@ export default function TrustSafetySection() {
                       gap: "0.35rem",
                       fontSize: "0.825rem",
                       fontWeight: 700,
-                      color: "#0329b2",
+                      color: isHighlight ? "#15803d" : "#0329b2",
                       textDecoration: "none"
                     }}
                   >

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { X, Sparkles, ShieldCheck, MapPin, BookOpen, Clock, MessageSquare, Check, ThumbsUp, ThumbsDown, ExternalLink } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import MatchScoreBadge from "./MatchScoreBadge";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import { showSuccess, showError } from "@/lib/toast";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface MatchedTutor {
   tutor: {
@@ -55,6 +56,7 @@ export default function MatchedTutorsModal({
   const [loading, setLoading] = useState(true);
   const [tutors, setTutors] = useState<MatchedTutor[]>([]);
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, boolean>>({});
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen || !requestId) return;
@@ -102,7 +104,7 @@ export default function MatchedTutorsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div ref={modalRef} className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white">
           <div className="flex items-center gap-3">

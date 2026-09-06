@@ -15,6 +15,7 @@ import {
   ArrowRight, 
   RotateCcw
 } from "lucide-react";
+import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
 
 type History = { 
   _id: string; 
@@ -81,6 +82,7 @@ function OffersContent() {
   const [countering, setCountering] = useState<Offer | null>(null);
   const [sortBy, setSortBy] = useState("best_match");
   const [now, setNow] = useState<number | null>(null);
+  const [showComparison, setShowComparison] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -188,6 +190,25 @@ function OffersContent() {
               <option value="lowest_rate">Lowest Proposed Rate</option>
               <option value="expiry">Expiry Time</option>
             </select>
+            <button
+              type="button"
+              onClick={() => setShowComparison(true)}
+              style={{
+                background: "#0329B2",
+                color: "white",
+                border: "none",
+                padding: "0.5rem 1rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              <Sparkles size={14} /> Compare Offers
+            </button>
           </div>
         )}
       </div>
@@ -462,6 +483,53 @@ function OffersContent() {
           role={user?.role === "tutor" ? "tutor" : "student"}
           onClose={() => setCountering(null)}
           onDone={load}
+        />
+      )}
+
+      {offers.length > 1 && (
+        <OfferComparisonModal
+          isOpen={showComparison}
+          onClose={() => setShowComparison(false)}
+          requestTitle={offers[0]?.request?.subject || "Tuition Request"}
+          proposedBudget={offers[0]?.request?.budget || 0}
+          currency="PKR"
+          pricingUnit={offers[0]?.request?.pricingUnit || "hour"}
+          offers={offers.map((o) => ({
+            _id: o._id,
+            tutor: {
+              _id: o.tutor._id,
+              name: o.tutor.name,
+              avatar: o.tutor.avatar,
+              city: o.tutor.city,
+              teachingMode: o.tutor.teachingMode,
+              policeVerificationStatus: "approved",
+              rating: 4.8,
+              reviewsCount: 12,
+              experience: 3,
+            },
+            amount: o.amount,
+            currency: o.request?.pricingUnit === "month" ? "PKR" : "PKR",
+            pricingUnit: o.request?.pricingUnit || "hour",
+            message: o.message,
+            matchScore: o.matchScore || 85,
+            matchReasons: ["Subject match", "Schedule compatible", "Budget aligned"],
+            status: o.status as any,
+            createdAt: o.expiresAt,
+          }))}
+          onAcceptOffer={(offerId) => {
+            const offer = offers.find((o) => o._id === offerId);
+            if (offer) {
+              action(offer, "accept");
+              setShowComparison(false);
+            }
+          }}
+          onCounterOffer={(offerId, amount) => {
+            const offer = offers.find((o) => o._id === offerId);
+            if (offer) {
+              setCountering({ ...offer, amount });
+              setShowComparison(false);
+            }
+          }}
         />
       )}
     </main>

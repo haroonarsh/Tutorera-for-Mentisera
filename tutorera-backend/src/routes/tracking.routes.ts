@@ -21,11 +21,11 @@ import { trackingLimiter, tutorRotateLimiter } from "../middlewares/rateLimiters
 const router = Router();
 
 // ─── Public token tracking ───────────────────────────────────────────────────
-router.get("/tutor/:token", trackingLimiter, getPublicTracking);
+router.get(["/:token", "/tutor/:token"], trackingLimiter, getPublicTracking);
 
 // ─── Tutor authenticated ────────────────────────────────────────────────────
-router.get("/tutor/application-status", protect, authorize("tutor"), getApplicationStatus);
-router.post("/tutor/application-status/rotate-token", protect, authorize("tutor"), tutorRotateLimiter, rotateTrackingToken);
+router.get(["/application-status", "/tutor/application-status"], protect, authorize("tutor"), getApplicationStatus);
+router.post(["/application-status/rotate-token", "/tutor/application-status/rotate-token"], protect, authorize("tutor"), tutorRotateLimiter, rotateTrackingToken);
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 router.get("/admin/applications", protect, authorize("admin"), listApplications);

@@ -28,6 +28,7 @@ import guaranteeRoutes from "./routes/guarantee.routes";
 import referralRoutes from "./routes/referral.routes";
 import aiRoutes from "./routes/ai.routes";
 import earningsRoutes from "./routes/earnings.routes";
+import parentRoutes from "./routes/parent.routes";
 import paymentRoutes from "./routes/payment.routes";
 import trackingRoutes from "./routes/tracking.routes";
 import webhookRoutes from "./routes/webhook.routes";
@@ -60,6 +61,7 @@ app.set("trust proxy", 1);
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
+    "https://tutorera-frontend.pakstudy.workers.dev",
     "https://tutorera-frontend.vercel.app",
     "https://tutorera.ac.pk",
     "http://localhost:3000",
@@ -96,6 +98,7 @@ app.use(hpp());
 const apiRouter = express.Router();
 apiRouter.use("/auth", authRoutes);
 apiRouter.use("/tutors", tutorRoutes);
+apiRouter.use("/tutor", trackingRoutes);
 apiRouter.use("/students", studentRoutes);
 apiRouter.use("/requests", requestRoutes);
 apiRouter.use("/offers", offerRoutes);
@@ -111,6 +114,7 @@ apiRouter.use("/guarantee", guaranteeRoutes);
 apiRouter.use("/referral", referralRoutes);
 apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/earnings", earningsRoutes);
+apiRouter.use("/parent", parentRoutes);
 apiRouter.use("/payments", paymentRoutes);
 apiRouter.use("/webhooks", webhookRoutes);
 apiRouter.use("/track", trackingRoutes);

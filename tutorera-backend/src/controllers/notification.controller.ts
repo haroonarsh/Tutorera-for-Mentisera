@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import Notification from "../models/Notification.model";
+import User from "../models/User.model";
 
 // @desc    Get my notifications
 // @route   GET /api/notifications
@@ -65,4 +66,55 @@ export const markAllAsRead = async (
     { isRead: true }
   );
   res.status(200).json({ success: true, message: "All marked as read" });
+};
+
+// @desc    Get notification preferences
+// @route   GET /api/notifications/preferences
+// @access  Private
+export const getNotificationPreferences = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const user = await User.findById(req.user?._id).select("notificationPreferences");
+  const defaults = {
+    emailNotifications: true,
+    pushNotifications: true,
+    bookingUpdates: true,
+    bidNotifications: true,
+    chatMessages: true,
+    paymentUpdates: true,
+    securityAlerts: true,
+    platformUpdates: false,
+  };
+
+  res.status(200).json({
+    success: true,
+    preferences: user?.notificationPreferences || defaults,
+  });
+};
+
+// @desc    Update notification preferences
+// @route   PATCH /api/notifications/preferences
+// @access  Private
+export const updateNotificationPreferences = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { preferences } = req.body;
+  if (!preferences || typeof preferences !== "object") {
+    res.status(400).json({ success: false, message: "Invalid preferences data" });
+    return;
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { notificationPreferences: preferences } },
+    { new: true, runValidators: true }
+  ).select("notificationPreferences");
+
+  res.status(200).json({
+    success: true,
+    preferences: updatedUser?.notificationPreferences,
+    message: "Notification preferences updated successfully",
+  });
 };

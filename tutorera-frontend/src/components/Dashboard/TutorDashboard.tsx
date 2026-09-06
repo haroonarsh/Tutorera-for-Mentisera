@@ -898,14 +898,14 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
                 <div className={s.emptyIcon}>📅</div>
                 <p className={s.emptyTitle}>No bookings yet</p>
                 <p className={s.emptyDesc}>Browse matching requests and send offers to get your first booking.</p>
-                <button onClick={() => setTab("browse")} className={s.btnPrimary}>Browse Requests</button>
+                <button type="button" onClick={() => setTab("browse")} className={s.btnPrimary}>Browse Requests</button>
               </div>
             ) : (
               <>
                 {bookings.map((b) => <BookingCard key={b._id} booking={b} />)}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                    <button onClick={loadMoreBookings} disabled={loadingMoreBookings}
+                    <button type="button" onClick={loadMoreBookings} disabled={loadingMoreBookings}
                       style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingMoreBookings ? 'not-allowed' : 'pointer' }}>
                       {loadingMoreBookings ? "Loading..." : "Load More Bookings"}
                     </button>
@@ -929,7 +929,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
                   Ranked by your subject specializations, teaching mode, location feasibility, and schedule compatibility.
                 </p>
               </div>
-              <button onClick={fetchRecommended} className={s.btnOutline}>↻ Refresh</button>
+              <button type="button" onClick={fetchRecommended} className={s.btnOutline}>↻ Refresh</button>
             </div>
 
             {bidSuccess && (

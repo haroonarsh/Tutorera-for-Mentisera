@@ -3,8 +3,12 @@ import { Response, Request } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
+import Bid from "../models/Bid.model";
 import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
 import { finalizeBidAcceptance } from "./request.controller";
+import sendEmail from "../utils/sendEmail";
+import { paymentConfirmedEmail, paymentFailedEmail } from "../utils/emailTemplates";
+import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
@@ -92,13 +96,24 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
   try {
     if (event.eventType === "transaction.completed") {
       if (event.merchantTransactionId.startsWith("BID-")) {
-        // Pay-before-accept flow: no booking exists yet — payment success
-        // is what triggers the actual atomic booking creation.
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const io = req.app.get("io");
         await finalizeBidAcceptance(bidId, io);
+
+        const bid = await Bid.findById(bidId);
+        if (bid) {
+          const student = await User.findById(bid.request.toString()).select("name email");
+          const tutor = await User.findById(bid.tutor).select("name email");
+          try {
+            if (student && tutor) {
+              const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount);
+              await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
+            }
+          } catch (err) {
+            logger.error({ err, bidId }, "Failed to send payment receipt email");
+          }
+        }
       } else {
-        // Legacy/direct path: booking already exists, just mark it paid.
         const booking = await Booking.findById(event.merchantTransactionId);
 
         if (!booking) {
@@ -112,14 +127,69 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
           await booking.save();
         }
+
+        try {
+          const student = await User.findById(booking.student).select("name email");
+          const tutor = await User.findById(booking.tutor).select("name email");
+          if (student && tutor) {
+            const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount);
+            await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
+          }
+        } catch (err) {
+          logger.error({ err, bookingId: booking._id }, "Failed to send payment receipt email");
+        }
       }
     } else if (event.eventType === "transaction.failed") {
       logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Payment gateway reported a failed transaction");
-      // For BID- checkouts, we deliberately do nothing here — the bid stays
-      // "payment_pending" until its 30-minute hold expires and is reverted
-      // by releaseExpiredPaymentHold, rather than reverting instantly on a
-      // single failure (the student may immediately retry the same
-      // checkout attempt).
+
+      if (event.merchantTransactionId.startsWith("BID-")) {
+        const bidId = event.merchantTransactionId.slice("BID-".length);
+        const bid = await Bid.findById(bidId);
+        if (bid) {
+          const student = await User.findById(bid.request.toString()).select("name email");
+          const tutor = await User.findById(bid.tutor).select("name email");
+          try {
+            if (student) {
+              const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount);
+              await sendEmail({ to: student.email, subject: failEmail.subject, html: failEmail.html, eventType: "payment_failed" });
+              const io = req.app.get("io");
+              if (io) {
+                await sendNotification(io, student._id.toString(), {
+                  title: "Payment Failed",
+                  message: "Your payment could not be processed. Please try again or contact support.",
+                  type: "general",
+                  link: "/dashboard",
+                });
+              }
+            }
+          } catch (err) {
+            logger.error({ err, bidId }, "Failed to send payment failure notification");
+          }
+        }
+      } else {
+        const booking = await Booking.findById(event.merchantTransactionId);
+        if (booking) {
+          const student = await User.findById(booking.student).select("name email");
+          const tutor = await User.findById(booking.tutor).select("name email");
+          try {
+            if (student) {
+              const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount);
+              await sendEmail({ to: student.email, subject: failEmail.subject, html: failEmail.html, eventType: "payment_failed" });
+              const io = req.app.get("io");
+              if (io) {
+                await sendNotification(io, student._id.toString(), {
+                  title: "Payment Failed",
+                  message: "Your payment could not be processed. Please try again or contact support.",
+                  type: "general",
+                  link: "/dashboard",
+                });
+              }
+            }
+          } catch (err) {
+            logger.error({ err, bookingId: booking._id }, "Failed to send payment failure notification");
+          }
+        }
+      }
     }
 
     res.status(200).json({ success: true });

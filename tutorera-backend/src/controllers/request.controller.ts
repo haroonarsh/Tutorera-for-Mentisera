@@ -539,6 +539,170 @@ export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Prom
 }
 
 
+const PAYMENT_HOLD_MINUTES = 30;
+
+// @desc    Accept an offer — reserves it and starts payment checkout.
+//          The booking is NOT created here; it's created by
+//          finalizeBidAcceptance once payment is confirmed via webhook.
+// @route   PATCH /api/requests/:id/bids/:bidId/accept
+// @access  Private (student or direct tutor)
+export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promise<void> => {
+  const requestId = new Types.ObjectId(req.params.id as string);
+  const bidId = new Types.ObjectId(req.params.bidId as string);
+
+  await releaseExpiredPaymentHold(requestId);
+
+  const request = await Request.findById(requestId);
+  if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
+    res.status(400).json({ success: false, message: "Request not available" });
+    return;
+  }
+
+  const bid = await Bid.findOne({
+    _id: bidId,
+    request: requestId,
+    status: { $in: ["pending", "submitted", "viewed", "countered"] },
+  });
+
+  if (!bid) {
+    res.status(404).json({ success: false, message: "Offer not found or does not belong to this request" });
+    return;
+  }
+
+  if (bid.expiresAt && bid.expiresAt.getTime() <= Date.now()) {
+    res.status(410).json({ success: false, message: "This offer has expired." });
+    return;
+  }
+
+  const isOwner = request.student.toString() === req.user?._id?.toString();
+  const isDirectTutorAccept = request.isDirect && bid.tutor.toString() === req.user?._id?.toString();
+  if (!isOwner && !isDirectTutorAccept) {
+    res.status(403).json({ success: false, message: "Not authorized to accept this offer" });
+    return;
+  }
+
+  // ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
+  if (isDirectTutorAccept) {
+    const existingBookingsCount = await Booking.countDocuments({
+      student: request.student,
+      tutor: bid.tutor,
+    });
+    const fees = calculateMarketplaceFees(bid.amount);
+    const bookingArr = await Booking.create([{
+      student: request.student,
+      tutor: bid.tutor,
+      request: request._id,
+      bid: bid._id,
+      amount: bid.amount,
+      finalAgreedRate: bid.amount,
+      pricingUnit: bid.pricingUnit || "hour",
+      sessionCount: 1,
+      ...fees,
+      platformFee: fees.tutorFee + fees.tax,
+      tutorPayout: fees.tutorNet,
+      schedule: request.schedule,
+      teachingMode: request.teachingMode,
+      isFirstSession: existingBookingsCount === 0,
+      paymentStatus: "pending",
+      paymentNote: "Awaiting student checkout through authorized payment gateway",
+    }]);
+    const booking = bookingArr[0];
+
+    if (request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
+      await BookedSlot.create([{
+        tutor: bid.tutor,
+        student: request.student,
+        booking: booking._id,
+        date: new Date(request.selectedDate),
+        startTime: request.selectedStartTime,
+        endTime: request.selectedEndTime,
+      }]);
+    }
+
+    bid.status = "accepted";
+    request.status = "closed";
+    request.acceptedOffer = bid._id;
+    request.finalAgreedRate = bid.amount;
+    await Promise.all([bid.save(), request.save()]);
+
+    const io = req.app.get("io");
+    if (io) {
+      await sendNotification(io, request.student.toString(), {
+        title: "✅ Direct Booking Accepted!",
+        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment on your dashboard to confirm.`,
+        type: "booking",
+        link: "/dashboard",
+      });
+    }
+
+    try {
+      const studentUser = await User.findById(request.student).select("name email");
+      if (studentUser) {
+        const { subject: emailSubject, html } = directBookingAcceptedEmail(
+          studentUser.name,
+          req.user?.name || "Your tutor",
+          request.subject
+        );
+        await sendEmail({ to: studentUser.email, subject: emailSubject, html });
+      }
+    } catch (emailErr) {
+      console.error("[DirectBooking] Failed to send acceptance email to student:", emailErr);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Direct booking accepted successfully. The booking has been scheduled and the student notified to pay.",
+      bookingId: booking._id,
+    });
+    return;
+  }
+
+  // Atomic guard — only one accept attempt can win this transition
+  const reservedRequest = await Request.findOneAndUpdate(
+    { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+    { status: "awaiting_payment" },
+    { new: true }
+  );
+
+  if (!reservedRequest) {
+    res.status(409).json({ success: false, message: "This request was just accepted or is no longer available." });
+    return;
+  }
+
+  const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
+  bid.status = "payment_pending";
+  bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
+  await bid.save();
+
+  try {
+    const student = await User.findById(request.student).select("name email phone");
+    const checkoutUrl = await createTransaction({
+      amount: bid.amount,
+      customerMobileNo: student?.phone || "03000000000",
+      customerEmail: student?.email || "",
+      basketId: `BID-${bid._id.toString()}`,
+      description: `TUTORERA offer acceptance ${bid._id.toString()}`,
+      successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
+      failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
+      checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
+      checkoutUrl,
+    });
+  } catch (err: any) {
+    await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
+    await Bid.updateOne(
+      { _id: bid._id, status: "payment_pending" },
+      { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
+    );
+
+    console.error("Failed to create payment checkout for offer acceptance:", err);
+    res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+  }
+};
 
 // Called ONLY by the payment webhook (payment.controller.ts) once the
 // authorized payment gateway confirms payment for a "BID-<id>" checkout. Runs the same

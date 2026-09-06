@@ -7,10 +7,12 @@ import StarRating from "./StarRating";
 import AvatarImage from "@/components/Common/AvatarImage";
 import { useFavourites } from "@/hooks/useFavourites";
 import { tutorProfileHref } from "@/lib/tutor-directory";
+import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import styles from "./Tutorcard.module.css";
 
 interface TutorCardProps {
   tutor: TutorProfile;
+  matchScore?: number;
 }
 
 function getModeClass(mode: TutorProfile["teachingMode"]): string {
@@ -28,12 +30,12 @@ function getModeLabel(mode: TutorProfile["teachingMode"]): string {
   return "In-Person";
 }
 
-export default function TutorCard({ tutor }: TutorCardProps) {
+export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
   const { isFavourited, toggleFavourite, isStudent } = useFavourites();
   const favourited = isFavourited(tutor._id);
 
   const handleHeartClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // don't navigate to profile when clicking heart
+    e.preventDefault();
     e.stopPropagation();
     toggleFavourite(tutor._id);
   };
@@ -44,6 +46,17 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const locationLabel = city ? `${city}, ${countryName}` : countryName;
   const currency = tutor.currency || "PKR";
   const hasVideo = Boolean(tutor.videoIntro);
+
+  const rating = tutor.averageRating || 0;
+  const reviews = tutor.totalReviews || 0;
+  const experience = tutor.experience || 0;
+  const qualityScore = Math.min(100, Math.round(
+    rating * 18 +
+    Math.min(reviews, 50) * 0.8 +
+    (tutor.isVerified ? 25 : 0) +
+    Math.min(experience, 10) * 5
+  ));
+  const qualityTier = qualityScore >= 85 ? "Excellent" : qualityScore >= 70 ? "Great" : qualityScore >= 55 ? "Good" : "New";
 
   return (
     <Link
@@ -75,6 +88,12 @@ export default function TutorCard({ tutor }: TutorCardProps) {
               />
             </svg>
             Verified
+          </span>
+        )}
+
+        {typeof matchScore === "number" && (
+          <span style={{ position: "relative", zIndex: 1 }}>
+            <MatchScoreBadge score={matchScore} compact />
           </span>
         )}
       </div>
@@ -160,6 +179,23 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         >
           {getModeLabel(tutor.teachingMode)}
         </span>
+      </div>
+
+      {/* Quality tier */}
+      <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <span style={{
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          padding: '0.15rem 0.5rem',
+          borderRadius: '999px',
+          backgroundColor: qualityTier === 'Excellent' ? '#ecfdf5' : qualityTier === 'Great' ? '#EEF5FF' : qualityTier === 'Good' ? '#fffbeb' : '#f3f4f6',
+          color: qualityTier === 'Excellent' ? '#059669' : qualityTier === 'Great' ? '#0329B2' : qualityTier === 'Good' ? '#d97706' : '#6b7280',
+          textTransform: 'uppercase',
+          letterSpacing: '0.03em',
+        }}>
+          {qualityTier}
+        </span>
+        <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{qualityScore}/100</span>
       </div>
 
       {/* Bio */}

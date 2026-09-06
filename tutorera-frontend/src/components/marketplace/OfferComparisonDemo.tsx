@@ -174,29 +174,31 @@ export default function OfferComparisonDemo() {
           }}
         >
           {DEMO_OFFERS.map((offer) => {
-            const isBestMatch = offer.matchScore >= 95;
-            const isSelected = selectedOffer === offer.id;
+             const isBestMatch = offer.matchScore >= 95;
+             const isSelected = selectedOffer === offer.id;
 
-            return (
-              <div
-                key={offer.id}
-                onClick={() => setSelectedOffer(offer.id)}
-                style={{
-                  background: "white",
-                  borderRadius: "1rem",
-                  border: isSelected ? "2.5px solid #0329b2" : "1.5px solid #e2e8f0",
-                  padding: "1.5rem",
-                  boxShadow: isSelected 
-                    ? "0 14px 32px rgba(3, 41, 178, 0.16)" 
-                    : "0 4px 16px rgba(2, 21, 80, 0.05)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  position: "relative",
-                  transition: "all 0.2s ease",
-                }}
-              >
+             return (
+               <button
+                 key={offer.id}
+                 onClick={() => setSelectedOffer(offer.id)}
+                 style={{
+                   background: "white",
+                   borderRadius: "1rem",
+                   border: isSelected ? "2.5px solid #0329B2" : "1.5px solid #e2e8f0",
+                   padding: "1.5rem",
+                   boxShadow: isSelected 
+                     ? "0 14px 32px rgba(3, 41, 178, 0.16)" 
+                     : "0 4px 16px rgba(2, 21, 80, 0.05)",
+                   display: "flex",
+                   flexDirection: "column",
+                   justifyContent: "space-between",
+                   cursor: "pointer",
+                   position: "relative",
+                   transition: "all 0.2s ease",
+                   textAlign: "left",
+                   width: "100%",
+                 }}
+               >
                 {/* Top Badge */}
                 {isBestMatch && (
                   <div 
@@ -362,7 +364,7 @@ export default function OfferComparisonDemo() {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

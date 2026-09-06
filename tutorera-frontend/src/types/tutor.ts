@@ -24,9 +24,9 @@ export interface TutorProfile {
   languages?: string[];
   curricula?: string[];
   teachingMode: "online" | "in-person" | "both";
-  levels: string[];           // API returns "levels" not "level"
+  levels: string[];
   hourlyRate: number;
-  averageRating: number;      // API returns "averageRating" not "rating"
+  averageRating: number;
   totalReviews: number;
   bio: string;
   videoIntro?: string;
@@ -34,9 +34,10 @@ export interface TutorProfile {
   experience?: number;
   education: { degree: string; institution: string; year: number; _id: string }[];
   availability: { day: string; slots: string[]; _id: string }[];
-  verificationStatus?: string;  
+  verificationStatus?: string;
   policeVerificationStatus?: string;
   fullName?: string;
+  matchScore?: number;
 }
 
 export interface FiltersState {

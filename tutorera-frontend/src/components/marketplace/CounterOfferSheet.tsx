@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { X, ArrowRight, DollarSign, Sparkles, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showError, showSuccess } from "@/lib/toast";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface CounterOfferSheetProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export default function CounterOfferSheet({
   const [amount, setAmount] = useState(String(currentAmount));
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const sheetRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -68,6 +70,7 @@ export default function CounterOfferSheet({
 
   return (
     <div
+      ref={sheetRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="counter-sheet-title"
@@ -285,6 +288,11 @@ export default function CounterOfferSheet({
                 resize: "vertical",
               }}
             />
+            {Boolean(message && /(\+92|0092|92)?[\s\-]?3[0-9]{2}[\s\-]?[0-9]{7}|\b\d[\d\s\-]{8,12}\d\b|whatsapp|whatsap|watsapp|wa\.me|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(message)) && (
+              <p style={{ fontSize: "0.75rem", color: "#b45309", background: "#fef3c7", padding: "6px 10px", borderRadius: 6, margin: "6px 0 0", border: "1px solid #fde68a" }}>
+                ⚠️ <strong>Safety Warning:</strong> Sharing phone numbers, WhatsApp, or emails violates platform rules and will flag your counter-offer for review.
+              </p>
+            )}
           </div>
 
           {/* Actions */}
