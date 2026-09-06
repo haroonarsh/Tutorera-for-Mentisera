@@ -3,17 +3,18 @@ import TutorCard from "@/components/Tutors/TutorCard";
 import { fetchTutors, type DirectoryKind, tutorProfileHref } from "@/lib/tutor-directory";
 import styles from "@/app/tutors/page.module.css";
 
-interface Props { kind: DirectoryKind; value: string; filters?: Partial<Record<DirectoryKind, string>>; title: string; description: string; canonicalPath: string; }
+interface Props { kind: DirectoryKind; value: string; filters?: Partial<Record<DirectoryKind, string>>; title: string; description: string; canonicalPath: string; currency?: string; }
 
-export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath }: Props) {
+export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency }: Props) {
   const result = await fetchTutors(filters ?? { [kind]: value });
   const rates = result.tutors.map((tutor) => tutor.hourlyRate).filter(Boolean);
   const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
+  const displayCurrency = currency || result.tutors.find((t) => t.currency)?.currency || "PKR";
   const context = filters?.city && filters?.subject ? `${filters.subject} tutoring in ${filters.city}` : `${value} tutoring`;
   const faq = [
     { q: `How do I choose a ${value} tutor?`, a: `Compare verified profiles by relevant subjects, teaching levels, experience, lesson mode, availability, completed-booking reviews, and hourly rate. Discuss learning goals before confirming a booking.` },
     { q: `Can I book ${context} online?`, a: `Yes. Use the teaching-mode information on each profile to find tutors offering online lessons, in-person lessons, or both.` },
-    { q: `How much does ${context} cost?`, a: averageRate ? `The currently displayed matching tutors average approximately PKR ${averageRate.toLocaleString()} per hour. Individual rates vary by experience, subject, level, and lesson mode.` : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.` },
+    { q: `How much does ${context} cost?`, a: averageRate ? `The currently displayed matching tutors average approximately ${displayCurrency} ${averageRate.toLocaleString()} per hour. Individual rates vary by experience, subject, level, and lesson mode.` : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.` },
   ];
   const breadcrumb = {
     "@context": "https://schema.org", "@type": "BreadcrumbList",

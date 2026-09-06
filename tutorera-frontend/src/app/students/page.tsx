@@ -142,7 +142,7 @@ export default function StudentsLandingPage() {
                 First-Session Guarantee
               </h3>
               <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                Your payment is held safely in base escrow and is only released after you confirm your lesson was conducted successfully.
+                Your payment is protected safely under TUTORERA guarantees and is only settled after your lesson is conducted successfully.
               </p>
             </div>
           </div>

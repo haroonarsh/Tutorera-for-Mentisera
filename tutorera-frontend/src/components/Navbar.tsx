@@ -81,7 +81,7 @@ const megaMenus = [
       { title: "Guides & Research", links: [
         { label: "Global Tutoring Index", href: "/research/pakistan-tutoring-rates", desc: "Tutoring market rate benchmarks." },
         { label: "Student Journey", href: "/student-journey", desc: "From posting need to completed session." },
-        { label: "Payment Process", href: "/payment-process", desc: "Secure multi-currency escrow & checkout." },
+        { label: "Payment Process", href: "/payment-process", desc: "Secure multi-currency checkout & guarantees." },
         { label: "Help Center", href: "/help", desc: "FAQs & support documentation." },
       ] },
       { title: "Company & Trust", links: [

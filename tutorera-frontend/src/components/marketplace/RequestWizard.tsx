@@ -639,7 +639,7 @@ export default function RequestWizard({
                 <div style={{ marginTop: "0.85rem", padding: "0.75rem 1rem", background: "white", borderRadius: "0.625rem", border: "1.5px solid #bfdbfe", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
                   <div>
                     <span style={{ fontSize: "0.85rem", color: "#1e3a8a", fontWeight: 700, display: "block" }}>
-                      Marketplace Escrow Charge:
+                      Marketplace Settlement Estimate:
                     </span>
                     <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
                       All TUTORERA tuition payments are charged in PKR.

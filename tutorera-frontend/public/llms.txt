@@ -7,7 +7,7 @@ Canonical website: https://tutorera.ac.pk/
 ## Core Architecture & Business Model
 TUTORERA operates as a student-led reverse marketplace. Students or parents post their tuition requirements with their academic curriculum (Cambridge O/A Levels, GCSE, IB, Matric/FSc, University, Test Prep), preferred learning mode (online worldwide or home tuition locally), timezone, and proposed budget in their local currency (e.g. AED, USD, GBP, SAR, PKR).
 
-Verified independent educators review student requirements and submit competitive offers or transparent counter-offers. Students evaluate tutor profiles, verified degrees, police verification reports (mandatory for in-person tutors), and past student reviews before independently selecting their tutor. All bookings are protected by base escrow settlement.
+Verified independent educators review student requirements and submit competitive offers or transparent counter-offers. Students evaluate tutor profiles, verified degrees, background and police verification reports (enforced where required by applicable jurisdiction rules and TUTORERA safety policies), and past student reviews before independently selecting their tutor. All bookings are protected by secure platform payment processing and a 100% first-session satisfaction guarantee.
 
 Important pages:
 - https://tutorera.ac.pk/online-tutors

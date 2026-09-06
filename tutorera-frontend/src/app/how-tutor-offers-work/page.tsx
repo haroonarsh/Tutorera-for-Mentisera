@@ -30,7 +30,7 @@ const faq = [
   ],
   [
     "What happens after accepting an offer?",
-    "The agreed rate is locked, competing offers close, and a secure escrow booking order is created. Funds are safely held in escrow until the session is completed and verified by the student.",
+    "The agreed rate is locked, competing offers close, and a secure platform booking is created. Payment is processed with full student satisfaction guarantees.",
   ],
 ];
 
@@ -118,7 +118,7 @@ export default function HowTutorOffersWorkPage() {
               <strong>Choose your educator:</strong> Accept the tutor whose expertise and price best meet your criteria. The final rate is locked.
             </li>
             <li>
-              <strong>Secure escrow booking:</strong> Review transparent checkout details with escrow protection. Your payment is held safely until the session is successfully delivered.
+              <strong>Secure platform booking:</strong> Review transparent checkout details with satisfaction guarantee. Your payment is protected until the session is successfully delivered.
             </li>
           </ol>
         </section>
@@ -138,7 +138,7 @@ export default function HowTutorOffersWorkPage() {
           <ul style={{ lineHeight: 1.9, color: "#475569", paddingLeft: "1.25rem" }}>
             <li>Students retain full autonomy over which tutor they hire.</li>
             <li>Tutors define their own rates and are never compelled to accept below-market prices.</li>
-            <li>Multi-currency transparency: budgets and offers are denominated clearly with base escrow settlement.</li>
+            <li>Multi-currency transparency: budgets and offers are denominated clearly with protected platform checkout.</li>
             <li>Rankings prioritize qualification authenticity, teaching efficacy, and student reviews.</li>
             <li>Zero hidden charges: all fees and tutor earnings are disclosed upfront.</li>
             <li>Police verification is mandatory for in-person home tutors to ensure parent peace of mind.</li>

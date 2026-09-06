@@ -15,6 +15,9 @@ export const CITIES = {
   lahore: "Lahore", karachi: "Karachi", islamabad: "Islamabad", rawalpindi: "Rawalpindi",
   faisalabad: "Faisalabad", multan: "Multan", peshawar: "Peshawar", quetta: "Quetta",
   sialkot: "Sialkot", gujranwala: "Gujranwala",
+  dubai: "Dubai", "abu-dhabi": "Abu Dhabi", sharjah: "Sharjah",
+  riyadh: "Riyadh", jeddah: "Jeddah", dammam: "Dammam",
+  london: "London", manchester: "Manchester", birmingham: "Birmingham",
 } as const;
 
 export const LEVELS = {

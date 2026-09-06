@@ -4,12 +4,12 @@ import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "TUTORERA Business Model | Global Student-Led Tutoring Marketplace",
-  description: "How TUTORERA by MENTISERA operates as a global student-led demand tutoring marketplace with multi-currency transparency and secure base escrow settlement.",
+  description: "How TUTORERA by MENTISERA operates as a global student-led demand tutoring marketplace with multi-currency transparency and secure platform payment protection.",
   alternates: { canonical: "/business-model" },
 };
 
 const explanation =
-  "TUTORERA by MENTISERA is a global student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. Students or parents post tutoring requirements with their preferred budget in their selected currency (such as AED, USD, GBP, SAR, or PKR). Eligible verified independent tutors can respond with customized offers based on the student's subject, academic curriculum, timezone, schedule, learning mode (online worldwide or home tuition locally), and proposed budget. The student compares available tutors and independently selects the tutor they prefer. Once the tutor's offer is accepted, the final tutoring rate is locked and a booking is created. Payment is then collected against that specific booking and held safely in escrow before the tutoring session is delivered.";
+  "TUTORERA by MENTISERA is a global student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. Students or parents post tutoring requirements with their preferred budget in their selected currency (such as AED, USD, GBP, SAR, or PKR). Eligible verified independent tutors can respond with customized offers based on the student's subject, academic curriculum, timezone, schedule, learning mode (online worldwide or home tuition locally), and proposed budget. The student compares available tutors and independently selects the tutor they prefer. Once the tutor's offer is accepted, the final tutoring rate is locked and a booking is created. Payment is then collected against that specific booking and processed securely under platform satisfaction guarantees before the tutoring session is delivered.";
 
 const flow = [
   "Student posts tutoring requirement specifying subject, curriculum, and mode",
@@ -19,14 +19,14 @@ const flow = [
   "Student compares tutor profiles, verified credentials, and rates",
   "Student independently selects preferred tutor",
   "Final tutoring rate is agreed and locked",
-  "Booking schedule and escrow order are generated",
+  "Booking schedule and payment order are generated",
   "Customer reviews final amount in preferred currency with transparent base conversion",
-  "Customer proceeds to secure escrow payment",
-  "Payment is verified and held securely in escrow",
+  "Customer proceeds to secure platform payment",
+  "Payment is verified and secured",
   "Booking is confirmed with session calendar and room link",
   "Tutor delivers tutoring service independently",
   "Session is completed and verified",
-  "Student provides feedback and releases escrow to tutor",
+  "Student provides feedback and confirms successful lesson delivery",
 ];
 
 const studentItems = [
@@ -42,7 +42,7 @@ const studentItems = [
   "Review tutor ratings, experience & past student feedback",
   "Select tutor independently with zero booking pressure",
   "Accept offer & confirm schedule",
-  "Pay transparent checkout total with secure escrow protection",
+  "Pay transparent checkout total with secure platform payment protection",
   "Attend online or in-person tutoring session",
   "Rate tutor performance",
   "Access 100% money-back guarantee & dispute resolution",
@@ -59,7 +59,7 @@ const tutorItems = [
   "Accept student proposed budget directly",
   "Submit customized counter-offers where appropriate",
   "Add tailored introduction message & lesson proposal",
-  "Receive confirmed booking with escrow guarantee",
+  "Receive confirmed booking with payment guarantee",
   "Deliver high-standard tutoring service independently",
   "Receive timely payouts after transparent platform commission",
 ];

@@ -27,7 +27,7 @@ export default function AboutPage() {
             A Global Student-Led Tutoring Marketplace
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1.1rem', lineHeight: '1.75', maxWidth: '650px', margin: '0 auto' }}>
-            TUTORERA® brings transparency, safety, and student empowerment to tutoring worldwide and locally — connecting learners with verified tutors through competitive custom offers and secure escrow settlement.
+            TUTORERA® brings transparency, safety, and student empowerment to tutoring worldwide and locally — connecting learners with verified tutors through competitive custom offers and secure platform payment.
           </p>
         </div>
       </section>
@@ -43,7 +43,7 @@ export default function AboutPage() {
             {[
               { icon: <Target size={28} color={C.accent} />, title: "Student-Led", desc: "Post your subject, curriculum, budget, and mode (online or in-person) — let verified tutors submit offers to you." },
               { icon: <Shield size={28} color={C.accent} />, title: "Verified & Safe", desc: "Tutors undergo strict identity, degree, and mandatory background verification for home tuition." },
-              { icon: <Globe2 size={28} color={C.accent} />, title: "Global & Multi-Currency", desc: "Learn worldwide or locally with transparent pricing in your local currency and secure escrow protection." },
+              { icon: <Globe2 size={28} color={C.accent} />, title: "Global & Multi-Currency", desc: "Learn worldwide or locally with transparent pricing in your local currency and secure platform protection." },
             ].map(item => (
               <div key={item.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>{item.icon}</div>
@@ -74,11 +74,11 @@ export default function AboutPage() {
               "Student posts requirement with preferred budget",
               "Verified tutors submit tailored offers",
               "Student compares profile credentials & price",
-              "Final rate agreed with secure escrow settlement",
+              "Final rate agreed with secure platform booking",
               "Booking is confirmed with structured schedule",
               "Payment held securely until session completed",
               "Tutor delivers high-quality session",
-              "Student reviews tutor & releases escrow",
+              "Student reviews tutor & confirms session delivery",
             ].map((step, index) => (
               <div key={step} style={{ backgroundColor: C.gray50, border: '1px solid #e5e7eb', borderRadius: '0.875rem', padding: '1.25rem' }}>
                 <p style={{ color: C.accent, fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.35rem' }}>STEP {String(index + 1).padStart(2, "0")}</p>
@@ -87,7 +87,7 @@ export default function AboutPage() {
             ))}
           </div>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '1.5rem', textAlign: 'center' }}>
-            TUTORERA provides student-led marketplace technology, student requirement matching, tutor offer comparison, rate negotiation, booking management, international timezone scheduling, communication, payment facilitation, transparent currency display with base escrow security, tutor reviews, customer support, dispute administration, and platform governance. Tutors provide tutoring services as independent verified educators.
+            TUTORERA provides student-led marketplace technology, student requirement matching, tutor offer comparison, rate negotiation, booking management, international timezone scheduling, communication, payment facilitation, transparent currency display with platform payment security, tutor reviews, customer support, dispute administration, and platform governance. Tutors provide tutoring services as independent verified educators.
           </p>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '0.5rem', textAlign: 'center' }}>
             TUTORERA is not affiliated with, endorsed by, or certified by any ride-hailing or third-party marketplace brand. The model similarity is limited to the general demand-marketplace model where students post demand and verified providers respond with offers.

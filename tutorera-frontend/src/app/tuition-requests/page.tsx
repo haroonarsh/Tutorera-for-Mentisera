@@ -59,34 +59,6 @@ interface RequestItem {
 
 const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
 
-// Seed request for Ahmed Al in Jeddah if database is fresh
-const SEED_REQUESTS: RequestItem[] = [
-  {
-    _id: "req-ahmed-jeddah-live",
-    subject: "Mathematics & Physics",
-    level: "O-Level",
-    description: "Looking for an experienced tutor for Cambridge O-Level Mathematics and Physics exam preparation. Need 3 sessions per week.",
-    budget: 200,
-    currency: "AED",
-    pricingUnit: "hour",
-    allowCounterOffers: true,
-    teachingMode: "both",
-    city: "Jeddah",
-    countryCode: "SA",
-    countryName: "Kingdom of Saudi Arabia",
-    schedule: "3 sessions/week · Evening",
-    createdAt: new Date(Date.now() - 120000).toISOString(),
-    offersCount: 1,
-    student: {
-      displayTitle: "Ahmed A. in Jeddah",
-      name: "Ahmed A.",
-      city: "Jeddah",
-      countryName: "Kingdom of Saudi Arabia",
-    },
-    bid: null,
-  }
-];
-
 export default function TuitionRequestsPage() {
   const { user } = useAuth();
   const now = useCurrentTime();
@@ -115,20 +87,15 @@ export default function TuitionRequestsPage() {
       if (mode) params.teachingMode = mode;
 
       const res = await api.get(`/requests/public/preview?${new URLSearchParams(params).toString()}`);
-      let reqList: RequestItem[] = res.data.requests || [];
-
-      // If no requests returned yet, include seed request
-      if (reqList.length === 0 && !subject && !level) {
-        reqList = SEED_REQUESTS;
-      }
+      const reqList: RequestItem[] = res.data.requests || [];
 
       setRequests(reqList);
-      setTotalCount(res.data.total || reqList.length);
-      setTotalPages(Math.max(1, Math.ceil((res.data.total || reqList.length) / 12)));
+      setTotalCount(res.data.total ?? reqList.length);
+      setTotalPages(Math.max(1, Math.ceil((res.data.total ?? reqList.length) / 12)));
     } catch (err) {
       console.error("Failed to fetch public requests:", err);
-      setRequests(SEED_REQUESTS);
-      setTotalCount(SEED_REQUESTS.length);
+      setRequests([]);
+      setTotalCount(0);
       setTotalPages(1);
     } finally {
       setLoading(false);
@@ -340,10 +307,12 @@ export default function TuitionRequestsPage() {
         ) : requests.length === 0 ? (
           <div style={{ background: "white", borderRadius: "1rem", padding: "4rem 2rem", textAlign: "center", border: "1px solid #e2e8f0" }}>
             <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
-              No Open Requests Match These Filters
+              {subject || level || country || city || mode ? "No Open Requests Match These Filters" : "No Active Tuition Requests Right Now"}
             </h3>
             <p style={{ color: "#64748b", fontSize: "0.9rem", maxWidth: 460, margin: "0 auto 1.5rem" }}>
-              Be among the first to post in this category, or reset your filters to browse all student requirements.
+              {subject || level || country || city || mode
+                ? "Reset your filters to browse all student requirements, or post your requirement to receive tutor offers."
+                : "Post your requirement to receive customized offers from qualified tutors, or check back soon."}
             </p>
             <Link
               href="/post-tuition-request"

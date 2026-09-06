@@ -16,7 +16,7 @@ import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 
 export const metadata: Metadata = {
   title: "Parent Safety Guide & Verified Tutors for Your Child | TUTORERA",
-  description: "Find verified, background-checked tutors for your child. Mandatory police verification for home tuition, credential checks, and transparent escrow safety.",
+  description: "Find verified, background-checked tutors for your child. Mandatory police verification for home tuition, credential checks, and transparent payment protection.",
   alternates: { canonical: "/parents" },
 };
 
@@ -130,10 +130,10 @@ export default function ParentsLandingPage() {
                 <Lock size={24} />
               </div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
-                Escrow Payment Protection
+                Platform Payment Protection
               </h3>
               <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                You never pay cash directly or risk upfront losses. Fees remain safely deposited in escrow until you verify the session was delivered to your satisfaction.
+                You never pay cash directly or risk upfront losses. Payments remain safely protected by TUTORERA guarantees until you verify the session was delivered to your satisfaction.
               </p>
             </div>
 

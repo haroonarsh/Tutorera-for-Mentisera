@@ -16,7 +16,7 @@ const trustPillars = [
   },
   {
     icon: Lock,
-    title: "Secure Booking & Escrow",
+    title: "Secure Booking & Payment",
     desc: "Pay only when you choose your tutor. Sessions are protected under platform standards and fair cancellation rules.",
     link: "/payment-process"
   },

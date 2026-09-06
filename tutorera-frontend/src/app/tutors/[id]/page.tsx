@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import {
   BookOpen,
   CheckCircle,
@@ -15,7 +16,8 @@ import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
 import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
 import AvatarImage from "@/components/Common/AvatarImage";
 import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
-import { fetchTutor } from "@/lib/tutor-directory";
+import { fetchTutor, tutorProfileHref } from "@/lib/tutor-directory";
+import { SITE_URL } from "@/lib/site";
 import type { Review } from "@/types/tutor";
 
 const API_URL =
@@ -23,6 +25,48 @@ const API_URL =
   "https://tutorera-backend.onrender.com/api/v1";
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const tutor = await fetchTutor(id);
+  if (!tutor) {
+    return {
+      title: "Tutor Profile | TUTORERA",
+      robots: { index: false, follow: true },
+    };
+  }
+
+  const name = tutor.user?.name || tutor.fullName || "Verified Tutor";
+  const primarySubject = tutor.subjects?.[0] || "Tuition";
+  const city = tutor.city || tutor.user?.city || "Pakistan";
+  const modeText = tutor.teachingMode === "both" ? "Online & In-Person" : tutor.teachingMode === "online" ? "Online" : "In-Person";
+  const rateText = tutor.hourlyRate ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString()}/hr` : "Competitive rates";
+
+  const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText}) | TUTORERA`;
+  const description = `${name} is an approved, verified ${primarySubject} educator serving students in ${city} and worldwide (${modeText}). Offering ${tutor.subjects?.slice(0, 3).join(", ") || primarySubject} across ${tutor.levels?.slice(0, 3).join(", ") || "standard curricula"} at ${rateText}.`;
+  const canonical = tutorProfileHref(tutor);
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title: `${title} | TUTORERA`,
+      description,
+      url: `${SITE_URL}${canonical}`,
+      type: "profile",
+      images: tutor.user?.avatar ? [{ url: tutor.user.avatar, alt: name }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: tutor.user?.avatar ? [tutor.user.avatar] : undefined,
+    },
+  };
+}
 
 interface Slot {
   date: string;
@@ -73,6 +117,50 @@ export default async function TutorProfilePage({ params }: Props) {
   const isHomeTutor =
     tutor.teachingMode === "in-person" || tutor.teachingMode === "both";
 
+  const canonical = tutorProfileHref(tutor);
+  const profileSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "ProfilePage",
+        "@id": `${SITE_URL}${canonical}#webpage`,
+        url: `${SITE_URL}${canonical}`,
+        name: `${name} - ${tutor.subjects?.[0] || "Tuition"} Tutor`,
+        breadcrumb: {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+            { "@type": "ListItem", position: 2, name: "Tutors", item: `${SITE_URL}/tutors` },
+            { "@type": "ListItem", position: 3, name, item: `${SITE_URL}${canonical}` },
+          ],
+        },
+      },
+      {
+        "@type": "Person",
+        "@id": `${SITE_URL}${canonical}#person`,
+        name,
+        image: avatarUrl || undefined,
+        description: tutor.bio || `${name} is a verified educator on TUTORERA.`,
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: city,
+          addressCountry: tutor.countryCode || "PK",
+        },
+        knowsAbout: tutor.subjects || [],
+        alumniOf: tutor.education?.map((edu) => ({
+          "@type": "EducationalOrganization",
+          name: edu.institution,
+        })),
+        offers: {
+          "@type": "Offer",
+          price: tutor.hourlyRate || 0,
+          priceCurrency: tutor.currency || "PKR",
+          availability: "https://schema.org/InStock",
+        },
+      },
+    ],
+  };
+
   return (
     <main
       style={{
@@ -81,6 +169,10 @@ export default async function TutorProfilePage({ params }: Props) {
         color: "#021550",
       }}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
+      />
       {/* Header Profile Hero */}
       <header
         style={{

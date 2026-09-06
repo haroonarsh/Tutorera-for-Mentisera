@@ -354,7 +354,7 @@ export default function OfferComparisonModal({
         {/* Footer info note */}
         <div style={{ background: "#f8faff", borderTop: "1px solid #e2e8f0", padding: "0.85rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", color: "#64748b" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-            <ShieldCheck size={14} color="#10b981" /> 0% student fee · TUTORERA Escrow Protection Guarantee
+            <ShieldCheck size={14} color="#10b981" /> 0% student fee · TUTORERA Satisfaction Guarantee
           </span>
           <button
             type="button"

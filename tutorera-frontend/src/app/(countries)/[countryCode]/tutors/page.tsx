@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
-import { fetchTutors } from "@/lib/tutor-directory";
+import { fetchTutors, CITIES } from "@/lib/tutor-directory";
 import { getCountryByCode, COUNTRIES } from "@/lib/countries";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!country) return { title: "Tutors Directory", robots: { index: false, follow: true } };
 
   const title = `Find Verified Tutors in ${country.name} | Online & Home Tuition`;
-  const description = `Connect with verified tutors in ${country.name} (${country.currency}). Compare rates, explore ${country.curricula.slice(0, 3).join(", ")} curricula, and book with secure escrow.`;
+  const description = `Connect with verified tutors in ${country.name} (${country.currency}). Compare rates, explore ${country.curricula.slice(0, 3).join(", ")} curricula, and book with verified satisfaction guarantee.`;
   const canonical = `/${countryCode.toLowerCase()}/tutors`;
 
   return {
@@ -126,24 +127,35 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
             Explore In-Person & Home Tuition Cities in {country.name}
           </h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
-            {country.cities.map((city) => (
-              <a
-                key={city.id || city.name}
-                href={`/${countryCode.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`}
-                style={{
-                  background: "#f8faff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "999px",
-                  padding: "0.45rem 1rem",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "#0329b2",
-                  textDecoration: "none",
-                }}
-              >
-                {city.name}
-              </a>
-            ))}
+            {country.cities.map((city) => {
+              const citySlug = city.name.toLowerCase().replace(/\s+/g, "-");
+              const hasDedicatedLanding = citySlug in CITIES;
+              const href = hasDedicatedLanding
+                ? `/tutors/city/${citySlug}`
+                : `/${countryCode.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`;
+
+              return (
+                <Link
+                  key={city.id || city.name}
+                  href={href}
+                  style={{
+                    background: "#f8faff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "999px",
+                    padding: "0.45rem 1rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    color: "#0329b2",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                  }}
+                >
+                  {city.name} {hasDedicatedLanding ? "Tutors →" : ""}
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

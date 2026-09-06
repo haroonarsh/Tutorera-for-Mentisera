@@ -515,7 +515,7 @@ export default function LiveRequestPopup() {
                   </button>
 
                   <div style={{ marginTop: "0.75rem", textAlign: "center", fontSize: "0.75rem", color: "#64748b" }}>
-                    <span>Protected by TUTORERA Escrow · Instant notification sent to student</span>
+                    <span>Protected by TUTORERA Platform Guarantees · Instant notification sent to student</span>
                   </div>
                 </form>
               )}

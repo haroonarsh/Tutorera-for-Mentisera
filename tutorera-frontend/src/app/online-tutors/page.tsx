@@ -7,7 +7,7 @@ import { SITE_URL } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Find Verified Online Tutors Worldwide | 1-on-1 Live Lessons",
   description:
-    "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay with secure escrow protection.",
+    "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay with secure platform payment protection.",
   alternates: { canonical: "/online-tutors" },
   openGraph: {
     title: "Find Verified Online Tutors Worldwide | TUTORERA",
@@ -28,7 +28,7 @@ const onlineFaqs = [
   },
   {
     q: "In what currencies can I pay for online tutoring?",
-    a: "You can view and agree on rates in major international currencies (AED, USD, GBP, SAR, PKR, etc.). All transactions are held safely in TUTORERA escrow until your lesson is delivered.",
+    a: "You can view and agree on rates in major international currencies (AED, USD, GBP, SAR, PKR, etc.). All transactions are processed through secure TUTORERA platform payments with full satisfaction guarantees.",
   },
   {
     q: "What timezone scheduling is supported?",

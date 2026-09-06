@@ -119,10 +119,10 @@ export default function ForTutorsPage() {
                 <ShieldCheck size={24} />
               </div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
-                3. Guaranteed Payouts via Escrow
+                3. Guaranteed Platform Payouts
               </h3>
               <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                No chasing clients for payment. Before your lesson commences, the student deposits payment into platform escrow, released automatically upon session completion.
+                No chasing clients for payment. Before your lesson commences, the student completes payment through the platform, paid out directly upon verified session completion.
               </p>
             </div>
           </div>

@@ -239,10 +239,10 @@ export default function SafetyCenterPage() {
           </p>
           <div className={s.cardGrid}>
             <div className={s.card}>
-              <h3 className={s.cardTitle}>100% On-Platform Escrow Payments</h3>
+              <h3 className={s.cardTitle}>100% On-Platform Protected Payments</h3>
               <p className={s.cardText}>
                 All lesson fees must be paid through TUTORERA&apos;s authorized payment gateways. Funds are
-                held securely in milestone escrow and are only released to tutors after successful completion
+                protected securely under platform booking terms and are only released to tutors after successful completion
                 of scheduled instruction.
               </p>
             </div>

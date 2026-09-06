@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const CANONICAL_HOST = "tutorera.ac.pk";
-const LEGACY_HOSTS = new Set(["tutorera.mentisera.pk", "tutorera-frontend.vercel.app"]);
-const PRIVATE_PATHS = ["/admin", "/billing", "/chat", "/dashboard", "/earnings", "/forgot-password", "/login", "/notifications", "/offers", "/onboarding", "/profile", "/referral", "/register", "/select-role", "/settings", "/tutor"];
+import { CANONICAL_HOST, REDIRECT_HOSTS, SEO_PRIVATE_PATHS } from "@/constants/seoRoutes";
 
 export function middleware(request: NextRequest) {
-  if (LEGACY_HOSTS.has(request.nextUrl.hostname.toLowerCase())) {
+  const host = request.nextUrl.hostname.toLowerCase();
+  if (REDIRECT_HOSTS.has(host)) {
     const destination = request.nextUrl.clone();
     destination.protocol = "https";
     destination.hostname = CANONICAL_HOST;
@@ -14,8 +12,8 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  if (PRIVATE_PATHS.some((path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`))) {
-    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  if (SEO_PRIVATE_PATHS.some((path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`))) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
   return response;
 }
