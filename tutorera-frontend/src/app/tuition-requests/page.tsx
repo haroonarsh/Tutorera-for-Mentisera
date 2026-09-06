@@ -20,6 +20,7 @@ import { formatMoney, timeAgo } from "@/lib/site";
 import { COUNTRIES, getCitiesForCountry } from "@/lib/countries";
 import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { useAuth } from "@/context/AuthContext";
+import { useCurrentTime } from "@/hooks/useCurrentTime";
 
 interface RequestItem {
   _id: string;
@@ -36,6 +37,7 @@ interface RequestItem {
   city?: string;
   schedule: string;
   createdAt: string;
+  expiresAt?: string;
   offersCount?: number;
   student: { 
     name?: string; 
@@ -87,6 +89,7 @@ const SEED_REQUESTS: RequestItem[] = [
 
 export default function TuitionRequestsPage() {
   const { user } = useAuth();
+  const now = useCurrentTime();
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [subject, setSubject] = useState("");
@@ -395,6 +398,11 @@ export default function TuitionRequestsPage() {
                           <span style={{ fontSize: "0.72rem", background: "#ecfdf5", color: "#059669", padding: "0.15rem 0.55rem", borderRadius: "999px", fontWeight: 700 }}>
                             ⚡ {r.offersCount || 0} Offers
                           </span>
+                          {r.expiresAt && now > 0 && (
+                            <span style={{ fontSize: "0.72rem", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", padding: "0.15rem 0.55rem", borderRadius: "999px", fontWeight: 700 }}>
+                              ⏱️ {Math.max(1, Math.floor((new Date(r.expiresAt).getTime() - now) / (86400000)))}d left
+                            </span>
+                          )}
                         </div>
                       </div>
 

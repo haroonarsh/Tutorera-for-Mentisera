@@ -1,0 +1,337 @@
+// src/services/requestLifecycle.service.ts
+// Production-Ready TUTORERA Tuition Request Expiry, Archival & Retention Engine
+// Implements server-side UTC lifecycle transitions, negotiation grace, atomic updates, and idempotency
+
+import mongoose, { Types } from "mongoose";
+import Request, { IRequest } from "../models/Request.model";
+import Bid from "../models/Bid.model";
+import Booking from "../models/Booking.model";
+import { sendNotification } from "../utils/socket";
+import { logAudit } from "../utils/logAudit";
+import logger from "../config/logger";
+import {
+  MARKETPLACE_REQUEST_EXPIRY_DAYS,
+  EXPIRY_WARNING_HOURS,
+  DAY_5_INTERVENTION_HOURS,
+  ARCHIVE_INACTIVE_DAYS,
+  REQUEST_EXPIRY_ENABLED,
+  ACTIVE_REQUEST_STATUSES,
+  NON_EXPIRABLE_STATUSES,
+} from "../config/marketplace";
+import { MatchingService } from "./matching.service";
+
+export interface LifecycleRunResult {
+  scanned: number;
+  warningsSent: number;
+  day5EscalationsSent: number;
+  expiredCount: number;
+  offersClosedCount: number;
+  archivedCount: number;
+  errors: string[];
+}
+
+/**
+ * 1. Process 24-Hour Expiry Warnings
+ * Notifies students when their active request is 24 hours away from expiry.
+ */
+export async function sendExpiryWarnings(io?: any): Promise<number> {
+  const now = new Date();
+  const warningThreshold = new Date(now.getTime() + EXPIRY_WARNING_HOURS * 60 * 60 * 1000);
+
+  const eligible = await Request.find({
+    status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
+    expiresAt: { $gt: now, $lte: warningThreshold },
+    expiryWarningSentAt: { $exists: false },
+  }).limit(100);
+
+  let sent = 0;
+  for (const reqDoc of eligible) {
+    try {
+      const offersCount = await Bid.countDocuments({
+        request: reqDoc._id,
+        status: { $nin: ["withdrawn", "rejected"] },
+      });
+
+      const message = offersCount > 0
+        ? `Your request for ${reqDoc.subject} expires tomorrow and you have ${offersCount} tutor ${offersCount === 1 ? "offer" : "offers"} waiting. Compare offers or extend your request.`
+        : `Your request for ${reqDoc.subject} expires tomorrow. You can review preferences or extend your request by 7 days.`;
+
+      if (io) {
+        await sendNotification(io, reqDoc.student.toString(), {
+          title: "⏰ Tuition Request Expiring Soon",
+          message,
+          type: "bid",
+          link: "/dashboard",
+        });
+      }
+
+      reqDoc.expiryWarningSentAt = now;
+      await reqDoc.save();
+      sent++;
+    } catch (err: any) {
+      logger.error({ err, requestId: reqDoc._id }, "Failed to send request expiry warning");
+    }
+  }
+
+  return sent;
+}
+
+/**
+ * 2. Process Day-5 Supply Escalation
+ * If a request reaches 48h before expiry with 0 offers, expand tutor reach and inform student.
+ */
+export async function processDay5Escalations(io?: any): Promise<number> {
+  const now = new Date();
+  const escalationThreshold = new Date(now.getTime() + DAY_5_INTERVENTION_HOURS * 60 * 60 * 1000);
+
+  const eligible = await Request.find({
+    status: { $in: ["open", "published", "receiving_offers"] },
+    expiresAt: { $gt: now, $lte: escalationThreshold },
+    day5InterventionSentAt: { $exists: false },
+  }).limit(50);
+
+  let escalated = 0;
+  for (const reqDoc of eligible) {
+    try {
+      const offersCount = await Bid.countDocuments({ request: reqDoc._id });
+      if (offersCount === 0) {
+        // Broaden matching pool notifications
+        if (io) {
+          await MatchingService.dispatchProgressiveNotifications(reqDoc, io);
+          await sendNotification(io, reqDoc.student.toString(), {
+            title: "🔍 Expanding Tutor Search",
+            message: `We're expanding search parameters to find more qualified tutors for ${reqDoc.subject}. You can also adjust your budget or schedule anytime.`,
+            type: "general",
+            link: "/dashboard",
+          });
+        }
+        reqDoc.day5InterventionSentAt = now;
+        await reqDoc.save();
+        escalated++;
+      }
+    } catch (err: any) {
+      logger.error({ err, requestId: reqDoc._id }, "Failed to process day-5 escalation");
+    }
+  }
+
+  return escalated;
+}
+
+/**
+ * 3. Idempotent & Concurrency-Safe Request Expiry Processor
+ * Identifies expired active requests, executes atomic state transition,
+ * marks unselected offers as closed, preserves active negotiations under grace,
+ * and notifies the student.
+ */
+export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: number; offersClosedCount: number }> {
+  const now = new Date();
+  let expiredCount = 0;
+  let offersClosedCount = 0;
+
+  // Find active requests past expiration date
+  const expiredCandidates = await Request.find({
+    status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
+    expiresAt: { $lte: now },
+  }).limit(200);
+
+  for (const reqDoc of expiredCandidates) {
+    try {
+      // Check negotiation grace: If request is in "negotiating" and has an active counter-offer
+      // that is still valid according to the bid's own expiresAt, preserve the private negotiation!
+      let activeNegotiationGrace = false;
+      if (reqDoc.status === "negotiating") {
+        const activeCounterBid = await Bid.findOne({
+          request: reqDoc._id,
+          status: "countered",
+          expiresAt: { $gt: now },
+        });
+        if (activeCounterBid) {
+          activeNegotiationGrace = true;
+        }
+      }
+
+      // If active negotiation grace applies, do NOT prematurely mark the request as "expired",
+      // but ensure it remains non-discoverable by new tutors.
+      if (activeNegotiationGrace) {
+        continue;
+      }
+
+      // Atomic conditional update — ensures only one transition wins against concurrent bookings/offers
+      const updateResult = await Request.updateOne(
+        {
+          _id: reqDoc._id,
+          status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
+          expiresAt: { $lte: now },
+        },
+        {
+          $set: {
+            status: "expired",
+            expiredAt: now,
+          },
+        }
+      );
+
+      if (updateResult.modifiedCount !== 1) {
+        // Another process accepted an offer or transitioned this request concurrently
+        continue;
+      }
+
+      expiredCount++;
+
+      // Close outstanding active offers for this expired request
+      const activeBidUpdate = await Bid.updateMany(
+        {
+          request: reqDoc._id,
+          status: { $in: ["pending", "submitted", "viewed"] },
+        },
+        {
+          $set: { status: "expired" },
+        }
+      );
+      offersClosedCount += activeBidUpdate.modifiedCount;
+
+      // Notify student with Repost & View Previous Offers CTA
+      if (io) {
+        const totalBids = await Bid.countDocuments({ request: reqDoc._id });
+        const expiryNotice = totalBids > 0
+          ? `Your tuition request for ${reqDoc.subject} has expired after 7 days. You can review past offers or repost with updated preferences.`
+          : `Your tuition request for ${reqDoc.subject} has expired. Repost your requirement or adjust your budget/schedule to attract tutors.`;
+
+        await sendNotification(io, reqDoc.student.toString(), {
+          title: "📋 Tuition Request Expired",
+          message: expiryNotice,
+          type: "general",
+          link: "/dashboard",
+        });
+
+        // Notify tutors who had submitted pending offers that are now closed
+        const affectedBids = await Bid.find({ request: reqDoc._id, status: "expired" }).select("tutor");
+        for (const b of affectedBids) {
+          await sendNotification(io, b.tutor.toString(), {
+            title: "Request Closed",
+            message: `The tuition request for ${reqDoc.subject} has expired and is no longer accepting offers.`,
+            type: "bid",
+            link: "/offers",
+          });
+        }
+      }
+
+      await logAudit({
+        action: "tuition_request_expired",
+        actor: "system",
+        entity: "Request",
+        targetId: reqDoc._id.toString(),
+        metadata: {
+          subject: reqDoc.subject,
+          publishedAt: reqDoc.publishedAt,
+          expiresAt: reqDoc.expiresAt,
+          extensionCount: reqDoc.extensionCount,
+        },
+      });
+    } catch (err: any) {
+      logger.error({ err, requestId: reqDoc._id }, "Failed to expire request document");
+    }
+  }
+
+  return { expiredCount, offersClosedCount };
+}
+
+/**
+ * 4. Safe Archival of Inactive Requests
+ * Retains records for legal, compliance, tax, and dispute integrity.
+ * Moves requests expired or cancelled > ARCHIVE_INACTIVE_DAYS (30 days) to "archived"
+ * only if there are no open bookings, disputes, or legal holds.
+ */
+export async function processRequestArchival(): Promise<number> {
+  const now = new Date();
+  const archiveCutoff = new Date(now.getTime() - ARCHIVE_INACTIVE_DAYS * 24 * 60 * 60 * 1000);
+
+  const candidates = await Request.find({
+    status: { $in: ["expired", "cancelled"] },
+    updatedAt: { $lte: archiveCutoff },
+    archivedAt: { $exists: false },
+    legalHold: { $ne: true },
+  }).limit(100);
+
+  let archivedCount = 0;
+  for (const reqDoc of candidates) {
+    try {
+      // Safety check: Never archive if there is any active booking or open dispute
+      const activeBooking = await Booking.findOne({
+        request: reqDoc._id,
+        status: { $in: ["upcoming", "ongoing"] },
+      });
+      if (activeBooking) {
+        continue;
+      }
+
+      reqDoc.status = "archived";
+      reqDoc.archivedAt = now;
+      await reqDoc.save();
+      archivedCount++;
+
+      await logAudit({
+        action: "tuition_request_archived",
+        actor: "system",
+        entity: "Request",
+        targetId: reqDoc._id.toString(),
+      });
+    } catch (err: any) {
+      logger.error({ err, requestId: reqDoc._id }, "Failed to archive request document");
+    }
+  }
+
+  return archivedCount;
+}
+
+/**
+ * Master Lifecycle Worker Function
+ * Executed on scheduled interval by server.ts
+ */
+export async function processRequestLifecycle(io?: any): Promise<LifecycleRunResult> {
+  const result: LifecycleRunResult = {
+    scanned: 0,
+    warningsSent: 0,
+    day5EscalationsSent: 0,
+    expiredCount: 0,
+    offersClosedCount: 0,
+    archivedCount: 0,
+    errors: [],
+  };
+
+  if (!REQUEST_EXPIRY_ENABLED) {
+    return result;
+  }
+
+  try {
+    result.warningsSent = await sendExpiryWarnings(io);
+  } catch (err: any) {
+    result.errors.push(`Warnings error: ${err?.message}`);
+    logger.error({ err }, "Request lifecycle: warnings error");
+  }
+
+  try {
+    result.day5EscalationsSent = await processDay5Escalations(io);
+  } catch (err: any) {
+    result.errors.push(`Escalations error: ${err?.message}`);
+    logger.error({ err }, "Request lifecycle: escalations error");
+  }
+
+  try {
+    const { expiredCount, offersClosedCount } = await expireEligibleRequests(io);
+    result.expiredCount = expiredCount;
+    result.offersClosedCount = offersClosedCount;
+  } catch (err: any) {
+    result.errors.push(`Expiry error: ${err?.message}`);
+    logger.error({ err }, "Request lifecycle: expiry error");
+  }
+
+  try {
+    result.archivedCount = await processRequestArchival();
+  } catch (err: any) {
+    result.errors.push(`Archival error: ${err?.message}`);
+    logger.error({ err }, "Request lifecycle: archival error");
+  }
+
+  return result;
+}

@@ -16,6 +16,7 @@ import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
+import { useCurrentTime } from "@/hooks/useCurrentTime";
 
 const C = UI_COLORS;
 
@@ -29,13 +30,73 @@ function statusBadgeClass(status: string): string {
   return `${s.badge} ${map[status] ?? s.badgeOpen}`;
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function timeAgo(dateStr: string, nowMs: number = 0): string {
+  const then = new Date(dateStr).getTime();
+  if (!nowMs || isNaN(then)) {
+    return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
+  }
+  const diff = nowMs - then;
   const days = Math.floor(diff / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 30) return `${days} days ago`;
   return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
+}
+
+function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: string, nowMs: number = 0) {
+  if (isExpired || !expiresAt) {
+    return {
+      text: "⚠️ Expired",
+      detail: expiredAt ? `Expired on ${new Date(expiredAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}` : "Expired",
+      color: "#dc2626",
+      bg: "#fef2f2",
+      border: "#fecaca",
+    };
+  }
+  if (!nowMs) {
+    return {
+      text: "⏱️ Active",
+      detail: `Expires: ${new Date(expiresAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}`,
+      color: "#059669",
+      bg: "#ecfdf5",
+      border: "#a7f3d0",
+    };
+  }
+  const diffMs = new Date(expiresAt).getTime() - nowMs;
+  if (diffMs <= 0) {
+    return {
+      text: "⚠️ Expired",
+      detail: "No longer active",
+      color: "#dc2626",
+      bg: "#fef2f2",
+      border: "#fecaca",
+    };
+  }
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+  const localizedTime = new Date(expiresAt).toLocaleString("en-PK", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (diffHours < 24) {
+    return {
+      text: `⚡ Closes in ${Math.max(1, diffHours)}h`,
+      detail: `Expires: ${localizedTime}`,
+      color: "#d97706",
+      bg: "#fffbeb",
+      border: "#fde68a",
+    };
+  }
+  return {
+    text: `⏱️ ${diffDays} ${diffDays === 1 ? "day" : "days"} left`,
+    detail: `Expires: ${localizedTime}`,
+    color: "#059669",
+    bg: "#ecfdf5",
+    border: "#a7f3d0",
+  };
 }
 
 function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; size?: number }) {
@@ -336,9 +397,11 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
 function RequestCard({
   request,
   onBidAccepted,
+  onRefresh,
 }: {
   request: DashRequest;
   onBidAccepted: () => void;
+  onRefresh?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showMatchedTutors, setShowMatchedTutors] = useState(false);
@@ -349,6 +412,52 @@ function RequestCard({
   const [countering, setCountering] = useState<DashBid | null>(null);
   const [counterAmount, setCounterAmount] = useState("");
   const [counterMessage, setCounterMessage] = useState("");
+  const [extending, setExtending] = useState(false);
+  const [reposting, setReposting] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  async function handleExtend() {
+    setExtending(true);
+    try {
+      const res = await axiosInstance.post(`/requests/${request._id}/extend`);
+      showSuccess(res.data.message || "Request extended by 7 days!");
+      onRefresh?.();
+    } catch (err: any) {
+      showError(err, "Failed to extend request.");
+    } finally {
+      setExtending(false);
+    }
+  }
+
+  async function handleRepost() {
+    setReposting(true);
+    try {
+      const res = await axiosInstance.post(`/requests/${request._id}/repost`);
+      showSuccess(res.data.message || "Request reposted with fresh 7-day visibility!");
+      onRefresh?.();
+    } catch (err: any) {
+      showError(err, "Failed to repost request.");
+    } finally {
+      setReposting(false);
+    }
+  }
+
+  async function handleClose() {
+    if (!confirm("Are you sure you want to close this tuition request? Tutors will no longer be able to send offers.")) return;
+    setClosing(true);
+    try {
+      await axiosInstance.patch(`/requests/${request._id}/close`);
+      showSuccess("Tuition request closed.");
+      onRefresh?.();
+    } catch (err: any) {
+      showError(err, "Failed to close request.");
+    } finally {
+      setClosing(false);
+    }
+  }
+
+  const now = useCurrentTime();
+  const expiryBadge = formatExpiryBadge(request.expiresAt, request.isExpired, request.expiredAt, now);
 
   async function loadBids(force = false, sort = offerSort) {
     if (!force && bids.length > 0) { setExpanded(!expanded); return; }
@@ -413,6 +522,35 @@ function RequestCard({
         <span className={statusBadgeClass(request.status)}>{request.status}</span>
       </div>
 
+      {/* Expiry countdown badge & localized status indicator */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
+        <span
+          style={{
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            padding: "3px 8px",
+            borderRadius: "0.375rem",
+            color: expiryBadge.color,
+            backgroundColor: expiryBadge.bg,
+            border: `1px solid ${expiryBadge.border}`,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+          title={expiryBadge.detail}
+        >
+          {expiryBadge.text}
+        </span>
+        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+          {expiryBadge.detail}
+        </span>
+        {(request.extensionCount || 0) > 0 && (
+          <span style={{ fontSize: "0.72rem", color: "#64748b", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>
+            Extended {request.extensionCount}x
+          </span>
+        )}
+      </div>
+
       <p className={s.cardDesc}>{request.description}</p>
 
       <div className={s.infoRow}>
@@ -426,46 +564,116 @@ function RequestCard({
         <span className={s.infoChip}>{request.schedule}</span>
       </div>
 
-      {/* Action triggers: Expand tutor offers & Smart matched tutors */}
-      {["open", "published", "receiving_offers", "negotiating", "offer_accepted", "awaiting_payment", "booked", "closed"].includes(request.status) && (
-        <>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem", alignItems: "center" }}>
-            <button
-              onClick={() => loadBids()}
-              className={s.expandBtn}
-              style={{ margin: 0 }}
+      {/* Action triggers: Expand tutor offers, Extend, Repost, Close, & Smart matched tutors */}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem", alignItems: "center" }}>
+        {["open", "published", "receiving_offers", "negotiating", "offer_accepted", "awaiting_payment", "booked", "closed"].includes(request.status) && (
+          <button
+            onClick={() => loadBids()}
+            className={s.expandBtn}
+            style={{ margin: 0 }}
+          >
+            <svg
+              width={12} height={12} viewBox="0 0 20 20" fill="currentColor"
+              style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
+              aria-hidden="true"
             >
-              <svg
-                width={12} height={12} viewBox="0 0 20 20" fill="currentColor"
-                style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
-                aria-hidden="true"
-              >
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-              {expanded ? "Hide Tutor Offers" : "View Tutor Offers"}
-            </button>
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+            {expanded ? "Hide Tutor Offers" : "View Tutor Offers"}
+          </button>
+        )}
 
-            <button
-              type="button"
-              onClick={() => setShowMatchedTutors(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                padding: "0.5rem 0.85rem",
-                backgroundColor: "#eff6ff",
-                color: "#1d4ed8",
-                border: "1px solid #bfdbfe",
-                borderRadius: "0.5rem",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-            >
-              ⚡ View AI Matched Tutors
-            </button>
-          </div>
+        {request.canExtend && (
+          <button
+            type="button"
+            onClick={handleExtend}
+            disabled={extending}
+            style={{
+              padding: "0.5rem 0.85rem",
+              backgroundColor: "#0329b2",
+              color: "white",
+              border: "none",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: extending ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              boxShadow: "0 2px 6px rgba(3, 41, 178, 0.25)",
+            }}
+          >
+            {extending ? "Extending..." : `+ Extend 7 Days (${request.extensionCount || 0}/${request.maxExtensions || 2})`}
+          </button>
+        )}
+
+        {request.canRepost && (
+          <button
+            type="button"
+            onClick={handleRepost}
+            disabled={reposting}
+            style={{
+              padding: "0.5rem 0.85rem",
+              backgroundColor: "#059669",
+              color: "white",
+              border: "none",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: reposting ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              boxShadow: "0 2px 6px rgba(5, 150, 105, 0.25)",
+            }}
+          >
+            {reposting ? "Reposting..." : "🔄 Repost Request"}
+          </button>
+        )}
+
+        {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && (
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={closing}
+            style={{
+              padding: "0.5rem 0.75rem",
+              backgroundColor: "white",
+              color: "#6b7280",
+              border: "1px solid #e5e7eb",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              cursor: closing ? "not-allowed" : "pointer",
+            }}
+          >
+            {closing ? "Closing..." : "Close Request"}
+          </button>
+        )}
+
+        {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
+          <button
+            type="button"
+            onClick={() => setShowMatchedTutors(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.5rem 0.85rem",
+              backgroundColor: "#eff6ff",
+              color: "#1d4ed8",
+              border: "1px solid #bfdbfe",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            ⚡ View AI Matched Tutors
+          </button>
+        )}
+      </div>
 
           {expanded && (
             <div className={s.bidsSection}>
@@ -537,8 +745,6 @@ function RequestCard({
               )}
             </div>
           )}
-        </>
-      )}
       {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
 
       {/* AI Matched Tutors Drawer Modal */}
@@ -577,6 +783,7 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [bookingsHasMore, setBookingsHasMore] = useState(false);
   const [bookingsPage, setBookingsPage] = useState(1);
   const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
+  const [requestFilter, setRequestFilter] = useState<"active" | "expired" | "all">("active");
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
@@ -602,8 +809,8 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
 const fetchRequests = useCallback(async () => {
   setLoadingR(true);
   try {
-    const res = await axiosInstance.get("/requests/my"); // ← was /api/v1/requests
-    setRequests(res.data.requests ?? []);                    // ← same, works fine
+    const res = await axiosInstance.get("/requests/my");
+    setRequests(res.data.requests ?? []);
   } catch { setRequests([]); }
   finally { setLoadingR(false); }
 }, []);
@@ -637,7 +844,12 @@ const fetchRequests = useCallback(async () => {
 
   useEffect(() => { fetchRequests(); fetchBookings(); }, [fetchRequests, fetchBookings]);
 
-  const openCount     = requests.filter((r) => r.status === "open").length;
+  const now = useCurrentTime();
+  const activeRequests = requests.filter(r => !r.isExpired && r.status !== "expired" && (!r.expiresAt || !now || new Date(r.expiresAt).getTime() > now));
+  const expiredRequests = requests.filter(r => r.isExpired || r.status === "expired" || Boolean(r.expiresAt && now > 0 && new Date(r.expiresAt).getTime() <= now));
+  const displayedRequests = requestFilter === "active" ? activeRequests : requestFilter === "expired" ? expiredRequests : requests;
+
+  const openCount     = activeRequests.length;
   const upcomingCount = bookings.filter((b) => b.status === "upcoming").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
 
@@ -843,8 +1055,63 @@ const fetchRequests = useCallback(async () => {
         {/* Tab: My Requests */}
         {tab === "requests" && (
           <section aria-label="My tuition requests">
-            <div className={s.sectionHeader}>
-              <h2 className={s.sectionTitle}>My Requests</h2>
+            <div className={s.sectionHeader} style={{ alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+              <div>
+                <h2 className={s.sectionTitle} style={{ margin: 0 }}>My Tuition Requests</h2>
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter("active")}
+                    style={{
+                      padding: "0.35rem 0.85rem",
+                      borderRadius: "999px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: requestFilter === "active" ? "#0329b2" : "#e2e8f0",
+                      color: requestFilter === "active" ? "white" : "#475569",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Active Demand ({activeRequests.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter("expired")}
+                    style={{
+                      padding: "0.35rem 0.85rem",
+                      borderRadius: "999px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: requestFilter === "expired" ? "#dc2626" : "#e2e8f0",
+                      color: requestFilter === "expired" ? "white" : "#475569",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Expired ({expiredRequests.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter("all")}
+                    style={{
+                      padding: "0.35rem 0.85rem",
+                      borderRadius: "999px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: requestFilter === "all" ? "#0f172a" : "#e2e8f0",
+                      color: requestFilter === "all" ? "white" : "#475569",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    All ({requests.length})
+                  </button>
+                </div>
+              </div>
               <button onClick={() => setShowModal(true)} className={s.btnPrimary}>
                 + New Request
               </button>
@@ -852,21 +1119,32 @@ const fetchRequests = useCallback(async () => {
 
             {loadingR ? (
               <div className={s.spinner} />
-            ) : requests.length === 0 ? (
+            ) : displayedRequests.length === 0 ? (
               <div className={s.empty}>
                 <div className={s.emptyIcon}>📋</div>
-                <p className={s.emptyTitle}>No requests yet</p>
-                <p className={s.emptyDesc}>Post your first tuition request and receive offers from verified tutors.</p>
+                <p className={s.emptyTitle}>
+                  {requestFilter === "expired" ? "No expired requests" : requestFilter === "active" ? "No active requests seeking tutors" : "No requests yet"}
+                </p>
+                <p className={s.emptyDesc}>
+                  {requestFilter === "expired"
+                    ? "Requests stay active for 7 days. When expired, you can review past offers and easily repost anytime."
+                    : "Post your tuition requirement with budget and schedule. Matched verified tutors will send proposals to you."}
+                </p>
                 <button onClick={() => setShowModal(true)} className={s.btnPrimary}>
                   Post a Request
                 </button>
               </div>
             ) : (
-              requests.map((r) => (
-                <RequestCard key={r._id} request={r} onBidAccepted={() => {
-                  fetchRequests();
-                  fetchBookings();
-                }} />
+              displayedRequests.map((r) => (
+                <RequestCard
+                  key={r._id}
+                  request={r}
+                  onRefresh={fetchRequests}
+                  onBidAccepted={() => {
+                    fetchRequests();
+                    fetchBookings();
+                  }}
+                />
               ))
             )}
           </section>

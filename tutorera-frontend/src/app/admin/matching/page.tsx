@@ -43,11 +43,6 @@ export default function AdminMatchingPage() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [selectedMode, setSelectedMode] = useState<"online" | "home">("online");
 
-  useEffect(() => {
-    fetchAnalytics();
-    fetchConfig();
-  }, []);
-
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
     try {
@@ -71,6 +66,11 @@ export default function AdminMatchingPage() {
       setLoadingConfig(false);
     }
   };
+
+  useEffect(() => {
+    fetchAnalytics();
+    fetchConfig();
+  }, []);
 
   const handleWeightChange = (mode: "online" | "home", key: string, value: number) => {
     if (!config) return;

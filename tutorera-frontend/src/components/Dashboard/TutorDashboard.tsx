@@ -16,6 +16,7 @@ import { formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { Sparkles } from "lucide-react";
+import { useCurrentTime } from "@/hooks/useCurrentTime";
 
 const C = UI_COLORS;
 
@@ -30,8 +31,12 @@ function statusBadgeClass(status: string): string {
   return `${s.badge} ${map[status] ?? s.badgeOpen}`;
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function timeAgo(dateStr: string, nowMs: number = 0): string {
+  const then = new Date(dateStr).getTime();
+  if (!nowMs || isNaN(then)) {
+    return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
+  }
+  const diff = nowMs - then;
   const days = Math.floor(diff / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
@@ -266,6 +271,18 @@ function OpenRequestCard({
 }) {
   const [showBidModal, setShowBidModal] = useState(false);
 
+  const now = useCurrentTime();
+  const isExpired = request.status === "expired" || Boolean(request.expiresAt && now > 0 && new Date(request.expiresAt).getTime() <= now);
+  const diffHours = request.expiresAt && now > 0 ? Math.floor((new Date(request.expiresAt).getTime() - now) / (1000 * 60 * 60)) : 0;
+  const diffDays = Math.floor(diffHours / 24);
+  const closingText = isExpired
+    ? "⚠️ Closed"
+    : now > 0
+    ? diffHours < 24
+      ? `⚡ Closes in ${Math.max(1, diffHours)}h`
+      : `⏱️ Closes in ${diffDays}d`
+    : "⏱️ Active";
+
   return (
     <>
       <div className={s.card}>
@@ -289,6 +306,20 @@ function OpenRequestCard({
               <span>{request.city}</span>
               <span>·</span>
               <span>{timeAgo(request.createdAt)}</span>
+              <span>·</span>
+              <span
+                style={{
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: "0.25rem",
+                  backgroundColor: isExpired ? "#fef2f2" : diffHours < 24 ? "#fffbeb" : "#ecfdf5",
+                  color: isExpired ? "#dc2626" : diffHours < 24 ? "#d97706" : "#059669",
+                  border: `1px solid ${isExpired ? "#fecaca" : diffHours < 24 ? "#fde68a" : "#a7f3d0"}`,
+                }}
+              >
+                {closingText}
+              </span>
             </div>
           </div>
           <span className={statusBadgeClass(request.status)}>{request.status}</span>
@@ -330,8 +361,12 @@ function OpenRequestCard({
           <span className={s.infoChip}>{request.schedule}</span>
         </div>
 
-        <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-          {request.bid ? (
+        <div style={{ marginTop: 14, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {isExpired ? (
+            <span style={{ fontSize: "0.82rem", color: "#dc2626", fontWeight: 600, padding: "6px 10px", background: "#fef2f2", borderRadius: 6, border: "1px solid #fecaca" }}>
+              This request has expired and is no longer accepting offers.
+            </span>
+          ) : request.bid ? (
             <Link href="/offers" className={s.btnOutline} style={{ textDecoration: "none" }}>
               Offer sent: PKR {request.bid.amount.toLocaleString()}/{request.bid.pricingUnit || "hour"} · {request.bid.status.replaceAll("_", " ")}
             </Link>

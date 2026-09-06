@@ -25,6 +25,17 @@ export interface DashRequest {
   schedule: string;
   status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "offer_accepted" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   createdAt: string;
+  publishedAt?: string;
+  expiresAt?: string;
+  expiredAt?: string;
+  extensionCount?: number;
+  maxExtensions?: number;
+  repostedFromRequestId?: string;
+  archivedAt?: string;
+  canExtend?: boolean;
+  canRepost?: boolean;
+  isExpired?: boolean;
+  secondsRemaining?: number;
   bid?: Pick<DashBid, "_id" | "amount" | "currency" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
 }
 

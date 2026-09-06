@@ -513,11 +513,12 @@ export class MatchingService {
     const config = await this.getActiveConfig();
     const limit = options.limit || 20;
 
-    // Build base request candidate query
+    // Build base request candidate query — strictly unexpired fresh demand
     const activeStates = ["open", "published", "receiving_offers", "negotiating"];
     const query: Record<string, any> = {
       status: { $in: activeStates },
       isDirect: false,
+      expiresAt: { $gt: new Date() },
     };
 
     // Mode filter

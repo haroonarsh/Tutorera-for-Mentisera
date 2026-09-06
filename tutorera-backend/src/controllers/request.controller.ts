@@ -19,6 +19,11 @@ import { convertToPKR } from "../config/countries";
 import { createTransaction } from "../utils/rapidGateway";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import { MatchingService } from "../services/matching.service";
+import {
+  MARKETPLACE_REQUEST_EXPIRY_DAYS,
+  MAX_REQUEST_EXTENSIONS,
+  REQUEST_EXTENSION_DAYS,
+} from "../config/marketplace";
 
 // ─── Plan Limits ───────────────────────────────────────────────────────────────
 const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
@@ -66,7 +71,17 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   // ── Create request ──
-  const request = await Request.create({ student: req.user?._id, ...req.body });
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const request = await Request.create({
+    student: req.user?._id,
+    ...req.body,
+    status: req.body.status || "open",
+    publishedAt: now,
+    expiresAt,
+    extensionCount: 0,
+    maxExtensions: MAX_REQUEST_EXTENSIONS,
+  });
   await AbandonedJourney.updateMany(
     { user: req.user?._id, type: "student_request", completedAt: { $exists: false } },
     { $set: { completedAt: new Date() } }
@@ -175,7 +190,11 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
 
   const { subject, level, city, country, teachingMode, currency, page = "1", limit = "10" } = req.query;
-  const filter: Record<string, unknown> = { status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } };
+  const filter: Record<string, unknown> = {
+    status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
+    isDirect: { $ne: true },
+    expiresAt: { $gt: new Date() },
+  };
 
   if (subject) filter.subject = new RegExp(subject as string, "i");
   if (level) filter.level = level;
@@ -222,7 +241,25 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
 // @access  Private (student)
 export const getMyRequests = async (req: AuthRequest, res: Response): Promise<void> => {
   const requests = await Request.find({ student: req.user?._id }).sort("-createdAt");
-  res.status(200).json({ success: true, requests });
+  const now = Date.now();
+  const enriched = requests.map((r) => {
+    const obj = r.toObject();
+    const isExpired = obj.status === "expired" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
+    const canExtend =
+      ["open", "published", "receiving_offers"].includes(obj.status) &&
+      Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() > now) &&
+      (obj.extensionCount || 0) < (obj.maxExtensions || MAX_REQUEST_EXTENSIONS);
+    const canRepost = obj.status === "expired" || obj.status === "cancelled" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
+    const secondsRemaining = obj.expiresAt ? Math.max(0, Math.floor((new Date(obj.expiresAt).getTime() - now) / 1000)) : 0;
+    return {
+      ...obj,
+      isExpired,
+      canExtend,
+      canRepost,
+      secondsRemaining,
+    };
+  });
+  res.status(200).json({ success: true, requests: enriched });
 };
 
 // @desc    Cancel request
@@ -262,8 +299,23 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     });
     return;
   }
-  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible");
-  if (!requested || !["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) { res.status(400).json({ success: false, message: "Request is not accepting offers" }); return; }
+  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible expiresAt");
+  if (!requested) {
+    res.status(404).json({ success: false, message: "Request not found." });
+    return;
+  }
+  if (requested.status === "expired" || (requested.expiresAt && requested.expiresAt.getTime() <= Date.now())) {
+    res.status(410).json({
+      success: false,
+      code: "REQUEST_EXPIRED",
+      message: "This tuition request has expired and is no longer accepting tutor offers.",
+    });
+    return;
+  }
+  if (!["open", "published", "receiving_offers", "negotiating"].includes(requested.status)) {
+    res.status(400).json({ success: false, message: "Request is not accepting offers" });
+    return;
+  }
   
   // ── Police Verification Distinction: Online vs Home Tuition ──
   // Online Tuition: No Police Verification required.
@@ -339,7 +391,15 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   }
 
   const request = requested;
-  if (!request || !["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
+  if (!request || request.status === "expired" || (request.expiresAt && request.expiresAt.getTime() <= Date.now())) {
+    res.status(410).json({
+      success: false,
+      code: "REQUEST_EXPIRED",
+      message: "This tuition request has expired and is no longer accepting tutor offers.",
+    });
+    return;
+  }
+  if (!["open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
     res.status(400).json({ success: false, message: "Request is not accepting offers" });
     return;
   }
@@ -963,7 +1023,8 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
   const { page = "1", limit = "12" } = req.query;
   const filter: Record<string, unknown> = { 
     status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, 
-    isDirect: { $ne: true } 
+    isDirect: { $ne: true },
+    expiresAt: { $gt: new Date() },
   };
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
@@ -976,7 +1037,7 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum)
-    .select("subject level budget maximumBudget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt student");
+    .select("subject level budget maximumBudget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt expiresAt student");
 
   const Bid = (await import("../models/Bid.model")).default;
   const sanitizedRequests = await Promise.all(
@@ -1006,6 +1067,7 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
         description: r.description,
         status: r.status,
         createdAt: r.createdAt,
+        expiresAt: r.expiresAt,
         offersCount,
         student: {
           displayTitle: `${sanitizedName} in ${r.city || r.countryName || "Online"}`,
@@ -1024,4 +1086,216 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
     totalPages: Math.ceil(total / limitNum),
     requests: sanitizedRequests,
   });
+};
+
+// @desc    Extend active tuition request by 7 days
+// @route   POST /api/requests/:id/extend
+// @access  Private (student)
+export const extendRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id });
+  if (!request) {
+    res.status(404).json({ success: false, message: "Request not found." });
+    return;
+  }
+
+  const now = new Date();
+  if (!["open", "published", "receiving_offers"].includes(request.status)) {
+    res.status(400).json({
+      success: false,
+      code: "CANNOT_EXTEND_STATUS",
+      message: "Only active requests currently seeking tutors can be extended.",
+    });
+    return;
+  }
+
+  if (request.expiresAt && request.expiresAt.getTime() <= now.getTime()) {
+    res.status(400).json({
+      success: false,
+      code: "ALREADY_EXPIRED",
+      message: "This request has already expired. Please repost your requirement instead.",
+    });
+    return;
+  }
+
+  const currentExtensions = request.extensionCount || 0;
+  const maxAllowed = request.maxExtensions || MAX_REQUEST_EXTENSIONS;
+  if (currentExtensions >= maxAllowed) {
+    res.status(400).json({
+      success: false,
+      code: "MAX_EXTENSIONS_REACHED",
+      message: `Requests can only be extended up to ${maxAllowed} times (${maxAllowed * REQUEST_EXTENSION_DAYS} extra days). Please repost when expired.`,
+    });
+    return;
+  }
+
+  const baseExpiry = request.expiresAt && request.expiresAt.getTime() > now.getTime() ? request.expiresAt : now;
+  const newExpiresAt = new Date(baseExpiry.getTime() + REQUEST_EXTENSION_DAYS * 24 * 60 * 60 * 1000);
+
+  request.expiresAt = newExpiresAt;
+  request.extensionCount = currentExtensions + 1;
+  request.expiryWarningSentAt = undefined; // reset so next warning triggers appropriately
+  await request.save();
+
+  await logAudit({
+    action: "tuition_request_extended",
+    actor: req.user?.name,
+    actorId: req.user?._id?.toString(),
+    entity: "Request",
+    targetId: request.id,
+    metadata: {
+      extensionCount: request.extensionCount,
+      newExpiresAt,
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Your request has been extended by ${REQUEST_EXTENSION_DAYS} days.`,
+    expiresAt: newExpiresAt,
+    extensionCount: request.extensionCount,
+    maxExtensions: maxAllowed,
+  });
+};
+
+// @desc    Repost an expired or closed tuition request (creates a fresh request document)
+// @route   POST /api/requests/:id/repost
+// @access  Private (student)
+export const repostRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const oldRequest = await Request.findOne({ _id: req.params.id, student: req.user?._id });
+  if (!oldRequest) {
+    res.status(404).json({ success: false, message: "Original request not found." });
+    return;
+  }
+
+  // Enforce monthly plan limits
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found." });
+    return;
+  }
+  const resetDate = (user as any).requestsResetDate as Date | undefined;
+  if (!resetDate || isNewMonth(resetDate)) {
+    (user as any).requestsThisMonth = 0;
+    (user as any).requestsResetDate = new Date();
+    await user.save();
+  }
+  const limit = PLAN_REQUEST_LIMITS[user.plan || "free"];
+  const used = (user as any).requestsThisMonth || 0;
+  if (limit !== -1 && used >= limit) {
+    const planNames: Record<string, string> = { free: "Free", standard: "Standard", premium: "Premium" };
+    res.status(403).json({
+      success: false,
+      code: "REQUEST_LIMIT_REACHED",
+      message: `You've used all ${limit} tuition requests included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to repost.`,
+    });
+    return;
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+  // Create fresh request document, preserving old request for analytics
+  const newRequest = await Request.create({
+    student: oldRequest.student,
+    subject: oldRequest.subject,
+    level: oldRequest.level,
+    description: req.body?.description || oldRequest.description,
+    budget: req.body?.budget !== undefined ? Number(req.body.budget) : oldRequest.budget,
+    maximumBudget: oldRequest.maximumBudget,
+    pricingUnit: oldRequest.pricingUnit,
+    currency: oldRequest.currency,
+    allowCounterOffers: req.body?.allowCounterOffers !== undefined ? Boolean(req.body.allowCounterOffers) : oldRequest.allowCounterOffers,
+    classGrade: oldRequest.classGrade,
+    curriculum: oldRequest.curriculum,
+    examType: oldRequest.examType,
+    studentLevel: oldRequest.studentLevel,
+    learningObjectives: oldRequest.learningObjectives,
+    countryCode: oldRequest.countryCode,
+    countryName: oldRequest.countryName,
+    city: req.body?.city || oldRequest.city,
+    timezone: oldRequest.timezone,
+    area: req.body?.area || oldRequest.area,
+    travelRadiusKm: oldRequest.travelRadiusKm,
+    isWorldwideEligible: oldRequest.isWorldwideEligible,
+    preferredTutorCountries: oldRequest.preferredTutorCountries,
+    tutorGenderPreference: oldRequest.tutorGenderPreference,
+    minimumQualification: oldRequest.minimumQualification,
+    minimumExperience: oldRequest.minimumExperience,
+    preferredLanguage: oldRequest.preferredLanguage,
+    preferredTutorRating: oldRequest.preferredTutorRating,
+    preferredDays: oldRequest.preferredDays,
+    preferredStartTime: oldRequest.preferredStartTime,
+    sessionDurationMinutes: oldRequest.sessionDurationMinutes,
+    sessionsPerWeek: oldRequest.sessionsPerWeek,
+    expectedStartDate: oldRequest.expectedStartDate,
+    teachingMode: req.body?.teachingMode || oldRequest.teachingMode,
+    schedule: req.body?.schedule || oldRequest.schedule,
+    status: "published",
+    publishedAt: now,
+    expiresAt,
+    extensionCount: 0,
+    maxExtensions: MAX_REQUEST_EXTENSIONS,
+    repostedFromRequestId: oldRequest._id,
+  });
+
+  await User.findByIdAndUpdate(req.user?._id, {
+    $inc: { requestsThisMonth: 1 },
+  });
+
+  // Dispatch progressive notifications via Smart Matching Engine
+  await MatchingService.dispatchProgressiveNotifications(newRequest, req.app.get("io"));
+
+  await logAudit({
+    action: "tuition_request_reposted",
+    actor: req.user?.name,
+    actorId: req.user?._id?.toString(),
+    entity: "Request",
+    targetId: newRequest.id,
+    metadata: {
+      repostedFromRequestId: oldRequest.id,
+      subject: newRequest.subject,
+      budget: newRequest.budget,
+    },
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Your tuition request has been reposted as fresh demand.",
+    request: newRequest,
+  });
+};
+
+// @desc    Close active tuition request before 7 days (stops receiving new offers)
+// @route   PATCH /api/requests/:id/close
+// @access  Private (student)
+export const closeRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id });
+  if (!request) {
+    res.status(404).json({ success: false, message: "Request not found." });
+    return;
+  }
+
+  if (["completed", "booked"].includes(request.status)) {
+    res.status(400).json({ success: false, message: "Cannot close a completed or booked request." });
+    return;
+  }
+
+  request.status = "cancelled";
+  await request.save();
+
+  // Close unfinalized bids
+  await Bid.updateMany(
+    { request: request._id, status: { $in: ["pending", "submitted", "viewed"] } },
+    { $set: { status: "not_selected" } }
+  );
+
+  await logAudit({
+    action: "tuition_request_closed_by_student",
+    actor: req.user?.name,
+    actorId: req.user?._id?.toString(),
+    entity: "Request",
+    targetId: request.id,
+  });
+
+  res.status(200).json({ success: true, message: "Tuition request closed successfully." });
 };

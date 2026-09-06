@@ -8,6 +8,7 @@ import app from "./app";
 import logger from "./config/logger";
 import { processOfferExpirations } from "./utils/offerExpiry";
 import { processAbandonedJourneyRecovery } from "./utils/abandonedJourneyRecovery";
+import { processRequestLifecycle } from "./services/requestLifecycle.service";
 
 dotenv.config();
 
@@ -35,8 +36,11 @@ const offerExpiryTimer = setInterval(() => processOfferExpirations(io).catch(err
 offerExpiryTimer.unref();
 const abandonedJourneyTimer = setInterval(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Abandoned journey recovery failed")), 60 * 60 * 1000);
 abandonedJourneyTimer.unref();
+const requestLifecycleTimer = setInterval(() => processRequestLifecycle(io).catch(err => logger.error({ err }, "Request lifecycle processing failed")), 15 * 60 * 1000);
+requestLifecycleTimer.unref();
 setTimeout(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
 setTimeout(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
+setTimeout(() => processRequestLifecycle(io).catch(err => logger.error({ err }, "Initial request lifecycle processing failed")), 15_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
@@ -54,6 +58,7 @@ async function gracefulShutdown(signal: string) {
   isShuttingDown = true;
   clearInterval(offerExpiryTimer);
   clearInterval(abandonedJourneyTimer);
+  clearInterval(requestLifecycleTimer);
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 

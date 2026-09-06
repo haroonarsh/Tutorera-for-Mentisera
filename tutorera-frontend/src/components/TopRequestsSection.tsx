@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "@/lib/axios";
 import { formatPKR, timeAgo } from "@/lib/site";
+import { useCurrentTime } from "@/hooks/useCurrentTime";
 import s from "./TopRequestsSection.module.css";
 
 interface RequestPreview {
@@ -16,6 +17,7 @@ interface RequestPreview {
   city?: string;
   schedule: string;
   createdAt: string;
+  expiresAt?: string;
   student: { name: string; city?: string; avatar?: string };
 }
 
@@ -31,6 +33,7 @@ function initials(name: string): string {
 }
 
 export default function TopRequestsSection() {
+  const now = useCurrentTime();
   const [requests, setRequests] = useState<RequestPreview[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -110,11 +113,16 @@ export default function TopRequestsSection() {
                       {(r as any).currency || "PKR"} {Number(r.budget || 0).toLocaleString()}/{(r.pricingUnit || "hour")}
                     </span>
                   </header>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem" }}>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap" }}>
                     <span className={s.levelBadge}>{r.level}</span>
                     <span style={{ fontSize: "0.72rem", background: "#ecfdf5", color: "#059669", padding: "0.2rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
                       ⚡ {(r as any).offersCount || 0} Offers
                     </span>
+                    {r.expiresAt && now > 0 && (
+                      <span style={{ fontSize: "0.72rem", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", padding: "0.2rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
+                        ⏱️ {Math.max(1, Math.floor((new Date(r.expiresAt).getTime() - now) / (86400000)))}d left
+                      </span>
+                    )}
                   </div>
                   <ul className={s.metaRow}>
                     <li>
