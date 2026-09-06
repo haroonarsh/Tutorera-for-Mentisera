@@ -386,8 +386,53 @@ ${data.description ? `• Details: "${data.description}"` : ""}`,
       amount: `PKR ${data.budgetPKR.toLocaleString()}`,
     },
     cta: { label: "Review in Marketplace", url: "https://tutorera.ac.pk/browse-requests" },
-    additionalInformation: "Notification dispatched automatically to mentiserapk@gmail.com.",
+  additionalInformation: "Notification dispatched automatically to mentiserapk@gmail.com.",
+  includeSecurityNotice: true,
+});
+return { subject: `[TUTORERA Alert] New ${isHome ? "🏠 Home Tuition" : "🌐 Tuition"} Request: ${data.subject} (${data.city || data.countryName || "Global"})`, html };
+};
+
+export const payoutProcessedEmail = (tutorName: string, amount: number, bookingId: string) => {
+  const html = renderTransactionalEmail({
+    subject: "TUTORERA® — Payout Processed",
+    emailCategory: "Payout",
+    emailHeading: "Payout Processed",
+    emailSubheading: "Your earnings have been released.",
+    firstName: tutorName,
+    openingMessage: `We've processed a payout of PKR ${amount.toLocaleString()} for a completed session.`,
+    mainMessage: "The funds have been released and will be transferred to your registered payment method according to your payout schedule. You can track your earnings and payout history from your dashboard.",
+    transaction: {
+      referenceId: bookingId,
+      date: today(),
+      status: "Paid",
+      amount: `PKR ${amount.toLocaleString()}`,
+    },
+    cta: { label: "View Earnings", url: "https://tutorera.ac.pk/earnings" },
     includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent because a payout was processed for your TUTORERA tutoring session.",
   });
-  return { subject: `[TUTORERA Alert] New ${isHome ? "🏠 Home Tuition" : "🌐 Tuition"} Request: ${data.subject} (${data.city || data.countryName || "Global"})`, html };
+  return { subject: "TUTORERA® — Payout Processed", html };
+};
+
+export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: string, reason: string) => {
+  const html = renderTransactionalEmail({
+    subject: "TUTORERA® — Payout Update Required",
+    emailCategory: "Payout",
+    emailHeading: "Payout Update Required",
+    emailSubheading: "We need your attention regarding a payout.",
+    firstName: tutorName,
+    openingMessage: `We attempted to process a payout of PKR ${amount.toLocaleString()} but encountered an issue.`,
+    mainMessage: `Reason: ${reason}. Please update your payout details in your dashboard or contact support to resolve this.`,
+    transaction: {
+      referenceId: bookingId,
+      date: today(),
+      status: "Action Required",
+      amount: `PKR ${amount.toLocaleString()}`,
+    },
+    cta: { label: "Update Payout Details", url: "https://tutorera.ac.pk/earnings" },
+    additionalInformation: "If you believe this was an error, please reply to this email or contact hello@mentisera.pk.",
+    includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent because a payout for your TUTORERA tutoring session requires attention.",
+  });
+  return { subject: "TUTORERA® — Payout Update Required", html };
 };

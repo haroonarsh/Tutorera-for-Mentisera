@@ -3,6 +3,10 @@ import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import PDFDocument from "pdfkit";
 import User from "../models/User.model";
+import sendEmail from "../utils/sendEmail";
+import { payoutProcessedEmail } from "../utils/emailTemplates";
+import { sendNotification } from "../utils/socket";
+import logger from "../config/logger";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -335,4 +339,98 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
     .text(`TUTORERA® — Confidential · Generated ${now.toLocaleDateString("en-PK")}`, 50, 780, { align: "center" });
 
   doc.end();
+};
+
+// @desc    Tutor requests payout for a completed booking
+// @route   POST /api/earnings/payouts/:bookingId/request
+// @access  Private (tutor)
+export const requestPayout = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { bookingId } = req.params;
+  const tutorId = req.user?._id;
+
+  const booking = await Booking.findOne({
+    _id: bookingId,
+    tutor: tutorId,
+    status: "completed",
+    paymentStatus: "confirmed",
+    payoutStatus: "pending",
+  });
+
+  if (!booking) {
+    res.status(404).json({ success: false, message: "Eligible booking not found for payout request." });
+    return;
+  }
+
+  booking.payoutStatus = "processing";
+  booking.payoutNote = "Payout requested by tutor";
+  await booking.save();
+
+  const tutorUser = await User.findById(tutorId).select("name email");
+  if (tutorUser) {
+    try {
+      const mail = payoutProcessedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString());
+      await sendEmail({ to: tutorUser.email, subject: mail.subject, html: mail.html, eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
+    } catch (err) {
+      logger.error({ err, bookingId: booking._id }, "Failed to send payout request email");
+    }
+  }
+
+  res.status(200).json({ success: true, message: "Payout request submitted successfully.", booking });
+};
+
+// @desc    Get my payout history (tutor)
+// @route   GET /api/earnings/payouts
+// @access  Private (tutor)
+export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<void> => {
+  const tutorId = req.user?._id;
+  const { page = "1", limit = "20", status } = req.query;
+
+  const pageNum = Math.max(1, parseInt(page as string) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const filter: Record<string, unknown> = {
+    tutor: tutorId,
+    status: "completed",
+    paymentStatus: "confirmed",
+  };
+
+  if (status && status !== "all") {
+    filter.payoutStatus = status;
+  }
+
+  const total = await Booking.countDocuments(filter);
+
+  const payouts = await Booking.find(filter)
+    .populate("student", "name email")
+    .populate("request", "subject level")
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limitNum)
+    .lean();
+
+  const totalPayoutAmount = payouts.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const pendingAmount = payouts.filter(b => b.payoutStatus === "pending" || b.payoutStatus === "processing").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const paidAmount = payouts.filter(b => b.payoutStatus === "paid").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+
+  res.status(200).json({
+    success: true,
+    stats: {
+      totalPayouts: total,
+      totalPayoutAmount,
+      pendingAmount,
+      paidAmount,
+    },
+    pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum), limit: limitNum },
+    payouts: payouts.map(p => ({
+      _id: p._id,
+      studentName: (p.student as unknown as { name?: string } | null)?.name || "Student",
+      subject: (p.request as unknown as { subject?: string } | null)?.subject || "General",
+      amount: p.amount,
+      tutorPayout: p.tutorPayout,
+      payoutStatus: p.payoutStatus,
+      payoutNote: p.payoutNote,
+      createdAt: p.createdAt,
+    })),
+  });
 };
