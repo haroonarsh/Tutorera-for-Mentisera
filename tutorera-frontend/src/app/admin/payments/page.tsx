@@ -16,6 +16,7 @@ interface Booking {
   student: { name: string; email: string; phone: string; };
   tutor: { name: string; email: string; phone: string; };
   amount: number;
+  currency?: string;
   schedule: string;
   status: string;
   paymentStatus: string;
@@ -34,7 +35,7 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     api.get("/admin/bookings")
-      .then(res => setBookings(res.data.bookings))
+      .then(res => setBookings(res.data.bookings || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -79,9 +80,9 @@ export default function PaymentsPage() {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: "Total Confirmed",  value: `Rs. ${totalReceived.toLocaleString()}`,     icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
-          { label: "Pending Payments", value: `Rs. ${totalPending.toLocaleString()}`,       icon: <Clock size={20} color="#d97706" />,        bg: '#fffbeb' },
-          { label: "Platform Revenue", value: `Rs. ${totalPlatformFees.toLocaleString()}`,  icon: <AlertCircle size={20} color={C.accent} />, bg: '#EEF5FF' },
+          { label: "Total Confirmed",  value: `PKR ${totalReceived.toLocaleString()}`,     icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
+          { label: "Pending Payments", value: `PKR ${totalPending.toLocaleString()}`,       icon: <Clock size={20} color="#d97706" />,        bg: '#fffbeb' },
+          { label: "Platform Revenue", value: `PKR ${totalPlatformFees.toLocaleString()}`,  icon: <AlertCircle size={20} color={C.accent} />, bg: '#EEF5FF' },
         ].map(card => (
           <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -144,6 +145,7 @@ export default function PaymentsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {bookings.map(booking => {
             const { platformFee, tutorPayout } = calculateFees(booking.amount);
+            const curr = booking.currency || "PKR";
             return (
               <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
@@ -176,17 +178,17 @@ export default function PaymentsPage() {
                       {activeTab === "payments" ? "Amount to Receive from Student" : "Amount to Pay Tutor"}
                     </p>
                     <p style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary }}>
-                      Rs. {activeTab === "payments"
+                      {curr} {activeTab === "payments"
                         ? booking.amount?.toLocaleString()
                         : tutorPayout.toLocaleString()}
                     </p>
                     {activeTab === "payments" ? (
                       <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
-                        Platform keeps: Rs. {platformFee.toLocaleString()} ({PLATFORM_FEE_PERCENT}%)
+                        Platform keeps: {curr} {platformFee.toLocaleString()} ({PLATFORM_FEE_PERCENT}%)
                       </p>
                     ) : (
                       <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
-                        Total booking: Rs. {booking.amount?.toLocaleString()} · Fee: Rs. {platformFee.toLocaleString()}
+                        Total booking: {curr} {booking.amount?.toLocaleString()} · Fee: {curr} {platformFee.toLocaleString()}
                       </p>
                     )}
                   </div>
@@ -234,7 +236,7 @@ export default function PaymentsPage() {
                                 try {
                                   await api.patch(`/admin/bookings/${booking._id}/payment`, {
                                     payoutStatus: 'paid',
-                                    payoutNote: `Paid Rs. ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
+                                    payoutNote: `Paid ${curr} ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
                                   });
                                   setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, payoutStatus: 'paid' } : b));
                                   showSuccess("Payout status updated.");

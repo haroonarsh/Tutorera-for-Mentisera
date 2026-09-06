@@ -20,6 +20,7 @@ import { COUNTRIES, getCountryByCode, Country } from "@/lib/countries";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const CONTACT_INFO_REGEX = /(\+?\d[\d\s\-().]{8,}\d)|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(whatsapp|wa\.me|wechat|telegram|viber|skype)/i;
 
 interface RequestWizardProps {
   initialMode?: "online" | "in-person" | "both";
@@ -77,6 +78,8 @@ export default function RequestWizard({
     sessionsPerWeek: prefill.sessionsPerWeek || "3",
     expectedStartDate: prefill.expectedStartDate || "",
   });
+
+  const hasContactInfo = Boolean(form.learningObjectives && CONTACT_INFO_REGEX.test(form.learningObjectives)) || Boolean(form.description && CONTACT_INFO_REGEX.test(form.description));
 
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -146,6 +149,11 @@ export default function RequestWizard({
   };
 
   const handlePublish = async () => {
+    if (hasContactInfo) {
+      showError("Please remove personal phone numbers, WhatsApp, or email addresses before publishing your request.");
+      return;
+    }
+
     if (!user) {
       sessionStorage.setItem("tutorera_quick_request", JSON.stringify(form));
       sessionStorage.setItem("tutorera_redirect_after_auth", "/post-tuition-request");
@@ -429,6 +437,25 @@ export default function RequestWizard({
                 placeholder="e.g. Needs help with past papers, calculus basics, and weekly test preparation."
                 style={{ ...inputStyle, resize: "vertical" }}
               />
+              {hasContactInfo && (
+                <div style={{
+                  marginTop: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  borderRadius: "0.5rem",
+                  display: "flex",
+                  gap: "0.6rem",
+                  alignItems: "flex-start",
+                  fontSize: "0.8rem",
+                  color: "#92400e"
+                }}>
+                  <ShieldCheck size={16} style={{ flexShrink: 0, marginTop: "2px", color: "#d97706" }} />
+                  <div>
+                    <strong>Keep contact details private:</strong> For your safety and guarantee eligibility, phone numbers, WhatsApp links, and emails cannot be shared in request posts. Tutors will chat with you directly on TUTORERA.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

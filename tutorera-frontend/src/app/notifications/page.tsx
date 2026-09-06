@@ -1,10 +1,12 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSocket } from "@/context/SocketContext";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import { Bell } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
+import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 
 const C = UI_COLORS;
 
@@ -22,11 +24,31 @@ export default function NotificationsPage() {
     platformUpdates: false,
   });
 
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/notifications/preferences")
+      .then(res => {
+        if (!cancelled && res.data?.preferences) {
+          setPrefs(res.data.preferences);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // ← ADD: block pending/rejected tutors + show spinner while checking
   if (guardStatus !== "ok") return null;
 
-  const togglePref = (key: keyof typeof prefs) => {
-    setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+  const togglePref = async (key: keyof typeof prefs) => {
+    const previous = { ...prefs };
+    const updated = { ...prefs, [key]: !prefs[key] };
+    setPrefs(updated);
+    try {
+      await api.patch("/notifications/preferences", { preferences: updated });
+    } catch (err) {
+      setPrefs(previous);
+      showError(err, "Failed to save preference. Please try again.");
+    }
   };
 
   return (
@@ -83,7 +105,7 @@ export default function NotificationsPage() {
               <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: 'white' }}>
                 <span style={{ fontSize: '0.875rem', color: C.primary }}>{item.label}</span>
                 <button
-                    title="button"
+                  title="Toggle preference"
                   onClick={() => togglePref(item.key as keyof typeof prefs)}
                   style={{ width: '44px', height: '24px', borderRadius: '999px', border: 'none', cursor: 'pointer', position: 'relative', backgroundColor: prefs[item.key as keyof typeof prefs] ? C.accent : '#d1d5db', transition: 'background 0.2s' }}>
                   <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: 'white', position: 'absolute', top: '3px', left: prefs[item.key as keyof typeof prefs] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
