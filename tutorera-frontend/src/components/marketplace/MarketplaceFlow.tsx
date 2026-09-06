@@ -39,7 +39,7 @@ export default function MarketplaceFlow() {
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 3rem" }}>
           <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#016ef8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            The Student-Led Reverse Marketplace
+            The Student-Led Demand Marketplace
           </span>
           <h2 id="marketplace-flow-title" style={{ fontSize: "2rem", fontWeight: 800, color: "#021550", margin: "0.5rem 0 0.75rem" }}>
             How TUTORERA Works

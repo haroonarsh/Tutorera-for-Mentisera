@@ -31,7 +31,7 @@ export default function StudentJourneyPage() {
     <main className={s.page}>
       <section className={s.hero}>
         <h1>Student Journey on TUTORERA</h1>
-        <p>{BRAND_NAME} is a student-led reverse marketplace: students set the requirement, tutors respond with offers, and the student chooses.</p>
+        <p>{BRAND_NAME} is a student-led demand marketplace: students set the requirement, tutors respond with offers, and the student chooses.</p>
       </section>
 
       <section className={s.container}>

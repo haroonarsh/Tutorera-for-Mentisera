@@ -84,10 +84,10 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
         }}>
           <div>
             <strong style={{ color: "#021550", fontSize: "0.95rem", display: "block" }}>
-              Can&apos;t find the exact tutor or schedule you need?
+              Don&apos;t Want to Search Manually?
             </strong>
-            <span style={{ color: "#64748b", fontSize: "0.8rem" }}>
-              Post your requirement and preferred budget. Verified tutors will send offers to you.
+            <span style={{ color: "#64748b", fontSize: "0.82rem" }}>
+              Post your requirement and preferred budget. Let verified matching tutors send offers to you.
             </span>
           </div>
           <a

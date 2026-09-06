@@ -5,10 +5,9 @@ import { usePathname } from "next/navigation";
 const WhatsAppButton = dynamic(() => import("@/components/WhatsAppButton"), { ssr: false });
 const AIChatWidget = dynamic(() => import("@/components/AIChatWidget"), { ssr: false });
 const CookieBanner = dynamic(() => import("@/components/CookieBanner"), { ssr: false });
+const LiveRequestPopup = dynamic(() => import("@/components/marketplace/LiveRequestPopup"), { ssr: false });
 
-// Pages where WhatsApp/AI chat don't belong — app-internal/authenticated areas.
-// Cookie consent still shows everywhere (including these), since consent should
-// be gathered regardless of which part of the site someone's on.
+// Pages where widgets don't belong — app-internal/chat/admin areas.
 const HIDE_CHAT_WIDGETS = [
     "/onboarding",
     "/chat",
@@ -29,6 +28,7 @@ export default function LazyWidgets() {
             <>
             <WhatsAppButton />
             <AIChatWidget />
+            <LiveRequestPopup />
             </>
         )}
         <CookieBanner />

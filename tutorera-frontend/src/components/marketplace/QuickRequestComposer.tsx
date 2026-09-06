@@ -108,10 +108,10 @@ export default function QuickRequestComposer() {
               letterSpacing: "0.05em",
             }}
           >
-            Quick Request
+            Student Demand
           </span>
-          <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#021550", margin: 0 }}>
-            Post Tutoring Need in 30 Seconds
+          <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#021550", margin: 0 }}>
+            What Tutor Do You Need?
           </h2>
         </div>
         <span style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.35rem" }}>
@@ -335,7 +335,7 @@ export default function QuickRequestComposer() {
               minHeight: "48px",
             }}
           >
-            <span>Receive Tutor Offers to Your Budget</span>
+            <span>Find Tutors for My Requirement</span>
             <ArrowRight size={18} />
           </button>
         </div>

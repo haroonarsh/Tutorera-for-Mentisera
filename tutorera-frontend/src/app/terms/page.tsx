@@ -50,7 +50,7 @@ const masterTermsSections = [
     id: "3-definitions",
     title: "3. Definitions & Interpretation",
     content: `In these Terms:
-• "Marketplace" means the digital reverse-auction and direct-booking platform operated at tutorera.ac.pk and related mobile applications.
+• "Marketplace" means the digital student-led demand and direct-booking platform operated at tutorera.ac.pk and related mobile applications.
 • "Student" means an individual or learner receiving educational instruction.
 • "Parent/Guardian" means the adult legally responsible for a minor Student.
 • "Tutor" means an independent educational provider approved to offer tutoring.
@@ -141,7 +141,7 @@ const masterTermsSections = [
   {
     id: "20-direct-bookings",
     title: "20. Direct Tutor Booking Workflow",
-    content: `Students may choose to book verified tutors directly from the public tutor directory based on the tutor's advertised hourly rate, bypassing the reverse request wizard.`
+    content: `Students may choose to book verified tutors directly from the public tutor directory based on the tutor's advertised hourly rate, bypassing the tuition request wizard.`
   },
   {
     id: "21-invitations",
@@ -335,7 +335,7 @@ export default function GlobalTermsPage() {
       <header className={s.hero}>
         <h1>TUTORERA Global Terms of Service</h1>
         <p>
-          The master contractual agreement governing platform access, reverse marketplace requests, tutor bidding, bookings, and payments across all supported jurisdictions.
+          The master contractual agreement governing platform access, student demand requests, tutor offers, bookings, and payments across all supported jurisdictions.
         </p>
       </header>
 

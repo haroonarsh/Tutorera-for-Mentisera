@@ -7,7 +7,7 @@ import { BRAND_NAME, LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Team | TUTORERA by MENTISERA",
-  description: "Meet the TUTORERA by MENTISERA leadership and engineering team behind the global student-led reverse tutoring marketplace.",
+  description: "Meet the TUTORERA by MENTISERA leadership and engineering team behind the global student-led tutoring marketplace.",
   alternates: { canonical: "/team" },
 };
 

@@ -118,12 +118,12 @@ export default function MobileBottomNav() {
           </Link>
 
           <Link
-            href="/tutors"
-            style={navItemStyle(pathname.startsWith("/tutors"))}
-            aria-label="Find Tutors"
+            href="/dashboard?tab=requests"
+            style={navItemStyle(pathname === "/dashboard" && pathname.includes("tab=requests"))}
+            aria-label="My Tuition Requests"
           >
-            <Search size={20} />
-            <span>Tutors</span>
+            <Briefcase size={20} />
+            <span>My Requests</span>
           </Link>
 
           {/* Elevated Center Student Action: Post Tuition Request */}
@@ -161,11 +161,11 @@ export default function MobileBottomNav() {
 
           <Link
             href="/dashboard"
-            style={navItemStyle(pathname.startsWith("/dashboard"))}
-            aria-label="Student Dashboard"
+            style={navItemStyle(pathname === "/dashboard")}
+            aria-label="Student Profile"
           >
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
+            <User size={20} />
+            <span>Profile</span>
           </Link>
         </>
       ) : (
@@ -181,12 +181,12 @@ export default function MobileBottomNav() {
           </Link>
 
           <Link
-            href="/tutors"
-            style={navItemStyle(pathname.startsWith("/tutors"))}
-            aria-label="Find Verified Tutors"
+            href="/tuition-requests"
+            style={navItemStyle(pathname.startsWith("/tuition-requests") || pathname.startsWith("/requests"))}
+            aria-label="Tuition Requests"
           >
-            <Search size={20} />
-            <span>Tutors</span>
+            <Briefcase size={20} />
+            <span>Requests</span>
           </Link>
 
           {/* Elevated Center Action: Post Request */}
@@ -214,12 +214,12 @@ export default function MobileBottomNav() {
           </Link>
 
           <Link
-            href="/pricing"
-            style={navItemStyle(pathname === "/pricing")}
-            aria-label="Pricing & 0% Student Fee"
+            href="/tutors"
+            style={navItemStyle(pathname.startsWith("/tutors"))}
+            aria-label="Find Verified Tutors"
           >
-            <Tag size={20} />
-            <span>Pricing</span>
+            <Search size={20} />
+            <span>Tutors</span>
           </Link>
 
           <Link

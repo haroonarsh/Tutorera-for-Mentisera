@@ -6,7 +6,7 @@ import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "
 
 export const metadata: Metadata = {
   title: "About TUTORERA® | Global Student-Led Tutoring Marketplace",
-  description: "TUTORERA® is a global student-led reverse tutoring marketplace connecting learners and verified educators worldwide and locally, operated by MENTISERA (SMC-Private) Limited.",
+  description: "TUTORERA® is a global student-led demand tutoring marketplace connecting learners and verified educators worldwide and locally, operated by MENTISERA (SMC-Private) Limited.",
   alternates: { canonical: "/about" },
 };
 
@@ -27,7 +27,7 @@ export default function AboutPage() {
             A Global Student-Led Tutoring Marketplace
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1.1rem', lineHeight: '1.75', maxWidth: '650px', margin: '0 auto' }}>
-            TUTORERA® brings transparency, safety, and student empowerment to tutoring worldwide and locally — connecting learners with verified tutors through competitive reverse offers and secure escrow settlement.
+            TUTORERA® brings transparency, safety, and student empowerment to tutoring worldwide and locally — connecting learners with verified tutors through competitive custom offers and secure escrow settlement.
           </p>
         </div>
       </section>
@@ -37,7 +37,7 @@ export default function AboutPage() {
         <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '1rem' }}>Our Mission</h2>
           <p style={{ color: C.gray500, fontSize: '1.05rem', lineHeight: '1.8', maxWidth: '750px', margin: '0 auto 3rem' }}>
-            To replace fragmented, unverified, and opaque tutoring arrangements with a student-led, transparent reverse marketplace — empowering learners and verified educators across international curricula and national education systems.
+            To replace fragmented, unverified, and opaque tutoring arrangements with a student-led, transparent demand marketplace — empowering learners and verified educators across international curricula and national education systems.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
             {[
@@ -64,7 +64,7 @@ export default function AboutPage() {
       <section style={{ padding: '5rem 1.5rem', backgroundColor: 'white' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.75rem' }}>Our Reverse Marketplace Model</h2>
+            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.75rem' }}>Our Student-Led Marketplace Model</h2>
             <p style={{ color: C.gray500, fontSize: '1rem', lineHeight: 1.75, maxWidth: 760, margin: '0 auto' }}>
               TUTORERA by MENTISERA is a student-led tutoring marketplace. Students or parents post a requirement with their preferred budget in their local currency, receive tutor offers, compare profiles and counter-offers, and choose the tutor who best fits their learning goals.
             </p>
@@ -87,10 +87,10 @@ export default function AboutPage() {
             ))}
           </div>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '1.5rem', textAlign: 'center' }}>
-            TUTORERA provides reverse-marketplace technology, student requirement matching, tutor offer comparison, rate negotiation, booking management, international timezone scheduling, communication, payment facilitation, transparent currency display with base escrow security, tutor reviews, customer support, dispute administration, and platform governance. Tutors provide tutoring services as independent verified educators.
+            TUTORERA provides student-led marketplace technology, student requirement matching, tutor offer comparison, rate negotiation, booking management, international timezone scheduling, communication, payment facilitation, transparent currency display with base escrow security, tutor reviews, customer support, dispute administration, and platform governance. Tutors provide tutoring services as independent verified educators.
           </p>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '0.5rem', textAlign: 'center' }}>
-            TUTORERA is not affiliated with, endorsed by, or certified by any ride-hailing or third-party marketplace brand. The model similarity is limited to the general reverse-marketplace idea where students post demand and verified providers respond with offers.
+            TUTORERA is not affiliated with, endorsed by, or certified by any ride-hailing or third-party marketplace brand. The model similarity is limited to the general demand-marketplace model where students post demand and verified providers respond with offers.
           </p>
         </div>
       </section>
@@ -101,7 +101,7 @@ export default function AboutPage() {
           <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '1.5rem', textAlign: 'center' }}>Our Story</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', color: C.gray500, fontSize: '1rem', lineHeight: '1.8' }}>
             <p>For decades, finding a tutor meant relying on unverified word-of-mouth, unmoderated social media groups, or commission-heavy agencies — with no structured credentials verification, transparent pricing, or safety guarantees.</p>
-            <p>TUTORERA® was built to solve this globally and locally. We created a structured reverse marketplace where students specify their subject, curriculum, preferred budget, and mode (online worldwide or home tuition locally) — while every tutor on the platform undergoes manual credential review and verification.</p>
+            <p>TUTORERA® was built to solve this globally and locally. We created a structured student-led marketplace where students specify their subject, curriculum, preferred budget, and mode (online worldwide or home tuition locally) — while every tutor on the platform undergoes manual credential review and verification.</p>
             <p>We are operated by <strong style={{ color: C.primary }}>{LEGAL_OPERATOR}</strong>, an education technology company committed to building transparent, high-integrity learning platforms connecting students and educators across borders.</p>
             <p><strong style={{ color: C.primary }}>Corporate address:</strong> {BUSINESS_ADDRESS}</p>
             <p><strong style={{ color: C.primary }}>Official email:</strong> <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> · <strong style={{ color: C.primary }}>Support hotline:</strong> {SUPPORT_PHONE}</p>

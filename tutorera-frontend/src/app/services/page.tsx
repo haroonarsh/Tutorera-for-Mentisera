@@ -39,7 +39,7 @@ export default function ServicesPage() {
         <p>Tutoring categories span international and national curricula. Rates are student-proposed or tutor-offered, tailored to subject difficulty, academic level, and learning mode (online worldwide or home tuition locally). Final rates are agreed in your preferred currency with secure escrow settlement before session commencement.</p>
       </section>
       <section className={s.narrow}>
-        <p className={s.lead}><strong>Pricing Transparency:</strong> Reverse-marketplace model. Students propose their preferred budget or receive custom tutor counter-offers. All checkout totals are displayed with full currency transparency and protected by TUTORERA escrow.</p>
+        <p className={s.lead}><strong>Pricing Transparency:</strong> Student-led demand marketplace model. Students propose their preferred budget or receive custom tutor counter-offers. All checkout totals are displayed with full currency transparency and protected by TUTORERA escrow.</p>
       </section>
       <section className={s.container}>
         <div className={s.serviceGrid}>
@@ -54,7 +54,7 @@ export default function ServicesPage() {
                   <span><strong>Delivery mode:</strong> {mode}</span>
                   <span><strong>Academic level:</strong> {level}</span>
                   <span><strong>Tutor availability:</strong> Verified educators matched by curriculum expertise and timezone availability.</span>
-                  <span><strong>Pricing model:</strong> Student-led reverse offer. Transparent local currency display with secure base escrow protection.</span>
+                  <span><strong>Pricing model:</strong> Student-led custom offer. Transparent local currency display with secure base escrow protection.</span>
                 </div>
                 <div className={s.flow}>
                   <Link className={s.cta} href="/dashboard?tab=requests">Post Requirement</Link>

@@ -557,7 +557,7 @@ export default async function TutorProfilePage({ params }: Props) {
               </div>
             </div>
             <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "1rem", lineHeight: 1.5 }}>
-              * You can discuss syllabus coverage, test series frequency, and custom lesson schedules directly with the tutor or negotiate rates through our reverse marketplace.
+              * You can discuss syllabus coverage, test series frequency, and custom lesson schedules directly with the tutor or negotiate rates through our student-led marketplace.
             </p>
           </section>
 

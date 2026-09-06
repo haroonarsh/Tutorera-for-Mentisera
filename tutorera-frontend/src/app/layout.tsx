@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   keywords: [
     "online tutors worldwide",
     "find verified tutors",
-    "reverse tutoring marketplace",
+    "student demand tutoring marketplace",
     "home tuition",
     "O Level tutor",
     "A Level tutor",
@@ -108,7 +108,7 @@ export default function RootLayout({
         legalName: LEGAL_OPERATOR,
         url: SITE_URL,
         logo: `${SITE_URL}/tutorera-logo-transparent.png`,
-        description: "Global student-led reverse marketplace for online and in-person tutoring. Students post requirements with preferred budgets; verified tutors compete with offers.",
+        description: "Global student-led demand marketplace for online and in-person tutoring. Students post requirements with preferred budgets; verified tutors compete with offers.",
         address: {
           "@type": "PostalAddress",
           streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town",
@@ -144,7 +144,7 @@ export default function RootLayout({
         "@id": `${SITE_URL}/#website`,
         url: SITE_URL,
         name: PLATFORM_NAME,
-        description: "Global student-led reverse tutoring marketplace connecting learners and verified educators worldwide and locally.",
+        description: "Global student-led tutoring marketplace connecting learners and verified educators worldwide and locally.",
         publisher: {
           "@id": `${SITE_URL}/#organization`,
         },
@@ -161,7 +161,7 @@ export default function RootLayout({
         provider: {
           "@id": `${SITE_URL}/#organization`,
         },
-        description: "Reverse tutoring marketplace where students post requirements in their local currency and verified tutors respond with customized offers.",
+        description: "Student-led tutoring marketplace where students post requirements in their local currency and verified tutors respond with customized offers.",
         areaServed: {
           "@type": "Place",
           name: "Worldwide",

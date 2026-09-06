@@ -36,7 +36,7 @@ const legalCategories = [
   {
     title: "Master Marketplace Terms",
     icon: Scale,
-    description: "Core contracts governing access to the TUTORERA reverse marketplace, multi-currency bidding, and facilitation.",
+    description: "Core contracts governing access to the TUTORERA student-led marketplace, multi-currency offers, and facilitation.",
     links: [
       { label: "Global Terms of Service", href: "/terms", desc: "Master terms for students, parents, tutors, and visitors." },
       { label: "Tutor Marketplace Agreement", href: "/terms/tutors", desc: "Independent tutor status, earnings, and professional warranties." },

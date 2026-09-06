@@ -6,6 +6,7 @@ import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import TrustSafetySection from "@/components/marketplace/TrustSafetySection";
 import TopTutorsSection from "@/components/TopTutorsSection";
 import TopRequestsSection from "@/components/TopRequestsSection";
+import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
 import { ArrowRight, Star, MapPin } from "lucide-react";
 import s from "./page.module.css";
 
@@ -61,13 +62,16 @@ export default function Home() {
       {/* 3. Dedicated Home Tuition & Online Tuition Direct Action Cards */}
       <HomeOnlineTuitionCards />
 
-      {/* 4. Live Reverse-Marketplace Demand / Open Tuition Requests */}
+      {/* 4. Live Student Demand / Open Tuition Requests */}
       <TopRequestsSection />
 
       {/* 5. How TUTORERA Works (5-Step Visual Marketplace Loop) */}
       <MarketplaceFlow />
 
-      {/* 6. Popular Academic Subjects in Pakistan */}
+      {/* 6. Side-by-Side Offer Comparison Showcase */}
+      <OfferComparisonDemo />
+
+      {/* 7. Popular Academic Subjects */}
       <section style={{ padding: "4rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>

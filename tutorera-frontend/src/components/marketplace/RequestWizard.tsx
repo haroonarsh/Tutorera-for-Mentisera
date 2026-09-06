@@ -604,7 +604,7 @@ export default function RequestWizard({
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0 }}>Student-Proposed Pricing</h3>
               </div>
               <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: 1.5, margin: "0 0 1rem" }}>
-                In TUTORERA&apos;s reverse marketplace, you propose what you are willing to pay. Verified tutors can either accept your rate or submit a counter-offer.
+                In TUTORERA&apos;s student-led marketplace, you propose what you are willing to pay. Verified tutors can either accept your rate or submit a counter-offer.
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>

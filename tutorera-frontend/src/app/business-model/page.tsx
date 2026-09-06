@@ -4,7 +4,7 @@ import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "TUTORERA Business Model | Global Student-Led Tutoring Marketplace",
-  description: "How TUTORERA by MENTISERA operates as a global student-led reverse tutoring marketplace with multi-currency transparency and secure base escrow settlement.",
+  description: "How TUTORERA by MENTISERA operates as a global student-led demand tutoring marketplace with multi-currency transparency and secure base escrow settlement.",
   alternates: { canonical: "/business-model" },
 };
 

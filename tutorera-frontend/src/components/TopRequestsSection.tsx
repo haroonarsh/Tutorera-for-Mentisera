@@ -63,10 +63,10 @@ export default function TopRequestsSection() {
       <div className={s.container}>
         <header className={s.head}>
           <p className={s.eyebrow}>Live student demand</p>
-          <h2 id="requests-title">Active Tuition Requests</h2>
+          <h2 id="requests-title">Students Looking for Tutors Right Now</h2>
           <p className={s.subtitle}>
-            Real students across Pakistan have posted tuition needs. Browse a request to see how offers and
-            booking work, or post your own requirement.
+            Real students have posted tuition needs. Browse active requests to see how offers and
+            matching work, or post your own requirement.
           </p>
         </header>
 
@@ -84,14 +84,14 @@ export default function TopRequestsSection() {
         )}
 
         {!loading && errored && (
-          <p className={s.message}>Couldn't load requests right now. Please try again later.</p>
+          <p className={s.message}>Couldn&apos;t load requests right now. Please try again later.</p>
         )}
 
         {!loading && !errored && requests.length === 0 ? (
           <div className={s.empty}>
-            <p>No open tuition requests at the moment. Be the first to post one.</p>
-            <Link className={s.primaryCta} href="/dashboard?tab=requests">
-              Post a tuition request
+            <p>Be among the first students to post · Tell us what you need and let verified tutors respond.</p>
+            <Link className={s.primaryCta} href="/post-tuition-request">
+              Post My Tuition Request
             </Link>
           </div>
         ) : (
@@ -106,9 +106,16 @@ export default function TopRequestsSection() {
                 >
                   <header className={s.cardHead}>
                     <h3>{r.subject}</h3>
-                    <span className={s.price}>{formatPKR(r.budget || 0, r.pricingUnit || "hour")}</span>
+                    <span className={s.price}>
+                      {(r as any).currency || "PKR"} {Number(r.budget || 0).toLocaleString()}/{(r.pricingUnit || "hour")}
+                    </span>
                   </header>
-                  <span className={s.levelBadge}>{r.level}</span>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem" }}>
+                    <span className={s.levelBadge}>{r.level}</span>
+                    <span style={{ fontSize: "0.72rem", background: "#ecfdf5", color: "#059669", padding: "0.2rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
+                      ⚡ {(r as any).offersCount || 0} Offers
+                    </span>
+                  </div>
                   <ul className={s.metaRow}>
                     <li>
                       <BookOpen size={13} aria-hidden="true" /> {r.teachingMode}
@@ -124,9 +131,11 @@ export default function TopRequestsSection() {
                   </ul>
                   <footer className={s.cardFooter}>
                     <span className={s.avatar} aria-hidden="true">
-                      {initials(r.student?.name)}
+                      {initials(r.student?.name || "Verified Student")}
                     </span>
-                    <span className={s.studentName}>{r.student?.name}</span>
+                    <span className={s.studentName}>
+                      {r.student?.name ? (r.student.name.split(" ")[0] + " in " + (r.city || "Pakistan")) : "Verified Student"}
+                    </span>
                     <span className={s.posted}>Posted {timeAgo(r.createdAt)}</span>
                   </footer>
                 </article>

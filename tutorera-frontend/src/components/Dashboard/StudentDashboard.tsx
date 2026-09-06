@@ -762,6 +762,53 @@ const fetchRequests = useCallback(async () => {
           </div>
         </div>
 
+        {/* Waiting Offers Urgency Banner */}
+        {requests.some(r => Boolean(r.bid || r.status === "receiving_offers" || r.status === "negotiating" || (r as any).bids?.length)) && (
+          <div 
+            style={{
+              background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+              border: "1.5px solid #6ee7b7",
+              borderRadius: "0.875rem",
+              padding: "1rem 1.25rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+              boxShadow: "0 4px 12px rgba(5, 150, 105, 0.08)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <span style={{ fontSize: "1.5rem" }}>⚡</span>
+              <div>
+                <strong style={{ color: "#065f46", fontSize: "0.98rem", display: "block" }}>
+                  Verified Tutors Have Responded to Your Tuition Request!
+                </strong>
+                <span style={{ color: "#047857", fontSize: "0.82rem" }}>
+                  You have active tutor offers awaiting your decision. Compare rates, qualifications, and background verification.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setTab("requests")}
+              style={{
+                background: "#059669",
+                color: "white",
+                border: "none",
+                padding: "0.6rem 1.25rem",
+                borderRadius: "0.5rem",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3)"
+              }}
+            >
+              Review Offers Now →
+            </button>
+          </div>
+        )}
+
         {/* Tabs */}
         <nav aria-label="Dashboard sections" className={s.tabs}>
         <button

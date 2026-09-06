@@ -55,8 +55,8 @@ export default function HeroMarketplace() {
                 marginBottom: "1rem",
               }}
             >
-              Need a Tutor? <br />
-              <span style={{ color: "#016ef8" }}>Post Your Requirement.</span>
+              Tell Us What You Need. <br />
+              <span style={{ color: "#016ef8" }}>Let the Right Tutors Come to You.</span>
             </h1>
 
             <p
@@ -68,7 +68,7 @@ export default function HeroMarketplace() {
                 maxWidth: 540,
               }}
             >
-              Set your subject, location, schedule and preferred budget. Verified tutors can accept your rate or send an offer.
+              Post your subject, learning mode, schedule, and preferred budget. TUTORERA matches your requirement with suitable tutors who can accept your rate or send an offer. Compare, negotiate, and choose with confidence.
             </p>
 
             <div
@@ -77,39 +77,41 @@ export default function HeroMarketplace() {
                 gap: "0.75rem",
                 alignItems: "center",
                 flexWrap: "wrap",
-                marginBottom: "1.5rem",
+                marginBottom: "1.25rem",
               }}
             >
               <Link
                 href="/post-tuition-request"
+                id="hero-post-request-btn"
                 style={{
                   background: "#0329b2",
                   color: "white",
-                  padding: "0.85rem 1.75rem",
+                  padding: "0.95rem 1.85rem",
                   borderRadius: "0.75rem",
                   fontWeight: 800,
-                  fontSize: "0.95rem",
+                  fontSize: "1rem",
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "0.5rem",
                   textDecoration: "none",
-                  boxShadow: "0 8px 24px rgba(3, 41, 178, 0.35)",
-                  minHeight: "48px",
+                  boxShadow: "0 10px 28px rgba(3, 41, 178, 0.4)",
+                  minHeight: "50px",
                   flex: "1 1 auto",
                   maxWidth: "320px",
+                  transition: "transform 0.15s ease, background 0.15s ease",
                 }}
               >
-                <span>Post Tuition Request</span>
+                <span>Post My Tuition Request</span>
                 <ArrowRight size={18} />
               </Link>
 
               <Link
-                href="/tutors"
+                href="/#marketplace-flow-title"
                 style={{
                   background: "white",
                   color: "#021550",
-                  padding: "0.85rem 1.5rem",
+                  padding: "0.95rem 1.5rem",
                   borderRadius: "0.75rem",
                   fontWeight: 700,
                   fontSize: "0.92rem",
@@ -118,12 +120,27 @@ export default function HeroMarketplace() {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  minHeight: "48px",
+                  minHeight: "50px",
                   flex: "1 1 auto",
-                  maxWidth: "320px",
+                  maxWidth: "240px",
                 }}
               >
-                Browse Verified Tutors
+                See How It Works
+              </Link>
+            </div>
+
+            <div style={{ marginBottom: "1.25rem" }}>
+              <Link
+                href="/tutors"
+                style={{
+                  color: "#64748b",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  textUnderlineOffset: "3px",
+                }}
+              >
+                Prefer browsing? View tutor directory →
               </Link>
             </div>
 
@@ -170,14 +187,14 @@ export default function HeroMarketplace() {
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
                 <span style={{ background: "#ecfdf5", color: "#059669", padding: "0.25rem 0.6rem", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 800 }}>
-                  STUDENT-LED REVERSE MARKETPLACE
+                  STUDENT-LED DEMAND MARKETPLACE
                 </span>
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
                 You Decide the Budget. Tutors Compete for You.
               </h3>
               <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.5", margin: "0 0 1rem 0" }}>
-                Unlike traditional agency models, on TUTORERA students propose their preferred rate. Qualified tutors accept or counter transparently.
+                Unlike traditional agencies, on TUTORERA students and parents propose their preferred rate. Verified tutors accept or counter transparently.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.78rem" }}>
                 <div style={{ background: "#f8fafc", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>

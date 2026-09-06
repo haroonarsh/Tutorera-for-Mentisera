@@ -961,7 +961,10 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
 // @access  Public
 export const getPublicRequestsPreview = async (req: ExpressRequest, res: Response): Promise<void> => {
   const { page = "1", limit = "12" } = req.query;
-  const filter: Record<string, unknown> = { status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } };
+  const filter: Record<string, unknown> = { 
+    status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, 
+    isDirect: { $ne: true } 
+  };
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 12));
@@ -969,17 +972,56 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
 
   const total = await Request.countDocuments(filter);
   const requests = await Request.find(filter)
-    .populate("student", "name city avatar")
+    .populate("student", "name city countryCode countryName")
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum)
-    .select("subject level budget pricingUnit teachingMode city schedule createdAt student");
+    .select("subject level budget maximumBudget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt student");
+
+  const Bid = (await import("../models/Bid.model")).default;
+  const sanitizedRequests = await Promise.all(
+    requests.map(async (r) => {
+      const offersCount = await Bid.countDocuments({ 
+        request: r._id, 
+        status: { $nin: ["withdrawn", "rejected"] } 
+      });
+      const rawName = (r.student as any)?.name || "Student";
+      const nameParts = rawName.trim().split(" ");
+      const sanitizedName = nameParts.length > 1
+        ? `${nameParts[0]} ${nameParts[1].charAt(0)}.`
+        : nameParts[0] || "Verified Student";
+
+      return {
+        _id: r._id,
+        subject: r.subject,
+        level: r.level,
+        budget: r.budget,
+        pricingUnit: r.pricingUnit || "hour",
+        currency: r.currency || "PKR",
+        teachingMode: r.teachingMode,
+        city: r.city || (r.student as any)?.city || "",
+        countryCode: r.countryCode || (r.student as any)?.countryCode || "PK",
+        countryName: r.countryName || (r.student as any)?.countryName || "Pakistan",
+        schedule: r.schedule,
+        description: r.description,
+        status: r.status,
+        createdAt: r.createdAt,
+        offersCount,
+        student: {
+          displayTitle: `${sanitizedName} in ${r.city || r.countryName || "Online"}`,
+          name: sanitizedName,
+          city: r.city || "",
+          countryName: r.countryName || "Pakistan",
+        },
+      };
+    })
+  );
 
   res.status(200).json({
     success: true,
     total,
     page: pageNum,
     totalPages: Math.ceil(total / limitNum),
-    requests,
+    requests: sanitizedRequests,
   });
 };

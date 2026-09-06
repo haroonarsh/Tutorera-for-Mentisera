@@ -93,7 +93,7 @@ export default function HowTutorOffersWorkPage() {
       <div style={{ maxWidth: 850, margin: "auto", padding: "3.5rem 1.5rem" }}>
         <section>
           <h2 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: "1rem" }}>
-            A Global Student-Led Reverse Tutoring Marketplace
+            A Global Student-Led Demand Tutoring Marketplace
           </h2>
           <p style={{ lineHeight: 1.8, color: "#475569", fontSize: "1rem" }}>
             TUTORERA is a global student-led tutoring marketplace where students and parents post tutoring requirements in their preferred local currency and learning mode (online worldwide or home tuition locally). Qualified, verified educators submit competitive offers or transparent counter-offers. Students evaluate tutor credentials, teaching background, and reviews before making an empowered choice.

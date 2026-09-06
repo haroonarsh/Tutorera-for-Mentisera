@@ -76,7 +76,7 @@ const megaMenus = [
     eyebrow: "Guides & Policies",
     title: "Everything you need to know about TUTORERA.",
     icon: ShieldCheck,
-    featured: { label: "How TUTORERA Works", href: "/how-it-works", desc: "The global student-led reverse marketplace loop." },
+    featured: { label: "How TUTORERA Works", href: "/how-it-works", desc: "The global student-led demand marketplace loop." },
     groups: [
       { title: "Guides & Research", links: [
         { label: "Global Tutoring Index", href: "/research/pakistan-tutoring-rates", desc: "Tutoring market rate benchmarks." },
