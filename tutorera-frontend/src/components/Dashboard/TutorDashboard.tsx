@@ -344,6 +344,13 @@ function OpenRequestCard({
           </span>
           <span className={s.infoChip}>{request.teachingMode}</span>
           <span className={s.infoChip}>{request.schedule}</span>
+          {typeof request.offersCount === "number" && (
+            <span className={s.infoChip}>
+              {request.offersCount === 0
+                ? "🎯 No offers yet — be first!"
+                : `${request.offersCount} offer${request.offersCount === 1 ? "" : "s"} already received`}
+            </span>
+          )}
         </div>
 
         <div style={{ marginTop: 14, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

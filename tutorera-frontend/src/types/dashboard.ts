@@ -36,6 +36,7 @@ export interface DashRequest {
   canRepost?: boolean;
   isExpired?: boolean;
   secondsRemaining?: number;
+  offersCount?: number;
   bid?: Pick<DashBid, "_id" | "amount" | "currency" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
 }
 

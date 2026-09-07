@@ -233,8 +233,11 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   if (req.user?.role === "tutor") {
     const requestsWithOffer = await Promise.all(
       requests.map(async (request) => {
-        const bid = await Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount currency status expiresAt pricingUnit createdAt").lean();
-        return { ...request.toObject(), bid };
+        const [bid, offersCount] = await Promise.all([
+          Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount currency status expiresAt pricingUnit createdAt").lean(),
+          Bid.countDocuments({ request: request._id, status: { $nin: ["withdrawn", "rejected"] } }),
+        ]);
+        return { ...request.toObject(), bid, offersCount };
       })
     );
     res.status(200).json({ success: true, total, page: pageNum, requests: requestsWithOffer });
@@ -250,23 +253,27 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
 export const getMyRequests = async (req: AuthRequest, res: Response): Promise<void> => {
   const requests = await Request.find({ student: req.user?._id }).sort("-createdAt");
   const now = Date.now();
-  const enriched = requests.map((r) => {
-    const obj = r.toObject();
-    const isExpired = obj.status === "expired" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
-    const canExtend =
-      ["open", "published", "receiving_offers"].includes(obj.status) &&
-      Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() > now) &&
-      (obj.extensionCount || 0) < (obj.maxExtensions || MAX_REQUEST_EXTENSIONS);
-    const canRepost = obj.status === "expired" || obj.status === "cancelled" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
-    const secondsRemaining = obj.expiresAt ? Math.max(0, Math.floor((new Date(obj.expiresAt).getTime() - now) / 1000)) : 0;
-    return {
-      ...obj,
-      isExpired,
-      canExtend,
-      canRepost,
-      secondsRemaining,
-    };
-  });
+  const enriched = await Promise.all(
+    requests.map(async (r) => {
+      const obj = r.toObject();
+      const offersCount = await Bid.countDocuments({ request: r._id, status: { $nin: ["withdrawn", "rejected"] } });
+      const isExpired = obj.status === "expired" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
+      const canExtend =
+        ["open", "published", "receiving_offers"].includes(obj.status) &&
+        Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() > now) &&
+        (obj.extensionCount || 0) < (obj.maxExtensions || MAX_REQUEST_EXTENSIONS);
+      const canRepost = obj.status === "expired" || obj.status === "cancelled" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
+      const secondsRemaining = obj.expiresAt ? Math.max(0, Math.floor((new Date(obj.expiresAt).getTime() - now) / 1000)) : 0;
+      return {
+        ...obj,
+        offersCount,
+        isExpired,
+        canExtend,
+        canRepost,
+        secondsRemaining,
+      };
+    })
+  );
   res.status(200).json({ success: true, requests: enriched });
 };
 
