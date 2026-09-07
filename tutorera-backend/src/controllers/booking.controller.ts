@@ -7,6 +7,8 @@ import { bookingCancelledEmail } from "../utils/emailTemplates";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";
 import { sendNotification } from "../utils/socket";
+import AbandonedJourney from "../models/AbandonedJourney.model";
+import { syncStudentTutorRelationship } from "../services/relationship.service";
 
 // @desc    Get my bookings
 // @route   GET /api/bookings
@@ -120,4 +122,85 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   }
 
   res.status(200).json({ success: true, message: "Booking status updated", booking });
+};
+
+// @desc    Build a prefilled repeat-booking request from a completed booking
+// @route   POST /api/bookings/:id/book-again
+// @access  Private (student)
+export const bookAgainFromBooking = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "student") {
+    res.status(403).json({ success: false, message: "Only students can rebook a tutor from a completed booking." });
+    return;
+  }
+
+  const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id })
+    .populate("tutor", "name")
+    .populate("request", "subject level description curriculum classGrade examType learningObjectives countryCode countryName city area schedule teachingMode currency pricingUnit preferredDays preferredStartTime sessionDurationMinutes sessionsPerWeek");
+
+  if (!booking) {
+    res.status(404).json({ success: false, message: "Booking not found." });
+    return;
+  }
+
+  if (booking.status !== "completed") {
+    res.status(400).json({
+      success: false,
+      code: "BOOKING_NOT_COMPLETED",
+      message: "Book Again becomes available after a session is completed.",
+    });
+    return;
+  }
+
+  const request = booking.request as any;
+  const tutor = booking.tutor as any;
+  const prefill = {
+    tutorId: tutor?._id?.toString?.() || booking.tutor.toString(),
+    tutorName: tutor?.name || "Tutor",
+    subject: request?.subject || "Tutoring",
+    level: request?.level || "Other",
+    description: request?.description || request?.learningObjectives || `Continue learning with ${tutor?.name || "this tutor"}.`,
+    curriculum: request?.curriculum || "",
+    classGrade: request?.classGrade || "",
+    examType: request?.examType || "",
+    learningObjectives: request?.learningObjectives || "",
+    teachingMode: booking.teachingMode || request?.teachingMode || "online",
+    countryCode: request?.countryCode || "PK",
+    countryName: request?.countryName || "Pakistan",
+    city: request?.city || "",
+    area: request?.area || "",
+    schedule: request?.schedule || booking.schedule || "",
+    preferredDays: request?.preferredDays || [],
+    preferredStartTime: request?.preferredStartTime || "",
+    sessionDurationMinutes: request?.sessionDurationMinutes || 60,
+    sessionsPerWeek: request?.sessionsPerWeek || 1,
+    budget: booking.finalAgreedRate || booking.amount,
+    currency: request?.currency || "PKR",
+    pricingUnit: booking.pricingUnit || request?.pricingUnit || "hour",
+    allowCounterOffers: true,
+    sourceBookingId: booking._id.toString(),
+    rebooking: true,
+  };
+
+  await AbandonedJourney.findOneAndUpdate(
+    { user: req.user._id, type: "direct_booking", completedAt: { $exists: false } },
+    { $set: { data: prefill }, $setOnInsert: { user: req.user._id, type: "direct_booking", remindersSent: [] } },
+    { upsert: true }
+  );
+
+  await syncStudentTutorRelationship(booking as any);
+  await logAudit({
+    action: "book_again_started",
+    actor: req.user.name,
+    actorId: req.user._id?.toString(),
+    entity: "Booking",
+    targetId: booking.id,
+    metadata: { tutor: prefill.tutorId, subject: prefill.subject },
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Repeat booking details prepared.",
+    prefill,
+    redirectTo: "/post-tuition-request",
+  });
 };

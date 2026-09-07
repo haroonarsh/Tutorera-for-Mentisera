@@ -20,6 +20,7 @@ import { convertToPKR } from "../config/countries";
 import { createTransaction } from "../utils/rapidGateway";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import { MatchingService } from "../services/matching.service";
+import { syncStudentTutorRelationship } from "../services/relationship.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -613,6 +614,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       paymentNote: "Awaiting student checkout through authorized payment gateway",
     }]);
     const booking = bookingArr[0];
+    await syncStudentTutorRelationship(booking as any);
 
     if (request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
       await BookedSlot.create([{
@@ -788,6 +790,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         paymentNote: "Paid via authorized payment gateway before booking creation",
       }], { session });
       const booking = bookingArr[0];
+      await syncStudentTutorRelationship(booking as any, session);
 
       await OfferNegotiation.updateMany({ offer: bid._id, status: "active" }, { status: "accepted" }, { session });
 

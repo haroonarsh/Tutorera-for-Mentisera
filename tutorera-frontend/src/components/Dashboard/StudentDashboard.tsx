@@ -126,6 +126,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const [alreadyRated, setAlreadyRated] = useState(false);
   const router = useRouter();
   const [paying, setPaying] = useState(false);
+  const [rebooking, setRebooking] = useState(false);
 
   const handlePay = async () => {
     setPaying(true);
@@ -153,6 +154,23 @@ function BookingCard({ booking, onClaimSubmitted }: {
       showError("Failed to open chat. Please try again.");
     } finally {
       setCreatingChat(false);
+    }
+  };
+
+  const handleBookAgain = async () => {
+    setRebooking(true);
+    try {
+      const res = await axiosInstance.post(`/bookings/${booking._id}/book-again`);
+      const prefill = res.data?.prefill;
+      if (prefill) {
+        sessionStorage.setItem("tutorera_quick_request", JSON.stringify(prefill));
+      }
+      showSuccess("Repeat booking details prepared. Review the schedule and submit when ready.");
+      router.push(res.data?.redirectTo || "/post-tuition-request");
+    } catch (err: unknown) {
+      showError(err, "Could not prepare repeat booking. Please try again.");
+    } finally {
+      setRebooking(false);
     }
   };
 
@@ -241,6 +259,22 @@ function BookingCard({ booking, onClaimSubmitted }: {
               cursor: 'pointer',
             }}>
             ⭐ Rate Tutor
+          </button>
+        )}
+
+        {booking.status === "completed" && (
+          <button
+            type="button"
+            onClick={handleBookAgain}
+            disabled={rebooking}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.5rem 1rem', backgroundColor: rebooking ? '#dbeafe' : '#EEF5FF',
+              color: rebooking ? '#64748b' : '#0329B2', borderRadius: '0.5rem',
+              border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '700',
+              cursor: rebooking ? 'wait' : 'pointer',
+            }}>
+            {rebooking ? "Preparing..." : "↻ Book Again"}
           </button>
         )}
 
