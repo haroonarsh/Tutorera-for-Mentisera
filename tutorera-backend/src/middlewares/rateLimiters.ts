@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import jwt from "jsonwebtoken";
 
 // General API-wide limiter — generous, just to stop obvious abuse/scraping
 export const generalLimiter = rateLimit({
@@ -55,12 +56,26 @@ export const contactLimiter = rateLimit({
 });
 
 // AI chat — prevent runaway API costs
+// Uses user ID from JWT as key so each authenticated user gets their own
+// bucket (10 msg/min). Falls back to IP so unauthenticated burst attempts
+// are also throttled before hitting the per-user limit.
 export const aiChatLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: "You're sending messages too quickly. Please slow down." },
+    keyGenerator: (req) => {
+        try {
+            const auth = req.headers.authorization;
+            if (auth?.startsWith("Bearer ")) {
+                const token = auth.slice(7);
+                const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id?: string };
+                if (payload.id) return payload.id;
+            }
+        } catch { /* fall through to IP */ }
+        return (req as any).ip ?? (req as any).socket?.remoteAddress ?? "unknown";
+    },
 });
 
 // File uploads — prevent storage/bandwidth abuse
