@@ -223,7 +223,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>("");
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -266,7 +266,7 @@ export default function DashboardPage() {
   }, [user]);
 
   // Show loading while auth or status check is in progress
-  if (loading || !user || user.role === "pending" || user.role === "admin" || (user.role === "tutor" && checkingStatus)) {
+  if (loading || !user || user.role === "pending" || user.role === "admin" || (user.role === "tutor" && (checkingStatus || verificationStatus === null))) {
     return <LoadingScreen />;
   }
 

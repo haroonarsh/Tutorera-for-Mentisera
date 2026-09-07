@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? "Online"
       : "In-Person";
   const rateText = tutor.hourlyRate
-    ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString()}/hr`
+    ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString("en-US")}/hr`
     : "Competitive rates";
 
   const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText}) | TUTORERA`;
@@ -598,7 +598,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   color: "#0329B2",
                 }}
               >
-                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString()}
+                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString("en-US")}
                 <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
                   /hr
                 </span>
@@ -1126,7 +1126,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   color: "#0329B2",
                 }}
               >
-                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString()}
+                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString("en-US")}
                 <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
                   /hr
                 </span>
