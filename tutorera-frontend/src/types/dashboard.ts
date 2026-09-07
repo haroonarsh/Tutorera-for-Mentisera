@@ -162,3 +162,11 @@ export interface DashDirectRequest extends DashRequest {
   isDirect: true;
   bid: DashBid | null;
 }
+
+export interface RankedRequestMatch {
+  request: DashRequest;
+  score: number;
+  tier: "excellent" | "great" | "good" | "fair";
+  scoreBreakdown: Record<string, number>;
+  reasons: string[];
+}

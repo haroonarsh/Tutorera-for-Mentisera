@@ -4,7 +4,7 @@ import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import axiosInstance from "@/lib/axios";
-import { DashRequest, DashBooking, TutorProfileData, DashDirectRequest } from "@/types/dashboard";
+import { DashRequest, DashBooking, TutorProfileData, DashDirectRequest, RankedRequestMatch } from "@/types/dashboard";
 import { AuthenticatedTrackingPayload } from "@/types/tracking";
 import PlaceBidModal from "./PlaceBidModal";
 import s from "@/app/dashboard/dashboard.module.css";
@@ -149,7 +149,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
     router.push(`/chat/${conversationId}`);
   } catch (err) {
     console.error("Failed to create conversation:", err);
-    showError("Failed to open chat. Please try again.");
+    showError(err, "Failed to open chat. Please try again.");
   } finally {
     setCreatingChat(false);
   }
@@ -416,7 +416,7 @@ function DirectRequestCard({
       showSuccess("Direct booking accepted successfully.");
     } catch (err) {
       console.error("Failed to accept direct booking:", err);
-      showError("Failed to accept. Please try again.");
+      showError(err, "Failed to accept. Please try again.");
     } finally {
       setActioning(null);
     }
@@ -431,7 +431,7 @@ function DirectRequestCard({
       showSuccess("Direct booking declined.");
     } catch (err) {
       console.error("Failed to reject direct booking:", err);
-      showError("Failed to decline. Please try again.");
+      showError(err, "Failed to decline. Please try again.");
     } finally {
       setActioning(null);
     }
@@ -600,7 +600,7 @@ interface Props {
 export default function TutorDashboard({ userName, userAvatar, userId }: Props) {
   const [tab, setTab]               = useState<Tab>("bookings");
   const [bookings, setBookings]     = useState<DashBooking[]>([]);
-  const [recommended, setRecommended] = useState<any[]>([]);
+  const [recommended, setRecommended] = useState<RankedRequestMatch[]>([]);
   const [loadingRec, setLoadingRec] = useState(false);
   const [requests, setRequests]     = useState<DashRequest[]>([]);
   const [directRequests, setDirectRequests] = useState<DashDirectRequest[]>([]);
