@@ -38,6 +38,9 @@ export interface TutorProfile {
   policeVerificationStatus?: string;
   fullName?: string;
   matchScore?: number;
+  averageResponseMinutes?: number;
+  responseTimeFormatted?: string;
+  lastActiveAt?: string;
 }
 
 export interface FiltersState {

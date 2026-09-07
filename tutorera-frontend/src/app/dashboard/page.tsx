@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import StudentDashboard from "@/components/Dashboard/StudentDashboard";
 import TutorDashboard from "@/components/Dashboard/TutorDashboard";
+import ParentDashboard from "@/components/Dashboard/ParentDashboard";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import api from "@/lib/axios";
 import { SUPPORT_EMAIL } from "@/lib/site";
@@ -235,6 +236,9 @@ export default function DashboardPage() {
     if (!loading && user?.role === "admin") {
       router.replace("/admin");
     }
+    if (!loading && user?.role === "parent") {
+      // Parent goes directly to dashboard — no verification gate needed
+    }
   }, [user, loading, router]);
 
    // For tutors: fetch verification status
@@ -288,6 +292,14 @@ export default function DashboardPage() {
           userName={user.name}
           userAvatar={user.avatar}
         />
+      </DashboardLayout>
+    );
+  }
+
+  if (user.role === "parent") {
+    return (
+      <DashboardLayout>
+        <ParentDashboard userId={user._id} userName={user.name} userAvatar={user.avatar} />
       </DashboardLayout>
     );
   }

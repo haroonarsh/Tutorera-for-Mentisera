@@ -3,6 +3,10 @@ import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
 import TutorAvailability from "../models/TutorAvailability.model";
+import Bid from "../models/Bid.model";
+import Request from "../models/Request.model";
+import { computeAndStoreTutorResponseTime, formatResponseTime } from "../services/tutorStats.service";
+import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
@@ -98,7 +102,19 @@ export const getTutorById = async (
     return;
   }
 
-  res.status(200).json({ success: true, profile });
+  let responseMinutes = profile.averageResponseMinutes;
+  if (!responseMinutes) {
+    responseMinutes = await computeAndStoreTutorResponseTime((profile.user as any)._id?.toString() || profile.user.toString());
+  }
+
+  res.status(200).json({
+    success: true,
+    profile: {
+      ...profile.toObject(),
+      averageResponseMinutes: responseMinutes,
+      responseTimeFormatted: formatResponseTime(responseMinutes),
+    },
+  });
 };
 
 function extractObjectId(value: string): string {
@@ -218,17 +234,24 @@ export const getAllTutors = async (
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
+    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
     .sort(sort as string)
     .skip(skip)
     .limit(limitNum);
+
+  const tutorsWithResponse = tutors.map((t) => {
+    const obj = t.toObject() as any;
+    obj.responseTimeFormatted = formatResponseTime(obj.averageResponseMinutes || 0);
+    return obj;
+  });
 
   res.status(200).json({
     success: true,
     total,
     page: pageNum,
     pages: Math.ceil(total / limitNum),
-    tutors,
+    tutors: tutorsWithResponse,
   });
 };
 
@@ -267,6 +290,7 @@ export const saveOnboardingStep = async (
   let profile = await TutorProfile.findOne({ user: req.user?._id });
   if (!profile) {
     profile = await TutorProfile.create({ user: req.user?._id });
+    await advanceAccountStatus(req.user?._id?.toString() || "", "onboarding");
   }
 
   const stepNum = parseInt(step);
@@ -571,6 +595,7 @@ export const saveOnboardingStep = async (
       const firstCompletedSubmission = !tutorUser.applicationSubmittedAt && Boolean(updated?.onboardingComplete);
       if (firstCompletedSubmission) {
         tutorUser.applicationSubmittedAt = new Date();
+        await advanceAccountStatus(tutorUser._id.toString(), "submitted");
       }
       await tutorUser.save();
 

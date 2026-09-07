@@ -34,6 +34,10 @@ import trackingRoutes from "./routes/tracking.routes";
 import webhookRoutes from "./routes/webhook.routes";
 import geoRoutes from "./routes/geo.routes";
 import matchingRoutes from "./routes/matching.routes";
+import recurringRoutes from "./routes/recurring.routes";
+import liquidityRoutes from "./routes/liquidity.routes";
+import tutoringIndexRoutes from "./routes/tutoringIndex.routes";
+import publicRoutes from "./routes/public.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -119,6 +123,10 @@ apiRouter.use("/webhooks", webhookRoutes);
 apiRouter.use("/track", trackingRoutes);
 apiRouter.use("/tracking", trackingRoutes);
 apiRouter.use("/geo", geoRoutes);
+apiRouter.use("/recurring", recurringRoutes);
+apiRouter.use("/liquidity", liquidityRoutes);
+apiRouter.use("/tutoring-index", tutoringIndexRoutes);
+apiRouter.use("/public", publicRoutes);
 apiRouter.use("/matching", matchingRoutes);
 
 app.use("/api/v1", generalLimiter);

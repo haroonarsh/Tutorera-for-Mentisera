@@ -123,8 +123,8 @@ export default function MobileTopBar() {
               style={{
                 background: "#f1f5f9",
                 color: "#334155",
-                width: "36px",
-                height: "36px",
+                width: "44px",
+                height: "44px",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",

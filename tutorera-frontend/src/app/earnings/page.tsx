@@ -8,9 +8,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Download } from "lucide-react";
+import { Download, Calculator } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import { showSuccess, showError } from "@/lib/toast";
+import CommissionCalculator from "@/components/Dashboard/CommissionCalculator";
 
 const C = UI_COLORS;
 
@@ -50,6 +51,12 @@ interface TutorData {
   monthlyData: MonthlyPoint[];
   subjectBreakdown: SubjectItem[];
   recentSessions: RecentSession[];
+  tutorRetentionStats?: {
+    totalStudentsWorkedWith: number;
+    repeatStudentCount: number;
+    rebookRate: number;
+    studentsWithRecurring: number;
+  };
 }
 
 interface StudentData {
@@ -65,6 +72,13 @@ interface StudentData {
   subjectBreakdown: SubjectItem[];
   tutorsWorkedWith: { name: string; sessions: number }[];
   recentSessions: RecentSession[];
+  retentionStats?: {
+    totalRelationships: number;
+    repeatRelationships: number;
+    activeRecurringArrangements: number;
+    retentionRate: number;
+    topRecurringArrangements: { tutorId: string; arrangement: string; sessionsCompleted: number }[];
+  };
 }
 
 type EarningsData = TutorData | StudentData;
@@ -121,6 +135,7 @@ export default function EarningsPage() {
   const { user }         = useAuth();
   const [data, setData]  = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCalculator, setShowCalculator] = useState(false);
   const guardStatus = useAppGuard();
 
   useEffect(() => {
@@ -162,15 +177,19 @@ export default function EarningsPage() {
 
   // Stat cards
   const statCards = isTutor ? [
-    { label: "Total Earnings",      value: `Rs. ${(tutorData?.stats.totalEarnings ?? 0).toLocaleString()}`, color: '#16a34a', bg: '#f0fdf4', icon: '💰' },
-    { label: "Sessions Completed",  value: tutorData?.stats.sessionsCount ?? 0,                             color: C.accent,  bg: '#EEF5FF', icon: '✅' },
-    { label: "Hours Taught",        value: `${tutorData?.stats.hoursTaught ?? 0} hrs`,                      color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
-    { label: "Subjects Taught",     value: tutorData?.stats.subjectsCount ?? 0,                             color: '#d97706', bg: '#fffbeb', icon: '📖' },
+    { label: "Total Earnings",   value: `Rs. ${(tutorData?.stats.totalEarnings ?? 0).toLocaleString()}`, color: '#16a34a', bg: '#f0fdf4', icon: '💰' },
+    { label: "Sessions Completed", value: tutorData?.stats.sessionsCount ?? 0,                              color: C.accent,  bg: '#EEF5FF', icon: '✅' },
+    { label: "Hours Taught",     value: `${tutorData?.stats.hoursTaught ?? 0} hrs`,                         color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
+    { label: "Subjects Taught",  value: tutorData?.stats.subjectsCount ?? 0,                                 color: '#d97706', bg: '#fffbeb', icon: '📖' },
+    { label: "Rebook Rate",      value: `${tutorData?.tutorRetentionStats?.rebookRate ?? 0}%`,                color: '#c81b7f', bg: '#fdf2f8', icon: '🔄' },
+    { label: "Repeat Students",  value: tutorData?.tutorRetentionStats?.repeatStudentCount ?? 0,             color: '#7c3aed', bg: '#f5f3ff', icon: '👥' },
   ] : [
-    { label: "Sessions Completed",  value: studentData?.stats.sessionsCount ?? 0,                           color: C.accent,  bg: '#EEF5FF', icon: '✅' },
-    { label: "Hours Learned",       value: `${studentData?.stats.hoursLearned ?? 0} hrs`,                   color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
-    { label: "Subjects Learned",    value: studentData?.stats.subjectsCount ?? 0,                           color: '#d97706', bg: '#fffbeb', icon: '📖' },
-    { label: "Tutors Worked With",  value: studentData?.stats.tutorsCount ?? 0,                             color: '#16a34a', bg: '#f0fdf4', icon: '👨‍🏫' },
+    { label: "Sessions Completed", value: studentData?.stats.sessionsCount ?? 0,                            color: C.accent,  bg: '#EEF5FF', icon: '✅' },
+    { label: "Hours Learned",     value: `${studentData?.stats.hoursLearned ?? 0} hrs`,                    color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
+    { label: "Subjects Learned",  value: studentData?.stats.subjectsCount ?? 0,                            color: '#d97706', bg: '#fffbeb', icon: '📖' },
+    { label: "Tutors Worked With", value: studentData?.stats.tutorsCount ?? 0,                              color: '#16a34a', bg: '#f0fdf4', icon: '👨‍🏫' },
+    { label: "Retention Rate",     value: `${studentData?.retentionStats?.retentionRate ?? 0}%`,              color: '#c81b7f', bg: '#fdf2f8', icon: '🔄' },
+    { label: "Repeat Tutors",     value: studentData?.retentionStats?.repeatRelationships ?? 0,               color: '#7c3aed', bg: '#f5f3ff', icon: '🌟' },
   ];
 
   return (
@@ -190,10 +209,16 @@ export default function EarningsPage() {
             </p>
           </div>
           {isTutor && (
-            <button onClick={handleDownloadPDF}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: C.primary, color: 'white', padding: '0.65rem 1.25rem', borderRadius: '0.5rem', border: 'none', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}>
-              <Download size={16} /> Download PDF Report
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
+              <button onClick={() => setShowCalculator(v => !v)}
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: showCalculator ? C.accent : "white", color: showCalculator ? "white" : C.primary, padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: `1.5px solid ${showCalculator ? C.accent : "#e5e7eb"}`, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                <Calculator size={16} /> {showCalculator ? "Hide Calculator" : "Rate Calculator"}
+              </button>
+              <button onClick={handleDownloadPDF}
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: C.primary, color: "white", padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: "none", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                <Download size={16} /> Download PDF
+              </button>
+            </div>
           )}
         </div>
 
@@ -244,6 +269,13 @@ export default function EarningsPage() {
                 <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#d97706', backgroundColor: 'white', padding: '0.35rem 0.85rem', borderRadius: '999px', border: '1px solid #fde68a' }}>
                   Pending Release
                 </span>
+              </div>
+            )}
+
+            {/* Commission Calculator — tutor only, toggleable */}
+            {isTutor && showCalculator && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <CommissionCalculator />
               </div>
             )}
 

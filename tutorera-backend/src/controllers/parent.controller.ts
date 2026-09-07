@@ -1,147 +1,152 @@
 import { Response } from "express";
-import { AuthRequest, IUser } from "../types";
+import { AuthRequest } from "../types";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
-import { logAudit } from "../utils/logAudit";
-import { sendNotification } from "../utils/socket";
-import logger from "../config/logger";
+import StudentProfile from "../models/StudentProfile.model";
+import Booking from "../models/Booking.model";
 
-// @desc    Link child account to parent
-// @route   POST /api/parent/link-child
-// @access  Private (parent)
-export const linkChild = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { childEmail, childName } = req.body;
-  const parentId = req.user?._id;
-
-  if (!childEmail) {
-    res.status(400).json({ success: false, message: "Child email is required." });
+export const getMyParentProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
     return;
   }
 
-  const child = await User.findOne({ email: childEmail.toLowerCase(), role: "student" });
-  if (!child) {
-    res.status(404).json({ success: false, message: "Student account not found with this email." });
-    return;
+  let profile = await ParentProfile.findOne({ user: req.user._id }).lean();
+
+  if (!profile) {
+    profile = await ParentProfile.create({ user: req.user._id, children: [] });
   }
 
-  if (child.parentGuardianEmail && child.parentGuardianEmail !== (req.user as any)?.email) {
-    res.status(400).json({ success: false, message: "This student account is already linked to another parent/guardian." });
-    return;
-  }
+  const childUserIds = (profile as any).children.map((c: any) => c.studentUser);
 
-  const parent = await User.findById(parentId);
-  if (!parent || (parent as IUser).role !== "parent") {
-    res.status(403).json({ success: false, message: "Only parent accounts can link children." });
-    return;
-  }
+  const childBookings = childUserIds.length > 0
+    ? await Booking.find({ student: { $in: childUserIds } })
+        .populate("tutor", "name")
+        .populate("request", "subject")
+        .sort("-createdAt")
+        .limit(20)
+        .lean()
+    : [];
 
-  if (!(parent as IUser).children?.includes(child._id)) {
-    (parent as IUser).children = [...((parent as IUser).children || []), child._id];
-    await parent.save();
-  }
+  const childProfiles = await StudentProfile.find({ user: { $in: childUserIds } }).lean();
+  const childMap: Record<string, any> = {};
+  for (const cp of childProfiles) childMap[cp.user.toString()] = cp;
 
-  child.parentGuardianEmail = ((req.user as IUser)?.email || "").toString();
-  child.parentGuardianName = req.user?.name;
-  child.parentConsentVerified = true;
-  await child.save();
-
-  await logAudit({
-    action: "parent_linked_child",
-    actor: req.user?.name || "Parent",
-    actorId: parentId?.toString(),
-    entity: "User",
-    targetId: child._id.toString(),
-    targetName: child.name,
+  res.status(200).json({
+    success: true,
+    profile: {
+      ...profile,
+      children: (profile as any).children.map((c: any) => ({
+        ...c,
+        studentProfile: childMap[c.studentUser?.toString()] || null,
+      })),
+    },
+    recentBookings: childBookings.map((b: any) => ({
+      _id: b._id,
+      studentName: (b.student as any)?.name || "Student",
+      tutorName: (b.tutor as any)?.name || "Tutor",
+      subject: (b.request as any)?.subject || "Tutoring",
+      amount: b.amount,
+      status: b.status,
+      teachingMode: b.teachingMode,
+      createdAt: b.createdAt,
+    })),
   });
-
-  const io = req.app.get("io");
-  await sendNotification(io, child._id.toString(), {
-    title: "Parent Account Linked",
-    message: `Your parent/guardian (${req.user?.name}) has linked their account to yours.`,
-    type: "general",
-    link: "/dashboard",
-  });
-
-  res.status(200).json({ success: true, message: "Child account linked successfully.", child: { _id: child._id, name: child.name, email: child.email } });
 };
 
-// @desc    Unlink child account from parent
-// @route   DELETE /api/parent/link-child/:childId
-// @access  Private (parent)
-export const unlinkChild = async (req: AuthRequest, res: Response): Promise<void> => {
-  const childId = Array.isArray(req.params.childId) ? req.params.childId[0] : req.params.childId;
-  const parentId = req.user?._id;
-
-  const parent = await User.findById(parentId);
-  if (!parent || (parent as IUser).role !== "parent") {
-    res.status(403).json({ success: false, message: "Only parent accounts can unlink children." });
+export const addChildAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
     return;
   }
 
-  parent.children = ((parent as IUser).children || []).filter((id: any) => id.toString() !== childId);
-  await parent.save();
+  const { studentUserId, name, level, subjects, relationship } = req.body;
 
-  const child = await User.findById(childId);
-  if (child) {
-    child.parentGuardianEmail = undefined as any;
-    child.parentGuardianName = undefined as any;
-    child.parentConsentVerified = false;
-    await child.save();
+  if (!studentUserId || !name) {
+    res.status(400).json({ success: false, message: "studentUserId and name are required." });
+    return;
   }
 
-  await logAudit({
-    action: "parent_unlinked_child",
-    actor: req.user?.name || "Parent",
-    actorId: parentId?.toString(),
-    entity: "User",
-    targetId: childId,
-  });
+  const student = await User.findById(studentUserId);
+  if (!student || student.role !== "student") {
+    res.status(404).json({ success: false, message: "Student account not found." });
+    return;
+  }
 
-  res.status(200).json({ success: true, message: "Child account unlinked successfully." });
+  let profile = await ParentProfile.findOne({ user: req.user._id });
+  if (!profile) {
+    profile = await ParentProfile.create({ user: req.user._id, children: [] });
+  }
+
+  const alreadyLinked = profile.children.some(
+    (c) => c.studentUser?.toString() === studentUserId
+  );
+  if (alreadyLinked) {
+    res.status(409).json({ success: false, message: "This student account is already linked." });
+    return;
+  }
+
+  profile.children.push({
+    studentUser: new (require("mongoose").Types.ObjectId)(studentUserId),
+    name: name.trim(),
+    level: level || "",
+    subjects: subjects || [],
+    relationship: relationship || "child",
+  } as any);
+
+  await profile.save();
+
+  res.status(200).json({ success: true, message: "Child account linked.", profile });
 };
 
-// @desc    Get linked children for parent
-// @route   GET /api/parent/children
-// @access  Private (parent)
-export const getMyChildren = async (req: AuthRequest, res: Response): Promise<void> => {
-  const parentId = req.user?._id;
-
-  const parent = await User.findById(parentId).populate("children", "name email phone city createdAt role isMinor");
-  if (!parent || (parent as IUser).role !== "parent") {
-    res.status(403).json({ success: false, message: "Only parent accounts can view linked children." });
+export const removeChildAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
     return;
   }
 
-  const children = await Promise.all(
-    (parent.children || []).map(async (child: any) => {
-      const bookings = await (await import("../models/Booking.model")).default.find({ student: child._id, status: { $in: ["upcoming", "ongoing"] } })
-        .populate("tutor", "name avatar")
-        .populate("request", "subject level")
-        .sort("-createdAt")
-        .lean();
+  const { childId } = req.params;
 
-      const requests = await (await import("../models/Request.model")).default.find({ student: child._id, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } })
-        .sort("-createdAt")
-        .lean();
+  const profile = await ParentProfile.findOne({ user: req.user._id });
+  if (!profile) {
+    res.status(404).json({ success: false, message: "Parent profile not found." });
+    return;
+  }
 
-      return {
-        _id: child._id,
-        name: child.name,
-        email: child.email,
-        phone: child.phone,
-        city: child.city,
-        isMinor: child.isMinor,
-        upcomingBookings: bookings.length,
-        activeRequests: requests.length,
-        recentBookings: bookings.slice(0, 5).map((b: any) => ({
-          _id: b._id,
-          subject: b.request?.subject || "General",
-          tutorName: b.tutor?.name || "Tutor",
-          status: b.status,
-          createdAt: b.createdAt,
-        })),
-      };
-    })
+  const before = profile.children.length;
+  profile.children = profile.children.filter(
+    (c) => c._id?.toString() !== childId
   );
 
-  res.status(200).json({ success: true, children });
+  if (profile.children.length === before) {
+    res.status(404).json({ success: false, message: "Child account not found." });
+    return;
+  }
+
+  await profile.save();
+
+  res.status(200).json({ success: true, message: "Child account removed." });
+};
+
+export const updateParentSettings = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
+    return;
+  }
+
+  const { approvalRequiredForBookings, spendingLimitMonthly, notificationsEnabled } = req.body;
+
+  const profile = await ParentProfile.findOneAndUpdate(
+    { user: req.user._id },
+    {
+      $set: {
+        ...(approvalRequiredForBookings !== undefined && { approvalRequiredForBookings }),
+        ...(spendingLimitMonthly !== undefined && { spendingLimitMonthly }),
+        ...(notificationsEnabled !== undefined && { notificationsEnabled }),
+      },
+    },
+    { new: true, upsert: true }
+  );
+
+  res.status(200).json({ success: true, profile });
 };

@@ -568,9 +568,15 @@ export default async function TutorProfilePage({ params }: Props) {
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <Clock size={16} color="#0329B2" /> {tutor.experience || 0} years experience
                 </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#166534" }}>
-                  <Zap size={15} color="#16a34a" /> Fast Responder
-                </span>
+                {tutor.averageResponseMinutes !== undefined && tutor.averageResponseMinutes > 0 ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#7c3aed" }}>
+                    <Zap size={15} color="#7c3aed" /> Responds in ~{tutor.responseTimeFormatted || `${Math.round(tutor.averageResponseMinutes)}m`}
+                  </span>
+                ) : (
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#166534" }}>
+                    <Zap size={15} color="#16a34a" /> Fast Responder
+                  </span>
+                )}
               </div>
             </div>
 

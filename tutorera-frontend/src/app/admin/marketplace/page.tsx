@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 type Metrics = Record<string, number | null>;
 type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; student?: { name?: string } };
@@ -63,6 +64,7 @@ export default function Page() {
   const [selected, setSelected] = useState<{ offer: OfferRow; history: HistoryRow[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const modalRef = useFocusTrap(Boolean(selected), () => setSelected(null));
 
   useEffect(() => {
     let cancelled = false;
@@ -154,9 +156,9 @@ export default function Page() {
       </section>
 
       {selected && (
-        <div role="dialog" aria-modal="true" aria-label="Offer detail" style={overlay}>
+        <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Offer detail" style={overlay}>
           <div style={modal}>
-            <button onClick={() => setSelected(null)} style={{ ...button, marginLeft: "auto", display: "block" }}>Close</button>
+            <button onClick={() => setSelected(null)} aria-label="Close offer detail" style={{ ...button, marginLeft: "auto", display: "block" }}>Close</button>
             <h2 style={sectionTitle}>Negotiation Inspection</h2>
             <p style={muted}>{selected.offer.tutor?.name || "Tutor"} - {selected.offer.status || "status pending"} - {formatPKR(selected.offer.amount)}/{selected.offer.pricingUnit || "hour"}</p>
             <ol style={{ borderLeft: `2px solid ${UI_COLORS.accentLight}`, paddingLeft: 20 }}>

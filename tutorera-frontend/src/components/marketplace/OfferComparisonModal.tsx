@@ -69,6 +69,7 @@ export default function OfferComparisonModal({
   const [selectedOfferId, setSelectedOfferId] = useState<string>(offers[0]?._id || "");
   const [counteringOfferId, setCounteringOfferId] = useState<string | null>(null);
   const [counterAmount, setCounterAmount] = useState<string>("");
+  const [showGuaranteeConfirm, setShowGuaranteeConfirm] = useState<string | null>(null);
   const modalRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -148,8 +149,8 @@ export default function OfferComparisonModal({
               border: "none",
               color: "white",
               borderRadius: "50%",
-              width: "32px",
-              height: "32px",
+              width: "44px",
+              height: "44px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -307,7 +308,7 @@ export default function OfferComparisonModal({
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                       <button
                         type="button"
-                        onClick={() => onAcceptOffer(offer._id)}
+                        onClick={() => setShowGuaranteeConfirm(offer._id)}
                         style={{
                           background: "#0329b2",
                           color: "white",
@@ -367,6 +368,70 @@ export default function OfferComparisonModal({
             Done Comparing
           </button>
         </div>
+
+        {/* Guarantee Confirmation Dialog */}
+        {showGuaranteeConfirm && (
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(2,21,80,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            borderRadius: "1rem",
+            backdropFilter: "blur(2px)",
+          }}>
+            <div style={{
+              background: "white",
+              borderRadius: "1rem",
+              padding: "1.5rem",
+              maxWidth: "420px",
+              width: "90%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+                <div style={{ background: "#ecfdf5", borderRadius: "50%", padding: "0.6rem" }}>
+                  <ShieldCheck size={24} color="#10b981" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#021550" }}>TUTORERA Satisfaction Guarantee</h3>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>Powered by secure platform checkout</p>
+                </div>
+              </div>
+
+              <div style={{ background: "#f8fafc", borderRadius: "0.75rem", padding: "1rem", marginBottom: "1rem", fontSize: "0.83rem", color: "#334155", lineHeight: 1.6 }}>
+                <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#021550" }}>Your booking is protected:</p>
+                <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <li>First session protection — full refund if not satisfied</li>
+                  <li>Verified tutor credentials before booking</li>
+                  <li>Secure payment processing via Rapid Gateway</li>
+                  <li>Dispute resolution support</li>
+                  <li>0% platform fee — price shown is what tutor receives</li>
+                </ul>
+              </div>
+
+              <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "1rem", lineHeight: 1.5 }}>
+                By proceeding, you agree to TUTORERA's <a href="/terms" style={{ color: "#0329b2" }}>Terms of Service</a> and <a href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</a> policy.
+              </p>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  onClick={() => setShowGuaranteeConfirm(null)}
+                  style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0", background: "white", color: "#334155", fontWeight: 600, cursor: "pointer", fontSize: "0.85rem" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowGuaranteeConfirm(null); onAcceptOffer(showGuaranteeConfirm); }}
+                  style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: "none", background: "#10b981", color: "white", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}
+                >
+                  Confirm Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

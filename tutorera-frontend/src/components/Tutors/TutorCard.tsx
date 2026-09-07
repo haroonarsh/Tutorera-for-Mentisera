@@ -181,8 +181,8 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
         </span>
       </div>
 
-      {/* Quality tier */}
-      <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      {/* Quality tier + Response time */}
+      <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
         <span style={{
           fontSize: '0.7rem',
           fontWeight: 700,
@@ -196,6 +196,27 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
           {qualityTier}
         </span>
         <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{qualityScore}/100</span>
+
+        {tutor.averageResponseMinutes !== undefined && tutor.averageResponseMinutes > 0 && (
+          <span style={{
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            padding: '0.15rem 0.5rem',
+            borderRadius: '999px',
+            backgroundColor: '#f5f3ff',
+            color: '#7c3aed',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+          }}
+          title={`Responds in ~${tutor.responseTimeFormatted || Math.round(tutor.averageResponseMinutes)} on average`}
+          >
+            <svg width="10" height="10" viewBox="0 0 20 20" fill="#7c3aed" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+            </svg>
+            ~{tutor.responseTimeFormatted || `${Math.round(tutor.averageResponseMinutes)}m`}
+          </span>
+        )}
       </div>
 
       {/* Bio */}

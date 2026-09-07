@@ -17,6 +17,7 @@ import {
   getCountryByCode,
   getCitiesForCountry,
 } from "@/lib/countries";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 
 interface CountryCityPickerModalProps {
@@ -53,6 +54,7 @@ export default function CountryCityPickerModal({
   const [countryQuery, setCountryQuery] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [customCityInput, setCustomCityInput] = useState("");
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   const filteredCountries = useMemo(() => {
     const list = countriesProp || COUNTRIES;
@@ -111,6 +113,7 @@ export default function CountryCityPickerModal({
 
   return (
     <div
+      ref={modalRef}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -176,23 +179,23 @@ export default function CountryCityPickerModal({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close location selector"
-            style={{
-              background: "#f1f5f9",
-              border: "none",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#64748b",
-            }}
-          >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close location selector"
+              style={{
+                background: "#f1f5f9",
+                border: "none",
+                borderRadius: "50%",
+                width: "44px",
+                height: "44px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#64748b",
+              }}
+            >
             <X size={18} />
           </button>
         </div>

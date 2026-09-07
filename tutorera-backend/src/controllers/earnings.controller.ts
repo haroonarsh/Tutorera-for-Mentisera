@@ -7,6 +7,7 @@ import sendEmail from "../utils/sendEmail";
 import { payoutProcessedEmail } from "../utils/emailTemplates";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
+import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -78,6 +79,22 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       createdAt:   b.createdAt,
     }));
 
+    // Tutor retention metrics — how many students rebook
+    const tutorRelationships = await StudentTutorRelationship.find({ tutor: userId });
+    const repeatStudents = tutorRelationships.filter(r => r.repeatBookingCount > 0);
+    const studentsWithRecurring = tutorRelationships.filter(r => r.currentRecurringArrangement && r.currentRecurringArrangement !== "none");
+    const rebookRate = tutorRelationships.length > 0
+      ? Math.round((repeatStudents.length / tutorRelationships.length) * 100)
+      : 0;
+    const repeatStudentCount = repeatStudents.length;
+
+    const tutorRetentionStats = {
+      totalStudentsWorkedWith: tutorRelationships.length,
+      repeatStudentCount,
+      rebookRate,
+      studentsWithRecurring: studentsWithRecurring.length,
+    };
+
     res.status(200).json({
       success: true,
       role: "tutor",
@@ -92,6 +109,7 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       monthlyData,
       subjectBreakdown,
       recentSessions,
+      tutorRetentionStats,
     });
     return;
   }
@@ -157,6 +175,26 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
     createdAt: b.createdAt,
   }));
 
+  // Student retention metrics from relationship model
+  const relationships = await StudentTutorRelationship.find({ student: userId });
+  const repeatRelationships = relationships.filter(r => r.repeatBookingCount > 0);
+  const activeRecurring = relationships.filter(r => r.currentRecurringArrangement && r.currentRecurringArrangement !== "none");
+  const retentionRate = relationships.length > 0
+    ? Math.round((repeatRelationships.length / relationships.length) * 100)
+    : 0;
+
+  const retentionStats = {
+    totalRelationships: relationships.length,
+    repeatRelationships: repeatRelationships.length,
+    activeRecurringArrangements: activeRecurring.length,
+    retentionRate,
+    topRecurringArrangements: activeRecurring.slice(0, 5).map(r => ({
+      tutorId: r.tutor,
+      arrangement: r.currentRecurringArrangement,
+      sessionsCompleted: r.completedBookings,
+    })),
+  };
+
   res.status(200).json({
     success: true,
     role: "student",
@@ -171,6 +209,7 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
     subjectBreakdown,
     tutorsWorkedWith,
     recentSessions,
+    retentionStats,
   });
 };
 

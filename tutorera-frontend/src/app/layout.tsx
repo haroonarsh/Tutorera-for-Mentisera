@@ -8,6 +8,7 @@ import ConditionalLayout from "@/components/ConditionalLayout";
 import LazyWidgets from "@/components/LazyWidgets";
 import { Toaster } from "react-hot-toast";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import SkipLink from "@/components/SkipLink";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -203,10 +204,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={inter.className}>
-        {/* WCAG 2.2 SC 2.4.1 Skip to Main Content Landmark */}
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
+        <SkipLink />
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe

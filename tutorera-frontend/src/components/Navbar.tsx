@@ -157,7 +157,7 @@ export default function Navbar() {
 
   return (
     <header ref={navRef} className={s.header}>
-      <nav className={s.nav} aria-label="Main navigation">
+      <nav id="main-nav" className={s.nav} aria-label="Main navigation">
         <BrandLogo className={s.logo} imageClassName={s.logoImage} priority />
 
         {/* Desktop Main Links */}

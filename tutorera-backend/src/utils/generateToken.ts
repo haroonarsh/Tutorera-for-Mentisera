@@ -38,6 +38,7 @@ export const sendTokenResponse = (
       name: user.name,
       email: user.email,
       role: user.role,
+      accountStatus: user.accountStatus || "registered",
       isVerified: user.isVerified,
       isApproved: user.isApproved,
       avatar: user.avatar,

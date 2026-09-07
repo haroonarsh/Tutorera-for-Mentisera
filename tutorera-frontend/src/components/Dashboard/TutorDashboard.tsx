@@ -15,7 +15,8 @@ import { showSuccess, showError } from "@/lib/toast";
 import { formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
-import { Sparkles } from "lucide-react";
+import CommissionCalculator from "./CommissionCalculator";
+import { Sparkles, Calculator } from "lucide-react";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 
 const C = UI_COLORS;
@@ -588,7 +589,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
 
 // ─── Tutor Dashboard ──────────────────────────────────────────────────────────
 
-type Tab = "bookings" | "recommended" | "browse" | "profile";
+type Tab = "bookings" | "recommended" | "browse" | "profile" | "calculator";
 
 interface Props {
   userId: string;
@@ -615,7 +616,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
-    if (requestedTab === "bookings" || requestedTab === "recommended" || requestedTab === "browse" || requestedTab === "profile") {
+    if (["bookings", "recommended", "browse", "profile", "calculator"].includes(requestedTab as string)) {
       setTab(requestedTab as Tab);
     }
   }, []);
@@ -881,6 +882,14 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   <Link href="/offers" className={s.tab}>My Offers & Negotiations</Link>
   <Link href="/chat" className={s.tab}>Messages</Link>
   <Link href="/earnings" className={s.tab}>Earnings</Link>
+  <button
+    onClick={() => setTab("calculator")}
+    aria-current={tab === "calculator" ? "true" : undefined}
+    className={`${s.tab} ${tab === "calculator" ? s.tabActive : ""}`}
+  >
+    <Calculator size={14} />
+    Rate Calculator
+  </button>
   <Link href="/notifications" className={s.tab}>Notifications</Link>
   <Link href="/settings" className={s.tab}>Settings</Link>
 </nav>
@@ -1053,6 +1062,21 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             ) : (
               <ProfileSection profile={profile} />
             )}
+          </section>
+        )}
+
+        {/* Tab: Rate Calculator */}
+        {tab === "calculator" && (
+          <section aria-label="Commission and earnings calculator">
+            <div className={s.sectionHeader}>
+              <div>
+                <h2 className={s.sectionTitle}>Commission Calculator</h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+                  See exactly what you take home after TUTORERA fees — before you accept any booking.
+                </p>
+              </div>
+            </div>
+            <CommissionCalculator />
           </section>
         )}
       </div>

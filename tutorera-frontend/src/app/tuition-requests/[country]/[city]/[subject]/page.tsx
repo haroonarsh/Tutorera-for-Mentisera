@@ -1,75 +1,71 @@
-import { Metadata } from "next";
-import TuitionRequestsClient from "../../TuitionRequestsClient";
+import type { Metadata } from "next";
+import TuitionRequestsExplorer from "@/components/TuitionRequests/TuitionRequestsExplorer";
+import { fetchRequests } from "@/lib/tuition-requests";
+import type { RequestFilters } from "@/lib/tuition-requests";
+import { CITIES, SUBJECTS } from "@/lib/tutor-directory";
 
-interface Props {
+type Props = {
   params: Promise<{ country: string; city: string; subject: string }>;
-}
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 const COUNTRY_NAMES: Record<string, string> = {
-  pk: "Pakistan",
-  ae: "United Arab Emirates",
-  sa: "Saudi Arabia",
-  gb: "United Kingdom",
-  us: "United States",
+  PK: "Pakistan", AE: "UAE", SA: "Saudi Arabia", GB: "United Kingdom",
 };
 
-const CITY_DISPLAY_NAMES: Record<string, string> = {
-  lahore: "Lahore",
-  islamabad: "Islamabad & Rawalpindi",
-  karachi: "Karachi",
-  faisalabad: "Faisalabad",
-  multan: "Multan",
-  peshawar: "Peshawar",
-  quetta: "Quetta",
-  dubai: "Dubai",
-  "abu-dhabi": "Abu Dhabi",
-  sharjah: "Sharjah",
-  riyadh: "Riyadh",
-  jeddah: "Jeddah",
-  london: "London",
-  manchester: "Manchester",
-};
-
-function titleCaseSlug(slug: string): string {
-  return slug
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function slugToLabel(slug: string, map: Record<string, string>): string {
+  return map[slug] || slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country, city, subject } = await params;
-  const countryName = COUNTRY_NAMES[country.toLowerCase()] || country.toUpperCase();
-  const cityDisplay = CITY_DISPLAY_NAMES[city.toLowerCase()] || titleCaseSlug(city);
-  const subjectDisplay = titleCaseSlug(subject);
-
-  return {
-    title: `${subjectDisplay} Tuition Requests in ${cityDisplay}, ${countryName} | TUTORERA`,
-    description: `Browse privacy-safe active ${subjectDisplay} tuition requests in ${cityDisplay}, ${countryName}. Students post requirements; verified tutors send structured offers.`,
-    alternates: {
-      canonical: `/tuition-requests/${country}/${city}/${subject}`,
-    },
-    openGraph: {
-      title: `${subjectDisplay} Tutor Demand in ${cityDisplay} | TUTORERA`,
-      description: `Real student demand for ${subjectDisplay} tutoring in ${cityDisplay}. No phone numbers, emails, exact addresses, or minor identities are published.`,
-      type: "website",
-    },
-  };
+  const countryName = COUNTRY_NAMES[country.toUpperCase()] || country;
+  const cityLabel = slugToLabel(city, CITIES);
+  const subjectLabel = slugToLabel(subject, SUBJECTS);
+  const title = `${subjectLabel} Tuition in ${cityLabel}, ${countryName} | TUTORERA`;
+  const description = `Browse open ${subjectLabel} tuition requests from students in ${cityLabel}, ${countryName}. Submit your offer today.`;
+  return { title, description, alternates: { canonical: `/tuition-requests/${country}/${city}/${subject}` } };
 }
 
-export default async function SubjectCityTuitionRequestsPage({ params }: Props) {
+export default async function SubjectTuitionRequestsPage({ params, searchParams }: Props) {
   const { country, city, subject } = await params;
-  const countryName = COUNTRY_NAMES[country.toLowerCase()] || country.toUpperCase();
-  const cityDisplay = CITY_DISPLAY_NAMES[city.toLowerCase()] || titleCaseSlug(city);
-  const subjectDisplay = titleCaseSlug(subject);
+  const sp = await searchParams;
+  const cityLabel = slugToLabel(city, CITIES);
+  const subjectLabel = slugToLabel(subject, SUBJECTS);
+  const countryName = COUNTRY_NAMES[country.toUpperCase()] || country;
+
+  const filters: RequestFilters = {
+    city: cityLabel,
+    country: country.toUpperCase(),
+    subject: subjectLabel,
+    level: typeof sp.level === "string" ? sp.level : "",
+    teachingMode: typeof sp.teachingMode === "string" ? sp.teachingMode : "",
+    page: typeof sp.page === "string" ? sp.page : "1",
+  };
+
+  const result = await fetchRequests(filters, 12);
 
   return (
-    <TuitionRequestsClient
-      countryCode={country.toUpperCase()}
-      countryName={countryName}
-      cityName={cityDisplay}
-      subjectName={subjectDisplay}
-    />
+    <div>
+      <div style={{ background: "linear-gradient(135deg, #021550 0%, #0329B2 100%)", color: "white", padding: "2rem 1rem", textAlign: "center" }}>
+        <p style={{ opacity: 0.7, fontSize: "0.875rem", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tuition Requests</p>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: "0 0 0.4rem" }}>{subjectLabel} in {cityLabel}, {countryName}</h1>
+        <p style={{ opacity: 0.85, fontSize: "0.9rem" }}>Browse {result.total.toLocaleString()} open {subjectLabel} request{result.total !== 1 ? "s" : ""} from students in {cityLabel}</p>
+      </div>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "1rem" }}>
+        <div style={{ marginBottom: "1rem", display: "flex", gap: "0.75rem", fontSize: "0.875rem" }}>
+          <a href="/tuition-requests" style={{ color: "#0329b2", textDecoration: "none" }}>All Requests</a>
+          <span style={{ color: "#94a3b8" }}>/</span>
+          <a href={`/tuition-requests/${country}/${city}`} style={{ color: "#0329b2", textDecoration: "none" }}>{cityLabel}</a>
+          <span style={{ color: "#94a3b8" }}>/</span>
+          <span style={{ color: "#64748b" }}>{subjectLabel}</span>
+        </div>
+        <TuitionRequestsExplorer
+          initialRequests={result.requests}
+          initialPagination={{ total: result.total, page: result.page, pages: result.pages }}
+          initialFilters={filters}
+        />
+      </div>
+    </div>
   );
 }

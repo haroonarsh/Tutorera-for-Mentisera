@@ -187,7 +187,7 @@ export default function AIChatWidget() {
               onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
             />
             <button title="button" onClick={() => sendMessage(input)} disabled={loading || !input.trim()}
-              style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: loading || !input.trim() ? '#e5e7eb' : '#0329B2', border: 'none', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s' }}>
+              style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: loading || !input.trim() ? '#e5e7eb' : '#0329B2', border: 'none', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s' }}>
               <svg width={16} height={16} viewBox="0 0 20 20" fill={loading || !input.trim() ? '#9ca3af' : 'white'}>
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
               </svg>

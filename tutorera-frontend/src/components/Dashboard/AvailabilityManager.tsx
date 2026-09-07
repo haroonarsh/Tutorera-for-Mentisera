@@ -110,7 +110,8 @@ export default function AvailabilityManager() {
                       {TIME_OPTIONS.filter(t => t > slot.startTime).map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <button onClick={() => removeSlot(realIndex)}
-                      style={{ padding: '0.3rem 0.5rem', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '0.375rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>
+                      aria-label="Remove time slot"
+                      style={{ padding: '0.4rem 0.6rem', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '0.375rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700, minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ×
                     </button>
                   </div>

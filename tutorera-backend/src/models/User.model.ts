@@ -92,6 +92,11 @@ const userSchema = new Schema<IUser>(
       enum: ["local", "google"],
       default: "local",
     },
+    accountStatus: {
+      type: String,
+      enum: ["registered", "onboarding", "profile_complete", "submitted", "verified", "rejected"],
+      default: "registered",
+    },
 
     // ── Tutor Application Tracking ──
     applicationId: { type: String, unique: true, sparse: true, index: true },

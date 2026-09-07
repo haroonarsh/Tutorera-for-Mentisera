@@ -236,12 +236,15 @@ export default function LiveRequestPopup() {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#94a3b8",
+                color: "#94a9b8",
                 cursor: "pointer",
-                padding: "2px",
+                padding: "8px",
                 display: "flex",
                 alignItems: "center",
-                borderRadius: "4px",
+                justifyContent: "center",
+                borderRadius: "6px",
+                minWidth: "44px",
+                minHeight: "44px",
               }}
             >
               <X size={15} />

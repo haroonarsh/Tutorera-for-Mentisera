@@ -40,7 +40,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const user = await User.create({ name, email, password, role, phone, city });
+  const user = await User.create({ name, email, password, role, phone, city, accountStatus: "registered" });
 
   let trackingToken: string | undefined;
   if (user.role === "tutor") {

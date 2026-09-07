@@ -21,6 +21,7 @@ import { paymentProvider } from "../services/paymentProvider.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
+import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -480,6 +481,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
 
   await Request.updateOne({ _id: request._id, status: { $in: ["open", "published"] } }, { status: "receiving_offers" });
   await incrementBidCount(req.user?._id?.toString() || "");
+  computeAndStoreTutorResponseTime(req.user?._id?.toString() || "").catch(() => {});
 
   // Notify student
   const io = req.app.get("io");
@@ -960,6 +962,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     { user: req.user?._id, type: "direct_booking", completedAt: { $exists: false } },
     { $set: { completedAt: new Date() } }
   );
+  computeAndStoreTutorResponseTime(tutorId).catch(() => {});
 
   const io = req.app.get("io");
   await sendNotification(io, tutorId, {

@@ -1,11 +1,17 @@
 import { Router } from "express";
 import { protect } from "../middlewares/auth.middleware";
-import { linkChild, unlinkChild, getMyChildren } from "../controllers/parent.controller";
+import {
+  getMyParentProfile,
+  addChildAccount,
+  removeChildAccount,
+  updateParentSettings,
+} from "../controllers/parent.controller";
 
 const router = Router();
 
-router.post("/link-child", protect, linkChild);
-router.delete("/link-child/:childId", protect, unlinkChild);
-router.get("/children", protect, getMyChildren);
+router.get("/profile", protect, getMyParentProfile);
+router.post("/children", protect, addChildAccount);
+router.delete("/children/:childId", protect, removeChildAccount);
+router.patch("/settings", protect, updateParentSettings);
 
 export default router;

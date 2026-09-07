@@ -7,7 +7,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  role: "student" | "tutor" | "admin" | "pending";
+  role: "student" | "tutor" | "admin" | "pending" | "parent";
   avatar?: string;
   plan: string;
   isVerified: boolean;
@@ -29,7 +29,7 @@ interface RegisterData {
   name: string;
   email: string;
   password: string;
-  role: "student" | "tutor";
+  role: "student" | "tutor" | "parent";
   phone?: string;
   city?: string;
 }
@@ -39,7 +39,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
-  loginWithGoogle: (idToken: string, role?: "student" | "tutor") => Promise<GoogleAuthResult>;
+  loginWithGoogle: (idToken: string, role?: "student" | "tutor" | "parent") => Promise<GoogleAuthResult>;
   selectRole: (role: "student" | "tutor") => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginWithGoogle = async (
     idToken: string,
-    role?: "student" | "tutor"
+    role?: "student" | "tutor" | "parent"
   ): Promise<GoogleAuthResult> => {
     const res = await api.post("/auth/google", { idToken, role });
     localStorage.setItem("token", res.data.token);

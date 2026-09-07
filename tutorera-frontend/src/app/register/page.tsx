@@ -15,7 +15,7 @@ const C = UI_COLORS;
 const cities = ["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Quetta", "Multan", "Faisalabad"];
 
 function RegisterForm() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor", phone: "", city: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "" });
   const [referralCode, setReferralCode] = useState("");
   const [referralApplied, setReferralApplied] = useState(false);
   const [referralMsg, setReferralMsg] = useState("");
@@ -57,6 +57,8 @@ function RegisterForm() {
     // Redirect based on role
     if (form.role === "tutor") {
       router.push("/onboarding/tutor");
+    } else if (form.role === "parent") {
+      router.push("/dashboard");
     } else {
       router.push("/onboarding/student");
     }
@@ -78,6 +80,8 @@ function RegisterForm() {
         router.push("/onboarding/tutor");
       } else if (user.role === "student") {
         router.push("/onboarding/student");
+      } else if (user.role === "parent") {
+        router.push("/dashboard");
       } else if (user.role === "admin") {
         router.push("/admin");
       } else {
@@ -101,10 +105,10 @@ function RegisterForm() {
 
         {/* Role Toggle */}
         <div style={{ display: 'flex', backgroundColor: '#f3f4f6', borderRadius: '0.625rem', padding: '0.25rem', marginBottom: '1.5rem' }}>
-          {(["student", "tutor"] as const).map((role) => (
+          {(["student", "tutor", "parent"] as const).map((role) => (
             <button key={role} type="button" onClick={() => setForm({ ...form, role })}
               style={{ flex: 1, padding: '0.6rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', transition: 'all 0.2s', backgroundColor: form.role === role ? 'white' : 'transparent', color: form.role === role ? C.primary : C.gray500, boxShadow: form.role === role ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
-              I'm a {role}
+              {role === "parent" ? "Parent / Guardian" : `I'm a ${role}`}
             </button>
           ))}
         </div>
@@ -205,7 +209,7 @@ function RegisterForm() {
 
           <button type="submit" disabled={loading}
             style={{ backgroundColor: loading ? '#93c5fd' : C.accent, color: 'white', padding: '0.85rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '0.25rem' }}>
-            {loading ? "Creating account..." : `Create ${form.role} account`}
+            {loading ? "Creating account..." : `Create ${form.role === "parent" ? "parent" : form.role} account`}
           </button>
         </form>
         
@@ -215,7 +219,7 @@ function RegisterForm() {
           <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
         </div>
 
-        <GoogleButton onToken={handleGoogleToken} text="signup_with" roleLabel={form.role === "tutor" ? "Tutor" : "Student"} />
+        <GoogleButton onToken={handleGoogleToken} text="signup_with" roleLabel={form.role === "tutor" ? "Tutor" : form.role === "parent" ? "Parent/Guardian" : "Student"} />
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: C.gray500 }}>
           Already have an account?{" "}

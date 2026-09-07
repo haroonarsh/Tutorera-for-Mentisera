@@ -92,6 +92,8 @@ export interface ITutorProfile extends Document {
   // Stats
   averageRating: number;
   totalReviews: number;
+  averageResponseMinutes: number;
+  lastActiveAt: Date;
 
   createdAt: Date;
   updatedAt: Date;
@@ -196,8 +198,30 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     // Stats
     averageRating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
+    averageResponseMinutes: { type: Number, default: 0 },
+    lastActiveAt: { type: Date },
   },
   { timestamps: true }
 );
+
+function policeIsRequired(profile: ITutorProfile): boolean {
+  const inPerson = profile.teachingMode === "in-person" || profile.teachingMode === "both";
+  const homeCountries = ["PK", "SA", "AE"];
+  const country = profile.countryCode || "PK";
+  return inPerson && homeCountries.includes(country);
+}
+
+tutorProfileSchema.pre("save", function () {
+  const p = this as ITutorProfile;
+  const allApproved =
+    p.verificationStatus === "approved" &&
+    p.cnicVerificationStatus === "approved" &&
+    p.degreeVerificationStatus === "approved" &&
+    p.demoVideoStatus === "approved" &&
+    (!policeIsRequired(p) || p.policeVerificationStatus === "approved");
+  if (allApproved && !p.isVerified) {
+    p.isVerified = true;
+  }
+});
 
 export default mongoose.model<ITutorProfile>("TutorProfile", tutorProfileSchema);

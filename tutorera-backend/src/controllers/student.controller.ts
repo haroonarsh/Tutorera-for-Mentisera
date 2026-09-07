@@ -3,6 +3,7 @@ import { AuthRequest } from "../types";
 import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
+import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import { Types } from "mongoose";
 
 // @desc    Save student onboarding
@@ -37,6 +38,8 @@ export const saveStudentOnboarding = async (
     },
     { upsert: true, new: true }
   );
+
+  await advanceAccountStatus(req.user!._id.toString(), "profile_complete");
 
   res.status(200).json({
     success: true,

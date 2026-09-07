@@ -132,14 +132,14 @@ export default function SlotPicker({ tutorUserId, onSlotSelect, selectedSlot }: 
         <button
           onClick={() => setWeekOffset(0)}
           disabled={weekOffset === 0}
-          style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 0 ? '#F5F7FF' : 'white', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
+          style={{ width: 44, height: 44, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 0 ? '#F5F7FF' : 'white', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
           ←
         </button>
         <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#021550' }}>{weekLabel}</span>
         <button
           onClick={() => setWeekOffset(1)}
           disabled={weekOffset === 1 || week2Days.length === 0}
-          style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 1 || week2Days.length === 0 ? '#F5F7FF' : 'white', cursor: weekOffset === 1 || week2Days.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 1 || week2Days.length === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
+          style={{ width: 44, height: 44, borderRadius: '50%', border: '1.5px solid #e5e7eb', backgroundColor: weekOffset === 1 || week2Days.length === 0 ? '#F5F7FF' : 'white', cursor: weekOffset === 1 || week2Days.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: weekOffset === 1 || week2Days.length === 0 ? '#d1d5db' : '#374151', fontSize: '1rem' }}>
           →
         </button>
       </div>

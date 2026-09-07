@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShieldCheck, UserCheck, Lock, Award, Eye, ArrowRight, Sparkles } from "lucide-react";
+import TrustBadges from "./TrustBadges";
 
 const trustPillars = [
   {
@@ -56,6 +57,8 @@ export default function TrustSafetySection() {
             TUTORERA eliminates informal tuition uncertainties by establishing verified standards for both in-person and online learning worldwide and locally.
           </p>
         </div>
+
+        <TrustBadges />
 
         <div style={{
           display: "grid",

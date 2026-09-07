@@ -5,6 +5,7 @@ import { Document, Types } from "mongoose";
 export type UserRole = "student" | "tutor" | "admin" | "pending" | "parent";
 export type UserPlan = "free" | "standard" | "premium";
 export type AuthProvider = "local" | "google";
+export type AccountStatus = "registered" | "onboarding" | "profile_complete" | "submitted" | "verified" | "rejected";
 
 // User Document Interface
 export interface IUser extends Document {
@@ -42,6 +43,7 @@ export interface IUser extends Document {
   trackingTokenCreatedAt?: Date;
   trackingTokenRotatedAt?: Date;
   applicationSubmittedAt?: Date;
+  accountStatus?: AccountStatus;
 
   // ── Legal, Privacy & Compliance ──
   legalTermsVersionAccepted?: string;

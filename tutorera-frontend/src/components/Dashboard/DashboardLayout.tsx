@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          style={{ background: 'none', border: '1px solid #e5e7eb', cursor: 'pointer', color: C.gray500, borderRadius: '0.375rem', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ background: 'none', border: '1px solid #e5e7eb', cursor: 'pointer', color: C.gray500, borderRadius: '0.375rem', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px' }}
           className="hidden-mobile">
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
