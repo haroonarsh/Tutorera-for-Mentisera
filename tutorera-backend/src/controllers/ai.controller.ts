@@ -105,7 +105,7 @@ export const chatWithAI = async (req: AuthRequest, res: Response): Promise<void>
     model: GROQ_MODEL,
     messages,
     temperature: 0.7,
-    max_tokens: 500,
+    max_tokens: 1200,
   };
 
   try {
@@ -171,9 +171,9 @@ Rules:
 - Example output: {"subject":"Physics","level":"FSc","city":"Lahore","countryCode":"PK","teachingMode":"both","budget":2000,"schedule":"weekends","language":"English"}`;
 
 export const parseRequestText = async (req: Request, res: Response): Promise<void> => {
-  const { text } = req.body;
+  const { text } = req.body as { text?: unknown };
 
-  if (!text?.trim()) {
+  if (typeof text !== "string" || !text.trim()) {
     res.status(400).json({ success: false, message: "Text is required." });
     return;
   }

@@ -69,10 +69,9 @@ export default function AIChatWidget() {
     setLoading(true);
 
     try {
-      // Send history excluding the greeting (which isn't from the API)
+      // Send all prior messages as history (excluding the greeting, which isn't from the API)
       const history = updatedMessages
         .slice(1) // skip greeting
-        .slice(0, -1) // skip current message (sent separately)
         .map(m => ({ role: m.role, text: m.text }));
 
       const res = await api.post("/ai/chat", {

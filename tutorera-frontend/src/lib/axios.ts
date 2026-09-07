@@ -26,7 +26,8 @@ api.interceptors.response.use(
     if (typeof window !== "undefined" && error.response?.status === 401) {
       const isAuthRoute = error.config?.url?.includes("/auth/login")
         || error.config?.url?.includes("/auth/register")
-        || error.config?.url?.includes("/auth/logout");
+        || error.config?.url?.includes("/auth/logout")
+        || error.config?.url?.includes("/ai/"); // don't redirect away from chat on 401
       if (!isAuthRoute) {
         localStorage.removeItem("token");
         if (window.location.pathname !== "/login") {
