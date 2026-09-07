@@ -132,11 +132,11 @@ export class MatchingService {
       if (dbConfig) {
         this.cachedConfig = {
           algorithmVersion: dbConfig.algorithmVersion || DEFAULT_MATCHING_CONFIG.algorithmVersion,
-          onlineWeights: dbConfig.onlineWeights || DEFAULT_MATCHING_CONFIG.onlineWeights,
-          homeWeights: dbConfig.homeWeights || DEFAULT_MATCHING_CONFIG.homeWeights,
-          thresholds: dbConfig.thresholds || DEFAULT_MATCHING_CONFIG.thresholds,
-          bayesian: dbConfig.bayesian || DEFAULT_MATCHING_CONFIG.bayesian,
-          coldStart: dbConfig.coldStart || DEFAULT_MATCHING_CONFIG.coldStart,
+          onlineWeights: { ...DEFAULT_MATCHING_CONFIG.onlineWeights, ...(dbConfig.onlineWeights as any) },
+          homeWeights: { ...DEFAULT_MATCHING_CONFIG.homeWeights, ...(dbConfig.homeWeights as any) },
+          thresholds: { ...DEFAULT_MATCHING_CONFIG.thresholds, ...(dbConfig.thresholds as any) },
+          bayesian: { ...DEFAULT_MATCHING_CONFIG.bayesian, ...(dbConfig.bayesian as any) },
+          coldStart: { ...DEFAULT_MATCHING_CONFIG.coldStart, ...(dbConfig.coldStart as any) },
         };
         this.configCacheTime = now;
         return this.cachedConfig;

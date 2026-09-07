@@ -34,6 +34,7 @@ const matchingConfigSchema = new Schema<IMatchingConfigDocument>(
       strong: { type: Number, default: DEFAULT_MATCHING_CONFIG.thresholds.strong },
       good: { type: Number, default: DEFAULT_MATCHING_CONFIG.thresholds.good },
       notificationMinimum: { type: Number, default: DEFAULT_MATCHING_CONFIG.thresholds.notificationMinimum },
+      maxOffers: { type: Number, default: DEFAULT_MATCHING_CONFIG.thresholds.maxOffers },
     },
     bayesian: {
       globalMeanRating: { type: Number, default: DEFAULT_MATCHING_CONFIG.bayesian.globalMeanRating },

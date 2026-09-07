@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -16,20 +16,25 @@ import {
   Play,
   Send,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { tutorProfileHref } from "@/lib/tutor-directory";
+import { useAuth } from "@/context/AuthContext";
+import AvatarImage from "@/components/Common/AvatarImage";
 
 interface MatchAnalytics {
   totalMatches: number;
-  avgMatchScore: number;
+  avgMatchScore: number | null;
   totalOffers: number;
   totalBookings: number;
   offerConversionRate: number;
   bookingConversionRate: number;
-  avgStudentResponseMinutes: number;
+  avgStudentResponseMinutes: number | null;
+  generatedAt: string;
+  hasData: boolean;
   tierDistribution: {
     excellent: number;
     great: number;
@@ -39,11 +44,14 @@ interface MatchAnalytics {
 }
 
 export default function AdminMatchingPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"analytics" | "weights" | "simulator">("analytics");
   const [analytics, setAnalytics] = useState<MatchAnalytics | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState("");
   const [config, setConfig] = useState<any>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [configError, setConfigError] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
   const [selectedMode, setSelectedMode] = useState<"online" | "home">("online");
 
@@ -68,51 +76,53 @@ export default function AdminMatchingPage() {
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [dispatchingWave, setDispatchingWave] = useState(false);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoadingAnalytics(true);
+    setAnalyticsError("");
     try {
       const res = await api.get("/matching/admin/analytics");
       setAnalytics(res.data.analytics);
     } catch (err) {
       console.error("Failed to load matching analytics:", err);
+      setAnalyticsError("Matching analytics could not be loaded. Values are unavailable, not zero.");
     } finally {
       setLoadingAnalytics(false);
     }
-  };
+  }, []);
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     setLoadingConfig(true);
+    setConfigError("");
     try {
       const res = await api.get("/matching/admin/config");
       setConfig(res.data.config);
     } catch (err) {
       console.error("Failed to load matching config:", err);
+      setConfigError("The active matching configuration could not be loaded.");
     } finally {
       setLoadingConfig(false);
     }
-  };
+  }, []);
 
-  const fetchLiveRequests = async () => {
+  const fetchLiveRequests = useCallback(async () => {
     setLoadingRequests(true);
     try {
       const res = await api.get("/requests?status=open,published,receiving_offers&limit=30");
       const list = res.data?.requests || res.data?.data || [];
       setLiveRequests(list);
-      if (list.length > 0 && !selectedRequestId) {
-        setSelectedRequestId(list[0]._id);
-      }
+      setSelectedRequestId((current) => current || list[0]?._id || "");
     } catch (err) {
       console.error("Failed to load live requests:", err);
     } finally {
       setLoadingRequests(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAnalytics();
     fetchConfig();
     fetchLiveRequests();
-  }, []);
+  }, [fetchAnalytics, fetchConfig, fetchLiveRequests]);
 
   const handleWeightChange = (mode: "online" | "home", key: string, value: number) => {
     if (!config) return;
@@ -130,7 +140,15 @@ export default function AdminMatchingPage() {
     if (!config) return;
     setSavingConfig(true);
     try {
-      await api.put("/matching/admin/config", config);
+      const payload = {
+        algorithmVersion: config.algorithmVersion,
+        onlineWeights: config.onlineWeights,
+        homeWeights: config.homeWeights,
+        thresholds: config.thresholds,
+        bayesian: config.bayesian,
+        coldStart: config.coldStart,
+      };
+      await api.put("/matching/admin/config", payload);
       showSuccess("Matching weights successfully saved and activated in memory!");
       fetchConfig();
     } catch {
@@ -172,58 +190,89 @@ export default function AdminMatchingPage() {
   };
 
   const currentWeights = config ? (selectedMode === "online" ? config.onlineWeights : config.homeWeights) : null;
+  const currentWeightTotal = currentWeights
+    ? Object.values(currentWeights).reduce((sum: number, value) => sum + Number(value || 0), 0)
+    : 0;
+  const isSuperAdmin = user?.adminRole === "super_admin" || user?.adminPermissions?.includes("*");
+  const canConfigure = Boolean(isSuperAdmin || user?.adminRole === "marketplace_operations" || user?.adminPermissions?.includes("matching.configure"));
+  const canSimulate = Boolean(isSuperAdmin || user?.adminRole === "marketplace_operations" || user?.adminPermissions?.includes("matching.simulate"));
   const tierDist = analytics?.tierDistribution || { excellent: 0, great: 0, good: 0, fair: 0 };
   const totalMatchesCount = analytics?.totalMatches || 0;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-6 rounded-2xl text-white shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 bg-cyan-400/20 text-cyan-300 rounded-xl border border-cyan-400/30">
-            <Sparkles className="w-7 h-7 animate-pulse" />
+      <header className="rounded-2xl border border-blue-800/50 bg-gradient-to-r from-[#021550] via-blue-950 to-slate-950 p-5 text-white shadow-lg sm:p-6">
+        <div className="flex items-start gap-3.5">
+          <div className="rounded-xl border border-cyan-400/30 bg-cyan-400/15 p-2.5 text-cyan-300">
+            <Sparkles className="h-6 w-6" aria-hidden="true" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight text-white">Smart Tutor Matching Engine</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Smart Tutor Matching</h1>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-bold border border-cyan-400/30">
-                {config?.algorithmVersion || config?.activeVersion || "8L-HYBRID-V2.1"}
+                {config?.algorithmVersion || "Version unavailable"}
               </span>
             </div>
-            <p className="text-xs text-blue-200/80 mt-1">
-              8-layer two-sided marketplace intelligence: compatibility, Bayesian ratings, reliability, and explainable scoring.
+            <p className="mt-1 max-w-3xl text-sm leading-5 text-blue-100/85">
+              Monitor compatibility, conversion, safeguards, and explainable tutor rankings.
             </p>
           </div>
         </div>
+      </header>
 
-        <div className="flex items-center gap-2 flex-wrap">
+      <div
+        className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        role="tablist"
+        aria-label="Matching administration views"
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home" && event.key !== "End") return;
+          const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+          const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
+          if (currentIndex < 0 || tabs.length === 0) return;
+          event.preventDefault();
+          const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (currentIndex + 1) % tabs.length : (currentIndex - 1 + tabs.length) % tabs.length;
+          tabs[nextIndex].focus();
+          tabs[nextIndex].click();
+        }}
+      >
+        <div className="flex min-w-max gap-1">
           <button
+            type="button" role="tab" id="matching-tab-analytics"
+            aria-selected={activeTab === "analytics"} aria-controls="matching-panel-analytics"
+            tabIndex={activeTab === "analytics" ? 0 : -1}
             onClick={() => setActiveTab("analytics")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-150 ${
               activeTab === "analytics"
-                ? "bg-white text-blue-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
+                ? "bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950 dark:text-blue-100"
+                : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
           >
             Analytics & Conversion
           </button>
-          <button
+          {canSimulate && <button
+            type="button" role="tab" id="matching-tab-simulator"
+            aria-selected={activeTab === "simulator"} aria-controls="matching-panel-simulator"
+            tabIndex={activeTab === "simulator" ? 0 : -1}
             onClick={() => setActiveTab("simulator")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-150 ${
               activeTab === "simulator"
-                ? "bg-cyan-400 text-slate-950 font-black shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
+                ? "bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950 dark:text-blue-100"
+                : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
+            <Play className="h-4 w-4" aria-hidden="true" />
             Match Simulator
-          </button>
+          </button>}
           <button
+            type="button" role="tab" id="matching-tab-weights"
+            aria-selected={activeTab === "weights"} aria-controls="matching-panel-weights"
+            tabIndex={activeTab === "weights" ? 0 : -1}
             onClick={() => setActiveTab("weights")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-150 ${
               activeTab === "weights"
-                ? "bg-white text-blue-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
+                ? "bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950 dark:text-blue-100"
+                : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
           >
             Algorithm Weights
@@ -233,7 +282,15 @@ export default function AdminMatchingPage() {
 
       {/* TAB 1: ANALYTICS */}
       {activeTab === "analytics" && (
-        <div className="space-y-6">
+        <div id="matching-panel-analytics" role="tabpanel" aria-labelledby="matching-tab-analytics" className="space-y-6">
+          {analyticsError && (
+            <div role="alert" className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
+              <span>{analyticsError}</span>
+              <button type="button" onClick={fetchAnalytics} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 font-semibold">
+                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Retry
+              </button>
+            </div>
+          )}
           {/* Key KPI Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -242,7 +299,7 @@ export default function AdminMatchingPage() {
                 <Layers className="w-4 h-4 text-blue-500" />
               </div>
               <p className="text-2xl font-black text-slate-900 dark:text-white">
-                {analytics?.totalMatches !== undefined ? analytics.totalMatches.toLocaleString() : "—"}
+                {loadingAnalytics ? "…" : analytics?.totalMatches !== undefined ? analytics.totalMatches.toLocaleString() : "—"}
               </p>
               <p className="text-[11px] text-slate-500 mt-1">Across student requests & offers</p>
             </div>
@@ -253,7 +310,7 @@ export default function AdminMatchingPage() {
                 <Award className="w-4 h-4 text-emerald-500" />
               </div>
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {analytics?.avgMatchScore !== undefined ? `${analytics.avgMatchScore}%` : "—"}
+                {loadingAnalytics ? "…" : analytics?.avgMatchScore != null ? `${analytics.avgMatchScore}%` : "—"}
               </p>
               <p className="text-[11px] text-slate-500 mt-1">Target compatibility threshold: &ge; 70%</p>
             </div>
@@ -301,7 +358,7 @@ export default function AdminMatchingPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      className="h-full rounded-full bg-emerald-500 transition-[width] duration-200"
                       style={{
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.excellent / totalMatchesCount) * 100) : 0}%`,
                       }}
@@ -316,7 +373,7 @@ export default function AdminMatchingPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      className="h-full rounded-full bg-blue-500 transition-[width] duration-200"
                       style={{
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.great / totalMatchesCount) * 100) : 0}%`,
                       }}
@@ -331,7 +388,7 @@ export default function AdminMatchingPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
-                      className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                      className="h-full rounded-full bg-purple-500 transition-[width] duration-200"
                       style={{
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.good / totalMatchesCount) * 100) : 0}%`,
                       }}
@@ -346,7 +403,7 @@ export default function AdminMatchingPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
-                      className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                      className="h-full rounded-full bg-amber-500 transition-[width] duration-200"
                       style={{
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.fair / totalMatchesCount) * 100) : 0}%`,
                       }}
@@ -364,7 +421,7 @@ export default function AdminMatchingPage() {
                   Algorithm Fairness & Trust Rules
                 </h3>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold">
-                  Enforced
+                  Configured safeguards
                 </span>
               </div>
 
@@ -400,7 +457,7 @@ export default function AdminMatchingPage() {
 
       {/* TAB 2: MATCH SIMULATOR & DIAGNOSTICS */}
       {activeTab === "simulator" && (
-        <div className="space-y-6">
+        <div id="matching-panel-simulator" role="tabpanel" aria-labelledby="matching-tab-simulator" className="space-y-6">
           {/* Simulator Control Console */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -443,7 +500,7 @@ export default function AdminMatchingPage() {
             {/* Input Selection */}
             {simMode === "live" ? (
               <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                <label htmlFor="live-request" className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                   Select Active Student Request:
                 </label>
                 {loadingRequests ? (
@@ -455,6 +512,7 @@ export default function AdminMatchingPage() {
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-3">
                     <select
+                      id="live-request"
                       value={selectedRequestId}
                       onChange={(e) => setSelectedRequestId(e.target.value)}
                       className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500 outline-none"
@@ -482,8 +540,9 @@ export default function AdminMatchingPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Subject</label>
+                    <label htmlFor="simulation-subject" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Subject</label>
                     <input
+                      id="simulation-subject"
                       type="text"
                       value={customRequest.subject}
                       onChange={(e) => setCustomRequest({ ...customRequest, subject: e.target.value })}
@@ -493,8 +552,9 @@ export default function AdminMatchingPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Level</label>
+                    <label htmlFor="simulation-level" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Level</label>
                     <select
+                      id="simulation-level"
                       value={customRequest.level}
                       onChange={(e) => setCustomRequest({ ...customRequest, level: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
@@ -510,8 +570,9 @@ export default function AdminMatchingPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Teaching Mode</label>
+                    <label htmlFor="simulation-mode" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Teaching Mode</label>
                     <select
+                      id="simulation-mode"
                       value={customRequest.teachingMode}
                       onChange={(e) => setCustomRequest({ ...customRequest, teachingMode: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
@@ -522,8 +583,9 @@ export default function AdminMatchingPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">City (for Home Mode)</label>
+                    <label htmlFor="simulation-city" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">City (for Home Mode)</label>
                     <input
+                      id="simulation-city"
                       type="text"
                       value={customRequest.city}
                       onChange={(e) => setCustomRequest({ ...customRequest, city: e.target.value })}
@@ -533,8 +595,9 @@ export default function AdminMatchingPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Student Budget</label>
+                    <label htmlFor="simulation-budget" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Student Budget</label>
                     <input
+                      id="simulation-budget"
                       type="number"
                       value={customRequest.budget}
                       onChange={(e) => setCustomRequest({ ...customRequest, budget: Number(e.target.value) })}
@@ -543,8 +606,9 @@ export default function AdminMatchingPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Pricing Unit</label>
+                    <label htmlFor="simulation-pricing-unit" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Pricing Unit</label>
                     <select
+                      id="simulation-pricing-unit"
                       value={customRequest.pricingUnit}
                       onChange={(e) => setCustomRequest({ ...customRequest, pricingUnit: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
@@ -555,8 +619,9 @@ export default function AdminMatchingPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Currency</label>
+                    <label htmlFor="simulation-currency" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Currency</label>
                     <select
+                      id="simulation-currency"
                       value={customRequest.currency}
                       onChange={(e) => setCustomRequest({ ...customRequest, currency: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
@@ -656,13 +721,7 @@ export default function AdminMatchingPage() {
                               #{index + 1}
                             </span>
 
-                            <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-slate-600 dark:text-slate-300 shrink-0">
-                              {tutor.avatar ? (
-                                <img src={tutor.avatar} alt={tutor.name} className="w-full h-full object-cover" />
-                              ) : (
-                                tutor.name?.charAt(0).toUpperCase() || "T"
-                              )}
-                            </div>
+                            <AvatarImage src={tutor.avatar} alt={`${tutor.name || "Tutor"} profile`} name={tutor.name || "Tutor"} size={48} />
 
                             <div className="space-y-1 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -760,7 +819,15 @@ export default function AdminMatchingPage() {
 
       {/* TAB 3: ALGORITHM WEIGHTS */}
       {activeTab === "weights" && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+        <div id="matching-panel-weights" role="tabpanel" aria-labelledby="matching-tab-weights" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+          {configError && (
+            <div role="alert" className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
+              <span>{configError}</span>
+              <button type="button" onClick={fetchConfig} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 font-semibold">
+                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Retry
+              </button>
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -768,7 +835,7 @@ export default function AdminMatchingPage() {
                 Live Weight Configuration
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Tune scoring parameters for Online vs. Home Tuition modes. Total weights should sum to ~100 points.
+                Review scoring parameters for Online and Home Tuition. Each mode must total exactly 100 points.
               </p>
             </div>
 
@@ -802,17 +869,25 @@ export default function AdminMatchingPage() {
               <button
                 type="button"
                 onClick={handleSaveConfig}
-                disabled={savingConfig}
+                disabled={savingConfig || !canConfigure || currentWeightTotal !== 100}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all disabled:opacity-50"
+                title={!canConfigure ? "You do not have permission to change matching weights" : currentWeightTotal !== 100 ? "Weights must total exactly 100 points" : undefined}
               >
                 <Save className="w-4 h-4" />
-                {savingConfig ? "Saving..." : "Save Changes"}
+                {savingConfig ? "Saving..." : canConfigure ? "Save Changes" : "Read only"}
               </button>
             </div>
           </div>
 
+          <div className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold ${currentWeightTotal === 100 ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`} aria-live="polite">
+            <span>{selectedMode === "online" ? "Online" : "Home tuition"} weight total</span>
+            <span>{currentWeightTotal} / 100 points</span>
+          </div>
+
           {/* Weight Sliders */}
-          {currentWeights ? (
+          {loadingConfig ? (
+            <div className="py-12 text-center text-slate-500" role="status">Loading configuration…</div>
+          ) : currentWeights ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {Object.entries(currentWeights).map(([key, val]) => {
                 const numericVal = Number(val) || 0;
@@ -833,6 +908,7 @@ export default function AdminMatchingPage() {
                     </div>
 
                     <input
+                      aria-label={`${readableLabel} matching weight`}
                       type="range"
                       min="0"
                       max="40"
@@ -852,9 +928,7 @@ export default function AdminMatchingPage() {
                 );
               })}
             </div>
-          ) : (
-            <div className="py-12 text-center text-slate-500">Loading configuration...</div>
-          )}
+          ) : null}
 
           {/* Footer information */}
           <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex items-start gap-3 text-xs text-blue-900 dark:text-blue-200">

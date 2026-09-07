@@ -9,6 +9,7 @@ import { MatchingService } from "../services/matching.service";
 import { DEFAULT_MATCHING_CONFIG } from "../config/matchingConfig";
 import { logAudit } from "../utils/logAudit";
 import logger from "../config/logger";
+import { formatMatchingConfigError, matchingConfigUpdateSchema } from "../validators/matchingConfig.validator";
 
 // @desc    Get top matching tutors for a student's request
 // @route   GET /api/v1/matching/requests/:id/matches
@@ -180,7 +181,17 @@ export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Pr
     const avgScoreAgg = await MatchLog.aggregate([
       { $group: { _id: null, avgScore: { $avg: "$score" } } },
     ]);
-    const averageMatchScore = avgScoreAgg.length > 0 ? Math.round(avgScoreAgg[0].avgScore) : 84;
+    const averageMatchScore = avgScoreAgg.length > 0 ? Math.round(avgScoreAgg[0].avgScore) : null;
+
+    const responseTimeAgg = await MatchLog.aggregate([
+      { $match: { notificationSentAt: { $type: "date" }, offerReceivedAt: { $type: "date" } } },
+      { $project: { minutes: { $divide: [{ $subtract: ["$offerReceivedAt", "$notificationSentAt"] }, 60000] } } },
+      { $match: { minutes: { $gte: 0 } } },
+      { $group: { _id: null, average: { $avg: "$minutes" } } },
+    ]);
+    const avgStudentResponseMinutes = responseTimeAgg.length > 0
+      ? Math.round(responseTimeAgg[0].average)
+      : null;
 
     const matchToOfferRate = notificationTier1 > 0 ? Math.round((offersReceived / notificationTier1) * 100) : 0;
     const offerToBookingRate = offersReceived > 0 ? Math.round((offersAccepted / offersReceived) * 100) : 0;
@@ -192,10 +203,12 @@ export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Pr
         totalMatches,
         avgMatchScore: averageMatchScore,
         totalOffers: offersReceived,
-        totalBookings: offersAccepted + bookingsCompleted,
+        totalBookings: offersAccepted,
         offerConversionRate: matchToOfferRate,
         bookingConversionRate: offerToBookingRate,
-        avgStudentResponseMinutes: 24,
+        avgStudentResponseMinutes,
+        generatedAt: new Date().toISOString(),
+        hasData: totalMatches > 0,
         tierDistribution,
 
         // Legacy / snake keys for backwards compatibility
@@ -236,11 +249,21 @@ export const getMatchingConfig = async (_req: AuthRequest, res: Response): Promi
 // @access  Private (admin)
 export const updateMatchingConfig = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const parsed = matchingConfigUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        message: formatMatchingConfigError(parsed.error),
+        issues: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })),
+      });
+      return;
+    }
+
     const updated = await MatchingConfig.findOneAndUpdate(
       {},
       {
         $set: {
-          ...req.body,
+          ...parsed.data,
           updatedBy: req.user?._id,
         },
       },
@@ -256,7 +279,7 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
       actorId: req.user?._id?.toString(),
       entity: "MatchingConfig",
       targetId: updated._id.toString(),
-      metadata: req.body,
+      metadata: parsed.data,
     });
 
     res.json({ success: true, message: "Matching configuration updated successfully.", config: updated });
