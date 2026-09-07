@@ -1,16 +1,23 @@
 # TUTORERA® Frontend
 
-Next.js frontend for Pakistan's tutoring marketplace.
+Next.js frontend for TUTORERA's global student-led tutoring marketplace.
 
 ## Tech Stack
 - Next.js 15 (App Router)
 - TypeScript
 - Tailwind CSS + Inline Styles
 - Axios
-- Deployed on Vercel
+- OpenNext for Cloudflare
+- Deployed on Cloudflare Workers
 
 ## Live URL
-https://tutorera-frontend.vercel.app
+https://tutorera.ac.pk
+
+## Production hosting
+
+Production traffic must resolve through Cloudflare Workers/OpenNext using the Worker routes in `wrangler.jsonc`.
+
+The legacy Vercel preview host is not the canonical product domain. If a Vercel project is retained for emergency redirects only, it must redirect to `https://tutorera.ac.pk` and emit `X-Robots-Tag: noindex, nofollow, noarchive`.
 
 ## Local Setup
 

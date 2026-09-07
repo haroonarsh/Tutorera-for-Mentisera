@@ -43,13 +43,6 @@ const SUBPROCESSORS: SubprocessorItem[] = [
     safeguard: "Standard Contractual Clauses (SCCs), ISO 27001, SOC 2 Type II",
   },
   {
-    name: "Vercel Inc.",
-    purpose: "Global edge CDN routing, frontend web hosting, and serverless compute delivery.",
-    category: "Hosting & Infrastructure",
-    location: "United States & Global Edge PoPs",
-    safeguard: "Data Processing Addendum (DPA), SCCs, SOC 2 Type II",
-  },
-  {
     name: "MongoDB Inc. (MongoDB Atlas)",
     purpose: "Managed database clusters, persistent user records, requests, bookings, and encrypted logs.",
     category: "Database Services",
@@ -86,8 +79,8 @@ const SUBPROCESSORS: SubprocessorItem[] = [
   },
   {
     name: "Cloudflare Inc.",
-    purpose: "Web Application Firewall (WAF), distributed denial of service (DDoS) mitigation, and SSL termination.",
-    category: "Security & Networking",
+    purpose: "Production frontend hosting through Cloudflare Workers/OpenNext, edge routing, Web Application Firewall (WAF), distributed denial of service (DDoS) mitigation, and SSL termination.",
+    category: "Hosting, Security & Networking",
     location: "Global Edge Network",
     safeguard: "ISO 27001, SOC 2 Type II, Global Privacy Framework",
   },

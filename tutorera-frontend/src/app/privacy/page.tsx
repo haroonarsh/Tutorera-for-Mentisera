@@ -97,7 +97,7 @@ We never claim that using the platform waives your international transfer statut
     id: "7-subprocessors",
     title: "7. Third-Party Service Providers & Subprocessors",
     content: `We share data with trusted third-party subprocessors strictly to deliver platform services:
-• Cloud Infrastructure & Hosting: MongoDB Atlas, Render, Vercel, Cloudinary.
+• Cloud Infrastructure & Hosting: MongoDB Atlas, Render, Cloudflare Workers, Cloudinary.
 • Authentication & Security: Google OAuth, JSON Web Token cryptography.
 • Payment Processing: Authorized PCI-DSS payment gateways (Stripe, Paymob, local banking partners).
 • Email & Transactional Notifications: SendGrid, Resend.

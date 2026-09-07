@@ -3,6 +3,16 @@
   "compatibility_date": "2026-07-17",
   "compatibility_flags": ["nodejs_compat"],
   "main": ".open-next/worker.js",
+  "routes": [
+    {
+      "pattern": "tutorera.ac.pk/*",
+      "zone_name": "tutorera.ac.pk"
+    },
+    {
+      "pattern": "www.tutorera.ac.pk/*",
+      "zone_name": "tutorera.ac.pk"
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets"
   },
