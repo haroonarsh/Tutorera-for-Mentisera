@@ -89,6 +89,7 @@ export default function TutorOnboardingPage() {
     teachingMode: "both" as "online" | "in-person" | "both",
   });
   const [availability, setAvailability] = useState<{ day: string; slots: string[] }[]>([]);
+  const [pricingInsight, setPricingInsight] = useState<{ min: number | null; max: number | null; median: number | null; count: number } | null>(null);
 
   // Step 5
   const [cnicFront, setCnicFront] = useState<File | null>(null);
@@ -183,6 +184,21 @@ export default function TutorOnboardingPage() {
         .catch(() => {});
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (currentStep !== 4 || !step1.city) return;
+    const citySlug = step1.city.toLowerCase().replace(/\s+/g, "-");
+    const subject = selectedSubjects[0];
+    const params = new URLSearchParams({ city: citySlug });
+    if (subject) params.set("subject", subject);
+    api.get(`/pricing/insights?${params}`)
+      .then((res) => {
+        const insight = res.data?.insight;
+        if (insight?.count >= 3) setPricingInsight(insight);
+        else setPricingInsight(null);
+      })
+      .catch(() => setPricingInsight(null));
+  }, [currentStep, step1.city, selectedSubjects]);
 
   const toggleItem = (arr: string[], item: string, setter: (v: string[]) => void) => {
     arr.includes(item) ? setter(arr.filter(i => i !== item)) : setter([...arr, item]);
@@ -632,6 +648,11 @@ export default function TutorOnboardingPage() {
                     {step1.currency !== "PKR" && Number(step4.hourlyRate) > 0 && (
                       <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
                         ≈ Rs. {convertToPKR(Number(step4.hourlyRate), step1.currency).amountPKR.toLocaleString()} PKR/hr
+                      </p>
+                    )}
+                    {pricingInsight && pricingInsight.median && (
+                      <p style={{ margin: "0.35rem 0 0", fontSize: "0.72rem", color: "#16a34a", fontWeight: 500 }}>
+                        💡 Similar tutors in {step1.city} charge PKR {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: PKR {pricingInsight.median?.toLocaleString()})
                       </p>
                     )}
                   </div>
