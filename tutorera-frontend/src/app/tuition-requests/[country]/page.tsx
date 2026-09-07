@@ -22,6 +22,15 @@ const COUNTRY_NAMES: Record<string, string> = {
   sg: "Singapore",
 };
 
+export async function generateStaticParams() {
+  return [
+    { country: "pk" }, { country: "ae" }, { country: "sa" }, { country: "gb" },
+    { country: "us" }, { country: "ca" }, { country: "au" }, { country: "qa" },
+    { country: "om" }, { country: "kw" }, { country: "bh" }, { country: "in" },
+    { country: "my" }, { country: "sg" },
+  ];
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country } = await params;
   const countryName = COUNTRY_NAMES[country.toLowerCase()] || country.toUpperCase();

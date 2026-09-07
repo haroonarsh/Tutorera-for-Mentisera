@@ -12,10 +12,29 @@ TUTORERA enables students to post tuition requirements and receive transparent o
 - Authorized platform checkout with atomic booking creation, server-side payment verification, and webhook confirmation
 - Per-component tutor verification (identity, education, demo video, police)
 - Admin control tower with at-risk request rescue, supply-gap intelligence, and financial reconciliation
-- 11-role RBAC with granular permissions
+- Role-based access control with granular permissions (student, tutor, parent, admin)
 - Email webhook tracking and delivery monitoring
 - Request expiry lifecycle with archival and retention
-- Multi-country market configuration (PK, SA, AE, GB)
+- Multi-country market configuration (PK, AE, SA, GB, US, CA, AU, QA, OM, KW, BH, IN, MY, SG)
+- One-click rebooking with pre-filled tutor, subject, mode, and rate from previous sessions
+- Post-session review request automation
+- Recurring lesson scheduling (weekly, twice-weekly, monthly plans) with session packages (4-session, 8-session)
+- Parent/guardian accounts with child profile management and approval workflows
+- Self-service refund request flow for completed bookings
+- Guest checkout for parent accounts — parents can pay for their children's bookings
+- Pricing intelligence showing market rate ranges per city and subject
+- Learning relationship tracking (student-tutor pairs, repeat booking counts, retention metrics)
+- First-session satisfaction guarantee with claim workflow
+
+## Demand SEO Pages
+TUTORERA generates city×subject×curriculum demand pages for organic discovery:
+- /tuition-requests/pk/lahore/mathematics
+- /tuition-requests/pk/karachi/physics
+- /tuition-requests/pk/islamabad/chemistry
+Each page surfaces anonymized, real request data filtered by city, subject, curriculum, and teaching mode.
+
+## Tutoring Index
+Public aggregate market research at /research/pakistan-tutoring-rates — anonymized data on tutoring rates by city, subject, mode, and trend over 6 months.
 
 ## Contact
 - Website: https://tutorera.ac.pk

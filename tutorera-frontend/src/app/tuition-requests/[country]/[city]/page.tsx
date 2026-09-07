@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import TuitionRequestsExplorer from "@/components/TuitionRequests/TuitionRequestsExplorer";
 import { fetchRequests } from "@/lib/tuition-requests";
 import type { RequestFilters } from "@/lib/tuition-requests";
-import { CITIES, SUBJECTS } from "@/lib/tutor-directory";
+import { CITIES, SUBJECTS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS } from "@/lib/tutor-directory";
 
 type Props = {
   params: Promise<{ country: string; city: string }>;
@@ -15,6 +15,10 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 function slugToLabel(slug: string, map: Record<string, string>): string {
   return map[slug] || slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export async function generateStaticParams() {
+  return PRIMARY_CITY_SLUGS.map((city) => ({ country: "pk", city }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
