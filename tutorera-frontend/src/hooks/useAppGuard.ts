@@ -8,10 +8,11 @@ import api from "@/lib/axios";
 type GuardStatus = "loading" | "ok" | "blocked";
 
 /**
- * Guards pages meant for logged-in students and tutors (not admins).
+ * Guards pages meant for logged-in students, parents, and tutors (not admins).
  * - Logged-out visitors → redirected to /login
  * - Admins → redirected away (not meant for admin pages)
  * - Students → allowed through immediately
+ * - Parents → allowed through immediately
  * - Tutors → must be a fully verified tutor; pending/rejected are redirected to /dashboard
  * - Network/API errors while checking tutor status → fail closed (blocked), not silently approved
  */
@@ -33,7 +34,7 @@ export function useAppGuard() {
         return;
         }
 
-        if (user.role === "student") {
+        if (user.role === "student" || user.role === "parent") {
         setStatus("ok");
         return;
         }
