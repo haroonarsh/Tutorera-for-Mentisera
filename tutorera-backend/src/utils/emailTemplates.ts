@@ -127,17 +127,32 @@ export const planUpgradedEmail = (name: string, plan: string) => {
   return { subject: `TUTORERA® — Your Plan is Now ${plan.charAt(0).toUpperCase() + plan.slice(1)}`, html };
 };
 
-export const paymentConfirmedEmail = (studentName: string, tutorName: string, amount: number) => {
+interface BookingDetails {
+  bookingId: string;
+  subject?: string;
+  schedule?: string;
+  teachingMode?: string;
+  sessionCount?: number;
+}
+
+export const paymentConfirmedEmail = (
+  studentName: string,
+  tutorName: string,
+  amount: number,
+  details?: BookingDetails
+) => {
+  const bookingId = details?.bookingId || `PAY-${Date.now()}`;
+  const subject = details?.subject ? ` — ${details.subject}` : "";
   const html = renderTransactionalEmail({
     subject: "TUTORERA® — Payment Confirmed",
     emailCategory: "Payment Confirmation",
     emailHeading: "Payment Confirmed",
-    emailSubheading: "Your session is now fully booked.",
+    emailSubheading: `Your session with ${tutorName} is now fully booked.`,
     firstName: studentName,
-    openingMessage: `We've confirmed your payment of PKR ${amount.toLocaleString()} for your session with ${tutorName}.`,
+    openingMessage: `We've confirmed your payment of PKR ${amount.toLocaleString()} for your${subject} session with ${tutorName}.${details?.schedule ? ` ${details.schedule}.` : ""}`,
     mainMessage: "Your session is now fully booked. Please join the lesson a few minutes before the scheduled start time. Enjoy learning!",
     transaction: {
-      referenceId: `PAY-${Date.now()}`,
+      referenceId: bookingId,
       date: today(),
       status: "Confirmed",
       amount: `PKR ${amount.toLocaleString()}`,

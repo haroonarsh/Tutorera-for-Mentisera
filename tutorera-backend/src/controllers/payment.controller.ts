@@ -125,7 +125,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           });
           try {
             if (student && tutor) {
-              const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount);
+              const booking = await Booking.findOne({ bid: bid._id }).populate("request");
+              const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount, {
+                bookingId: booking?._id?.toString() || `BID-${bidId}`,
+                subject: (booking?.request as any)?.subject,
+                schedule: booking?.schedule,
+                teachingMode: booking?.teachingMode,
+                sessionCount: booking?.sessionCount,
+              });
               await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
             }
           } catch (err) {
@@ -162,8 +169,15 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         try {
           const student = await User.findById(booking.student).select("name email");
           const tutor = await User.findById(booking.tutor).select("name email");
+          const populatedBooking = await Booking.findById(booking._id).populate("request");
           if (student && tutor) {
-            const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount);
+            const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount, {
+              bookingId: booking._id.toString(),
+              subject: (populatedBooking?.request as any)?.subject,
+              schedule: booking.schedule,
+              teachingMode: booking.teachingMode,
+              sessionCount: booking.sessionCount,
+            });
             await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
           }
         } catch (err) {
