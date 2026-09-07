@@ -39,6 +39,7 @@ export const ALL_PERMISSIONS = [
 
   // Finance & Governance
   "payment.read",
+  "payment.manage",
   "payment.refund",
   "payout.read",
   "payout.approve",
@@ -137,6 +138,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
 
   finance: [
     "payment.read",
+    "payment.manage",
     "payment.refund",
     "payout.read",
     "payout.approve",

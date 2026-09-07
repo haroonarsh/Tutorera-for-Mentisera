@@ -36,6 +36,8 @@ import { getAllStudentRatings, getStudentRatings } from "../controllers/studentR
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
+import { validate as validateBooking } from "../validators/booking.validator";
+import { updateAdminPaymentSchema } from "../validators/adminFinance.validator";
 import { getMarketplaceAnalytics, getMarketplaceOfferDetail, listMarketplaceOffers, listMarketplaceRequests } from "../controllers/marketplaceAdmin.controller";
 import {
   getControlTowerPulse,
@@ -112,7 +114,7 @@ router.patch("/verify/:id", requirePermission("tutor.verify"), verifyTutor);
 router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
-router.patch("/bookings/:id/payment", requirePermission("payment.read"), updatePaymentStatus);
+router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
 router.get("/contacts", requirePermission("student.read"), getAllContacts);
 router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
 router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);
