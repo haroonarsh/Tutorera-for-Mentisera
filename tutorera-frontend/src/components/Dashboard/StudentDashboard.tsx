@@ -579,6 +579,23 @@ function RequestCard({
       setAccepting(null);
     }
   }
+
+  async function retryPayment(bidId: string) {
+    setAccepting(bidId);
+    try {
+      const res = await axiosInstance.post(`/offers/${bidId}/retry-payment`);
+      const checkoutUrl = res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        window.location.assign(checkoutUrl); // reuses the same useEffect-based redirect from acceptBid
+      } else {
+        console.error("Retry-payment response had no checkoutUrl:", res.data);
+        setAccepting(null);
+      }
+    } catch (err) {
+      console.error("Failed to retry payment:", err);
+      setAccepting(null);
+    }
+  }
   
   async function counterOffer() {
     if (!countering || Number(counterAmount) <= 0) return;
@@ -844,7 +861,16 @@ function RequestCard({
                           <button onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
                           <Link href={`/support?topic=report-tutor&offer=${bid._id}`} className={s.btnOutline}>Report</Link>
                         </>)}
-                        {!(["pending", "submitted", "viewed", "countered"].includes(bid.status)) && (
+                        {(bid.status as string) === "payment_pending" && (
+                          <button
+                            onClick={() => retryPayment(bid._id)}
+                            disabled={accepting === bid._id}
+                            className={s.btnSuccess}
+                          >
+                            {accepting === bid._id ? "Redirecting…" : "Complete Payment"}
+                          </button>
+                        )}
+                        {!(["pending", "submitted", "viewed", "countered", "payment_pending"].includes(bid.status)) && (
                           <span className={`${s.badge} ${bid.status === "accepted" ? s.badgeAccepted : s.badgeCancelled}`}>
                             {bid.status}
                           </span>
