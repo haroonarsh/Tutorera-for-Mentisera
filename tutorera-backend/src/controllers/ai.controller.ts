@@ -39,11 +39,8 @@ PLATFORM FEES:
 - Example: Tutor charges PKR 1,000 → Student currently pays PKR 1,000 → tutor fee and tax are deducted from tutor earnings according to the disclosed marketplace fee model.
 
 PAYMENTS:
-- Secure online payment will be processed through TUTORERA's authorized payment gateway upon merchant activation.
-- Account Title: MENTISERA (SMC-PRIVATE) LIMITED
-- IBAN: PK27NAYA7556428306882526
-- Payment is verified server-side before a booking is treated as paid.
-- Payment confirmed within 24 hours
+- Secure online payment will be processed through TUTORERA's authorized payment gateway.
+- For payment account details, refer to your booking confirmation or contact support at hello@mentisera.pk
 
 REFERRAL PROGRAM:
 - Share your referral code with friends

@@ -17,11 +17,35 @@ const SUGGESTED_QUESTIONS = [
   "How do I become a tutor?",
 ];
 
+const STORAGE_KEY = "tutorera_chat_messages";
+
+function loadMessages(userId: string | undefined): Message[] {
+  if (!userId || typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(`${STORAGE_KEY}_${userId}`);
+    return stored ? JSON.parse(stored) : [];
+  } catch { return []; }
+}
+
+function saveMessages(userId: string | undefined, msgs: Message[]) {
+  if (!userId || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(msgs));
+  } catch { /* quota exceeded or private mode */ }
+}
+
+function clearMessages(userId: string | undefined) {
+  if (!userId || typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(`${STORAGE_KEY}_${userId}`);
+  } catch { /* ignore */ }
+}
+
 export default function AIChatWidget() {
   const { user } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => loadMessages(user?._id));
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
@@ -34,22 +58,42 @@ export default function AIChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Sync messages to localStorage whenever they change
+  useEffect(() => {
+    saveMessages(user?._id, messages);
+  }, [messages, user?._id]);
+
   useEffect(() => {
     if (open && !hasGreeted) {
       const firstName = user?.name?.split(" ")[0] || "there";
-      setMessages([{
-        role: "assistant",
-        text: `Hi ${firstName}! 👋 I'm TUTORERA's AI assistant. I can help you with questions about our platform — bookings, payments, tutors, policies, and more. What would you like to know?`,
-      }]);
+      if (messages.length === 0) {
+        setMessages([{
+          role: "assistant",
+          text: `Hi ${firstName}! 👋 I'm TUTORERA's AI assistant. I can help you with questions about our platform — bookings, payments, tutors, policies, and more. What would you like to know?`,
+        }]);
+      }
       setHasGreeted(true);
     }
   }, [hasGreeted, open, user?.name]);
 
+  // Reset on logout — clear storage and state
   useEffect(() => {
     setMessages([]);
     setHasGreeted(false);
     setOpen(false);
     setInput("");
+    clearMessages(user?._id);
+  }, [user?._id]);
+
+  // Reload persisted messages when user logs back in
+  useEffect(() => {
+    if (user?._id) {
+      const stored = loadMessages(user._id);
+      if (stored.length > 0) {
+        setMessages(stored);
+        setHasGreeted(true);
+      }
+    }
   }, [user?._id]);
 
   useEffect(() => {
@@ -119,9 +163,8 @@ export default function AIChatWidget() {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ color: 'white', fontWeight: 700, fontSize: '0.875rem', margin: 0 }}>TUTORERA® AI Assistant</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.7rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <span style={{ width: 6, height: 6, backgroundColor: '#34d399', borderRadius: '50%', display: 'inline-block' }} />
-                Online · Replies instantly
+              <p style={{ color: '#9ca3af', fontSize: '0.7rem', margin: 0 }}>
+                TUTORERA® AI Assistant
               </p>
             </div>
             <button onClick={() => setOpen(false)}
