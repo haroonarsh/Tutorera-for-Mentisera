@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /onboarding/
+Disallow: /profile/
+Disallow: /earnings/
+Disallow: /settings/
+Disallow: /tracking/
+
+Sitemap: https://tutorera.ac.pk/sitemap.xml
