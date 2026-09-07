@@ -4,7 +4,8 @@ import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
-import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
+import RequestModel from "../models/Request.model";
+import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
 import { finalizeBidAcceptance } from "./request.controller";
 import sendEmail from "../utils/sendEmail";
 import { paymentConfirmedEmail, paymentFailedEmail } from "../utils/emailTemplates";
@@ -44,11 +45,15 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
   const basketId = booking._id.toString();
 
   try {
-    const checkoutUrl = await createTransaction({
+    const checkoutUrl = await paymentProvider.createCheckout({
       amount: booking.amount,
+      currency: "PKR",
       customerMobileNo: student.phone || "03000000000",
       customerEmail: student.email,
       basketId,
+      bookingId: booking._id.toString(),
+      studentId: booking.student.toString(),
+      tutorId: booking.tutor.toString(),
       description: `TUTORERA booking ${basketId}`,
       successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
       failureUrl: `${FRONTEND_URL}/dashboard?payment=failed&booking=${basketId}`,
@@ -78,20 +83,21 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
   const signature = req.header("X-RapidGateway-Signature");
   const timestamp = req.header("X-RapidGateway-Timestamp");
 
-  const isValid = verifyWebhookSignature(rawBody, signature, timestamp);
+  const isValid = paymentProvider.verifyWebhookSignature(rawBody, signature, timestamp);
   if (!isValid) {
     logger.warn({ requestId: (req as any).id }, "Rejected payment webhook — invalid or stale signature");
     res.status(401).json({ success: false, message: "Invalid signature" });
     return;
   }
 
-  const event = req.body as {
+  const event = paymentProvider.normalizeWebhook(req.body as {
     eventId: string;
     eventType: string;
     merchantTransactionId: string; // == our BASKET_ID
     status: string;
     amount: number;
-  };
+    currency?: string;
+  });
 
   try {
     if (event.eventType === "transaction.completed") {
@@ -102,8 +108,21 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
 
         const bid = await Bid.findById(bidId);
         if (bid) {
-          const student = await User.findById(bid.request.toString()).select("name email");
+          const request = await RequestModel.findById(bid.request).select("student");
+          const student = request ? await User.findById(request.student).select("name email") : null;
           const tutor = await User.findById(bid.tutor).select("name email");
+          await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.succeeded",
+            status: "succeeded",
+            amount: event.amount,
+            currency: event.currency,
+            bidId,
+            studentId: request?.student?.toString(),
+            tutorId: bid.tutor.toString(),
+            metadata: { gatewayStatus: event.status },
+          });
           try {
             if (student && tutor) {
               const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount);
@@ -127,6 +146,18 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
           await booking.save();
         }
+        await recordPaymentLedger({
+          providerTransactionId: event.merchantTransactionId,
+          providerEventId: event.eventId,
+          eventType: "payment.succeeded",
+          status: "succeeded",
+          amount: event.amount,
+          currency: event.currency,
+          bookingId: booking._id.toString(),
+          studentId: booking.student.toString(),
+          tutorId: booking.tutor.toString(),
+          metadata: { gatewayStatus: event.status },
+        });
 
         try {
           const student = await User.findById(booking.student).select("name email");
@@ -146,8 +177,21 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const bid = await Bid.findById(bidId);
         if (bid) {
-          const student = await User.findById(bid.request.toString()).select("name email");
+          const request = await RequestModel.findById(bid.request).select("student");
+          const student = request ? await User.findById(request.student).select("name email") : null;
           const tutor = await User.findById(bid.tutor).select("name email");
+          await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.failed",
+            status: "failed",
+            amount: event.amount,
+            currency: event.currency,
+            bidId,
+            studentId: request?.student?.toString(),
+            tutorId: bid.tutor.toString(),
+            metadata: { gatewayStatus: event.status },
+          });
           try {
             if (student) {
               const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount);
@@ -169,6 +213,18 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
       } else {
         const booking = await Booking.findById(event.merchantTransactionId);
         if (booking) {
+          await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.failed",
+            status: "failed",
+            amount: event.amount,
+            currency: event.currency,
+            bookingId: booking._id.toString(),
+            studentId: booking.student.toString(),
+            tutorId: booking.tutor.toString(),
+            metadata: { gatewayStatus: event.status },
+          });
           const student = await User.findById(booking.student).select("name email");
           const tutor = await User.findById(booking.tutor).select("name email");
           try {

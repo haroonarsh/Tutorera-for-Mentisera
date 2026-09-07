@@ -11,6 +11,23 @@ interface ReconciliationSummary {
   totalPlatformGross: number;
   totalEstimatedGatewayFees: number;
   netPlatformSettlement: number;
+  ledger?: Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>;
+}
+
+interface LedgerItem {
+  _id: string;
+  createdAt: string;
+  provider: string;
+  eventType: string;
+  status: string;
+  providerTransactionId: string;
+  grossAmount: number;
+  currency: string;
+  platformNet: number;
+  tutorPayable: number;
+  settlementStatus: string;
+  student?: { name: string; email: string };
+  tutor?: { name: string; email: string };
 }
 
 interface BookingReconciledItem {
@@ -33,6 +50,7 @@ interface BookingReconciledItem {
 export default function ReconciliationPage() {
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
   const [bookings, setBookings] = useState<BookingReconciledItem[]>([]);
+  const [ledger, setLedger] = useState<LedgerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
@@ -42,6 +60,7 @@ export default function ReconciliationPage() {
       const res = await api.get(`/admin/finance/reconciliation${filter !== "all" ? `?status=${filter}` : ""}`);
       setSummary(res.data.summary);
       setBookings(res.data.bookings || []);
+      setLedger(res.data.ledger || []);
     } catch (err) {
       console.error("Failed to load reconciliation:", err);
     } finally {
@@ -92,6 +111,21 @@ export default function ReconciliationPage() {
           <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh Ledger
         </button>
       </div>
+
+      {summary?.ledger && (
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #dbe5ff", marginBottom: "1.25rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 900, color: "#0f172a", margin: "0 0 0.75rem" }}>Payment Provider Ledger Summary</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+            {Object.entries(summary.ledger).map(([status, row]) => (
+              <div key={status} style={{ background: "#f8faff", border: "1px solid #e2e8f0", borderRadius: "0.65rem", padding: "0.8rem" }}>
+                <span style={{ color: "#64748b", fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase" }}>{status}</span>
+                <strong style={{ display: "block", color: "#021550", fontSize: "1.2rem", marginTop: "0.15rem" }}>{row.count}</strong>
+                <span style={{ color: "#475569", fontSize: "0.75rem" }}>Gross PKR {Math.round(row.grossAmount || 0).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Financial Metrics Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
@@ -242,6 +276,42 @@ export default function ReconciliationPage() {
           </table>
         )}
       </div>
+
+      <section style={{ marginTop: "1.5rem", backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden" }}>
+        <div style={{ padding: "1rem 1.2rem", borderBottom: "1px solid #e2e8f0" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>Recent Payment Ledger Events</h2>
+          <p style={{ color: "#64748b", fontSize: "0.78rem", margin: "0.25rem 0 0" }}>Provider transaction events recorded for checkout, payment success, and payment failure.</p>
+        </div>
+        {ledger.length === 0 ? (
+          <div style={{ padding: "1.5rem", color: "#64748b", fontSize: "0.85rem" }}>No provider ledger events recorded yet.</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#f8fafc", color: "#64748b", textAlign: "left" }}>
+                <th style={{ padding: "0.75rem 1rem" }}>Event</th>
+                <th style={{ padding: "0.75rem 1rem" }}>Provider Ref</th>
+                <th style={{ padding: "0.75rem 1rem" }}>Gross</th>
+                <th style={{ padding: "0.75rem 1rem" }}>Tutor Payable</th>
+                <th style={{ padding: "0.75rem 1rem" }}>Settlement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledger.map((row) => (
+                <tr key={row._id} style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "0.8rem 1rem" }}>
+                    <strong style={{ display: "block", color: "#0f172a" }}>{row.eventType}</strong>
+                    <span style={{ color: "#64748b" }}>{new Date(row.createdAt).toLocaleString()}</span>
+                  </td>
+                  <td style={{ padding: "0.8rem 1rem", color: "#334155" }}>{row.providerTransactionId}</td>
+                  <td style={{ padding: "0.8rem 1rem", fontWeight: 800 }}>{row.currency} {Math.round(row.grossAmount || 0).toLocaleString()}</td>
+                  <td style={{ padding: "0.8rem 1rem", color: "#059669", fontWeight: 700 }}>PKR {Math.round(row.tutorPayable || 0).toLocaleString()}</td>
+                  <td style={{ padding: "0.8rem 1rem" }}>{row.status} / {row.settlementStatus}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       <style jsx>{`
         .spin {

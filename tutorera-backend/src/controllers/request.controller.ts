@@ -17,7 +17,7 @@ import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracki
 import sendEmail from "../utils/sendEmail";
 import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
 import { convertToPKR } from "../config/countries";
-import { createTransaction } from "../utils/rapidGateway";
+import { paymentProvider } from "../services/paymentProvider.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
@@ -684,11 +684,15 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const checkoutUrl = await createTransaction({
+    const checkoutUrl = await paymentProvider.createCheckout({
       amount: bid.amount,
+      currency: bid.currency || "PKR",
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${bid._id.toString()}`,
+      bidId: bid._id.toString(),
+      studentId: request.student.toString(),
+      tutorId: bid.tutor.toString(),
       description: `TUTORERA offer acceptance ${bid._id.toString()}`,
       successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
       failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,

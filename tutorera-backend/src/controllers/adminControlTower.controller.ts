@@ -12,6 +12,7 @@ import User from "../models/User.model";
 import SafetyCase from "../models/SafetyCase.model";
 import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
+import PaymentLedger from "../models/PaymentLedger.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS } from "../config/rbac";
 import mongoose from "mongoose";
@@ -257,7 +258,7 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
   const filter: Record<string, unknown> = {};
   if (status) filter.paymentStatus = status;
 
-  const [total, bookings] = await Promise.all([
+  const [total, bookings, ledgerStatusRows, recentLedgerRows] = await Promise.all([
     Booking.countDocuments(filter),
     Booking.find(filter)
       .populate("student", "name email")
@@ -266,6 +267,15 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       .sort("-createdAt")
       .skip(skip)
       .limit(limitNum)
+      .lean(),
+    PaymentLedger.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 }, grossAmount: { $sum: "$grossAmount" }, platformNet: { $sum: "$platformNet" }, tutorPayable: { $sum: "$tutorPayable" } } },
+    ]),
+    PaymentLedger.find()
+      .populate("student", "name email")
+      .populate("tutor", "name email")
+      .sort("-createdAt")
+      .limit(20)
       .lean(),
   ]);
 
@@ -294,7 +304,17 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       totalPlatformGross,
       totalEstimatedGatewayFees,
       netPlatformSettlement: totalPlatformGross - totalEstimatedGatewayFees,
+      ledger: ledgerStatusRows.reduce((acc, row) => {
+        acc[row._id || "unknown"] = {
+          count: row.count,
+          grossAmount: row.grossAmount,
+          platformNet: row.platformNet,
+          tutorPayable: row.tutorPayable,
+        };
+        return acc;
+      }, {} as Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>),
     },
+    ledger: recentLedgerRows,
     bookings: bookings.map((b) => {
       const gmv = b.studentTotal || b.subtotal || 0;
       const expectedSettlement = gmv - (gmv * 0.029 + 30);
