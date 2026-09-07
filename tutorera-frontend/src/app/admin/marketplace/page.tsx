@@ -13,6 +13,8 @@ const labels: Record<string, string> = {
   totalRequests: "Total requests",
   activeRequests: "Active requests",
   totalOffers: "Tutor offers",
+  zeroOfferRequests: "Zero-offer active requests",
+  threeOfferCoverageRate: "3+ offer coverage",
   averageOffersPerRequest: "Average offers / request",
   averageMinutesToFirstOffer: "Minutes to first offer",
   offerAcceptanceRate: "Offer acceptance",

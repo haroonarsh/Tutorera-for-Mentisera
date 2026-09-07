@@ -33,6 +33,13 @@ export default function ForTutorsPage() {
           <p style={{ fontSize: "1.1rem", color: "#bfdbfe", maxWidth: 660, margin: "0 auto 2.5rem", lineHeight: 1.6 }}>
             Browse active student tuition requests across subjects and curricula. Accept the student&apos;s proposed budget or submit your own custom offer. Teach online worldwide or home tuition locally.
           </p>
+          <div style={{ display: "inline-flex", gap: "0.6rem", flexWrap: "wrap", justifyContent: "center", marginBottom: "1.5rem" }} aria-label="Tutor marketplace economics">
+            {["No lead fees", "No bidding credits", "No coins to contact students"].map((item) => (
+              <span key={item} style={{ background: "rgba(8, 191, 252, 0.16)", border: "1px solid rgba(191, 219, 254, 0.45)", color: "white", borderRadius: 999, padding: "0.45rem 0.8rem", fontSize: "0.82rem", fontWeight: 800 }}>
+                {item}
+              </span>
+            ))}
+          </div>
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Link
@@ -110,7 +117,7 @@ export default function ForTutorsPage() {
                 2. Transparent Offer Negotiation
               </h3>
               <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                You are never locked into bad rates. If a student&apos;s proposed budget is too low, send a counter-offer with your rate and personalized value proposition.
+                You are never asked to buy leads or bidding credits. If a student&apos;s proposed budget is too low, send a counter-offer with your rate and personalized value proposition.
               </p>
             </div>
 
@@ -122,7 +129,7 @@ export default function ForTutorsPage() {
                 3. Guaranteed Platform Payouts
               </h3>
               <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                No chasing clients for payment. Before your lesson commences, the student completes payment through the platform, paid out directly upon verified session completion.
+                Payment status, booking records, and payout eligibility are tracked in the platform so finance exceptions can be handled with clear records.
               </p>
             </div>
           </div>

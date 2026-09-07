@@ -13,14 +13,14 @@ export default function BecomeTutorPage() {
       <section style={{ backgroundColor: C.primary, padding: '5rem 1.5rem', textAlign: 'center' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'rgba(37,99,235,0.2)', color: '#93c5fd', padding: '0.4rem 1rem', borderRadius: '999px', fontSize: '0.85rem', fontWeight: '600', marginBottom: '1.5rem' }}>
-            <Star size={14} /> Join 500+ Verified Tutors
+            <Star size={14} /> Verified Tutor Marketplace
           </div>
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', fontWeight: '800', color: 'white', lineHeight: '1.2', marginBottom: '1.25rem' }}>
             Teach Smarter with<br />
             <span style={{ color: '#60a5fa' }}>TUTORERA®</span>
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1.05rem', maxWidth: '560px', margin: '0 auto 2.5rem', lineHeight: '1.75' }}>
-            Reach serious students across Pakistan. Build your tutoring career on a structured, professional platform — without chasing leads.
+            Reach students through structured requests and transparent offers. Build your tutoring career on a professional platform without buying leads or bidding credits.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/register?role=tutor"
@@ -49,7 +49,7 @@ export default function BecomeTutorPage() {
               { icon: <Shield size={26} color={C.accent} />, title: "Verified & Trusted Badge", desc: "Get a verified badge after credential review. Stand out from unverified tutors and build trust with parents." },
               { icon: <Star size={26} color={C.accent} />, title: "Build Your Reputation", desc: "Collect reviews from students after each session. A strong profile attracts more bookings automatically." },
               { icon: <BookOpen size={26} color={C.accent} />, title: "Professional Platform", desc: "No WhatsApp groups or informal arrangements. A clean, professional system handles everything for you." },
-              { icon: <ArrowRight size={26} color={C.accent} />, title: "Grow Your Income", desc: `Set your own hourly rate. Active tutors can earn ${formatPKR(5000)}–${formatPKR(15000)} per day from multiple students.` },
+              { icon: <ArrowRight size={26} color={C.accent} />, title: "Grow Through Successful Teaching", desc: "Set your own rate, respond to relevant student demand, and build repeat relationships through completed bookings and reviews." },
             ].map(item => (
               <div key={item.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
                 <div style={{ width: '48px', height: '48px', backgroundColor: C.accentLight, borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
@@ -91,7 +91,7 @@ export default function BecomeTutorPage() {
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.5rem' }}>Who Can Join?</h2>
-            <p style={{ color: C.gray500 }}>We welcome qualified educators across Pakistan.</p>
+            <p style={{ color: C.gray500 }}>We welcome qualified educators for online learning worldwide and local home tuition where available.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb' }}>
