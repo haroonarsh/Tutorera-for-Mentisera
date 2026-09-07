@@ -199,6 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
+                      className={isActive ? "bg-blue-800/55" : "hover:bg-white/[0.06]"}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -208,16 +209,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         textDecoration: "none",
                         fontSize: "0.82rem",
                         fontWeight: isActive ? 700 : 600,
-                        backgroundColor: isActive ? "rgba(3,41,178,0.55)" : "transparent",
                         color: isActive ? "#ffffff" : "#cbd5e1",
                         border: isActive ? "1px solid rgba(59,130,246,0.4)" : "1px solid transparent",
                         transition: "background-color 150ms ease, border-color 150ms ease, color 150ms ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
