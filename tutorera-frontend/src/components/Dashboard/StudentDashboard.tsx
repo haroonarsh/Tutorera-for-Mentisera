@@ -856,9 +856,9 @@ function RequestCard({
                           >
                             {accepting === bid._id ? "Accepting…" : "Accept Offer"}
                           </button>
-                          {request.allowCounterOffers && bid.latestSenderRole !== "student" && (bid.counterCounts?.student ?? 0) < 3 && <button onClick={() => {setCountering(bid);setCounterAmount(String(bid.amount))}} className={s.btnOutline}>Counter Offer</button>}
+                          {request.allowCounterOffers && bid.latestSenderRole !== "student" && (bid.counterCounts?.student ?? 0) < 3 && <button type="button" onClick={() => {setCountering(bid);setCounterAmount(String(bid.amount))}} className={s.btnOutline}>Counter Offer</button>}
                           <Link href="/chat" className={s.btnOutline}>Message</Link>
-                          <button onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
+                          <button type="button" onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
                           <Link href={`/support?topic=report-tutor&offer=${bid._id}`} className={s.btnOutline}>Report</Link>
                         </>)}
                         {(bid.status as string) === "payment_pending" && (
@@ -1273,7 +1273,7 @@ const fetchRequests = useCallback(async () => {
                   </button>
                 </div>
               </div>
-              <button onClick={() => setShowModal(true)} className={s.btnPrimary}>
+              <button type="button" onClick={() => setShowModal(true)} className={s.btnPrimary}>
                 + New Request
               </button>
             </div>
@@ -1291,7 +1291,7 @@ const fetchRequests = useCallback(async () => {
                     ? "Requests stay active for 7 days. When expired, you can review past offers and easily repost anytime."
                     : "Post your tuition requirement with budget and schedule. Matched verified tutors will send proposals to you."}
                 </p>
-                <button onClick={() => setShowModal(true)} className={s.btnPrimary}>
+                <button type="button" onClick={() => setShowModal(true)} className={s.btnPrimary}>
                   Post a Request
                 </button>
               </div>
@@ -1331,7 +1331,7 @@ const fetchRequests = useCallback(async () => {
                 {bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                    <button onClick={loadMoreBookings} disabled={loadingMoreBookings}
+                    <button type="button" onClick={loadMoreBookings} disabled={loadingMoreBookings}
                       style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingMoreBookings ? 'not-allowed' : 'pointer' }}>
                       {loadingMoreBookings ? "Loading..." : "Load More Bookings"}
                     </button>

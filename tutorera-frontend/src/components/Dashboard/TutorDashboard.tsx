@@ -960,7 +960,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
                 <p className={s.emptyDesc}>
                   As students post requests matching your subjects and teaching mode, they will appear here with high match scores. You can also browse all open requests.
                 </p>
-                <button onClick={() => setTab("browse")} className={s.btnPrimary}>Browse All Requests</button>
+                <button type="button" onClick={() => setTab("browse")} className={s.btnPrimary}>Browse All Requests</button>
               </div>
             ) : (
               recommended.map((item) => (
@@ -1012,7 +1012,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             
             <div className={s.sectionHeader}>
               <h2 className={s.sectionTitle}>Open Student Requests</h2>
-              <button onClick={fetchRequests} className={s.btnOutline}>↻ Refresh</button>
+              <button type="button" onClick={fetchRequests} className={s.btnOutline}>↻ Refresh</button>
             </div>
 
             {bidSuccess && (
