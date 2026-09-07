@@ -38,6 +38,7 @@ import recurringRoutes from "./routes/recurring.routes";
 import liquidityRoutes from "./routes/liquidity.routes";
 import tutoringIndexRoutes from "./routes/tutoringIndex.routes";
 import publicRoutes from "./routes/public.routes";
+import pricingRoutes from "./routes/pricing.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -126,6 +127,7 @@ apiRouter.use("/liquidity", liquidityRoutes);
 apiRouter.use("/tutoring-index", tutoringIndexRoutes);
 apiRouter.use("/public", publicRoutes);
 apiRouter.use("/matching", matchingRoutes);
+apiRouter.use("/pricing", pricingRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
