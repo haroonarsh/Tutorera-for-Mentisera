@@ -11,6 +11,8 @@ import { DEFAULT_MATCHING_CONFIG } from "../config/matchingConfig";
 import { logAudit } from "../utils/logAudit";
 import logger from "../config/logger";
 import { formatMatchingConfigError, matchingConfigUpdateSchema } from "../validators/matchingConfig.validator";
+import mongoose from "mongoose";
+import AuditLog from "../models/AuditLog.model";
 
 // @desc    Get top matching tutors for a student's request
 // @route   GET /api/v1/matching/requests/:id/matches
@@ -151,18 +153,54 @@ export const submitMatchFeedback = async (req: AuthRequest, res: Response): Prom
 // @desc    Admin: Get matching analytics and conversion metrics
 // @route   GET /api/v1/matching/admin/analytics
 // @access  Private (admin)
-export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Promise<void> => {
+export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const totalMatches = await MatchLog.countDocuments();
-    const notificationTier1 = await MatchLog.countDocuments({ notificationTier: 1 });
-    const offersReceived = await MatchLog.countDocuments({ offerReceivedAt: { $exists: true } });
-    const offersAccepted = await MatchLog.countDocuments({ offerAcceptedAt: { $exists: true } });
-    const bookingsCompleted = await MatchLog.countDocuments({ bookingCompletedAt: { $exists: true } });
+    const { dateFrom, dateTo, mode, algorithmVersion, countryCode, city, subject } = req.query as Record<string, string | undefined>;
+    const matchFilter: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      const createdAt: Record<string, Date> = {};
+      if (dateFrom) {
+        const parsed = new Date(dateFrom);
+        if (Number.isNaN(parsed.getTime())) { res.status(400).json({ success: false, message: "Invalid dateFrom." }); return; }
+        createdAt.$gte = parsed;
+      }
+      if (dateTo) {
+        const parsed = new Date(dateTo);
+        if (Number.isNaN(parsed.getTime())) { res.status(400).json({ success: false, message: "Invalid dateTo." }); return; }
+        parsed.setHours(23, 59, 59, 999);
+        createdAt.$lte = parsed;
+      }
+      matchFilter.createdAt = createdAt;
+      if (createdAt.$gte && createdAt.$lte && createdAt.$gte > createdAt.$lte) {
+        res.status(400).json({ success: false, message: "dateFrom must be on or before dateTo." });
+        return;
+      }
+    }
+    if (mode) {
+      if (!["online", "in-person", "both"].includes(mode)) { res.status(400).json({ success: false, message: "Invalid matching mode." }); return; }
+      matchFilter.mode = mode;
+    }
+    if (algorithmVersion) matchFilter.algorithmVersion = algorithmVersion;
+    if (countryCode || city || subject) {
+      const requestFilter: Record<string, unknown> = {};
+      if (countryCode) requestFilter.countryCode = countryCode.toUpperCase();
+      if (city) requestFilter.city = new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+      if (subject) requestFilter.subject = new RegExp(`^${subject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+      const requestIds = await Request.find(requestFilter).distinct("_id");
+      matchFilter.request = { $in: requestIds };
+    }
 
-    // Score tier breakdown
-    const tierCounts = await MatchLog.aggregate([
-      { $group: { _id: "$tier", count: { $sum: 1 }, avgScore: { $avg: "$score" } } },
+    const [totalMatches, notificationTier1, offersReceived, offersAccepted, bookingsCompleted, tierCounts, avgScoreAgg, responseTimeAgg] = await Promise.all([
+      MatchLog.countDocuments(matchFilter),
+      MatchLog.countDocuments({ ...matchFilter, notificationTier: 1 }),
+      MatchLog.countDocuments({ ...matchFilter, offerReceivedAt: { $exists: true } }),
+      MatchLog.countDocuments({ ...matchFilter, offerAcceptedAt: { $exists: true } }),
+      MatchLog.countDocuments({ ...matchFilter, bookingCompletedAt: { $exists: true } }),
+      MatchLog.aggregate([{ $match: matchFilter }, { $group: { _id: "$tier", count: { $sum: 1 }, avgScore: { $avg: "$score" } } }]),
+      MatchLog.aggregate([{ $match: matchFilter }, { $group: { _id: null, avgScore: { $avg: "$score" } } }]),
+      MatchLog.aggregate([{ $match: { ...matchFilter, notificationSentAt: { $type: "date" }, offerReceivedAt: { $type: "date" } } }, { $project: { minutes: { $divide: [{ $subtract: ["$offerReceivedAt", "$notificationSentAt"] }, 60000] } } }, { $match: { minutes: { $gte: 0 } } }, { $group: { _id: null, average: { $avg: "$minutes" } } }]),
     ]);
+
 
     const tierDistribution = {
       excellent: 0,
@@ -178,18 +216,7 @@ export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Pr
       else tierDistribution.fair += tc.count;
     });
 
-    // Average score overall
-    const avgScoreAgg = await MatchLog.aggregate([
-      { $group: { _id: null, avgScore: { $avg: "$score" } } },
-    ]);
     const averageMatchScore = avgScoreAgg.length > 0 ? Math.round(avgScoreAgg[0].avgScore) : null;
-
-    const responseTimeAgg = await MatchLog.aggregate([
-      { $match: { notificationSentAt: { $type: "date" }, offerReceivedAt: { $type: "date" } } },
-      { $project: { minutes: { $divide: [{ $subtract: ["$offerReceivedAt", "$notificationSentAt"] }, 60000] } } },
-      { $match: { minutes: { $gte: 0 } } },
-      { $group: { _id: null, average: { $avg: "$minutes" } } },
-    ]);
     const avgStudentResponseMinutes = responseTimeAgg.length > 0
       ? Math.round(responseTimeAgg[0].average)
       : null;
@@ -210,6 +237,7 @@ export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Pr
         avgStudentResponseMinutes,
         generatedAt: new Date().toISOString(),
         hasData: totalMatches > 0,
+        filters: { dateFrom, dateTo, mode, algorithmVersion, countryCode, city, subject },
         tierDistribution,
 
         // Legacy / snake keys for backwards compatibility
@@ -250,6 +278,7 @@ export const getMatchingConfig = async (_req: AuthRequest, res: Response): Promi
 // @route   PUT /api/v1/matching/admin/config
 // @access  Private (admin)
 export const updateMatchingConfig = async (req: AuthRequest, res: Response): Promise<void> => {
+  const session = await mongoose.startSession();
   try {
     const parsed = matchingConfigUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -262,52 +291,47 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
     }
 
     const { changeReason, expectedUpdatedAt, ...configData } = parsed.data;
-    const existing = await MatchingConfig.findOne().sort({ updatedAt: -1 });
-    if (expectedUpdatedAt && existing && existing.updatedAt.toISOString() !== expectedUpdatedAt) {
-      res.status(409).json({ success: false, code: "CONFIG_CONFLICT", message: "Matching configuration changed in another session. Reload before saving." });
-      return;
-    }
+    let updated: any = null;
+    await session.withTransaction(async () => {
+      const existing = await MatchingConfig.findOne().sort({ updatedAt: -1 }).session(session);
+      if (expectedUpdatedAt && existing && existing.updatedAt.toISOString() !== expectedUpdatedAt) {
+        const conflict = new Error("Matching configuration changed in another session. Reload before saving.") as Error & { statusCode?: number; code?: string };
+        conflict.statusCode = 409;
+        conflict.code = "CONFIG_CONFLICT";
+        throw conflict;
+      }
+      const filter = existing ? { _id: existing._id, updatedAt: existing.updatedAt } : {};
+      updated = await MatchingConfig.findOneAndUpdate(
+        filter,
+        { $set: { ...configData, updatedBy: req.user?._id }, $inc: { revision: 1 } },
+        { returnDocument: "after", upsert: !existing, runValidators: true, session }
+      );
+      if (!updated) {
+        const conflict = new Error("Matching configuration changed in another session. Reload before saving.") as Error & { statusCode?: number; code?: string };
+        conflict.statusCode = 409;
+        conflict.code = "CONFIG_CONFLICT";
+        throw conflict;
+      }
+      await MatchingConfigHistory.create([{ snapshot: configData, revision: updated.revision, changeReason, changedBy: req.user?._id }], { session });
+      await AuditLog.create([{
+        action: "matching_config_updated",
+        actor: req.user?.name || "Admin",
+        actorId: req.user?._id?.toString(),
+        entity: "MatchingConfig",
+        targetId: updated._id.toString(),
+        metadata: { changeReason, revision: updated.revision, before: existing?.toObject(), after: configData },
+      }], { session });
+    });
 
-    const filter = existing ? { _id: existing._id, updatedAt: existing.updatedAt } : {};
-    const updated = await MatchingConfig.findOneAndUpdate(
-      filter,
-      {
-        $set: {
-          ...configData,
-          updatedBy: req.user?._id,
-        },
-        $inc: { revision: 1 },
-      },
-      { returnDocument: "after", upsert: !existing, runValidators: true }
-    );
-    if (!updated) {
-      res.status(409).json({ success: false, code: "CONFIG_CONFLICT", message: "Matching configuration changed in another session. Reload before saving." });
-      return;
-    }
-
-    // Invalidate in-memory cache immediately so changes take effect
     MatchingService.invalidateConfigCache();
-
-    await logAudit({
-      action: "matching_config_updated",
-      actor: req.user?.name,
-      actorId: req.user?._id?.toString(),
-      entity: "MatchingConfig",
-      targetId: updated._id.toString(),
-      metadata: { changeReason, revision: updated.revision, before: existing?.toObject(), after: configData },
-    });
-
-    await MatchingConfigHistory.create({
-      snapshot: configData,
-      revision: updated.revision,
-      changeReason,
-      changedBy: req.user?._id,
-    });
 
     res.json({ success: true, message: "Matching configuration updated successfully.", config: updated });
   } catch (err) {
     logger.error({ err }, "Error in updateMatchingConfig");
-    res.status(500).json({ success: false, message: "Failed to update config." });
+    const operational = err as Error & { statusCode?: number; code?: string };
+    res.status(operational.statusCode || 500).json({ success: false, code: operational.code, message: operational.statusCode ? operational.message : "Failed to update config." });
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -321,26 +345,47 @@ export const getMatchingConfigHistory = async (_req: AuthRequest, res: Response)
 };
 
 export const rollbackMatchingConfig = async (req: AuthRequest, res: Response): Promise<void> => {
-  const history = await MatchingConfigHistory.findById(req.params.id).lean();
-  if (!history) {
-    res.status(404).json({ success: false, message: "Configuration history entry not found." });
+  const rollbackReason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (rollbackReason.length < 8 || rollbackReason.length > 500) {
+    res.status(400).json({ success: false, message: "Provide a rollback reason of 8 to 500 characters." });
     return;
   }
-  const current = await MatchingConfig.findOne().sort({ updatedAt: -1 });
-  const updated = await MatchingConfig.findOneAndUpdate(
-    current ? { _id: current._id, updatedAt: current.updatedAt } : {},
-    { $set: { ...history.snapshot, updatedBy: req.user?._id }, $inc: { revision: 1 } },
-    { returnDocument: "after", upsert: !current, runValidators: true }
-  );
-  if (!updated) {
-    res.status(409).json({ success: false, message: "Configuration changed during rollback. Reload and try again." });
-    return;
+  const session = await mongoose.startSession();
+  try {
+    let updated: any = null;
+    let sourceRevision = 0;
+    await session.withTransaction(async () => {
+      const history = await MatchingConfigHistory.findById(req.params.id).session(session).lean();
+      if (!history) {
+        const missing = new Error("Configuration history entry not found.") as Error & { statusCode?: number };
+        missing.statusCode = 404;
+        throw missing;
+      }
+      sourceRevision = history.revision;
+      const current = await MatchingConfig.findOne().sort({ updatedAt: -1 }).session(session);
+      updated = await MatchingConfig.findOneAndUpdate(
+        current ? { _id: current._id, updatedAt: current.updatedAt } : {},
+        { $set: { ...history.snapshot, updatedBy: req.user?._id }, $inc: { revision: 1 } },
+        { returnDocument: "after", upsert: !current, runValidators: true, session }
+      );
+      if (!updated) {
+        const conflict = new Error("Configuration changed during rollback. Reload and try again.") as Error & { statusCode?: number };
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+      const reason = `Rollback to revision ${history.revision}: ${rollbackReason}`;
+      await MatchingConfigHistory.create([{ snapshot: history.snapshot, revision: updated.revision, changeReason: reason, changedBy: req.user?._id }], { session });
+      await AuditLog.create([{ action: "matching_config_rolled_back", actor: req.user?.name || "Admin", actorId: req.user?._id?.toString(), entity: "MatchingConfig", targetId: updated._id.toString(), metadata: { sourceRevision, newRevision: updated.revision, rollbackReason } }], { session });
+    });
+    MatchingService.invalidateConfigCache();
+    res.json({ success: true, message: `Rolled back to revision ${sourceRevision}`, config: updated });
+  } catch (err) {
+    const operational = err as Error & { statusCode?: number };
+    logger.error({ err }, "Error rolling back matching configuration");
+    res.status(operational.statusCode || 500).json({ success: false, message: operational.statusCode ? operational.message : "Failed to roll back configuration." });
+  } finally {
+    await session.endSession();
   }
-  MatchingService.invalidateConfigCache();
-  const reason = `Rolled back to revision ${history.revision}`;
-  await MatchingConfigHistory.create({ snapshot: history.snapshot, revision: updated.revision, changeReason: reason, changedBy: req.user?._id });
-  await logAudit({ action: "matching_config_rolled_back", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "MatchingConfig", targetId: updated._id.toString(), metadata: { sourceRevision: history.revision, newRevision: updated.revision } });
-  res.json({ success: true, message: reason, config: updated });
 };
 
 // @desc    Admin: Simulate and diagnose matching evaluation for a request or custom parameters

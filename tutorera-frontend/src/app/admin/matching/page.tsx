@@ -24,7 +24,7 @@ import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import { useAuth } from "@/context/AuthContext";
 import AvatarImage from "@/components/Common/AvatarImage";
-import { AdminEmptyState, AdminErrorState, AdminMetricCard } from "@/components/admin/AdminUI";
+import { AdminDialog, AdminEmptyState, AdminErrorState, AdminMetricCard } from "@/components/admin/AdminUI";
 
 interface MatchAnalytics {
   totalMatches: number;
@@ -44,12 +44,28 @@ interface MatchAnalytics {
   };
 }
 
+interface AnalyticsFilters {
+  dateFrom: string;
+  dateTo: string;
+  mode: string;
+  algorithmVersion: string;
+  countryCode: string;
+  city: string;
+  subject: string;
+}
+
+const EMPTY_ANALYTICS_FILTERS: AnalyticsFilters = {
+  dateFrom: "", dateTo: "", mode: "", algorithmVersion: "", countryCode: "", city: "", subject: "",
+};
+
 export default function AdminMatchingPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"analytics" | "weights" | "simulator">("analytics");
   const [analytics, setAnalytics] = useState<MatchAnalytics | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [analyticsError, setAnalyticsError] = useState("");
+  const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>(EMPTY_ANALYTICS_FILTERS);
+  const [appliedAnalyticsFilters, setAppliedAnalyticsFilters] = useState<AnalyticsFilters>(EMPTY_ANALYTICS_FILTERS);
   const [config, setConfig] = useState<any>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [configError, setConfigError] = useState("");
@@ -57,6 +73,9 @@ export default function AdminMatchingPage() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [confirmingConfig, setConfirmingConfig] = useState(false);
   const [changeReason, setChangeReason] = useState("");
+  const [rollbackTarget, setRollbackTarget] = useState<{ id: string; revision: number } | null>(null);
+  const [rollbackReason, setRollbackReason] = useState("");
+  const [rollingBack, setRollingBack] = useState(false);
   const [selectedMode, setSelectedMode] = useState<"online" | "home">("online");
 
   // Simulator states
@@ -79,12 +98,14 @@ export default function AdminMatchingPage() {
   const [simulating, setSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [dispatchingWave, setDispatchingWave] = useState(false);
+  const [dispatchTarget, setDispatchTarget] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
     setLoadingAnalytics(true);
     setAnalyticsError("");
     try {
-      const res = await api.get("/matching/admin/analytics");
+      const params = Object.fromEntries(Object.entries(appliedAnalyticsFilters).filter(([, value]) => value.trim()));
+      const res = await api.get("/matching/admin/analytics", { params });
       setAnalytics(res.data.analytics);
     } catch (err) {
       console.error("Failed to load matching analytics:", err);
@@ -92,7 +113,7 @@ export default function AdminMatchingPage() {
     } finally {
       setLoadingAnalytics(false);
     }
-  }, []);
+  }, [appliedAnalyticsFilters]);
 
   const fetchConfig = useCallback(async () => {
     setLoadingConfig(true);
@@ -178,13 +199,17 @@ export default function AdminMatchingPage() {
   };
 
   const handleRollbackConfig = async (historyId: string, revision: number) => {
-    if (!window.confirm(`Roll back matching configuration to revision ${revision}? A new audited revision will be created.`)) return;
+    setRollingBack(true);
     try {
-      await api.post(`/matching/admin/config/history/${historyId}/rollback`);
+      await api.post(`/matching/admin/config/history/${historyId}/rollback`, { reason: rollbackReason });
       showSuccess(`Matching configuration rolled back to revision ${revision}.`);
+      setRollbackTarget(null);
+      setRollbackReason("");
       await Promise.all([fetchConfig(), fetchConfigHistory()]);
     } catch (err) {
       showError(err, "Failed to roll back matching configuration.");
+    } finally {
+      setRollingBack(false);
     }
   };
 
@@ -211,7 +236,8 @@ export default function AdminMatchingPage() {
     setDispatchingWave(true);
     try {
       await api.post(`/admin/at-risk/requests/${requestId}/action`, { action: "rematch" });
-      showSuccess("Progressive tutor notifications wave dispatched successfully!");
+      showSuccess("Tutor notification wave dispatched.");
+      setDispatchTarget(null);
     } catch {
       showError("Failed to trigger match dispatch wave.");
     } finally {
@@ -228,6 +254,7 @@ export default function AdminMatchingPage() {
   const canSimulate = Boolean(isSuperAdmin || user?.adminRole === "marketplace_operations" || user?.adminPermissions?.includes("matching.simulate"));
   const tierDist = analytics?.tierDistribution || { excellent: 0, great: 0, good: 0, fair: 0 };
   const totalMatchesCount = analytics?.totalMatches || 0;
+  const hasAnalyticsFilters = Object.values(appliedAnalyticsFilters).some(Boolean);
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6 p-4 sm:p-6 lg:p-8">
@@ -313,6 +340,34 @@ export default function AdminMatchingPage() {
       {/* TAB 1: ANALYTICS */}
       {activeTab === "analytics" && (
         <div id="matching-panel-analytics" role="tabpanel" aria-labelledby="matching-tab-analytics" className="space-y-6">
+          <form
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            onSubmit={(event) => { event.preventDefault(); setAppliedAnalyticsFilters(analyticsFilters); }}
+            aria-label="Filter matching analytics"
+          >
+            <div className="flex flex-wrap items-end gap-3">
+              {([
+                ["dateFrom", "From", "date", ""], ["dateTo", "To", "date", ""],
+                ["algorithmVersion", "Algorithm", "text", "e.g. RULE_V1"], ["countryCode", "Country", "text", "e.g. PK"],
+                ["city", "City", "text", "e.g. Lahore"], ["subject", "Subject", "text", "e.g. Mathematics"],
+              ] as const).map(([key, label, type, placeholder]) => (
+                <label key={key} className="min-w-36 flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {label}
+                  <input type={type} value={analyticsFilters[key]} placeholder={placeholder} onChange={(event) => setAnalyticsFilters((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                </label>
+              ))}
+              <label className="min-w-36 flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Mode
+                <select value={analyticsFilters.mode} onChange={(event) => setAnalyticsFilters((current) => ({ ...current, mode: event.target.value }))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                  <option value="">All modes</option><option value="online">Online</option><option value="in-person">Home tuition</option><option value="both">Both</option>
+                </select>
+              </label>
+              <div className="flex gap-2">
+                <button type="submit" className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">Apply</button>
+                <button type="button" disabled={!hasAnalyticsFilters && !Object.values(analyticsFilters).some(Boolean)} onClick={() => { setAnalyticsFilters(EMPTY_ANALYTICS_FILTERS); setAppliedAnalyticsFilters(EMPTY_ANALYTICS_FILTERS); }} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200">Clear</button>
+              </div>
+            </div>
+          </form>
           {analyticsError && <AdminErrorState message={analyticsError} onRetry={fetchAnalytics} />}
           {analytics?.generatedAt && <p className="text-right text-xs text-slate-500">Data refreshed {new Date(analytics.generatedAt).toLocaleString()}</p>}
           {/* Key KPI Metrics Grid */}
@@ -481,7 +536,7 @@ export default function AdminMatchingPage() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-slate-900 dark:text-white block">Bayesian Cold-Start Protection</strong>
-                    Prior rating (C = 4.85, m = 5) prevents new high-quality tutors from being penalized while protecting students from statistical rating anomalies.
+                    Prior rating (C = {config?.bayesian?.priorMean ?? "configured"}, m = {config?.bayesian?.minimumReviews ?? "configured"}) protects new tutors from sparse-data distortion while preserving student trust.
                   </div>
                 </div>
               </div>
@@ -506,11 +561,14 @@ export default function AdminMatchingPage() {
                 </p>
               </div>
 
-              <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+              <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="tablist" aria-label="Simulation source">
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={simMode === "live"}
+                  aria-controls="simulation-live-panel"
                   onClick={() => setSimMode("live")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
+                  className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition-[background-color,color,box-shadow] duration-150 ${
                     simMode === "live"
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-600 dark:text-slate-400"
@@ -520,8 +578,11 @@ export default function AdminMatchingPage() {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={simMode === "custom"}
+                  aria-controls="simulation-custom-panel"
                   onClick={() => setSimMode("custom")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
+                  className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition-[background-color,color,box-shadow] duration-150 ${
                     simMode === "custom"
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-600 dark:text-slate-400"
@@ -534,7 +595,7 @@ export default function AdminMatchingPage() {
 
             {/* Input Selection */}
             {simMode === "live" ? (
-              <div className="space-y-3">
+              <div id="simulation-live-panel" role="tabpanel" className="space-y-3">
                 <label htmlFor="live-request" className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                   Select Active Student Request:
                 </label>
@@ -572,7 +633,7 @@ export default function AdminMatchingPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div id="simulation-custom-panel" role="tabpanel" className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label htmlFor="simulation-subject" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Subject</label>
@@ -716,11 +777,11 @@ export default function AdminMatchingPage() {
                   {simMode === "live" && (
                     <button
                       type="button"
-                      onClick={() => handleDispatchNotificationWave(selectedRequestId)}
+                      onClick={() => setDispatchTarget(selectedRequestId)}
                       disabled={dispatchingWave}
                       className="min-h-11 min-w-11 rounded-xl bg-indigo-600 p-2 text-white shadow transition-[background-color,box-shadow,transform] duration-150 hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
                       aria-label="Dispatch tutor notification wave"
-                      title="Dispatch Match Notification Wave"
+                      title="Review tutor notification wave"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -982,33 +1043,28 @@ export default function AdminMatchingPage() {
                       <p className="text-sm font-bold text-slate-900 dark:text-white">Revision {entry.revision}: {entry.changeReason}</p>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{entry.changedBy?.name || "Administrator"} · {new Date(entry.createdAt).toLocaleString()}</p>
                     </div>
-                    {canConfigure && <button type="button" onClick={() => handleRollbackConfig(entry._id, entry.revision)} className="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Restore this revision</button>}
+                    {canConfigure && <button type="button" onClick={() => setRollbackTarget({ id: entry._id, revision: entry.revision })} className="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Restore this revision</button>}
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          {confirmingConfig && (
-            <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmingConfig(false); }}>
-              <div role="dialog" aria-modal="true" aria-labelledby="confirm-config-title" className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-                <h2 id="confirm-config-title" className="text-lg font-bold text-slate-950 dark:text-white">Confirm matching configuration</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">This immediately changes ranking for new requests. The current version will remain available in configuration history for rollback.</p>
-                <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
-                  <div><dt className="text-slate-500">Mode reviewed</dt><dd className="font-semibold">{selectedMode === "online" ? "Online" : "Home tuition"}</dd></div>
-                  <div><dt className="text-slate-500">Weight total</dt><dd className="font-semibold">{currentWeightTotal} / 100</dd></div>
-                </dl>
-                <label htmlFor="matching-change-reason" className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-200">Reason for change</label>
-                <textarea id="matching-change-reason" autoFocus value={changeReason} onChange={(event) => setChangeReason(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Describe why these weights are changing" />
-                <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <button type="button" onClick={() => setConfirmingConfig(false)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button>
-                  <button type="button" onClick={handleSaveConfig} disabled={savingConfig || changeReason.trim().length < 8} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{savingConfig ? "Saving…" : "Confirm and activate"}</button>
-                </div>
-              </div>
-            </div>
-          )}
+          <AdminDialog open={confirmingConfig} onClose={() => !savingConfig && setConfirmingConfig(false)} title="Confirm matching configuration" description="This immediately changes ranking for new requests. The current version remains available in history for rollback." footer={<><button type="button" onClick={() => setConfirmingConfig(false)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button><button type="button" onClick={handleSaveConfig} disabled={savingConfig || changeReason.trim().length < 8} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{savingConfig ? "Saving…" : "Confirm and activate"}</button></>}>
+            <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800"><div><dt className="text-slate-500">Mode reviewed</dt><dd className="font-semibold">{selectedMode === "online" ? "Online" : "Home tuition"}</dd></div><div><dt className="text-slate-500">Weight total</dt><dd className="font-semibold">{currentWeightTotal} / 100</dd></div></dl>
+            <label htmlFor="matching-change-reason" className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-200">Reason for change</label>
+            <textarea id="matching-change-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Describe why these weights are changing" />
+          </AdminDialog>
+
+          <AdminDialog open={Boolean(rollbackTarget)} onClose={() => !rollingBack && setRollbackTarget(null)} title={`Restore revision ${rollbackTarget?.revision || ""}`} description="This creates a new audited revision from the selected snapshot; newer history will not be deleted." footer={<><button type="button" onClick={() => setRollbackTarget(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button><button type="button" onClick={() => rollbackTarget && handleRollbackConfig(rollbackTarget.id, rollbackTarget.revision)} disabled={rollingBack || rollbackReason.trim().length < 8} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{rollingBack ? "Restoring…" : "Confirm rollback"}</button></>}>
+            <label htmlFor="matching-rollback-reason" className="block text-sm font-semibold text-slate-800 dark:text-slate-200">Reason for rollback</label>
+            <textarea id="matching-rollback-reason" value={rollbackReason} onChange={(event) => setRollbackReason(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Explain why this revision should be restored" />
+          </AdminDialog>
         </div>
       )}
+      <AdminDialog open={Boolean(dispatchTarget)} onClose={() => !dispatchingWave && setDispatchTarget(null)} title="Dispatch tutor notifications?" description="This operational action immediately sends a new matching notification wave for the selected live request. It does not change the request or accept any offer." footer={<><button type="button" onClick={() => setDispatchTarget(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button><button type="button" onClick={() => dispatchTarget && handleDispatchNotificationWave(dispatchTarget)} disabled={dispatchingWave} className="min-h-11 rounded-xl bg-indigo-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{dispatchingWave ? "Dispatching…" : "Dispatch wave"}</button></>}>
+        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Only eligible tutors are notified. This action is recorded in the administrative audit trail.</p>
+      </AdminDialog>
     </div>
   );
 }

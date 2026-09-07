@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useRef, type ReactNode } from "react";
 import { AlertCircle, Inbox, RefreshCw } from "lucide-react";
 
 export function AdminMetricCard({ label, value, detail, icon, valueClassName = "text-slate-950 dark:text-white", loading = false }: {
@@ -36,6 +38,65 @@ export function AdminEmptyState({ title, description }: { title: string; descrip
       <Inbox className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
       <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-white">{title}</h2>
       <p className="mx-auto mt-1 max-w-xl text-sm text-slate-600 dark:text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+export function AdminDialog({ open, onClose, title, description, children, footer }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  children?: ReactNode;
+  footer?: ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  const titleId = `admin-dialog-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const selector = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(panelRef.current?.querySelectorAll<HTMLElement>(selector) || []);
+    requestAnimationFrame(() => focusable()[0]?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [open]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <h2 id={titleId} className="text-lg font-bold text-slate-950 dark:text-white">{title}</h2>
+        {description && <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>}
+        {children && <div className="mt-4">{children}</div>}
+        {footer && <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{footer}</div>}
+      </div>
     </div>
   );
 }

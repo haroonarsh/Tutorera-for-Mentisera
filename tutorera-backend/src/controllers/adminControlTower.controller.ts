@@ -17,6 +17,7 @@ import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
 import logger from "../config/logger";
+import { logAudit } from "../utils/logAudit";
 
 // ─── 1. Control Tower Operational Pulse & Action Triage ───────────────────────
 
@@ -184,6 +185,16 @@ export const handleAtRiskAction = async (req: AuthRequest, res: Response): Promi
     req.user?._id?.toString() || "admin",
     io
   );
+  if (result.success) {
+    await logAudit({
+      action: `request_${action}`,
+      actor: req.user?.name || "Administrator",
+      actorId: req.user?._id?.toString(),
+      entity: "Request",
+      targetId: id,
+      metadata: { source: "admin_control_tower" },
+    });
+  }
   res.json(result);
 };
 
@@ -453,11 +464,11 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
       version: "2026.1",
       countryCode: "GLOBAL",
       currency: "PKR",
-      studentFeePercent: 5,
-      tutorFeePercent: 15,
-      minimumFee: 100,
+      studentFeePercent: 0,
+      tutorFeePercent: 20,
+      minimumFee: 0,
       maximumFee: 5000,
-      taxPercent: 0,
+      taxPercent: 15,
     });
   }
   const history = await FeeConfig.find().sort("-createdAt").limit(10).lean();
@@ -466,24 +477,29 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
 
 export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<void> => {
   const { studentFeePercent, tutorFeePercent, minimumFee, maximumFee, taxPercent, notes } = req.body;
-
-  // Deactivate old configs
-  await FeeConfig.updateMany({}, { isActive: false });
-
+  const values = {
+    studentFeePercent: Number(studentFeePercent ?? 0),
+    tutorFeePercent: Number(tutorFeePercent ?? 20),
+    minimumFee: Number(minimumFee ?? 0),
+    maximumFee: Number(maximumFee ?? 5000),
+    taxPercent: Number(taxPercent ?? 15),
+  };
+  if (!Object.values(values).every(Number.isFinite) || values.studentFeePercent < 0 || values.studentFeePercent > 100 || values.tutorFeePercent < 0 || values.tutorFeePercent > 100 || values.taxPercent < 0 || values.taxPercent > 100 || values.minimumFee < 0 || values.maximumFee < values.minimumFee) {
+    res.status(400).json({ success: false, message: "Provide valid fee percentages and a maximum fee greater than or equal to the minimum fee." });
+    return;
+  }
   const nextVersion = `2026.${Date.now().toString().slice(-4)}`;
-  const created = await FeeConfig.create({
-    version: nextVersion,
-    countryCode: "GLOBAL",
-    currency: "PKR",
-    studentFeePercent: Number(studentFeePercent || 5),
-    tutorFeePercent: Number(tutorFeePercent || 15),
-    minimumFee: Number(minimumFee || 100),
-    maximumFee: Number(maximumFee || 5000),
-    taxPercent: Number(taxPercent || 0),
-    notes: notes || "Updated via Admin Console",
-    isActive: true,
-    updatedBy: req.user?._id,
-  });
+  const session = await mongoose.startSession();
+  let created: any;
+  try {
+    await session.withTransaction(async () => {
+      await FeeConfig.updateMany({ isActive: true }, { isActive: false }, { session });
+      [created] = await FeeConfig.create([{ version: nextVersion, countryCode: "GLOBAL", currency: "PKR", ...values, notes: notes || "Updated via Admin Console", isActive: true, updatedBy: req.user?._id }], { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+  await logAudit({ action: "fee_config_updated", actor: req.user?.name || "Administrator", actorId: req.user?._id?.toString(), entity: "FeeConfig", targetId: created._id.toString(), metadata: { version: nextVersion, ...values } });
 
   res.json({ success: true, message: `Fee configuration updated to version ${nextVersion}`, config: created });
 };

@@ -29,6 +29,14 @@ describe("matching admin RBAC", () => {
     await analyst.put("/api/v1/matching/admin/config").send({ ...DEFAULT_MATCHING_CONFIG, changeReason: "Unauthorized calibration" }).expect(403);
   });
 
+  it("validates analytics filters before querying", async () => {
+    const analyst = await loginAs("analyst", "analytics-filter-admin");
+    await analyst.get("/api/v1/matching/admin/analytics?mode=classroom").expect(400);
+    await analyst.get("/api/v1/matching/admin/analytics?dateFrom=2026-09-10&dateTo=2026-09-01").expect(400);
+    const response = await analyst.get("/api/v1/matching/admin/analytics?mode=online&countryCode=pk").expect(200);
+    expect(response.body.analytics.filters).toMatchObject({ mode: "online", countryCode: "pk" });
+  });
+
   it("allows marketplace operations to save a valid configuration", async () => {
     const operator = await loginAs("marketplace_operations", "marketplace-admin");
     const response = await operator

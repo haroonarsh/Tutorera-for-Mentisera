@@ -50,5 +50,6 @@ const matchLogSchema = new Schema<IMatchLog>(
 matchLogSchema.index({ request: 1, tutor: 1 }, { unique: true });
 matchLogSchema.index({ score: -1, createdAt: -1 });
 matchLogSchema.index({ tutor: 1, createdAt: -1 });
+matchLogSchema.index({ createdAt: -1, mode: 1, algorithmVersion: 1 });
 
 export default mongoose.model<IMatchLog>("MatchLog", matchLogSchema);
