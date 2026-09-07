@@ -346,6 +346,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 padding: "0.5rem",
               }}
               aria-label="Toggle navigation menu"
+              aria-expanded={sidebarOpen}
+              aria-controls="admin-mobile-navigation"
             >
               <Menu size={22} />
             </button>
@@ -361,10 +363,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 zIndex: 50,
                 display: "flex",
               }}
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                setSidebarOpen(false);
+                menuButtonRef.current?.focus();
+              }}
             >
               <div
                 ref={drawerRef}
+                id="admin-mobile-navigation"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Admin navigation"

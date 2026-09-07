@@ -2,7 +2,7 @@ import { DEFAULT_MATCHING_CONFIG } from "../config/matchingConfig";
 import { matchingConfigUpdateSchema } from "../validators/matchingConfig.validator";
 
 describe("matching configuration validation", () => {
-  const validConfig = () => JSON.parse(JSON.stringify(DEFAULT_MATCHING_CONFIG));
+  const validConfig = () => ({ ...JSON.parse(JSON.stringify(DEFAULT_MATCHING_CONFIG)), changeReason: "Routine matching calibration" });
 
   it("accepts the complete default 100-point configuration", () => {
     expect(matchingConfigUpdateSchema.safeParse(validConfig()).success).toBe(true);

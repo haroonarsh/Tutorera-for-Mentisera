@@ -3,6 +3,7 @@ import { DEFAULT_MATCHING_CONFIG, MatchingConfigData } from "../config/matchingC
 
 export interface IMatchingConfigDocument extends Document, MatchingConfigData {
   updatedBy?: mongoose.Types.ObjectId;
+  revision: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +47,7 @@ const matchingConfigSchema = new Schema<IMatchingConfigDocument>(
       newTutorQualityScore: { type: Number, default: DEFAULT_MATCHING_CONFIG.coldStart.newTutorQualityScore },
     },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    revision: { type: Number, default: 1, min: 1 },
   },
   { timestamps: true }
 );

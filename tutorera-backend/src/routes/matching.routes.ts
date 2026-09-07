@@ -8,6 +8,8 @@ import {
   getMatchingConfig,
   updateMatchingConfig,
   simulateMatching,
+  getMatchingConfigHistory,
+  rollbackMatchingConfig,
 } from "../controllers/matching.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
@@ -27,6 +29,8 @@ router.get("/tutors/recommended-requests", protect, authorize("tutor"), getTutor
 router.get("/admin/analytics", protect, authorize("admin"), requirePermission("matching.read"), getMatchingAnalytics);
 router.get("/admin/config", protect, authorize("admin"), requirePermission("matching.read"), getMatchingConfig);
 router.put("/admin/config", protect, authorize("admin"), requirePermission("matching.configure"), updateMatchingConfig);
+router.get("/admin/config/history", protect, authorize("admin"), requirePermission("matching.read"), getMatchingConfigHistory);
+router.post("/admin/config/history/:id/rollback", protect, authorize("admin"), requirePermission("matching.configure"), rollbackMatchingConfig);
 router.post("/admin/simulate", protect, authorize("admin"), requirePermission("matching.simulate"), simulateMatching);
 
 export default router;

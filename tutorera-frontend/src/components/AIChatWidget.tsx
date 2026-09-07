@@ -49,6 +49,7 @@ export default function AIChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
+  const [persistedLoaded, setPersistedLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Hide on chat and onboarding pages (same as WhatsApp button)
@@ -64,7 +65,7 @@ export default function AIChatWidget() {
   }, [messages, user?._id]);
 
   useEffect(() => {
-    if (open && !hasGreeted) {
+    if (open && !hasGreeted && !persistedLoaded) {
       const firstName = user?.name?.split(" ")[0] || "there";
       if (messages.length === 0) {
         setMessages([{
@@ -74,12 +75,13 @@ export default function AIChatWidget() {
       }
       setHasGreeted(true);
     }
-  }, [hasGreeted, open, user?.name]);
+  }, [hasGreeted, open, user?.name, persistedLoaded]);
 
   // Reset on logout — clear storage and state
   useEffect(() => {
     setMessages([]);
     setHasGreeted(false);
+    setPersistedLoaded(false);
     setOpen(false);
     setInput("");
     clearMessages(user?._id);
@@ -92,6 +94,7 @@ export default function AIChatWidget() {
       if (stored.length > 0) {
         setMessages(stored);
         setHasGreeted(true);
+        setPersistedLoaded(true);
       }
     }
   }, [user?._id]);

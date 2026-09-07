@@ -5,6 +5,7 @@ import TutorProfile from "../models/TutorProfile.model";
 import Bid from "../models/Bid.model";
 import MatchLog from "../models/MatchLog.model";
 import MatchingConfig from "../models/MatchingConfig.model";
+import MatchingConfigHistory from "../models/MatchingConfigHistory.model";
 import { MatchingService } from "../services/matching.service";
 import { DEFAULT_MATCHING_CONFIG } from "../config/matchingConfig";
 import { logAudit } from "../utils/logAudit";
@@ -237,7 +238,8 @@ export const getMatchingAnalytics = async (_req: AuthRequest, res: Response): Pr
 export const getMatchingConfig = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const config = await MatchingService.getActiveConfig();
-    res.json({ success: true, config });
+    const metadata = await MatchingConfig.findOne().sort({ updatedAt: -1 }).select("updatedAt revision").lean();
+    res.json({ success: true, config: { ...config, updatedAt: metadata?.updatedAt, revision: metadata?.revision || 1 } });
   } catch (err) {
     logger.error({ err }, "Error in getMatchingConfig");
     res.status(500).json({ success: false, message: "Failed to fetch config." });
@@ -259,16 +261,29 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
+    const { changeReason, expectedUpdatedAt, ...configData } = parsed.data;
+    const existing = await MatchingConfig.findOne().sort({ updatedAt: -1 });
+    if (expectedUpdatedAt && existing && existing.updatedAt.toISOString() !== expectedUpdatedAt) {
+      res.status(409).json({ success: false, code: "CONFIG_CONFLICT", message: "Matching configuration changed in another session. Reload before saving." });
+      return;
+    }
+
+    const filter = existing ? { _id: existing._id, updatedAt: existing.updatedAt } : {};
     const updated = await MatchingConfig.findOneAndUpdate(
-      {},
+      filter,
       {
         $set: {
-          ...parsed.data,
+          ...configData,
           updatedBy: req.user?._id,
         },
+        $inc: { revision: 1 },
       },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: !existing, runValidators: true }
     );
+    if (!updated) {
+      res.status(409).json({ success: false, code: "CONFIG_CONFLICT", message: "Matching configuration changed in another session. Reload before saving." });
+      return;
+    }
 
     // Invalidate in-memory cache immediately so changes take effect
     MatchingService.invalidateConfigCache();
@@ -279,7 +294,14 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
       actorId: req.user?._id?.toString(),
       entity: "MatchingConfig",
       targetId: updated._id.toString(),
-      metadata: parsed.data,
+      metadata: { changeReason, revision: updated.revision, before: existing?.toObject(), after: configData },
+    });
+
+    await MatchingConfigHistory.create({
+      snapshot: configData,
+      revision: updated.revision,
+      changeReason,
+      changedBy: req.user?._id,
     });
 
     res.json({ success: true, message: "Matching configuration updated successfully.", config: updated });
@@ -287,6 +309,38 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
     logger.error({ err }, "Error in updateMatchingConfig");
     res.status(500).json({ success: false, message: "Failed to update config." });
   }
+};
+
+export const getMatchingConfigHistory = async (_req: AuthRequest, res: Response): Promise<void> => {
+  const history = await MatchingConfigHistory.find()
+    .populate("changedBy", "name email")
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+  res.json({ success: true, history });
+};
+
+export const rollbackMatchingConfig = async (req: AuthRequest, res: Response): Promise<void> => {
+  const history = await MatchingConfigHistory.findById(req.params.id).lean();
+  if (!history) {
+    res.status(404).json({ success: false, message: "Configuration history entry not found." });
+    return;
+  }
+  const current = await MatchingConfig.findOne().sort({ updatedAt: -1 });
+  const updated = await MatchingConfig.findOneAndUpdate(
+    current ? { _id: current._id, updatedAt: current.updatedAt } : {},
+    { $set: { ...history.snapshot, updatedBy: req.user?._id }, $inc: { revision: 1 } },
+    { returnDocument: "after", upsert: !current, runValidators: true }
+  );
+  if (!updated) {
+    res.status(409).json({ success: false, message: "Configuration changed during rollback. Reload and try again." });
+    return;
+  }
+  MatchingService.invalidateConfigCache();
+  const reason = `Rolled back to revision ${history.revision}`;
+  await MatchingConfigHistory.create({ snapshot: history.snapshot, revision: updated.revision, changeReason: reason, changedBy: req.user?._id });
+  await logAudit({ action: "matching_config_rolled_back", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "MatchingConfig", targetId: updated._id.toString(), metadata: { sourceRevision: history.revision, newRevision: updated.revision } });
+  res.json({ success: true, message: reason, config: updated });
 };
 
 // @desc    Admin: Simulate and diagnose matching evaluation for a request or custom parameters

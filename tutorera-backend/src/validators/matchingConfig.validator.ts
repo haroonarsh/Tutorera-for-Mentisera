@@ -40,6 +40,8 @@ export const matchingConfigUpdateSchema = z.object({
     newTutorDaysWindow: z.number().int().min(1).max(365),
     newTutorQualityScore: z.number().min(1).max(5),
   }).strict(),
+  changeReason: z.string().trim().min(8, "Provide a change reason of at least 8 characters.").max(500),
+  expectedUpdatedAt: z.string().datetime().optional(),
 }).strict();
 
 export function formatMatchingConfigError(error: z.ZodError): string {

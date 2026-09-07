@@ -26,14 +26,14 @@ describe("matching admin RBAC", () => {
   it("allows an analyst to read analytics but not change configuration", async () => {
     const analyst = await loginAs("analyst", "analyst-admin");
     await analyst.get("/api/v1/matching/admin/analytics").expect(200);
-    await analyst.put("/api/v1/matching/admin/config").send(DEFAULT_MATCHING_CONFIG).expect(403);
+    await analyst.put("/api/v1/matching/admin/config").send({ ...DEFAULT_MATCHING_CONFIG, changeReason: "Unauthorized calibration" }).expect(403);
   });
 
   it("allows marketplace operations to save a valid configuration", async () => {
     const operator = await loginAs("marketplace_operations", "marketplace-admin");
     const response = await operator
       .put("/api/v1/matching/admin/config")
-      .send(DEFAULT_MATCHING_CONFIG)
+      .send({ ...DEFAULT_MATCHING_CONFIG, changeReason: "Routine matching calibration" })
       .expect(200);
     expect(response.body.config.thresholds.maxOffers).toBe(DEFAULT_MATCHING_CONFIG.thresholds.maxOffers);
   });

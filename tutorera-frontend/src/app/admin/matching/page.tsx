@@ -16,7 +16,7 @@ import {
   Play,
   Send,
   ExternalLink,
-  RefreshCw,
+  Clock,
 } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -24,6 +24,7 @@ import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import { useAuth } from "@/context/AuthContext";
 import AvatarImage from "@/components/Common/AvatarImage";
+import { AdminEmptyState, AdminErrorState, AdminMetricCard } from "@/components/admin/AdminUI";
 
 interface MatchAnalytics {
   totalMatches: number;
@@ -53,6 +54,8 @@ export default function AdminMatchingPage() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [configError, setConfigError] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
+  const [confirmingConfig, setConfirmingConfig] = useState(false);
+  const [changeReason, setChangeReason] = useState("");
   const [selectedMode, setSelectedMode] = useState<"online" | "home">("online");
 
   // Simulator states
@@ -147,9 +150,13 @@ export default function AdminMatchingPage() {
         thresholds: config.thresholds,
         bayesian: config.bayesian,
         coldStart: config.coldStart,
+        expectedUpdatedAt: config.updatedAt || undefined,
+        changeReason,
       };
       await api.put("/matching/admin/config", payload);
       showSuccess("Matching weights successfully saved and activated in memory!");
+      setConfirmingConfig(false);
+      setChangeReason("");
       fetchConfig();
     } catch {
       showError("Failed to update matching configuration.");
@@ -283,16 +290,10 @@ export default function AdminMatchingPage() {
       {/* TAB 1: ANALYTICS */}
       {activeTab === "analytics" && (
         <div id="matching-panel-analytics" role="tabpanel" aria-labelledby="matching-tab-analytics" className="space-y-6">
-          {analyticsError && (
-            <div role="alert" className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
-              <span>{analyticsError}</span>
-              <button type="button" onClick={fetchAnalytics} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 font-semibold">
-                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Retry
-              </button>
-            </div>
-          )}
+          {analyticsError && <AdminErrorState message={analyticsError} onRetry={fetchAnalytics} />}
+          {analytics?.generatedAt && <p className="text-right text-xs text-slate-500">Data refreshed {new Date(analytics.generatedAt).toLocaleString()}</p>}
           {/* Key KPI Metrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between text-slate-500 mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider">Total Match Evaluations</span>
@@ -336,7 +337,18 @@ export default function AdminMatchingPage() {
               </p>
               <p className="text-[11px] text-slate-500 mt-1">Matches leading to paid student bookings</p>
             </div>
+            <AdminMetricCard
+              loading={loadingAnalytics}
+              label="Response time"
+              value={analytics?.avgStudentResponseMinutes != null ? `${analytics.avgStudentResponseMinutes} min` : "—"}
+              detail="Notification to tutor offer"
+              icon={<Clock className="h-4 w-4 text-amber-600" />}
+            />
           </div>
+
+          {!loadingAnalytics && !analyticsError && analytics && !analytics.hasData && (
+            <AdminEmptyState title="No matching evaluations yet" description="Analytics will appear after eligible tutors are evaluated against live student requests." />
+          )}
 
           {/* Tier Breakdown & Marketplace Fairness */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -820,14 +832,7 @@ export default function AdminMatchingPage() {
       {/* TAB 3: ALGORITHM WEIGHTS */}
       {activeTab === "weights" && (
         <div id="matching-panel-weights" role="tabpanel" aria-labelledby="matching-tab-weights" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          {configError && (
-            <div role="alert" className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
-              <span>{configError}</span>
-              <button type="button" onClick={fetchConfig} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 font-semibold">
-                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Retry
-              </button>
-            </div>
-          )}
+          {configError && <AdminErrorState message={configError} onRetry={fetchConfig} />}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -868,7 +873,7 @@ export default function AdminMatchingPage() {
 
               <button
                 type="button"
-                onClick={handleSaveConfig}
+                onClick={() => setConfirmingConfig(true)}
                 disabled={savingConfig || !canConfigure || currentWeightTotal !== 100}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all disabled:opacity-50"
                 title={!canConfigure ? "You do not have permission to change matching weights" : currentWeightTotal !== 100 ? "Weights must total exactly 100 points" : undefined}
@@ -937,6 +942,25 @@ export default function AdminMatchingPage() {
               <strong>Instant Cache Invalidation:</strong> Updates immediately flush the memory cache and take effect on all new student requests, offer rankings, and progressive tutor notification waves without requiring server restarts.
             </div>
           </div>
+
+          {confirmingConfig && (
+            <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmingConfig(false); }}>
+              <div role="dialog" aria-modal="true" aria-labelledby="confirm-config-title" className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                <h2 id="confirm-config-title" className="text-lg font-bold text-slate-950 dark:text-white">Confirm matching configuration</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">This immediately changes ranking for new requests. The current version will remain available in configuration history for rollback.</p>
+                <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
+                  <div><dt className="text-slate-500">Mode reviewed</dt><dd className="font-semibold">{selectedMode === "online" ? "Online" : "Home tuition"}</dd></div>
+                  <div><dt className="text-slate-500">Weight total</dt><dd className="font-semibold">{currentWeightTotal} / 100</dd></div>
+                </dl>
+                <label htmlFor="matching-change-reason" className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-200">Reason for change</label>
+                <textarea id="matching-change-reason" autoFocus value={changeReason} onChange={(event) => setChangeReason(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Describe why these weights are changing" />
+                <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={() => setConfirmingConfig(false)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button>
+                  <button type="button" onClick={handleSaveConfig} disabled={savingConfig || changeReason.trim().length < 8} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{savingConfig ? "Saving…" : "Confirm and activate"}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
