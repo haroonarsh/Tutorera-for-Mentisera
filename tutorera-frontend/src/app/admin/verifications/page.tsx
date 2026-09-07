@@ -1,7 +1,7 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Eye, EyeOff, Clock, Download } from "lucide-react";
+import { CheckCircle, XCircle, Eye, EyeOff, Clock, Download, ExternalLink } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
@@ -339,7 +339,7 @@ export default function VerificationsPage() {
                         {[
                           { label: "CNIC Front", url: tutor.cnicFront, field: "cnicFront" },
                           { label: "CNIC Back", url: tutor.cnicBack, field: "cnicBack" },
-                          { label: "Video Intro", url: tutor.videoIntro, field: "videoIntro" },
+                          { label: "Demo Video URL", url: tutor.videoIntro, field: "videoIntro" },
                           {
                             label: "Police Certificate",
                             url: tutor.policeCertificate,
@@ -358,7 +358,7 @@ export default function VerificationsPage() {
                               doc.field === "videoIntro" ? (
                                 <a href={doc.url} target="_blank" rel="noopener noreferrer"
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
-                                  <Download size={12} /> View
+                                  <ExternalLink size={12} /> Open
                                 </a>
                               ) : (
                                 <button onClick={() => handleViewDocument(tutor._id, doc.field)}

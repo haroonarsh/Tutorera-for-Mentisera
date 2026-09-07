@@ -496,18 +496,10 @@ export const saveOnboardingStep = async (
       cnicBackPublicId = result.public_id;
     }
 
-    if (files?.videoIntro?.[0]) {
-      const { valid, detectedType } = await verifyFileSignature(files.videoIntro[0].buffer, VIDEO_TYPES);
-      if (!valid) {
-        res.status(400).json({ success: false, message: `Video file is invalid (detected: ${detectedType || "unknown"})` });
-        return;
-      }
-      if (profile.videoIntroPublicId) {
-        await deleteFromCloudinary(profile.videoIntroPublicId, "video").catch(() => {});
-      }
-      const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/videos", "video", false);
-      videoIntroUrl = result.secure_url;
-      videoIntroPublicId = result.public_id;
+    const demoVideoUrl: string = parsedData?.demoVideoUrl || "";
+    if (demoVideoUrl && typeof demoVideoUrl === "string") {
+      videoIntroUrl = demoVideoUrl;
+      videoIntroPublicId = "";
     }
 
     if (files?.policeCertificate?.[0]) {
@@ -551,7 +543,7 @@ export const saveOnboardingStep = async (
       ...(cnicFrontUrl && { cnicFront: cnicFrontUrl, cnicFrontPublicId, cnicVerificationStatus: "pending" as const, cnicSubmittedAt: new Date() }),
       ...(cnicBackUrl && { cnicBack: cnicBackUrl, cnicBackPublicId }),
       ...(resubmitCnic && { cnicRejectionReason: "" }),
-      ...(videoIntroUrl && { videoIntro: videoIntroUrl, videoIntroPublicId, demoVideoStatus: "pending" as const, demoVideoSubmittedAt: new Date() }),
+      ...(videoIntroUrl && { videoIntro: videoIntroUrl, ...(videoIntroPublicId && { videoIntroPublicId }), demoVideoStatus: "pending" as const, demoVideoSubmittedAt: new Date() }),
       ...(resubmitDemo && { demoVideoRejectionReason: "" }),
       ...(policeCertificateUrl
         ? { policeCertificate: policeCertificateUrl, policeCertificatePublicId, policeVerificationStatus: "pending" as const, policeSubmittedAt: new Date() }

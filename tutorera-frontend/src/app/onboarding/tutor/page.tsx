@@ -94,7 +94,7 @@ export default function TutorOnboardingPage() {
   // Step 5
   const [cnicFront, setCnicFront] = useState<File | null>(null);
   const [cnicBack, setCnicBack] = useState<File | null>(null);
-  const [videoIntro, setVideoIntro] = useState<File | null>(null);
+  const [videoIntro, setVideoIntro] = useState<string>("");
   const [policeCertificate, setPoliceCertificate] = useState<File | null>(null);
 
   // Load existing profile on mount so tutors can correct mistaken info or resubmit rejected docs
@@ -154,7 +154,7 @@ export default function TutorOnboardingPage() {
               degreeDoc: p.education?.[0]?.degreeDoc,
               cnicFront: p.cnicFront,
               cnicBack: p.cnicBack,
-              videoIntro: p.videoIntro,
+              videoIntro: p.videoIntro || "",
               policeCertificate: p.policeCertificate,
               cnicVerificationStatus: p.cnicVerificationStatus,
               cnicRejectionReason: p.cnicRejectionReason,
@@ -302,15 +302,14 @@ export default function TutorOnboardingPage() {
         }
 
         if (existingDocs.demoVideoStatus === "rejected" && !videoIntro) {
-          setError(`Your Demo Video was rejected (${existingDocs.demoVideoRejectionReason || "Action required"}). Please select a replacement demo video to re-submit.`);
+          setError(`Your Demo Video was rejected (${existingDocs.demoVideoRejectionReason || "Action required"}). Please provide a replacement demo video URL to re-submit.`);
           setSaving(false);
           return;
         }
 
-        formData.append("data", JSON.stringify({}));
+        formData.append("data", JSON.stringify({ demoVideoUrl: videoIntro }));
         if (cnicFront) formData.append("cnicFront", cnicFront);
         if (cnicBack) formData.append("cnicBack", cnicBack);
-        if (videoIntro) formData.append("videoIntro", videoIntro);
         if (policeCertificate) formData.append("policeCertificate", policeCertificate);
       }
 
@@ -833,7 +832,7 @@ export default function TutorOnboardingPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-                      Introduction / Demo Video <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Recommended)</span>
+                      Demo Video URL <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Recommended)</span>
                     </label>
                     {existingDocs.videoIntro && (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.demoVideoStatus === 'approved' ? '#16a34a' : existingDocs.demoVideoStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
@@ -845,37 +844,33 @@ export default function TutorOnboardingPage() {
                   {existingDocs.demoVideoStatus === "rejected" && (
                     <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
                       <p style={{ color: '#b91c1c', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
-                        <strong>Admin rejection reason:</strong> {existingDocs.demoVideoRejectionReason || "Please record a clearer video introducing your subjects and teaching approach."}
+                        <strong>Admin rejection reason:</strong> {existingDocs.demoVideoRejectionReason || "Please provide a new demo video URL."}
                       </p>
                     </div>
                   )}
 
-                  <div
+                  <input
+                    type="url"
+                    value={videoIntro}
+                    onChange={e => setVideoIntro(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
                     style={{
-                      border: '2px dashed #e5e7eb',
+                      width: '100%',
+                      padding: '0.6rem 0.85rem',
                       borderRadius: '0.5rem',
-                      padding: '1.25rem',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      backgroundColor: C.gray50
+                      border: '1.5px solid #e5e7eb',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      color: '#021550',
+                      backgroundColor: C.gray50,
+                      boxSizing: 'border-box',
                     }}
-                    onClick={() => document.getElementById('videoIntro')?.click()}
-                  >
-                    {videoIntro ? (
-                      <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ Selected: {videoIntro.name}</p>
-                    ) : existingDocs.videoIntro ? (
-                      <div>
-                        <p style={{ color: '#0329b2', fontSize: '0.875rem', fontWeight: 600 }}>🎥 Demo Video on file</p>
-                        <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem' }}>Click to select a new replacement video</p>
-                      </div>
-                    ) : (
-                      <>
-                        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Upload a short intro video (max 2 min)</p>
-                        <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>MP4, MOV (max 50MB)</p>
-                      </>
-                    )}
-                  </div>
-                  <input id="videoIntro" type="file" accept="video/*" onChange={e => setVideoIntro(e.target.files?.[0] || null)} aria-label="Introduction Video" style={{ display: 'none' }} />
+                  />
+                  {existingDocs.videoIntro && !videoIntro && (
+                    <p style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.4rem' }}>
+                      Currently: <a href={existingDocs.videoIntro} target="_blank" rel="noreferrer" style={{ color: '#0329b2' }}>{existingDocs.videoIntro}</a>
+                    </p>
+                  )}
                 </div>
 
                 {/* Review Info box */}

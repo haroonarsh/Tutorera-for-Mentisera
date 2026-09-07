@@ -34,7 +34,6 @@ router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.
   { name: "degreeDoc", maxCount: 1 },
   { name: "cnicFront", maxCount: 1 },
   { name: "cnicBack", maxCount: 1 },
-  { name: "videoIntro", maxCount: 1 },
   { name: "policeCertificate", maxCount: 1 },
 ]), saveOnboardingStep);
 

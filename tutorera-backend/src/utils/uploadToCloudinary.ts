@@ -5,19 +5,28 @@ export const uploadToCloudinary = async (
   fileBuffer: Buffer,
   folder: string,
   resourceType: "image" | "raw" | "video" | "auto" = "image",
-  isPrivate: boolean = false
+  isPrivate: boolean = false,
+  moderationType: "cloudinary" | "aws_rek" | "metascan" | null = "cloudinary"
 ): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
-    const moderation = process.env.CLOUDINARY_MODERATION;
+    const moderationSetting = moderationType
+      ? { moderation: moderationType }
+      : process.env.CLOUDINARY_MODERATION
+        ? { moderation: process.env.CLOUDINARY_MODERATION }
+        : {};
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: resourceType,
         type: isPrivate ? "authenticated" : "upload",
-        ...(moderation ? { moderation } : {}),
+        ...moderationSetting,
       },
       (error, result) => {
         if (error || !result) return reject(error);
+        const moderationResult = result.moderation as unknown as Array<{ status: string }> | null;
+        if (moderationResult?.[0]?.status === "rejected") {
+          return reject(new Error("Upload rejected due to content policy violation"));
+        }
         resolve(result);
       }
     );

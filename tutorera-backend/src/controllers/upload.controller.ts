@@ -79,14 +79,22 @@ export const uploadVerificationDocs = async (
     if (existingProfile.cnicFrontPublicId) {
       await deleteFromCloudinary(existingProfile.cnicFrontPublicId).catch(() => {});
     }
-    const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
-    updateData.cnicFront = result.secure_url;
-    updateData.cnicFrontPublicId = result.public_id;
-    updateData.cnicSubmittedAt = new Date();
-    if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
-      updateData.cnicVerificationStatus = "pending";
-      updateData.cnicRejectionReason = "";
-      resubmittedDocs.push("CNIC");
+    try {
+      const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
+      updateData.cnicFront = result.secure_url;
+      updateData.cnicFrontPublicId = result.public_id;
+      updateData.cnicSubmittedAt = new Date();
+      if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
+        updateData.cnicVerificationStatus = "pending";
+        updateData.cnicRejectionReason = "";
+        resubmittedDocs.push("CNIC");
+      }
+    } catch (err: any) {
+      if (err.message?.includes("content policy")) {
+        res.status(400).json({ success: false, message: "CNIC front image contains prohibited content and could not be uploaded." });
+        return;
+      }
+      throw err;
     }
   }
 
@@ -100,13 +108,21 @@ export const uploadVerificationDocs = async (
     if (existingProfile.cnicBackPublicId) {
       await deleteFromCloudinary(existingProfile.cnicBackPublicId).catch(() => {});
     }
-    const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
-    updateData.cnicBack = result.secure_url;
-    updateData.cnicBackPublicId = result.public_id;
-    if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
-      updateData.cnicVerificationStatus = "pending";
-      updateData.cnicRejectionReason = "";
-      if (!resubmittedDocs.includes("CNIC")) resubmittedDocs.push("CNIC");
+    try {
+      const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
+      updateData.cnicBack = result.secure_url;
+      updateData.cnicBackPublicId = result.public_id;
+      if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
+        updateData.cnicVerificationStatus = "pending";
+        updateData.cnicRejectionReason = "";
+        if (!resubmittedDocs.includes("CNIC")) resubmittedDocs.push("CNIC");
+      }
+    } catch (err: any) {
+      if (err.message?.includes("content policy")) {
+        res.status(400).json({ success: false, message: "CNIC back image contains prohibited content and could not be uploaded." });
+        return;
+      }
+      throw err;
     }
   }
 
@@ -120,14 +136,22 @@ export const uploadVerificationDocs = async (
     if (existingProfile.policeCertificatePublicId) {
       await deleteFromCloudinary(existingProfile.policeCertificatePublicId).catch(() => {});
     }
-    const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
-    updateData.policeCertificate = result.secure_url;
-    updateData.policeCertificatePublicId = result.public_id;
-    updateData.policeSubmittedAt = new Date();
-    if (existingProfile.policeVerificationStatus === "approved" || existingProfile.policeVerificationStatus === "rejected") {
-      updateData.policeVerificationStatus = "pending";
-      updateData.policeRejectionReason = "";
-      resubmittedDocs.push("Police verification");
+    try {
+      const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
+      updateData.policeCertificate = result.secure_url;
+      updateData.policeCertificatePublicId = result.public_id;
+      updateData.policeSubmittedAt = new Date();
+      if (existingProfile.policeVerificationStatus === "approved" || existingProfile.policeVerificationStatus === "rejected") {
+        updateData.policeVerificationStatus = "pending";
+        updateData.policeRejectionReason = "";
+        resubmittedDocs.push("Police verification");
+      }
+    } catch (err: any) {
+      if (err.message?.includes("content policy")) {
+        res.status(400).json({ success: false, message: "Police certificate image contains prohibited content and could not be uploaded." });
+        return;
+      }
+      throw err;
     }
   }
 

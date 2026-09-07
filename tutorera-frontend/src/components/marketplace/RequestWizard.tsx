@@ -3,13 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  Check, 
-  ArrowRight, 
-  ArrowLeft, 
-  ShieldCheck, 
-  DollarSign, 
-  Send
+import {
+  Check,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  DollarSign,
+  Send,
+  Sparkles,
+  Zap
 } from "lucide-react";
 import api from "@/lib/axios";
 import { PostRequestPayload } from "@/types/dashboard";
@@ -43,6 +45,34 @@ export default function RequestWizard({
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [freeText, setFreeText] = useState("");
+  const [parsingNLP, setParsingNLP] = useState(false);
+
+  const handleNLPParse = async () => {
+    if (!freeText.trim()) return;
+    setParsingNLP(true);
+    try {
+      const res = await api.post("/ai/parse-request", { text: freeText });
+      const p = res.data?.parsed || {};
+      if (p.subject && typeof p.subject === "string") update("subject", p.subject);
+      if (p.level && typeof p.level === "string") update("level", p.level);
+      if (p.budget && !isNaN(Number(p.budget))) update("budget", String(p.budget));
+      if (p.city && typeof p.city === "string") update("city", p.city);
+      if (p.teachingMode && typeof p.teachingMode === "string") update("teachingMode", p.teachingMode);
+      if (p.schedule && typeof p.schedule === "string") update("schedule", p.schedule);
+      if (p.description && typeof p.description === "string") update("description", p.description);
+      if (p.currency && typeof p.currency === "string") update("currency", p.currency);
+      if (p.pricingUnit && typeof p.pricingUnit === "string") update("pricingUnit", p.pricingUnit);
+      if (p.studentLevel && typeof p.studentLevel === "string") update("studentLevel", p.studentLevel);
+      if (p.curriculum && typeof p.curriculum === "string") update("curriculum", p.curriculum);
+      showSuccess("Form auto-filled from your description!");
+      setStep(1);
+    } catch {
+      showError("Could not parse your description. Please fill the form manually.");
+    } finally {
+      setParsingNLP(false);
+    }
+  };
 
   const [form, setForm] = useState<PostRequestPayload>({
     subject: prefill.subject || "",
@@ -371,6 +401,67 @@ export default function RequestWizard({
         {/* STEP 1: Academic Needs */}
         {step === 1 && (
           <div style={{ display: "grid", gap: "1.25rem" }}>
+            {/* Ask Tutorera — Free text NLP parsing */}
+            <div style={{
+              background: "linear-gradient(135deg, #f0f9ff 0%, #eef5ff 100%)",
+              border: "1.5px solid #bfdbfe",
+              borderRadius: "0.875rem",
+              padding: "1rem 1.25rem",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
+                <Sparkles size={15} color="#0329b2" />
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0329b2" }}>Ask Tutorera — Describe your need in plain English</span>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input
+                  type="text"
+                  value={freeText}
+                  onChange={(e) => setFreeText(e.target.value)}
+                  placeholder="e.g. I need Grade 9 Maths tutor in Lahore, willing to pay 3000 per hour"
+                  style={{
+                    flex: 1,
+                    padding: "0.6rem 0.85rem",
+                    borderRadius: "0.5rem",
+                    border: "1.5px solid #bfdbfe",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    color: "#021550",
+                    minHeight: "42px",
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") void handleNLPParse(); }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleNLPParse()}
+                  disabled={parsingNLP || !freeText.trim()}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    padding: "0.6rem 0.9rem",
+                    background: parsingNLP ? "#93c5fd" : "#0329b2",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: parsingNLP || !freeText.trim() ? "not-allowed" : "pointer",
+                    whiteSpace: "nowrap",
+                    minHeight: "42px",
+                  }}
+                >
+                  {parsingNLP ? (
+                    <>Parsing…</>
+                  ) : (
+                    <><Zap size={13} /> Auto-fill</>
+                  )}
+                </button>
+              </div>
+              <p style={{ margin: "0.4rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>
+                Describe your tuition need in any language — we'll extract subject, level, city, and budget automatically.
+              </p>
+            </div>
+
             <div>
               <label style={labelStyle}>Select Subject *</label>
               <select 

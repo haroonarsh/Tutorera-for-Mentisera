@@ -208,7 +208,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
             <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px" }}>Current: <strong>{p.demoVideoStatus}</strong></p>
             {p.demoVideoRejectionReason && <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>Last reason: {p.demoVideoRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <a href={p.videoIntro} target="_blank" rel="noreferrer" style={btnSecondaryStyle}>Watch video</a>
+              <a href={p.videoIntro} target="_blank" rel="noreferrer" style={btnSecondaryStyle}>Open video URL</a>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
               <button disabled={busyKey === "demo-video-approved"} onClick={() => handleAction("demo-video", "approved", "Demo video")} style={btnSuccessStyle}>Approve</button>
