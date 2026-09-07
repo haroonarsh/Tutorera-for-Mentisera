@@ -158,7 +158,7 @@ export default function BecomeTutorPage() {
             Ready to Start Teaching?
           </h2>
           <p style={{ color: '#9ca3af', marginBottom: '2.5rem', fontSize: '1rem' }}>
-            Join Pakistan's fastest growing tutoring platform today.
+            Join TUTORERA's student-led tutoring marketplace and receive relevant student demand without paying for leads.
           </p>
           <Link href="/register?role=tutor"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: C.accent, color: 'white', padding: '1rem 2.5rem', borderRadius: '0.5rem', fontWeight: '700', fontSize: '1.05rem', textDecoration: 'none' }}>

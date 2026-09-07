@@ -19,7 +19,7 @@ export default function FirstSessionGuaranteePage() {
             First Session Guarantee
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1.1rem', lineHeight: 1.7 }}>
-            We want you to find the perfect tutor. If your first session doesn't meet your expectations, we'll make it right — guaranteed.
+            We want you to find the right tutor. If the first session materially fails to meet the published protection rules, we review the case for a replacement, credit, or refund where eligible.
           </p>
         </div>
       </div>
@@ -29,8 +29,8 @@ export default function FirstSessionGuaranteePage() {
         {/* Promise cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '3rem' }}>
           {[
-            { icon: <RefreshCw size={24} color={C.accent} />, bg: '#EEF5FF', title: "Try Another Tutor", desc: "We'll credit your account so you can book a session with a different tutor at no extra cost." },
-            { icon: <Shield size={24} color="#16a34a" />, bg: '#f0fdf4', title: "Or Get a Refund", desc: "If you'd prefer a refund instead, our team will review your claim and process it within 5 business days." },
+            { icon: <RefreshCw size={24} color={C.accent} />, bg: '#EEF5FF', title: "Try Another Tutor", desc: "Eligible cases may receive a session credit so you can book a different tutor." },
+            { icon: <Shield size={24} color="#16a34a" />, bg: '#f0fdf4', title: "Refund Review", desc: "If a refund is appropriate under the published rules, our team reviews the claim and records the decision." },
             { icon: <Clock size={24} color="#d97706" />, bg: '#fffbeb', title: "Quick Resolution", desc: "We review all claims within 24–48 hours and keep you updated every step of the way." },
           ].map(card => (
             <div key={card.title} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
@@ -50,7 +50,7 @@ export default function FirstSessionGuaranteePage() {
             { step: "01", title: "Complete your first session", desc: "Book and complete your first session with a tutor on TUTORERA®." },
             { step: "02", title: "Not satisfied? Let us know", desc: "In your dashboard, click \"Not Satisfied?\" on your completed first session booking and tell us what went wrong." },
             { step: "03", title: "We review your claim", desc: "Our team reviews your claim within 24–48 hours and contacts you via email." },
-            { step: "04", title: "We make it right", desc: "You'll receive either a session credit to try another tutor or a full refund — your choice." },
+            { step: "04", title: "Resolution is recorded", desc: "Eligible outcomes may include a tutor replacement, session credit, or refund through a supported documented method." },
           ].map((item, i) => (
             <div key={item.step} style={{ display: 'flex', gap: '1.25rem', paddingBottom: i < 3 ? '1.5rem' : 0, marginBottom: i < 3 ? '1.5rem' : 0, borderBottom: i < 3 ? '1px solid #f3f4f6' : 'none' }}>
               <div style={{ width: 40, height: 40, backgroundColor: '#EEF5FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', color: C.accent, flexShrink: 0 }}>
@@ -86,10 +86,10 @@ export default function FirstSessionGuaranteePage() {
         {/* CTA */}
         <div style={{ backgroundColor: C.primary, borderRadius: '0.875rem', padding: '2rem', textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '0.75rem' }}>
-            Ready to find your perfect tutor?
+            Ready to find the right tutor?
           </h2>
           <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-            Browse verified tutors across Pakistan — your first session is protected.
+            Post your requirement or browse verified tutors — eligible first sessions are protected under the published rules.
           </p>
           <Link href="/tutors"
             style={{ display: 'inline-block', backgroundColor: C.accent, color: 'white', padding: '0.875rem 2rem', borderRadius: '0.5rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.95rem' }}>

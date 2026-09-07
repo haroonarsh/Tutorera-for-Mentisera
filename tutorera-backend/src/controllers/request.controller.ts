@@ -39,6 +39,10 @@ function isNewMonth(resetDate: Date): boolean {
   );
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // @desc    Create tuition request
 // @route   POST /api/requests
 // @access  Private (student)
@@ -1085,12 +1089,36 @@ export const rejectBid = async (req: AuthRequest, res: Response): Promise<void> 
 // @route   GET /api/requests/public/preview
 // @access  Public
 export const getPublicRequestsPreview = async (req: ExpressRequest, res: Response): Promise<void> => {
-  const { page = "1", limit = "12" } = req.query;
+  const { page = "1", limit = "12", country, city, subject, level, teachingMode, currency } = req.query;
   const filter: Record<string, unknown> = { 
     status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, 
     isDirect: { $ne: true },
     expiresAt: { $gt: new Date() },
   };
+
+  if (country) filter.countryCode = String(country).toUpperCase();
+  if (city) {
+    const cityTerms = String(city)
+      .replace(/-/g, " ")
+      .split(/\s*(?:&|and)\s*/i)
+      .map((term) => term.trim())
+      .filter(Boolean);
+    filter.city = cityTerms.length > 1
+      ? { $in: cityTerms.map((term) => new RegExp(`^${escapeRegExp(term)}$`, "i")) }
+      : new RegExp(`^${escapeRegExp(cityTerms[0] || String(city).replace(/-/g, " "))}$`, "i");
+  }
+  if (subject) filter.subject = new RegExp(`^${escapeRegExp(String(subject).replace(/-/g, " "))}$`, "i");
+  if (level) filter.level = String(level);
+  if (currency) filter.currency = String(currency).toUpperCase();
+  if (teachingMode && teachingMode !== "all") {
+    if (teachingMode === "online") {
+      filter.teachingMode = { $in: ["online", "both"] };
+    } else if (teachingMode === "in_person" || teachingMode === "home") {
+      filter.teachingMode = { $in: ["in_person", "home", "both"] };
+    } else {
+      filter.teachingMode = String(teachingMode);
+    }
+  }
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 12));

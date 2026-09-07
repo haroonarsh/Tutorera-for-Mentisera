@@ -55,7 +55,7 @@ export default function ReferralPage() {
   };
 
   const whatsappShare = data
-    ? `https://wa.me/?text=${encodeURIComponent(`Join me on TUTORERA® — Pakistan's tutoring marketplace! Use my referral code *${data.referralCode}* when signing up to get Rs. 200 off your first booking. Sign up here: ${data.referralLink}`)}`
+    ? `https://wa.me/?text=${encodeURIComponent(`Join me on TUTORERA® — the student-led tutoring marketplace. Use my referral code *${data.referralCode}* when signing up to get Rs. 200 off your first booking. Sign up here: ${data.referralLink}`)}`
     : "#";
 
   if (loading || fetching) return (

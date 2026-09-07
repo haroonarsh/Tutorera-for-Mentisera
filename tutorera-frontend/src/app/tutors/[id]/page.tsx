@@ -1143,7 +1143,7 @@ export default async function TutorProfilePage({ params }: Props) {
             >
               <Sparkles size={14} color="#16a34a" />
               <span>
-                <strong>100% Student Guarantee:</strong> First trial session refund if not satisfied.
+                <strong>First-session protection:</strong> eligible sessions may qualify for replacement, credit, or refund review.
               </span>
             </div>
 

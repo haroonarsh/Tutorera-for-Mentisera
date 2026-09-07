@@ -151,9 +151,9 @@ function buildFooter(): string {
         <div style="margin-bottom:5px;color:#ffffff;font-size:19px;font-weight:800;letter-spacing:0.8px;">${BRAND_NAME}<span style="color:${COLORS.cyan};">${REG_NAME}</span></div>
         <div style="margin-bottom:18px;color:#8edcff;font-size:10px;font-weight:600;letter-spacing:1.7px;text-transform:uppercase;">BY MENTISERA</div>
         <p style="margin:0 auto 17px;max-width:480px;color:${COLORS.footerText};font-size:11px;line-height:19px;">
-          Pakistan's student-led digital tutoring marketplace connecting
-          students and parents with qualified tutors for online and
-          in-person educational support.
+          A global student-led digital tutoring marketplace connecting
+          students and parents with qualified tutors for online learning
+          and local in-person educational support where available.
         </p>
         <p style="margin:0 0 15px;font-size:11px;line-height:20px;">${links}</p>
         <p style="margin:0;color:${COLORS.footerMuted};font-size:10px;line-height:17px;">

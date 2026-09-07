@@ -39,7 +39,7 @@ export default function ServicesPage() {
         <p>Tutoring categories span international and national curricula. Rates are student-proposed or tutor-offered, tailored to subject difficulty, academic level, and learning mode (online worldwide or home tuition locally). Final rates are agreed in your preferred currency before authorized platform checkout.</p>
       </section>
       <section className={s.narrow}>
-        <p className={s.lead}><strong>Pricing Transparency:</strong> Student-led demand marketplace model. Students propose their preferred budget or receive custom tutor counter-offers. All checkout totals are displayed with full currency transparency and protected by TUTORERA platform guarantees.</p>
+        <p className={s.lead}><strong>Pricing Transparency:</strong> Student-led demand marketplace model. Students propose their preferred budget or receive custom tutor counter-offers. All checkout totals are displayed with full currency transparency, documented payment status, and published support/dispute routes.</p>
       </section>
       <section className={s.container}>
         <div className={s.serviceGrid}>

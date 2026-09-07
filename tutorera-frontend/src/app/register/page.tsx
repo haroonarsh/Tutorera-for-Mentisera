@@ -96,7 +96,7 @@ function RegisterForm() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <BrandLogo size="lg" /><h1 style={{ fontSize: '1.4rem', fontWeight: '700', color: C.primary, marginBottom: '0.3rem' }}>Create your account</h1>
-          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Join Pakistan's tutoring marketplace</p>
+          <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Join the global student-led tutoring marketplace</p>
         </div>
 
         {/* Role Toggle */}

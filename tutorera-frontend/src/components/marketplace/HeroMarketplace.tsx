@@ -92,7 +92,7 @@ export default function HeroMarketplace() {
               >
                 <ShieldCheck size={16} color="#10b981" />
                 <span>
-                  <strong>100% Student Guarantee:</strong> First trial session refund if not satisfied
+                  <strong>First-session protection:</strong> replacement, credit, or refund review where eligible
                 </span>
                 <ArrowRight size={13} color="#059669" />
               </Link>

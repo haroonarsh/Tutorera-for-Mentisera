@@ -54,7 +54,7 @@ export const welcomeEmail = (name: string) => {
     subject: "Welcome to TUTORERA®!",
     emailCategory: "Welcome",
     emailHeading: "Welcome to TUTORERA®",
-    emailSubheading: "Pakistan's student-led tutoring marketplace.",
+    emailSubheading: "The global student-led tutoring marketplace.",
     firstName: name,
     openingMessage: "Thanks for joining TUTORERA®.",
     mainMessage: "You can now browse tutors, book sessions, and start learning. If you have any questions, our support team is here to help.",
