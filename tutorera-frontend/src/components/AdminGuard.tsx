@@ -14,24 +14,26 @@ const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/audit-logs": "audit.read",
   "/admin/system-health": "system.monitor",
   "/admin/users": "users.read",
+  "/admin/markets": "market.read",
+  "/admin/control-tower": "system.monitor",
 };
 
 const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/bookings": "bookings.read",
+  "/admin/bookings/": "bookings.read",
   "/admin/requests": "request.read",
-  "/admin/supply-gaps": "market.read",
+  "/admin/supply-gaps": "analytics.read",
   "/admin/students": "student.read",
   "/admin/tutors": "tutor.read",
   "/admin/applications": "tutor.read",
   "/admin/verifications": "tutor.verify",
   "/admin/matching": "matching.read",
   "/admin/analytics": "analytics.read",
-  "/admin/contacts": "support.read",
-  "/admin/notifications": "notifications.read",
+  "/admin/contacts": "student.read",
   "/admin/broadcasts": "broadcast.send",
-  "/admin/subscriptions": "subscription.read",
+  "/admin/subscriptions": "growth.read",
   "/admin/student-ratings": "student.read",
-  "/admin/referrals": "referral.read",
+  "/admin/referrals": "growth.read",
 };
 
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {

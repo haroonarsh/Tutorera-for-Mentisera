@@ -17,7 +17,7 @@ import {
   Send,
   ExternalLink,
 } from "lucide-react";
-import axiosInstance from "@/lib/axios";
+import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { tutorProfileHref } from "@/lib/tutor-directory";
@@ -71,7 +71,7 @@ export default function AdminMatchingPage() {
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
     try {
-      const res = await axiosInstance.get("/matching/admin/analytics");
+      const res = await api.get("/matching/admin/analytics");
       setAnalytics(res.data.analytics);
     } catch (err) {
       console.error("Failed to load matching analytics:", err);
@@ -83,7 +83,7 @@ export default function AdminMatchingPage() {
   const fetchConfig = async () => {
     setLoadingConfig(true);
     try {
-      const res = await axiosInstance.get("/matching/admin/config");
+      const res = await api.get("/matching/admin/config");
       setConfig(res.data.config);
     } catch (err) {
       console.error("Failed to load matching config:", err);
@@ -95,7 +95,7 @@ export default function AdminMatchingPage() {
   const fetchLiveRequests = async () => {
     setLoadingRequests(true);
     try {
-      const res = await axiosInstance.get("/requests?status=open,published,receiving_offers&limit=30");
+      const res = await api.get("/requests?status=open,published,receiving_offers&limit=30");
       const list = res.data?.requests || res.data?.data || [];
       setLiveRequests(list);
       if (list.length > 0 && !selectedRequestId) {
@@ -130,7 +130,7 @@ export default function AdminMatchingPage() {
     if (!config) return;
     setSavingConfig(true);
     try {
-      await axiosInstance.put("/matching/admin/config", config);
+      await api.put("/matching/admin/config", config);
       showSuccess("Matching weights successfully saved and activated in memory!");
       fetchConfig();
     } catch {
@@ -148,7 +148,7 @@ export default function AdminMatchingPage() {
           ? { requestId: selectedRequestId, limit: 25 }
           : { customRequest, limit: 25 };
 
-      const res = await axiosInstance.post("/matching/admin/simulate", payload);
+      const res = await api.post("/matching/admin/simulate", payload);
       setSimulationResult(res.data);
       showSuccess(`Smart matching evaluated: found ${res.data.totalRanked} candidate tutors.`);
     } catch (err: any) {
@@ -162,7 +162,7 @@ export default function AdminMatchingPage() {
     if (!requestId) return;
     setDispatchingWave(true);
     try {
-      await axiosInstance.post(`/admin/requests/${requestId}/rescue`, { action: "rematch" });
+      await api.post(`/admin/at-risk/requests/${requestId}/action`, { action: "rematch" });
       showSuccess("Progressive tutor notifications wave dispatched successfully!");
     } catch {
       showError("Failed to trigger match dispatch wave.");
