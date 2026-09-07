@@ -105,7 +105,7 @@ export const initSocket = (httpServer: HttpServer): Server => {
 
 // Send notification to specific user
 export const sendNotification = async (
-  io: Server,
+  io: Server | undefined,
   userId: string,
   notification: {
     title: string;
@@ -114,6 +114,8 @@ export const sendNotification = async (
     link?: string;
   }
 ) => {
+  if (!io) return;
+
   // Save to DB
   const saved = await Notification.create({
     user: userId,
