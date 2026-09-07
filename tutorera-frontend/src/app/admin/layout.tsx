@@ -1,5 +1,4 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,8 +13,6 @@ import { useAuth } from "@/context/AuthContext";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
-
-const C = UI_COLORS;
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: ["*"],

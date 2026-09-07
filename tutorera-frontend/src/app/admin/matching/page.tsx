@@ -53,6 +53,7 @@ export default function AdminMatchingPage() {
   const [config, setConfig] = useState<any>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [configError, setConfigError] = useState("");
+  const [configHistory, setConfigHistory] = useState<any[]>([]);
   const [savingConfig, setSavingConfig] = useState(false);
   const [confirmingConfig, setConfirmingConfig] = useState(false);
   const [changeReason, setChangeReason] = useState("");
@@ -121,11 +122,21 @@ export default function AdminMatchingPage() {
     }
   }, []);
 
+  const fetchConfigHistory = useCallback(async () => {
+    try {
+      const res = await api.get("/matching/admin/config/history");
+      setConfigHistory(res.data.history || []);
+    } catch {
+      setConfigHistory([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAnalytics();
     fetchConfig();
     fetchLiveRequests();
-  }, [fetchAnalytics, fetchConfig, fetchLiveRequests]);
+    fetchConfigHistory();
+  }, [fetchAnalytics, fetchConfig, fetchConfigHistory, fetchLiveRequests]);
 
   const handleWeightChange = (mode: "online" | "home", key: string, value: number) => {
     if (!config) return;
@@ -158,10 +169,22 @@ export default function AdminMatchingPage() {
       setConfirmingConfig(false);
       setChangeReason("");
       fetchConfig();
+      fetchConfigHistory();
     } catch {
       showError("Failed to update matching configuration.");
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const handleRollbackConfig = async (historyId: string, revision: number) => {
+    if (!window.confirm(`Roll back matching configuration to revision ${revision}? A new audited revision will be created.`)) return;
+    try {
+      await api.post(`/matching/admin/config/history/${historyId}/rollback`);
+      showSuccess(`Matching configuration rolled back to revision ${revision}.`);
+      await Promise.all([fetchConfig(), fetchConfigHistory()]);
+    } catch (err) {
+      showError(err, "Failed to roll back matching configuration.");
     }
   };
 
@@ -302,7 +325,7 @@ export default function AdminMatchingPage() {
               <p className="text-2xl font-black text-slate-900 dark:text-white">
                 {loadingAnalytics ? "…" : analytics?.totalMatches !== undefined ? analytics.totalMatches.toLocaleString() : "—"}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Across student requests & offers</p>
+              <p className="mt-1 text-xs text-slate-500">Across student requests & offers</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -313,7 +336,7 @@ export default function AdminMatchingPage() {
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 {loadingAnalytics ? "…" : analytics?.avgMatchScore != null ? `${analytics.avgMatchScore}%` : "—"}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Target compatibility threshold: &ge; 70%</p>
+              <p className="mt-1 text-xs text-slate-500">Target compatibility threshold: &ge; 70%</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -324,7 +347,7 @@ export default function AdminMatchingPage() {
               <p className="text-2xl font-black text-slate-900 dark:text-white">
                 {analytics?.offerConversionRate !== undefined ? `${analytics.offerConversionRate}%` : "—"}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Matches converting to formal tutor offers</p>
+              <p className="mt-1 text-xs text-slate-500">Matches converting to formal tutor offers</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -335,7 +358,7 @@ export default function AdminMatchingPage() {
               <p className="text-2xl font-black text-slate-900 dark:text-white">
                 {analytics?.bookingConversionRate !== undefined ? `${analytics.bookingConversionRate}%` : "—"}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Matches leading to paid student bookings</p>
+              <p className="mt-1 text-xs text-slate-500">Matches leading to paid student bookings</p>
             </div>
             <AdminMetricCard
               loading={loadingAnalytics}
@@ -487,7 +510,7 @@ export default function AdminMatchingPage() {
                 <button
                   type="button"
                   onClick={() => setSimMode("live")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
                     simMode === "live"
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-600 dark:text-slate-400"
@@ -498,7 +521,7 @@ export default function AdminMatchingPage() {
                 <button
                   type="button"
                   onClick={() => setSimMode("custom")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
                     simMode === "custom"
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-600 dark:text-slate-400"
@@ -540,7 +563,7 @@ export default function AdminMatchingPage() {
                       type="button"
                       onClick={handleRunSimulation}
                       disabled={simulating || !selectedRequestId}
-                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow transition-all disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow transition-[background-color,box-shadow,transform] duration-150 disabled:opacity-50"
                     >
                       <Zap className="w-4 h-4" />
                       {simulating ? "Evaluating..." : "Run Match Evaluation"}
@@ -651,7 +674,7 @@ export default function AdminMatchingPage() {
                       type="button"
                       onClick={handleRunSimulation}
                       disabled={simulating}
-                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow transition-all disabled:opacity-50"
+                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow transition-[background-color,box-shadow,transform] duration-150 disabled:opacity-50"
                     >
                       <Zap className="w-4 h-4" />
                       {simulating ? "Evaluating..." : "Run Evaluation"}
@@ -668,26 +691,26 @@ export default function AdminMatchingPage() {
               {/* Summary Stats Header */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Eligible Pool</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Eligible Pool</span>
                   <span className="text-xl font-black text-slate-900 dark:text-white">
                     {simulationResult.totalEligible} tutors
                   </span>
                 </div>
                 <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Ranked Matches</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Ranked Matches</span>
                   <span className="text-xl font-black text-blue-600 dark:text-blue-400">
                     {simulationResult.totalRanked} tutors
                   </span>
                 </div>
                 <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">High Compatibility (&ge;80%)</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">High Compatibility (&ge;80%)</span>
                   <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                     {(simulationResult.tierSummary?.excellent || 0) + (simulationResult.tierSummary?.great || 0)} tutors
                   </span>
                 </div>
                 <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Operations Action</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Operations Action</span>
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Dispatch Notification Wave</span>
                   </div>
                   {simMode === "live" && (
@@ -695,7 +718,8 @@ export default function AdminMatchingPage() {
                       type="button"
                       onClick={() => handleDispatchNotificationWave(selectedRequestId)}
                       disabled={dispatchingWave}
-                      className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow active:scale-95 transition-all disabled:opacity-50"
+                      className="min-h-11 min-w-11 rounded-xl bg-indigo-600 p-2 text-white shadow transition-[background-color,box-shadow,transform] duration-150 hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
+                      aria-label="Dispatch tutor notification wave"
                       title="Dispatch Match Notification Wave"
                     >
                       <Send className="w-4 h-4" />
@@ -724,7 +748,7 @@ export default function AdminMatchingPage() {
                     return (
                       <div
                         key={tutor._id || index}
-                        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:border-blue-300 dark:hover:border-blue-800 transition-all"
+                        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:border-blue-300 dark:hover:border-blue-800 transition-[border-color,box-shadow] duration-150"
                       >
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                           {/* Tutor Identity */}
@@ -747,13 +771,13 @@ export default function AdminMatchingPage() {
                                 </Link>
 
                                 {tutor.policeCertificateVerified && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
                                     <ShieldCheck className="w-3 h-3" /> Police Verified
                                   </span>
                                 )}
 
                                 {match.isColdStartExploration && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-[10px] font-bold">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-xs font-bold">
                                     🌟 Rising Explorer
                                   </span>
                                 )}
@@ -791,7 +815,7 @@ export default function AdminMatchingPage() {
                                   {match.reasons.map((r: string, i: number) => (
                                     <span
                                       key={i}
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300"
                                     >
                                       <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                                       {r}
@@ -804,7 +828,7 @@ export default function AdminMatchingPage() {
 
                           {/* Score Breakdown Radar/Pills */}
                           {match.scoreBreakdown && (
-                            <div className="w-full md:w-64 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1.5 shrink-0 text-[11px]">
+                            <div className="w-full md:w-64 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1.5 shrink-0 text-xs">
                               <span className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                                 Point Breakdown:
                               </span>
@@ -850,7 +874,7 @@ export default function AdminMatchingPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedMode("online")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
                     selectedMode === "online"
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-600 dark:text-slate-400"
@@ -861,7 +885,7 @@ export default function AdminMatchingPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedMode("home")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
                     selectedMode === "home"
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-600 dark:text-slate-400"
@@ -875,7 +899,7 @@ export default function AdminMatchingPage() {
                 type="button"
                 onClick={() => setConfirmingConfig(true)}
                 disabled={savingConfig || !canConfigure || currentWeightTotal !== 100}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-[background-color,box-shadow,transform] duration-150 disabled:opacity-50"
                 title={!canConfigure ? "You do not have permission to change matching weights" : currentWeightTotal !== 100 ? "Weights must total exactly 100 points" : undefined}
               >
                 <Save className="w-4 h-4" />
@@ -925,7 +949,7 @@ export default function AdminMatchingPage() {
                       className="w-full accent-blue-600 cursor-pointer"
                     />
 
-                    <div className="flex justify-between text-[10px] text-slate-400">
+                    <div className="flex justify-between text-xs text-slate-500">
                       <span>0 pts (Disabled)</span>
                       <span>40 pts (Dominant)</span>
                     </div>
@@ -942,6 +966,28 @@ export default function AdminMatchingPage() {
               <strong>Instant Cache Invalidation:</strong> Updates immediately flush the memory cache and take effect on all new student requests, offer rankings, and progressive tutor notification waves without requiring server restarts.
             </div>
           </div>
+
+          <section aria-labelledby="configuration-history-title" className="space-y-3 border-t border-slate-200 pt-6 dark:border-slate-800">
+            <div>
+              <h2 id="configuration-history-title" className="text-base font-bold text-slate-950 dark:text-white">Configuration history</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Recent audited revisions can be restored without deleting newer history.</p>
+            </div>
+            {configHistory.length === 0 ? (
+              <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">No configuration changes have been recorded yet.</p>
+            ) : (
+              <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+                {configHistory.slice(0, 8).map((entry) => (
+                  <div key={entry._id} className="flex flex-col gap-3 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-900">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">Revision {entry.revision}: {entry.changeReason}</p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{entry.changedBy?.name || "Administrator"} · {new Date(entry.createdAt).toLocaleString()}</p>
+                    </div>
+                    {canConfigure && <button type="button" onClick={() => handleRollbackConfig(entry._id, entry.revision)} className="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Restore this revision</button>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           {confirmingConfig && (
             <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmingConfig(false); }}>
