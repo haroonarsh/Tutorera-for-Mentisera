@@ -152,3 +152,74 @@ export const chatWithAI = async (req: AuthRequest, res: Response): Promise<void>
     res.status(500).json({ success: false, message: "AI service unavailable. Please try again." });
   }
 };
+
+const REQUEST_PARSE_SYSTEM_PROMPT = `You are TUTORERA's request parser. Extract structured tuition request data from free-text input. Return ONLY a valid JSON object with these exact fields:
+- subject: string (e.g. "Mathematics", "Physics", "English")
+- level: string (e.g. "Matric", "FSc", "O-Level", "A-Level", "University")
+- city: string (e.g. "Lahore", "Karachi", "Islamabad") or null if not mentioned
+- countryCode: string (2-letter code, default "PK") or null
+- teachingMode: "online" | "in-person" | "both" (default "both" if not specified)
+- budget: number (hourly rate in PKR, extract from text like "1500 per hour") or null if not mentioned
+- schedule: string (brief description of preferred days/times) or null
+- language: string (language of instruction) or null
+
+Rules:
+- If a field cannot be determined from the input, use null
+- budget should be a number (PKR per hour)
+- Return ONLY the JSON, no markdown, no explanation, no text before or after
+- Example input: "I need physics tutor for my FSc son in Lahore, willing to pay 2000 per hour on weekends"
+- Example output: {"subject":"Physics","level":"FSc","city":"Lahore","countryCode":"PK","teachingMode":"both","budget":2000,"schedule":"weekends","language":"English"}`;
+
+export const parseRequestText = async (req: Request, res: Response): Promise<void> => {
+  const { text } = req.body;
+
+  if (!text?.trim()) {
+    res.status(400).json({ success: false, message: "Text is required." });
+    return;
+  }
+
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) {
+    res.status(503).json({ success: false, message: "AI service is not configured." });
+    return;
+  }
+
+  try {
+    const response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: "system", content: REQUEST_PARSE_SYSTEM_PROMPT },
+          { role: "user", content: text },
+        ],
+        temperature: 0.1,
+        max_tokens: 300,
+      }),
+    });
+
+    if (!response.ok) {
+      res.status(500).json({ success: false, message: "AI service unavailable." });
+      return;
+    }
+
+    const data = await response.json() as {
+      choices?: { message?: { content?: string } }[];
+    };
+
+    const raw = data.choices?.[0]?.message?.content || "{}";
+    const cleaned = raw.replace(/```json|```/gi, "").trim();
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      parsed = {};
+    }
+
+    res.status(200).json({ success: true, parsed });
+  } catch (err) {
+    console.error("Request parse failed:", err);
+    res.status(500).json({ success: false, message: "AI service unavailable." });
+  }
+};
