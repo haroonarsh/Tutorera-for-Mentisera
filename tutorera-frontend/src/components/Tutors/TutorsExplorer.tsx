@@ -39,10 +39,6 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => !["search", "sortBy"].includes(key) && value).length;
 
-  useEffect(() => {
-    if (matchRequestId) load(1, filters);
-  }, []);
-
   const load = useCallback(async (page: number, next: FiltersState) => {
     setLoading(true);
     try {
@@ -52,6 +48,10 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       setPagination({ total: data.total ?? list.length, page: data.page ?? page, pages: data.pages ?? 1, limit: 12 });
     } finally { setLoading(false); }
   }, [matchRequestId]);
+
+  useEffect(() => {
+    if (matchRequestId) load(1, filters);
+  }, [filters, load, matchRequestId]);
 
   function change(key: keyof FiltersState, value: string) {
     const next = { ...filters, [key]: value }; setFilters(next);

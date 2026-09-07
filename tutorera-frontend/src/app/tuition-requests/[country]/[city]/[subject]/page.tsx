@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import TuitionRequestsExplorer from "@/components/TuitionRequests/TuitionRequestsExplorer";
 import { fetchRequests } from "@/lib/tuition-requests";
 import type { RequestFilters } from "@/lib/tuition-requests";
@@ -87,9 +88,9 @@ export default async function SubjectTuitionRequestsPage({ params, searchParams 
       </div>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "1rem" }}>
         <div style={{ marginBottom: "1rem", display: "flex", gap: "0.75rem", fontSize: "0.875rem" }}>
-          <a href="/tuition-requests" style={{ color: "#0329b2", textDecoration: "none" }}>All Requests</a>
+          <Link href="/tuition-requests" style={{ color: "#0329b2", textDecoration: "none" }}>All Requests</Link>
           <span style={{ color: "#94a3b8" }}>/</span>
-          <a href={`/tuition-requests/${country}/${city}`} style={{ color: "#0329b2", textDecoration: "none" }}>{cityLabel}</a>
+          <Link href={`/tuition-requests/${country}/${city}`} style={{ color: "#0329b2", textDecoration: "none" }}>{cityLabel}</Link>
           <span style={{ color: "#94a3b8" }}>/</span>
           <span style={{ color: "#64748b" }}>{subjectLabel}</span>
         </div>
