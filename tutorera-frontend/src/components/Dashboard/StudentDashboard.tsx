@@ -242,22 +242,13 @@ function BookingCard({ booking, onClaimSubmitted }: {
           {creatingChat ? "Opening..." : "💬 Chat"}
         </button>
 
-        <button type="button" onClick={() => router.push(`/support?bookingId=${booking._id}`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: '#fff7ed', color: '#d97706', borderRadius: '0.5rem', border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+        <button type="button" className={s.btnWarning} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
         </button>
 
         {/* ── Rate Tutor — only on completed bookings ── */}
         {booking.status === "completed" && !alreadyRated && (
-          <button
-            onClick={() => setShowRatingModal(true)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.5rem 1rem', backgroundColor: '#fffbeb',
-              color: '#d97706', borderRadius: '0.5rem',
-              border: '1px solid #fde68a', fontSize: '0.8rem', fontWeight: '600',
-              cursor: 'pointer',
-            }}>
+          <button type="button" className={s.btnWarning} onClick={() => setShowRatingModal(true)}>
             ⭐ Rate Tutor
           </button>
         )}
@@ -409,8 +400,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
               style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#C81B7F', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
               {submittingClaim ? "Submitting..." : "Submit Claim"}
             </button>
-            <button type="button" onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}
-              style={{ padding: '0.6rem 1rem', backgroundColor: 'white', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+            <button type="button" className={s.btnOutline} onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}>
               Cancel
             </button>
           </div>
@@ -463,8 +453,8 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
             <p className={s.personSub}>{tutor.city} · {formatPKR(tutor.hourlyRate, "hour")}</p>
           </div>
         </Link>
-        <button type="button" onClick={handleRemove} disabled={removing}
-          style={{ background: 'none', border: 'none', cursor: removing ? 'not-allowed' : 'pointer', color: '#C81B7F', padding: '0.4rem', flexShrink: 0 }}
+        <button type="button" className={s.btnIcon} onClick={handleRemove} disabled={removing}
+          style={{ color: '#C81B7F' }}
           aria-label="Remove from favourites">
           <Trash2 size={16} />
         </button>
@@ -1036,46 +1026,10 @@ const fetchRequests = useCallback(async () => {
             </div>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", width: "100%", maxWidth: 420 }}>
-            <button 
-              onClick={() => setShowModal(true)} 
-              style={{
-                background: "#08bffc",
-                color: "#021550",
-                border: "none",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "0.625rem",
-                fontWeight: 800,
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(8, 191, 252, 0.4)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.4rem",
-                minHeight: 48,
-                flex: "1 1 180px"
-              }}
-            >
+            <button className={s.btnCyan} onClick={() => setShowModal(true)} style={{ flex: "1 1 180px", minHeight: 48 }}>
               + Post Tuition Request
             </button>
-            <Link
-              href="/tutors"
-              style={{
-                background: "rgba(255,255,255,0.15)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.3)",
-                padding: "0.75rem 1.25rem",
-                borderRadius: "0.625rem",
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 48,
-                flex: "1 1 140px"
-              }}
-            >
+            <Link href="/tutors" className={s.btnGhost} style={{ flex: "1 1 140px", minHeight: 48 }}>
               Browse Tutors
             </Link>
           </div>

@@ -285,6 +285,109 @@
 
 .btnSuccess:hover { background: #059669; }
 
+.btnWarning {
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #d97706;
+  border: 1.5px solid #fed7aa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnWarning:hover { background: #fef3c7; }
+
+.btnPink {
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #C81B7F;
+  border: 1.5px solid #fecdd3;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPink:hover { background: #fdf2f8; }
+
+.btnCyan {
+  padding: 9px 20px;
+  border-radius: 10px;
+  background: #08bffc;
+  color: #021550;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(8, 191, 252, 0.4);
+}
+
+.btnCyan:hover { background: #06a3d4; }
+
+.btnGhost {
+  padding: 9px 18px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  color: #ffffff;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.btnGhost:hover { background: rgba(255,255,255,0.25); }
+
+.btnPurple {
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1.5px solid #ddd6fe;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPurple:hover { background: #ede9fe; }
+
+.btnIcon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 /* ── Cards ── */
 .card {
   background: #ffffff;
@@ -582,7 +685,7 @@
     min-height: 44px;
     box-sizing: border-box;
   }
-  .btnOutline, .btnSuccess, .btnDanger, .btnPrimary {
+  .btnOutline, .btnSuccess, .btnDanger, .btnPrimary, .btnWarning, .btnPink, .btnCyan, .btnGhost, .btnPurple {
     min-height: 44px;
     display: inline-flex;
     align-items: center;

@@ -189,28 +189,12 @@ function BookingCard({ booking }: { booking: DashBooking }) {
       </button>
 
       {/* ── NEW: Need Help button ── */}
-        <button
-          onClick={() => router.push(`/support?bookingId=${booking._id}`)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-            padding: '0.5rem 1rem', backgroundColor: '#fff7ed',
-            color: '#d97706', borderRadius: '0.5rem',
-            border: '1px solid #fed7aa', fontSize: '0.8rem', fontWeight: '600',
-            cursor: 'pointer', marginBottom: '0.5rem'
-          }}>
+        <button type="button" className={s.btnWarning} style={{ marginBottom: '0.5rem' }} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
         </button>
 
         {booking.status === "completed" && !studentRated && (
-          <button
-            onClick={() => setShowStudentRatingModal(true)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.5rem 1rem', backgroundColor: '#f5f3ff',
-              color: '#7c3aed', borderRadius: '0.5rem',
-              border: '1px solid #ddd6fe', fontSize: '0.8rem', fontWeight: '600',
-              cursor: 'pointer',
-            }}>
+          <button type="button" className={s.btnPurple} onClick={() => setShowStudentRatingModal(true)}>
             ⭐ Rate Student
           </button>
         )}
@@ -729,39 +713,10 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             </div>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <Link
-              href="/browse-requests"
-              style={{
-                background: "#08bffc",
-                color: "#021550",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "0.625rem",
-                fontWeight: 800,
-                fontSize: "0.9rem",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                boxShadow: "0 4px 14px rgba(8, 191, 252, 0.4)"
-              }}
-            >
+            <Link href="/browse-requests" className={s.btnCyan}>
               View Matching Requests →
             </Link>
-            <Link 
-              href={userId ? `/tutors/${userId}` : "/tutors"} 
-              style={{ 
-                background: "rgba(255,255,255,0.15)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.3)",
-                padding: "0.75rem 1.25rem",
-                borderRadius: "0.625rem",
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center"
-              }}
-            >
+            <Link href={userId ? `/tutors/${userId}` : "/tutors"} className={s.btnGhost}>
               View Public Profile
             </Link>
           </div>
