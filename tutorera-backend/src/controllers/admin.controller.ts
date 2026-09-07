@@ -166,7 +166,12 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   profile.isVerified = status === "approved";
   profile.rejectionReason = status === "rejected" ? (reason || "") : "";
   profile.lastStatusChangeAt = now;
-  await profile.save();
+  // Some applications pre-date the expanded level enum (for example
+  // "Matric" and "O-Level"). A verification decision must not revalidate and
+  // reject unrelated legacy application data. The decision fields are
+  // explicitly validated above, so persist this administrative state change
+  // without running whole-document validation.
+  await profile.save({ validateBeforeSave: false });
 
   await recordStatusEvent({
     tutorId: tutorUser._id.toString(),
@@ -217,7 +222,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   if (mpEligible && !profile.marketplaceEligible) {
     profile.marketplaceEligible = true;
     profile.marketplaceEligibleAt = now;
-    await profile.save();
+    await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
     try {
       const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
@@ -227,7 +232,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   } else if (!mpEligible && profile.marketplaceEligible) {
     profile.marketplaceEligible = false;
     profile.marketplaceEligibleAt = undefined as any;
-    await profile.save();
+    await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
     try {
       const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
@@ -238,7 +243,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   if (htEligible && !profile.homeTuitionEligible) {
     profile.homeTuitionEligible = true;
     profile.homeTuitionEligibleAt = now;
-    await profile.save();
+    await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
     try {
       const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
@@ -248,7 +253,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   } else if (!htEligible && profile.homeTuitionEligible) {
     profile.homeTuitionEligible = false;
     profile.homeTuitionEligibleAt = undefined as any;
-    await profile.save();
+    await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
     try {
       const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
@@ -322,7 +327,9 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       profile.isVerified = status === "approved";
       profile.rejectionReason = status === "rejected" ? (reason || "") : "";
       profile.lastStatusChangeAt = now;
-      await profile.save();
+      // See verifyTutor: verification is an administrative state transition,
+      // not an edit of legacy application content.
+      await profile.save({ validateBeforeSave: false });
 
       await recordStatusEvent({
         tutorId: tutorUser._id.toString(),
@@ -371,7 +378,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       if (mpEligible && !profile.marketplaceEligible) {
         profile.marketplaceEligible = true;
         profile.marketplaceEligibleAt = now;
-        await profile.save();
+        await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
         try {
           const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
@@ -381,7 +388,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       } else if (!mpEligible && profile.marketplaceEligible) {
         profile.marketplaceEligible = false;
         profile.marketplaceEligibleAt = undefined as any;
-        await profile.save();
+        await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
         try {
           const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
@@ -392,7 +399,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       if (htEligible && !profile.homeTuitionEligible) {
         profile.homeTuitionEligible = true;
         profile.homeTuitionEligibleAt = now;
-        await profile.save();
+        await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
         try {
           const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
@@ -402,7 +409,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       } else if (!htEligible && profile.homeTuitionEligible) {
         profile.homeTuitionEligible = false;
         profile.homeTuitionEligibleAt = undefined as any;
-        await profile.save();
+        await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
         try {
           const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);

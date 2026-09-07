@@ -116,20 +116,29 @@ export const sendNotification = async (
 ) => {
   if (!io) return;
 
-  // Save to DB
-  const saved = await Notification.create({
-    user: userId,
-    ...notification,
-  });
+  try {
+    // Notification delivery is a secondary side effect. A temporary database
+    // or socket failure must never roll back an already-completed booking,
+    // payment, verification, or other administrative action.
+    const saved = await Notification.create({
+      user: userId,
+      ...notification,
+    });
 
-  // Send real-time if user is connected
-  io.to(userId).emit("notification", {
-    _id: saved._id,
-    title: saved.title,
-    message: saved.message,
-    type: saved.type,
-    link: saved.link,
-    isRead: false,
-    createdAt: saved.createdAt,
-  });
+    io.to(userId).emit("notification", {
+      _id: saved._id,
+      title: saved.title,
+      message: saved.message,
+      type: saved.type,
+      link: saved.link,
+      isRead: false,
+      createdAt: saved.createdAt,
+    });
+  } catch (error) {
+    console.error("[Notification] Failed to persist or emit notification:", {
+      userId,
+      type: notification.type,
+      error,
+    });
+  }
 };
