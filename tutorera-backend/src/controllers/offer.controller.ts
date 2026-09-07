@@ -203,6 +203,49 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
+export const retryOfferPayment = async (req: AuthRequest, res: Response): Promise<void> => {
+  const offer = await Bid.findById(req.params.id);
+  if (!offer) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
+
+  if (offer.status !== "payment_pending") {
+    res.status(409).json({ success: false, message: "This offer is not currently awaiting payment." });
+    return;
+  }
+
+  const request = await Request.findById(offer.request);
+  if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
+
+  const userId = req.user?._id?.toString();
+  if (request.student.toString() !== userId) {
+    res.status(403).json({ success: false, message: "Only the student who accepted this offer can retry payment." });
+    return;
+  }
+
+  // Extend the hold from this retry attempt, so the student gets a full
+  // fresh window instead of racing whatever was left of the original one.
+  offer.paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
+  await offer.save();
+
+  try {
+    const student = await User.findById(request.student).select("name email phone");
+    const checkoutUrl = await createTransaction({
+      amount: offer.amount,
+      customerMobileNo: student?.phone || "03000000000",
+      customerEmail: student?.email || "",
+      basketId: `BID-${offer._id.toString()}`,
+      description: `TUTORERA offer acceptance ${offer._id.toString()} (retry)`,
+      successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
+      failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
+      checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
+    });
+
+    res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });
+  } catch (err: any) {
+    console.error("Failed to create retry checkout:", err);
+    res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
+  }
+};
+
 export const getRequestOffers = async (req: AuthRequest, res: Response): Promise<void> => {
   const request = await Request.findOne({ _id: req.params.requestId, student: req.user?._id });
   if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }

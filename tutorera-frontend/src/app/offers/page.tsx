@@ -13,7 +13,8 @@ import {
   MessageSquare, 
   Sparkles, 
   ArrowRight, 
-  RotateCcw
+  RotateCcw,
+  CreditCard
 } from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
 
@@ -152,6 +153,23 @@ function OffersContent() {
       load();
     } catch (e) {
       showError(e, "Unable to renew offer.");
+    }
+  }
+
+  // Retries checkout for an offer already "payment_pending" — e.g. the
+  // student's earlier attempt failed (declined card, insufficient balance,
+  // closed the tab) but the 30-minute hold hasn't expired yet. Without this,
+  // there's no visible action for a payment_pending offer at all.
+  async function retryPayment(o: Offer) {
+    try {
+      const res = await api.post(`/offers/${o._id}/retry-payment`);
+      if (res.data?.checkoutUrl) {
+        window.location.assign(res.data.checkoutUrl);
+        return;
+      }
+      showError(new Error("No checkout URL"), "Unable to resume payment. Please try again.");
+    } catch (e) {
+      showError(e, "Unable to resume payment. Please try again.");
     }
   }
 
@@ -330,6 +348,17 @@ function OffersContent() {
                   </div>
                 )}
 
+                {/* Payment pending banner — shown while a checkout for this
+                    offer is in flight or was abandoned/failed but the
+                    30-minute hold hasn't expired yet */}
+                {o.status === "payment_pending" && (
+                  <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "0.75rem 1rem", borderRadius: "0.5rem", fontSize: "0.825rem", color: "#1d4ed8", marginBottom: "1rem" }}>
+                    {user?.role === "student"
+                      ? "Payment in progress. If your last attempt didn't go through, you can pick up where you left off."
+                      : "The student is completing payment for this offer. The booking will be created once payment is confirmed."}
+                  </div>
+                )}
+
                 {/* Immutable Negotiation Timeline */}
                 <details style={{ background: "#f8fafc", padding: "0.85rem 1rem", borderRadius: "0.625rem", border: "1px solid #e2e8f0", marginBottom: "1rem" }}>
                   <summary style={{ fontWeight: 700, fontSize: "0.85rem", color: "#021550", cursor: "pointer" }}>
@@ -442,6 +471,31 @@ function OffersContent() {
                       {user?.role === "tutor" ? "Withdraw" : "Decline"}
                     </button>
                   </div>
+                )}
+
+                {o.status === "payment_pending" && user?.role === "student" && (
+                  <button
+                    onClick={() => retryPayment(o)}
+                    style={{
+                      background: "#10b981",
+                      color: "white",
+                      border: "none",
+                      padding: "0.85rem 1.5rem",
+                      borderRadius: "0.625rem",
+                      fontWeight: 800,
+                      fontSize: "0.95rem",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+                      minHeight: "48px",
+                      marginTop: "1rem",
+                      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.25)",
+                    }}
+                  >
+                    <CreditCard size={18} /> Complete Payment
+                  </button>
                 )}
 
                 {o.status === "expired" && user?.role === "tutor" && (
