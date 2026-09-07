@@ -19,6 +19,7 @@ const footerColumns = [
       { label: "Pricing & 0% Student Fee", href: "/pricing" },
       { label: "Ownership & Governance", href: "/governance" },
       { label: "Contact & Support", href: "/contact" },
+      { label: "Tutoring Index", href: "/research/tutoring-index" },
     ],
   },
   {

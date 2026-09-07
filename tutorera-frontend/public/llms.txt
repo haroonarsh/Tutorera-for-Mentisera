@@ -34,6 +34,7 @@ TUTORERA generates city×subject×curriculum demand pages for organic discovery:
 Each page surfaces anonymized, real request data filtered by city, subject, curriculum, and teaching mode.
 
 ## Tutoring Index
+Public aggregate market research is also available at /research/tutoring-index with anonymized demand, offer-rate, booking, response-time, city, subject, mode, and six-month trend data.
 Public aggregate market research at /research/pakistan-tutoring-rates — anonymized data on tutoring rates by city, subject, mode, and trend over 6 months.
 
 ## Contact

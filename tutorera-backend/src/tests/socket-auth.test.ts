@@ -67,7 +67,7 @@ describe("BE-03: Socket.IO conversation room authorization", () => {
     const conversation = await Conversation.create({
       student: student._id,
       tutor: tutor._id,
-      booking: (await Booking.create({ student: student._id, tutor: tutor._id, amount: 1000, schedule: "Mon 5pm" }))._id,
+      booking: (await Booking.create({ student: student._id, tutor: tutor._id, amount: 1000, finalAgreedRate: 1000, subtotal: 1000, studentTotal: 1000, tutorNet: 800, feeConfig: { version: 1 }, schedule: "Mon 5pm" }))._id,
     });
 
     const socket = await connectAs(student._id.toString());
@@ -87,7 +87,7 @@ describe("BE-03: Socket.IO conversation room authorization", () => {
     const conversation = await Conversation.create({
       student: student._id,
       tutor: tutor._id,
-      booking: (await Booking.create({ student: student._id, tutor: tutor._id, amount: 1200, schedule: "Tue 6pm" }))._id,
+      booking: (await Booking.create({ student: student._id, tutor: tutor._id, amount: 1200, finalAgreedRate: 1200, subtotal: 1200, studentTotal: 1200, tutorNet: 960, feeConfig: { version: 1 }, schedule: "Tue 6pm" }))._id,
     });
 
     const socket = await connectAs(outsider._id.toString());

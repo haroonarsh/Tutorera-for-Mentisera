@@ -6,7 +6,7 @@ import BrandLogo from "@/components/BrandLogo";
 
 export default function SelectRolePage() {
   const { selectRole, loading } = useAuth();
-  const [selected, setSelected] = useState<"student" | "tutor">("student");
+  const [selected, setSelected] = useState<"student" | "tutor" | "parent">("student");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +78,27 @@ export default function SelectRolePage() {
 
             <button
               type="button"
+              onClick={() => setSelected("parent")}
+              style={{
+                padding: "1.25rem",
+                border: selected === "parent" ? "2px solid #0329B2" : "1.5px solid #e5e7eb",
+                borderRadius: "0.75rem",
+                background: selected === "parent" ? "#EEF5FF" : "white",
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "border-color 0.15s ease, background-color 0.15s ease",
+              }}
+            >
+              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", marginBottom: "0.25rem" }}>
+                👪 I&apos;m a Parent or Guardian
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+                I want to manage safe tutoring, bookings, and learning plans for a child.
+              </div>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setSelected("tutor")}
               style={{
                 padding: "1.25rem",
@@ -94,6 +115,27 @@ export default function SelectRolePage() {
               </div>
               <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
                 I want to offer tuition, respond to student requests, and grow my teaching business.
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelected("parent")}
+              style={{
+                padding: "1.25rem",
+                border: selected === "parent" ? "2px solid #0329B2" : "1.5px solid #e5e7eb",
+                borderRadius: "0.75rem",
+                background: selected === "parent" ? "#EEF5FF" : "white",
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", marginBottom: "0.25rem" }}>
+                👨‍👩‍👧 I'm a Parent
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+                I want to find tutors for my children and manage their learning progress.
               </div>
             </button>
           </div>

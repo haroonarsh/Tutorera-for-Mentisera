@@ -11,10 +11,12 @@ import mongoose from "mongoose";
 let replSet: MongoMemoryReplSet;
 
 beforeAll(async () => {
-  process.env.MONGOMS_DISABLE_MD5_CHECK = "1";
+  // mongodb-memory-server v10 uses MONGOMS_MD5_CHECK; the older
+  // MONGOMS_DISABLE_MD5_CHECK flag is ignored and causes every suite to fail
+  // before the first test when mirrors serve a different checksum file.
+  process.env.MONGOMS_MD5_CHECK = "0";
   replSet = await MongoMemoryReplSet.create({
     replSet: { count: 1 },
-    binary: { skipMD5: true },
   });
   const uri = replSet.getUri();
   await mongoose.connect(uri);

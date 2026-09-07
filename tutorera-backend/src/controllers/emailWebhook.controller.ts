@@ -14,7 +14,11 @@ type ResendWebhookPayload = {
   };
 };
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Keep webhook route imports safe in workers/tests where transactional sending
+// is intentionally disabled and no Resend API key is configured. The SDK
+// validates the constructor eagerly, although signature verification itself
+// only needs the webhook secret.
+const resend = new Resend(process.env.RESEND_API_KEY || "re_test_placeholder");
 
 const STATUS_BY_EVENT: Record<string, EmailLogStatus> = {
   "email.sent": "sent",

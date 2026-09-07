@@ -39,6 +39,14 @@ export default function TutorProfileActions(props: Props) {
     >
       <PlusCircle size={16} /> Post Request & Invite
     </Link>
+    {loaded && isStudent && (
+      <Link
+        href={`/recurring?tutorId=${encodeURIComponent(props.tutorUserId)}&tutorName=${encodeURIComponent(props.tutorName)}&subject=${encodeURIComponent(props.subjects[0] || "Tutoring")}`}
+        style={{ width: "100%", padding: ".85rem", marginTop: ".75rem", border: "1px solid #c4b5fd", borderRadius: 8, background: "#faf5ff", color: "#6d28d9", fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", fontSize: "0.875rem", boxSizing: "border-box" }}
+      >
+        <Calendar size={16} /> Set up recurring lessons
+      </Link>
+    )}
     {booking && <DirectBookingModal tutorId={props.tutorUserId} tutorUserId={props.tutorUserId} tutorName={props.tutorName} hourlyRate={props.hourlyRate} currency={props.currency} tutorSubjects={props.subjects} tutorTeachingMode={props.teachingMode} tutorCity={props.city} onClose={() => setBooking(false)} onSuccess={() => setBooking(false)} />}
   </>;
 }

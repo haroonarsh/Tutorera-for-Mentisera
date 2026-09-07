@@ -1415,3 +1415,8 @@ export const closeRequest = async (req: AuthRequest, res: Response): Promise<voi
 
   res.status(200).json({ success: true, message: "Tuition request closed successfully." });
 };
+
+// Backwards-compatible controller export for legacy integrations/tests. The
+// transactional implementation is now named initiateAcceptBid because the
+// first step may create a payment hold before final booking confirmation.
+export const acceptBid = initiateAcceptBid;

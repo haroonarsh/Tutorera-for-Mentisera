@@ -63,21 +63,33 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
 
   const openStatus = ["open", "published", "receiving_offers"] as const;
   const demandFilter = { ...baseFilter, status: { $in: openStatus }, expiresAt: { $gt: now } };
-  const recentFilter = { ...baseFilter, createdAt: { $gte: thirtyDaysAgo } };
+  // Demand filters must exclude drafts/cancelled requests; those records are
+  // not actionable marketplace demand and otherwise inflate liquidity.
+  const recentFilter = {
+    ...baseFilter,
+    status: { $nin: ["draft", "cancelled"] },
+    createdAt: { $gte: thirtyDaysAgo },
+  };
 
-  const [openRequests, recentRequests, tutors, recentBookings] = await Promise.all([
+  const [openRequests, recentRequestDocs, tutors] = await Promise.all([
     Request.countDocuments(demandFilter),
-    Request.countDocuments(recentFilter),
+    Request.find(recentFilter as any).select("_id").lean(),
     TutorProfile.countDocuments({ ...baseFilter, verificationStatus: "approved", marketplaceEligible: true }),
-    Booking.find({ ...baseFilter, createdAt: { $gte: thirtyDaysAgo }, status: { $in: ["completed", "upcoming", "in_progress"] } as any })
-      .select("finalAgreedRate tutorPayout")
-      .lean(),
   ]);
 
-  const recentRequestIds = recentRequests > 0
-    ? await Request.find(recentFilter).select("_id").lean()
+  const recentRequestIds = recentRequestDocs.map((r) => r._id);
+  const recentRequests = recentRequestIds.length;
+  // Booking stores its market dimensions through `request`; applying the
+  // Request filter directly to Booking silently returned zero price samples.
+  const recentBookings = recentRequestIds.length
+    ? await Booking.find({
+        request: { $in: recentRequestIds },
+        createdAt: { $gte: thirtyDaysAgo },
+        status: { $in: ["completed", "upcoming", "in_progress"] } as any,
+      }).select("finalAgreedRate tutorPayout").lean()
     : [];
-  const reqIds = (recentRequestIds as any[]).map((r) => r._id);
+
+  const reqIds = recentRequestIds;
 
   let fillRate = 0;
   let avgOffersPerRequest = 0;

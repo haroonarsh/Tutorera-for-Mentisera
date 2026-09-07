@@ -169,7 +169,7 @@ export const recordSessionUse = async (req: AuthRequest, res: Response): Promise
 
   const recurringBooking = await RecurringBooking.findOne({
     _id: bookingId,
-    student: req.user?._id,
+    tutor: req.user?._id,
     status: "active",
   });
 
@@ -195,7 +195,7 @@ export const recordSessionUse = async (req: AuthRequest, res: Response): Promise
   await recurringBooking.save();
 
   await StudentTutorRelationship.findOneAndUpdate(
-    { student: req.user?._id, tutor: recurringBooking.tutor, subject: recurringBooking.subject },
+    { student: recurringBooking.student, tutor: req.user?._id, subject: recurringBooking.subject },
     {
       $inc: { completedBookings: 1, repeatBookingCount: 1 },
       lastSessionAt: new Date(),

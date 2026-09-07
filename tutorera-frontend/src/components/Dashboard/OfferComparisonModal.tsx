@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DashBid } from "@/types/dashboard";
 import { formatPKR } from "@/lib/site";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface OfferComparisonModalProps {
   offers: DashBid[];
@@ -20,6 +21,7 @@ export default function OfferComparisonModal({
   onAccept,
   acceptingId,
 }: OfferComparisonModalProps) {
+  const modalRef = useFocusTrap(true, onClose);
   const selectedOffers = offers.filter((o) => selected.includes(o._id));
 
   const comparisonRows: {
@@ -136,6 +138,7 @@ export default function OfferComparisonModal({
 
   return (
     <div
+      ref={modalRef}
       role="dialog"
       aria-modal="true"
       aria-label="Compare tutor offers"

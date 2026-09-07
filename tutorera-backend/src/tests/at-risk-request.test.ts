@@ -3,11 +3,11 @@
 
 import mongoose from "mongoose";
 import { Types } from "mongoose";
-import { jest } from "jest";
-import { Request } from "../models/Request.model";
-import { Bid } from "../models/Bid.model";
-import { User } from "../models/User.model";
-import { TutorProfile } from "../models/TutorProfile.model";
+import { jest } from "@jest/globals";
+import Request from "../models/Request.model";
+import Bid from "../models/Bid.model";
+import User from "../models/User.model";
+import TutorProfile from "../models/TutorProfile.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { MatchingService } from "../services/matching.service";
 import { sendNotification } from "../utils/socket";
@@ -37,7 +37,9 @@ describe("AtRiskRequestService - Automated Zero-Offer Rescue", () => {
     testRequest = await Request.create({
       student: testStudent._id,
       subject: "Mathematics",
-      level: "intermediate",
+      level: "Intermediate / FSc",
+      description: "Need help with algebra and exam preparation.",
+      schedule: "Evenings, three sessions weekly",
       budget: 2000,
       currency: "PKR",
       teachingMode: "online",
@@ -70,6 +72,9 @@ describe("AtRiskRequestService - Automated Zero-Offer Rescue", () => {
         request: testRequest._id,
         tutor: new Types.ObjectId(),
         amount: 2000,
+        initialStudentRate: 2000,
+        message: "Test offer",
+        expiresAt: new Date(Date.now() + 86400000),
         status: "withdrawn",
         createdAt: new Date(),
       });
@@ -103,10 +108,7 @@ describe("AtRiskRequestService - Automated Zero-Offer Rescue", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(MatchingService.dispatchProgressiveNotifications).toHaveBeenCalledWith(
-        testRequest,
-        null
-      );
+      expect(MatchingService.dispatchProgressiveNotifications).not.toHaveBeenCalled();
     });
   });
 
@@ -117,6 +119,9 @@ describe("AtRiskRequestService - Automated Zero-Offer Rescue", () => {
         request: testRequest._id,
         tutor: new Types.ObjectId(),
         amount: 2000,
+        initialStudentRate: 2000,
+        message: "Test offer",
+        expiresAt: new Date(Date.now() + 86400000),
         status: "withdrawn",
         createdAt: new Date(),
       });
@@ -140,6 +145,9 @@ describe("AtRiskRequestService - Automated Zero-Offer Rescue", () => {
         request: testRequest._id,
         tutor: new Types.ObjectId(),
         amount: 2000,
+        initialStudentRate: 2000,
+        message: "Test offer",
+        expiresAt: new Date(Date.now() + 86400000),
         status: "withdrawn",
         createdAt: new Date(),
       });
@@ -156,6 +164,9 @@ describe("AtRiskRequestService - Automated Zero-Offer Rescue", () => {
         request: testRequest._id,
         tutor: new Types.ObjectId(),
         amount: 2000,
+        initialStudentRate: 2000,
+        message: "Test offer",
+        expiresAt: new Date(Date.now() + 86400000),
         status: "accepted",
         createdAt: new Date(),
       });

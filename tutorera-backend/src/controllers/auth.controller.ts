@@ -192,7 +192,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
   // 3. No existing user at all — create one with selected role or pending
   if (!user) {
     isNewUser = true;
-    const assignedRole = role === "student" || role === "tutor" ? role : "pending";
+    const assignedRole = role === "student" || role === "tutor" || role === "parent" ? role : "pending";
     user = await User.create({
       name: name || email.split("@")[0],
       email,
@@ -210,6 +210,8 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       user.applicationSubmittedAt = new Date();
       await user.save();
       trackingToken = t.plaintext;
+    } else if (user.role === "parent") {
+      await ParentProfile.create({ user: user._id, children: [], approvalRequiredForBookings: false });
     }
 
     await logAudit({
@@ -314,6 +316,8 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     user.trackingTokenCreatedAt = new Date();
     user.applicationSubmittedAt = new Date();
     trackingToken = t.plaintext;
+  } else if (role === "parent") {
+    await ParentProfile.create({ user: user._id, children: [], approvalRequiredForBookings: false });
   }
   await user.save();
 
@@ -345,12 +349,12 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     } catch (err) {
       console.error("Failed to send tutor welcome email:", err);
     }
-  } else if (role === "student") {
+  } else if (role === "student" || role === "parent") {
     try {
       const { subject, html } = welcomeEmail(user.name);
       await sendEmail({ to: user.email, subject, html });
     } catch (err) {
-      console.error("Failed to send student welcome email:", err);
+      console.error("Failed to send welcome email:", err);
     }
   }
 

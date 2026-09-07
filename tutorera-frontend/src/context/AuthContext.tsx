@@ -40,7 +40,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
   loginWithGoogle: (idToken: string, role?: "student" | "tutor" | "parent") => Promise<GoogleAuthResult>;
-  selectRole: (role: "student" | "tutor") => Promise<User>;
+  selectRole: (role: "student" | "tutor" | "parent") => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
   logout: () => Promise<void>;
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { user: res.data.user, needsRole: res.data.needsRole };
   };
 
-  const selectRole = async (role: "student" | "tutor"): Promise<User> => {
+  const selectRole = async (role: "student" | "tutor" | "parent"): Promise<User> => {
     const res = await api.patch("/auth/select-role", { role });
     localStorage.setItem("token", res.data.token);
     setUser(res.data.user);

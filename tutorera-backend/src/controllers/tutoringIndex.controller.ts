@@ -58,6 +58,7 @@ export const getTutoringIndex = async (_req: AuthRequest, res: Response): Promis
 
   const subjectMap = new Map<string, {
     budgets: number[];
+    offerRates: number[];
     finalRates: number[];
     responseMinutes: number[];
     cities: Map<string, number>;
@@ -71,7 +72,7 @@ export const getTutoringIndex = async (_req: AuthRequest, res: Response): Promis
 
   for (const s of subjects) {
     subjectMap.set(s, {
-      budgets: [], finalRates: [], responseMinutes: [],
+      budgets: [], offerRates: [], finalRates: [], responseMinutes: [],
       cities: new Map(), countries: new Map(),
       online: 0, inPerson: 0, both: 0,
       requestCount: 0, bookingCount: 0,
@@ -100,6 +101,7 @@ export const getTutoringIndex = async (_req: AuthRequest, res: Response): Promis
     if (subject) {
       const entry = subjectMap.get(subject);
       if (entry) {
+        if (bid.amount) entry.offerRates.push(bid.amount);
         const reqCreatedAt = requests.find((r) => r._id.toString() === bid.request.toString())?.createdAt;
         if (reqCreatedAt) {
           entry.responseMinutes.push((new Date(bid.createdAt).getTime() - new Date(reqCreatedAt).getTime()) / 60000);
@@ -138,7 +140,7 @@ export const getTutoringIndex = async (_req: AuthRequest, res: Response): Promis
       avgBudget: data.budgets.length ? Math.round(data.budgets.reduce((s, v) => s + v, 0) / data.budgets.length) : 0,
       minBudget: data.budgets.length ? Math.min(...data.budgets) : 0,
       maxBudget: data.budgets.length ? Math.max(...data.budgets) : 0,
-      avgOfferRate: data.budgets.length ? Math.round(data.budgets.reduce((s, v) => s + v, 0) / data.budgets.length) : 0,
+      avgOfferRate: data.offerRates.length ? Math.round(data.offerRates.reduce((s, v) => s + v, 0) / data.offerRates.length) : 0,
       avgFinalRate: data.finalRates.length ? Math.round(data.finalRates.reduce((s, v) => s + v, 0) / data.finalRates.length) : 0,
       avgResponseHours: data.responseMinutes.length ? Math.round(data.responseMinutes.reduce((s, v) => s + v, 0) / data.responseMinutes.length / 60 * 10) / 10 : 0,
       topCities,

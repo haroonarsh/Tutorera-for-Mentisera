@@ -17,11 +17,11 @@ export const loginSchema = z.object({
 
 export const googleAuthSchema = z.object({
   idToken: z.string().min(1, "Google ID token is required"),
-  role: z.enum(["student", "tutor"]).optional(),
+  role: z.enum(["student", "tutor", "parent"]).optional(),
 });
 
 export const selectRoleSchema = z.object({
-  role: z.enum(["student", "tutor"]),
+  role: z.enum(["student", "tutor", "parent"]),
 });
 
 export const forgotPasswordSchema = z.object({

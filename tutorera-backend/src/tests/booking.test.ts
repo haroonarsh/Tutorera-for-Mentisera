@@ -26,6 +26,7 @@ function mockAuthRequest(overrides: Partial<AuthRequest>): AuthRequest {
     params: {},
     body: {},
     user: undefined,
+    app: { get: () => ({ to: () => ({ emit: jest.fn() }) }) },
     ...overrides,
   } as unknown as AuthRequest;
 }
@@ -35,6 +36,11 @@ async function makeBooking(studentId: any, tutorId: any) {
     student: studentId,
     tutor: tutorId,
     amount: 1000,
+    finalAgreedRate: 1000,
+    subtotal: 1000,
+    studentTotal: 1000,
+    tutorNet: 800,
+    feeConfig: { version: 1 },
     schedule: "Mon 5pm",
     status: "upcoming",
   });
@@ -154,6 +160,11 @@ describe("BE-02: booking state-transition authorization", () => {
       student: student._id,
       tutor: tutor._id,
       amount: 1000,
+      finalAgreedRate: 1000,
+      subtotal: 1000,
+      studentTotal: 1000,
+      tutorNet: 800,
+      feeConfig: { version: 1 },
       schedule: "Mon 5pm",
       status: "cancelled",
     });

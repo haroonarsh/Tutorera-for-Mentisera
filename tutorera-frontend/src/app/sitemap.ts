@@ -89,7 +89,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const research: MetadataRoute.Sitemap =
     tutors.length >= 10
-      ? [{ url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 }]
+      ? [
+          { url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 },
+          { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
+        ]
       : [];
 
   const TARGET_DEMAND_SLUGS = PRIMARY_CITY_SLUGS.flatMap((citySlug) =>

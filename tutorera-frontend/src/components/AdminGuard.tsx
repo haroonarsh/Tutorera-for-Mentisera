@@ -23,6 +23,7 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/bookings/": "bookings.read",
   "/admin/requests": "request.read",
   "/admin/supply-gaps": "analytics.read",
+  "/admin/liquidity": "analytics.read",
   "/admin/students": "student.read",
   "/admin/tutors": "tutor.read",
   "/admin/applications": "tutor.read",
