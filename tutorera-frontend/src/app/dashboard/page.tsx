@@ -248,7 +248,7 @@ export default function DashboardPage() {
     const fetchStatus = async () => {
       setCheckingStatus(true);
       try {
-        const res = await api.get("/tutor/application-status");
+        const res = await api.get("/tracking/application-status");
         const payload = res.data?.payload;
         const eligible = payload?.marketplaceEligibility?.eligible;
         const canonicalStatus = payload?.canonicalStatus;

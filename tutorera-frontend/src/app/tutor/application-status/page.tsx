@@ -37,7 +37,7 @@ export default function TutorApplicationStatusPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get("/tutor/application-status");
+        const res = await api.get("/tracking/application-status");
         if (!cancelled) setPayload(res.data.payload);
       } catch (err: any) {
         if (!cancelled) setError(err?.response?.data?.message || "Unable to load your application status right now.");

@@ -22,7 +22,7 @@ export function TrackingUrlBlock({ applicationId, token, basePath = "/track/tuto
   const handleRotate = async () => {
     setRotating(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1"}/tutor/application-status/rotate-token`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1"}/tracking/application-status/rotate-token`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${typeof window !== "undefined" ? localStorage.getItem("token") || "" : ""}`,

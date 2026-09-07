@@ -40,7 +40,7 @@ export function useAppGuard() {
 
         if (user.role === "tutor") {
         setStatus("loading");
-        api.get("/tutor/application-status", { timeout: 8000 })
+        api.get("/tracking/application-status", { timeout: 8000 })
             .then(res => {
             const eligible = res.data?.payload?.marketplaceEligibility?.eligible;
             if (eligible) {

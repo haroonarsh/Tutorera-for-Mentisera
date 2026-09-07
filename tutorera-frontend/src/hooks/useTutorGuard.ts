@@ -23,7 +23,7 @@ export function useTutorGuard() {
       return;
     }
 
-    api.get("/tutor/application-status")
+    api.get("/tracking/application-status")
       .then(res => {
         const eligible = res.data?.payload?.marketplaceEligibility?.eligible;
         const canonical = res.data?.payload?.canonicalStatus;

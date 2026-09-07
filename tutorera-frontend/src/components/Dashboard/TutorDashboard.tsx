@@ -54,7 +54,7 @@ function TutorApplicationStatusCard() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await axiosInstance.get("/tutor/application-status");
+        const res = await axiosInstance.get("/tracking/application-status");
         if (!cancelled) setData(res.data.payload);
       } catch {
         if (!cancelled) setError(null);
