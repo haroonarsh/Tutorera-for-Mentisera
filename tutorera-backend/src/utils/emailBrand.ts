@@ -7,7 +7,7 @@ const BRAND_NAME = "TUTORERA";
 const REG_NAME = "®";
 const CURRENT_YEAR = new Date().getFullYear();
 
-const COLORS = {
+export const COLORS = {
   background: "#F5F7FF",
   deepNavy: "#021550",
   royalBlue: "#0329B2",

@@ -2,6 +2,7 @@ import { Router } from "express";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import Booking from "../models/Booking.model";
+import { getPayoutReportById } from "../services/payoutReport.service";
 
 const router = Router();
 
@@ -45,6 +46,24 @@ router.get("/stats", async (_req, res) => {
   } catch (err) {
     console.error("Public stats error:", err);
     res.status(500).json({ success: false, message: "Failed to load stats." });
+  }
+});
+
+// @desc    Verify payout report
+// @route   GET /api/public/verify/report/:reportId
+// @access  Public
+router.get("/verify/report/:reportId", async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const report = await getPayoutReportById(reportId);
+    if (!report) {
+      res.status(404).json({ success: false, message: "Report not found." });
+      return;
+    }
+    res.status(200).json({ success: true, data: report });
+  } catch (err) {
+    console.error("Verification error:", err);
+    res.status(500).json({ success: false, message: "Verification failed." });
   }
 });
 
