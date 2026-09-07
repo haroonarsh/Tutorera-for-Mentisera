@@ -33,6 +33,10 @@ export interface IRequest extends Document {
   legalHold?: boolean;
   expiryWarningSentAt?: Date;
   day5InterventionSentAt?: Date;
+  lossReason?: "no_tutor_supply" | "no_tutor_response" | "budget_mismatch" | "offers_too_expensive" | "location_restriction" | "student_abandoned" | "student_cancelled" | "payment_failed" | "tutor_cancelled" | "request_expired" | "other";
+  lossReasonDetail?: string;
+  lossSignals?: Record<string, unknown>;
+  lossClassifiedAt?: Date;
   acceptedOffer?: Types.ObjectId;
   finalAgreedRate?: number;
   targetTutor?: Types.ObjectId;       // set only for direct booking requests
@@ -97,6 +101,14 @@ const requestSchema = new Schema<IRequest>(
     legalHold: { type: Boolean, default: false },
     expiryWarningSentAt: { type: Date },
     day5InterventionSentAt: { type: Date },
+    lossReason: {
+      type: String,
+      enum: ["no_tutor_supply", "no_tutor_response", "budget_mismatch", "offers_too_expensive", "location_restriction", "student_abandoned", "student_cancelled", "payment_failed", "tutor_cancelled", "request_expired", "other"],
+      index: true,
+    },
+    lossReasonDetail: { type: String, trim: true, maxlength: 500 },
+    lossSignals: { type: Schema.Types.Mixed },
+    lossClassifiedAt: { type: Date },
     acceptedOffer: { type: Schema.Types.ObjectId, ref: "Bid" },
     finalAgreedRate: { type: Number, min: 0 },
     targetTutor: { type: Schema.Types.ObjectId, ref: "User", default: null },
@@ -112,5 +124,6 @@ const requestSchema = new Schema<IRequest>(
 requestSchema.index({ status: 1, expiresAt: 1 });
 requestSchema.index({ student: 1, status: 1, createdAt: -1 });
 requestSchema.index({ teachingMode: 1, countryCode: 1, status: 1, expiresAt: 1 });
+requestSchema.index({ lossReason: 1, lossClassifiedAt: -1 });
 
 export default mongoose.model<IRequest>("Request", requestSchema);

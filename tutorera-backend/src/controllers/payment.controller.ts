@@ -5,6 +5,7 @@ import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
+import PaymentLedger from "../models/PaymentLedger.model";
 import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
 import { finalizeBidAcceptance } from "./request.controller";
 import sendEmail from "../utils/sendEmail";
@@ -280,4 +281,76 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
     logger.error({ requestId: (req as any).id, err }, "Error processing payment gateway webhook");
     res.status(500).json({ success: false });
   }
+};
+
+// @desc    Get student's transaction history
+// @route   GET /api/payments/history
+// @access  Private (student or parent)
+export const getTransactionHistory = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { status, page = "1" } = req.query;
+  const limitNum = 20;
+  const skip = (Number(page) - 1) * limitNum;
+
+  const ledgerFilter: Record<string, unknown> = { student: req.user?._id };
+  if (status) ledgerFilter.status = status;
+
+  const [transactions, total] = await Promise.all([
+    PaymentLedger.find(ledgerFilter)
+      .populate<{ booking: { schedule?: string; teachingMode?: string; status?: string } }>("booking", "schedule teachingMode status")
+      .populate<{ tutor: { name: string } }>("tutor", "name")
+      .sort("-createdAt")
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    PaymentLedger.countDocuments(ledgerFilter),
+  ]);
+
+  const bookingIds = transactions
+    .map((t) => (t.booking as unknown as { _id: { toString: () => string } })?._id?.toString())
+    .filter(Boolean);
+
+  const bookings = bookingIds.length
+    ? await Booking.find({ _id: { $in: bookingIds } }).select("student tutor request pricingUnit sessionCount").populate("request", "subject").lean()
+    : [];
+
+  const bookingMap = new Map(bookings.map((b) => [b._id.toString(), b]));
+
+  const enriched = transactions.map((t) => {
+    const booking = t.booking as unknown as { _id: { toString: () => string }; schedule?: string; teachingMode?: string; status?: string };
+    const bookingData = booking?._id ? bookingMap.get(booking._id.toString()) : null;
+    const eventLabels: Record<string, string> = {
+      "payment.succeeded": "Payment Received",
+      "payment.refunded": "Refund Processed",
+      "payment.failed": "Payment Failed",
+      "checkout.created": "Checkout Initiated",
+    };
+    return {
+      _id: t._id,
+      type: t.eventType,
+      typeLabel: eventLabels[t.eventType] || t.eventType,
+      status: t.status,
+      amount: t.grossAmount,
+      currency: t.currency,
+      refundAmount: t.refundAmount,
+      createdAt: t.createdAt,
+      booking: bookingData
+        ? {
+            id: (booking._id as unknown as { toString: () => string }).toString(),
+            subject: (bookingData.request as unknown as { subject?: string })?.subject || "Tutoring",
+            schedule: booking?.schedule || "",
+            teachingMode: booking?.teachingMode || "online",
+            bookingStatus: booking?.status || "",
+            sessionCount: bookingData.sessionCount || 1,
+            tutorName: t.tutor ? (t.tutor as unknown as { name: string }).name : "Tutor",
+          }
+        : null,
+      providerTransactionId: t.providerTransactionId,
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    transactions: enriched,
+    pagination: { total, page: Number(page), pages: Math.ceil(total / limitNum) },
+  });
 };

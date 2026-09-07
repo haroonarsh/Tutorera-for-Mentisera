@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import TuitionRequestsClient from "./TuitionRequestsClient";
 
 interface Props {
@@ -54,5 +55,9 @@ export default async function CountryTuitionRequestsPage({ params }: Props) {
   const countryCode = country.toUpperCase();
   const countryName = COUNTRY_NAMES[country.toLowerCase()] || countryCode;
 
-  return <TuitionRequestsClient countryCode={countryCode} countryName={countryName} />;
+  return (
+    <Suspense fallback={<main style={{ padding: "4rem 1.5rem", textAlign: "center" }}><p>Loading tuition requests for {countryName}...</p></main>}>
+      <TuitionRequestsClient countryCode={countryCode} countryName={countryName} />
+    </Suspense>
+  );
 }

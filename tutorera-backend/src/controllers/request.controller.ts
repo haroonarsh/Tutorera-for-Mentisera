@@ -22,6 +22,7 @@ import AbandonedJourney from "../models/AbandonedJourney.model";
 import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
+import { classifyRequestLoss } from "../services/requestLoss.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -280,6 +281,12 @@ export const cancelRequest = async (req: AuthRequest, res: Response): Promise<vo
   }
   request.status = "cancelled";
   await request.save();
+  await classifyRequestLoss({
+    requestId: request._id,
+    explicitReason: "student_cancelled",
+    detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
+    signals: { source: "student_cancel_request" },
+  });
   res.status(200).json({ success: true, message: "Request cancelled" });
 };
 
@@ -1385,6 +1392,12 @@ export const closeRequest = async (req: AuthRequest, res: Response): Promise<voi
 
   request.status = "cancelled";
   await request.save();
+  await classifyRequestLoss({
+    requestId: request._id,
+    explicitReason: "student_cancelled",
+    detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
+    signals: { source: "student_close_request" },
+  });
 
   // Close unfinalized bids
   await Bid.updateMany(

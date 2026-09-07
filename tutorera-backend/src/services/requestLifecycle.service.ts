@@ -13,6 +13,7 @@ import { logAudit } from "../utils/logAudit";
 import sendEmail from "../utils/sendEmail";
 import { reviewRequestEmail } from "../utils/emailTemplates";
 import logger from "../config/logger";
+import { classifyRequestLoss } from "./requestLoss.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   EXPIRY_WARNING_HOURS,
@@ -183,6 +184,10 @@ export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: 
       }
 
       expiredCount++;
+      await classifyRequestLoss({
+        requestId: reqDoc._id,
+        signals: { source: "scheduled_request_expiry" },
+      });
 
       // Close outstanding active offers for this expired request
       const activeBidUpdate = await Bid.updateMany(

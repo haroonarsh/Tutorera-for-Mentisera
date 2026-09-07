@@ -1,11 +1,12 @@
 // src/routes/payment.routes.ts
 import express from "express";
 import { protect, authorize } from "../middlewares/auth.middleware";
-import { createBookingCheckout, handleRapidGatewayWebhook } from "../controllers/payment.controller";
+import { createBookingCheckout, handleRapidGatewayWebhook, getTransactionHistory } from "../controllers/payment.controller";
 
 const router = express.Router();
 
 router.post("/booking/:bookingId/checkout", protect, authorize("student", "parent"), createBookingCheckout);
+router.get("/history", protect, authorize("student", "parent"), getTransactionHistory);
 
 // No `protect` here — the payment gateway calls this directly, authenticated by
 // HMAC signature (verified inside the controller), not a user session.

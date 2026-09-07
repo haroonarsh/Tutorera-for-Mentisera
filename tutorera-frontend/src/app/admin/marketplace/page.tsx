@@ -5,8 +5,8 @@ import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
-type Metrics = Record<string, number | null>;
-type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; student?: { name?: string } };
+type Metrics = Record<string, number | null> & { lossReasons?: Record<string, number> };
+type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; lossReason?: string; lossReasonDetail?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; student?: { name?: string } };
 type OfferRow = { _id: string; amount?: number; initialStudentRate?: number; pricingUnit?: string; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; tutor?: { name?: string }; request?: { subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string } };
 type HistoryRow = { _id: string; senderRole?: string; amount?: number; message?: string; status?: string; flaggedForModeration?: boolean; createdAt?: string };
 
@@ -37,6 +37,22 @@ const labels: Record<string, string> = {
   averageAgreedRate: "Agreed hourly rate",
   averageAgreedHourlyRate: "Agreed hourly rate",
   averageTutorResponseMinutes: "Tutor response minutes",
+  classifiedLostRequests: "Classified lost requests",
+  unclassifiedLostRequests: "Unclassified lost requests",
+};
+
+const lossReasonLabels: Record<string, string> = {
+  no_tutor_supply: "No tutor supply",
+  no_tutor_response: "No tutor response",
+  budget_mismatch: "Budget mismatch",
+  offers_too_expensive: "Offers too expensive",
+  location_restriction: "Location restriction",
+  student_abandoned: "Student abandoned",
+  student_cancelled: "Student cancelled",
+  payment_failed: "Payment failed",
+  tutor_cancelled: "Tutor cancelled",
+  request_expired: "Request expired",
+  other: "Other",
 };
 
 function toNumber(value: unknown, fallback = 0) {
@@ -116,8 +132,22 @@ export default function Page() {
         <p>Loading...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 16 }}>
-          {Object.entries(metrics ?? {}).map(([key, value]) => <article key={key} style={panel}><p style={muted}>{labels[key] || key}</p><strong style={{ fontSize: 24 }}>{formatMetric(key, value)}</strong></article>)}
+          {Object.entries(metrics ?? {}).filter(([, value]) => typeof value !== "object").map(([key, value]) => <article key={key} style={panel}><p style={muted}>{labels[key] || key}</p><strong style={{ fontSize: 24 }}>{formatMetric(key, value as number | null)}</strong></article>)}
         </div>
+      )}
+
+      {metrics?.lossReasons && Object.keys(metrics.lossReasons).length > 0 && (
+        <section style={{ marginTop: 28 }}>
+          <h2 style={sectionTitle}>Lost Request Reasons</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 12 }}>
+            {Object.entries(metrics.lossReasons).map(([reason, count]) => (
+              <article key={reason} style={panel}>
+                <p style={muted}>{lossReasonLabels[reason] || reason}</p>
+                <strong style={{ fontSize: 22 }}>{count}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       <section style={{ marginTop: 28 }}>
@@ -149,6 +179,7 @@ export default function Page() {
             <article key={request._id} style={panel}>
               <strong>{request.subject || "Tuition request"}</strong>
               <p style={muted}>{request.student?.name || "Student"} - {request.city || "Online"} - {request.level || "Any level"} - {request.teachingMode || "mode open"} - {formatPKR(request.budget)} - {request.status || "status pending"}</p>
+              {request.lossReason && <p style={{ ...muted, color: "#7c2d12" }}>Loss reason: {lossReasonLabels[request.lossReason] || request.lossReason}{request.lossReasonDetail ? ` — ${request.lossReasonDetail}` : ""}</p>}
               {request.flaggedForModeration && <p style={{ color: "#92400e", fontSize: 13 }}>Flags: {(request.moderationReasons || []).join(", ") || "manual review"}</p>}
             </article>
           ))}
