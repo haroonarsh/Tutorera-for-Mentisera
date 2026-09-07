@@ -8,12 +8,12 @@ import {
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Layers, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity,
+  KeyRound, Activity, X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const C = UI_COLORS;
 
@@ -132,15 +132,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { logout, user } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!sidebarOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(drawerRef.current?.querySelectorAll<HTMLElement>(focusableSelector) || []);
+    focusable()[0]?.focus();
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && sidebarOpen) {
+      if (e.key === "Escape") {
         setSidebarOpen(false);
+        menuButtonRef.current?.focus();
+      }
+      if (e.key === "Tab") {
+        const items = focusable();
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [sidebarOpen]);
 
   const SidebarContent = () => (
@@ -188,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         backgroundColor: isActive ? "rgba(3,41,178,0.55)" : "transparent",
                         color: isActive ? "#ffffff" : "#cbd5e1",
                         border: isActive ? "1px solid rgba(59,130,246,0.4)" : "1px solid transparent",
-                        transition: "all 0.15s ease",
+                        transition: "background-color 150ms ease, border-color 150ms ease, color 150ms ease",
                       }}
                       onMouseEnter={(e) => {
                         if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
@@ -235,6 +261,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         <button
+          type="button"
           onClick={async () => {
             await logout();
             router.replace("/");
@@ -244,8 +271,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: "32px",
-            height: "32px",
+            width: "44px",
+            height: "44px",
             borderRadius: "0.4rem",
             border: "1px solid rgba(255,255,255,0.15)",
             background: "rgba(255,255,255,0.05)",
@@ -306,12 +333,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <BrandLogo variant="light" size="sm" />
             <button
+              ref={menuButtonRef}
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
               style={{
                 background: "none",
                 border: "none",
                 color: "white",
                 cursor: "pointer",
+                width: "44px",
+                height: "44px",
                 padding: "0.5rem",
               }}
               aria-label="Toggle navigation menu"
@@ -333,13 +364,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={() => setSidebarOpen(false)}
             >
               <div
+                ref={drawerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Admin navigation"
                 style={{
                   width: "280px",
                   backgroundColor: "#0a1128",
                   height: "100%",
+                  position: "relative",
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    menuButtonRef.current?.focus();
+                  }}
+                  aria-label="Close admin navigation"
+                  style={{
+                    position: "absolute",
+                    right: "0.75rem",
+                    top: "0.75rem",
+                    zIndex: 2,
+                    display: "grid",
+                    width: "44px",
+                    height: "44px",
+                    placeItems: "center",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "0.65rem",
+                    background: "rgba(255,255,255,0.08)",
+                    color: "white",
+                  }}
+                >
+                  <X size={20} aria-hidden="true" />
+                </button>
                 <SidebarContent />
               </div>
             </div>

@@ -163,9 +163,6 @@ export default function AIChatWidget() {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ color: 'white', fontWeight: 700, fontSize: '0.875rem', margin: 0 }}>TUTORERA® AI Assistant</p>
-              <p style={{ color: '#9ca3af', fontSize: '0.7rem', margin: 0 }}>
-                TUTORERA® AI Assistant
-              </p>
             </div>
             <button onClick={() => setOpen(false)}
               style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, padding: 0 }}>

@@ -62,10 +62,10 @@ const router = Router();
 router.use(protect, authorize("admin"));
 
 // Control Tower & Liquidity
-router.get("/control-tower/pulse", getControlTowerPulse);
-router.get("/at-risk/requests", listAtRiskRequests);
+router.get("/control-tower/pulse", requirePermission("system.monitor"), getControlTowerPulse);
+router.get("/at-risk/requests", requirePermission("request.read"), listAtRiskRequests);
 router.post("/at-risk/requests/:id/action", handleAtRiskAction);
-router.get("/supply-gaps", getSupplyGapsIntelligence);
+router.get("/supply-gaps", requirePermission("analytics.read"), getSupplyGapsIntelligence);
 
 // Finance & Reconciliation
 router.get("/finance/reconciliation", requirePermission("finance.reconcile"), getFinanceReconciliation);

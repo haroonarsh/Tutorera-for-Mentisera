@@ -70,14 +70,14 @@ IMPORTANT RULES FOR YOU:
 - Never make up information not listed above`;
 
 export const chatWithAI = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { message, history } = req.body;
+  const { message, history } = req.body as { message?: unknown; history?: unknown[] };
 
   if (!["student", "tutor"].includes(req.user?.role || "")) {
     res.status(403).json({ success: false, message: "Access denied." });
     return;
   }
 
-  if (!message?.trim()) {
+  if (typeof message !== "string" || !message.trim()) {
     res.status(400).json({ success: false, message: "Message is required." });
     return;
   }
@@ -91,7 +91,7 @@ export const chatWithAI = async (req: AuthRequest, res: Response): Promise<void>
   // system prompt -> conversation history -> current message
   const messages = [
     { role: "system", content: TUTORERA_SYSTEM_PROMPT },
-    ...(history || []).map((msg: { role: string; text: string }) => ({
+    ...((history as { role: string; text: string }[]) || []).map((msg) => ({
       role: msg.role === "user" ? "user" : "assistant",
       content: stripImageRefs(msg.text),
     })),

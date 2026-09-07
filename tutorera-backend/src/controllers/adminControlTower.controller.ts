@@ -14,7 +14,7 @@ import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
-import { ROLE_PERMISSIONS, ALL_PERMISSIONS } from "../config/rbac";
+import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
 import logger from "../config/logger";
 
@@ -159,6 +159,22 @@ export const handleAtRiskAction = async (req: AuthRequest, res: Response): Promi
 
   if (!["rematch", "extend", "suggest_online", "escalate"].includes(action)) {
     res.status(400).json({ success: false, message: "Invalid rescue action." });
+    return;
+  }
+
+  const permissionByAction: Record<string, Permission> = {
+    rematch: "request.rematch",
+    suggest_online: "request.rematch",
+    extend: "request.extend",
+    escalate: "request.escalate",
+  };
+  const requiredPermission = permissionByAction[action];
+  if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
+    res.status(403).json({
+      success: false,
+      code: "PERMISSION_DENIED",
+      message: `You do not have permission to ${action.replace("_", " ")} this request.`,
+    });
     return;
   }
 

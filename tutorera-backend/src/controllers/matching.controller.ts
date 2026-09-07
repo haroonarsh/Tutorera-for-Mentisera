@@ -298,7 +298,7 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
 
     let targetRequest: any = null;
     if (requestId) {
-      targetRequest = await Request.findById(requestId).populate("student", "name email phone city countryCode");
+      targetRequest = await Request.findById(requestId).populate("student", "name city countryCode");
       if (!targetRequest) {
         res.status(404).json({ success: false, message: "Specified tuition request not found." });
         return;
@@ -324,7 +324,7 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
     } else {
       // Pick the most recent open/published request as default
       targetRequest = await Request.findOne({ status: { $in: ["open", "published", "receiving_offers"] } })
-        .populate("student", "name email phone city countryCode")
+        .populate("student", "name city countryCode")
         .sort({ createdAt: -1 });
     }
 
@@ -343,9 +343,24 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
       fair: rankedMatches.filter((m) => m.tier === "fair" || (m.tier as any) === "other").length,
     };
 
+    const requestSummary = {
+      _id: targetRequest._id,
+      subject: targetRequest.subject,
+      level: targetRequest.level,
+      curriculum: targetRequest.curriculum,
+      teachingMode: targetRequest.teachingMode,
+      city: targetRequest.city,
+      countryCode: targetRequest.countryCode,
+      budget: targetRequest.budget,
+      pricingUnit: targetRequest.pricingUnit,
+      currency: targetRequest.currency,
+      schedule: targetRequest.schedule,
+      student: targetRequest.student ? { name: targetRequest.student.name || "Student" } : undefined,
+    };
+
     res.json({
       success: true,
-      request: targetRequest,
+      request: requestSummary,
       totalEligible: eligibleTutors.length,
       totalRanked: rankedMatches.length,
       tierSummary,
