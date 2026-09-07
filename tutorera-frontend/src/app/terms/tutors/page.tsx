@@ -70,7 +70,7 @@ TUTORERA does not provide personal tax advice and will issue statutory tax repor
 • Solicit direct cash, bank transfers, or external wallet payments.
 • Share personal phone numbers, WhatsApp, or private emails prior to booking confirmation.
 • Encourage students to leave the platform to evade fees.
-Circumvention deprives both parties of escrow protection, first-session guarantees, dispute mediation, and insurance, and will result in immediate permanent account termination, forfeiture of pending payouts, and liability for lost platform fees.`
+Circumvention deprives both parties of platform payment records, first-session guarantees, dispute mediation, and official support protections, and may result in account termination, forfeiture of pending payouts where lawful, and liability for lost platform fees.`
   },
   {
     title: "9. Child Safeguarding & Minor Student Rules",

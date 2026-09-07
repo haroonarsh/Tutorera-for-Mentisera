@@ -241,7 +241,7 @@ const masterTermsSections = [
   {
     id: "40-anti-circumvention",
     title: "40. Anti-Circumvention Policy",
-    content: `Users introduced through TUTORERA must process all bookings and payments through the platform for a minimum period of 12 months from introduction. Bypassing platform payments deprives users of escrow protection, first-session guarantees, dispute mediation, and insurance coverage, and will result in immediate account termination.`
+    content: `Users introduced through TUTORERA must process all bookings and payments through the platform for a minimum period of 12 months from introduction. Bypassing platform payments deprives users of platform payment records, first-session guarantees, dispute mediation, and official support protections, and may result in account termination.`
   },
   {
     id: "41-intellectual-property",
