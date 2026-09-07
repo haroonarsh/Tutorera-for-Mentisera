@@ -190,8 +190,8 @@ export default function AcademicIntegrityPage() {
                 immediate, permanent closure of both the student and tutor accounts involved.
               </li>
               <li>
-                <strong>Escrow Forfeiture & No Refunds:</strong> Students who fund sessions for fraudulent
-                academic purposes forfeit all escrowed monies; no satisfaction guarantees or refunds apply to
+                <strong>Refund Ineligibility for Fraudulent Use:</strong> Students who fund sessions for fraudulent
+                academic purposes are not eligible for satisfaction guarantees or discretionary refunds for
                 contract cheating.
               </li>
               <li>

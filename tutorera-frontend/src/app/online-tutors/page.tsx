@@ -7,7 +7,7 @@ import { SITE_URL } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Find Verified Online Tutors Worldwide | 1-on-1 Live Lessons",
   description:
-    "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay with secure platform payment protection.",
+    "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay through authorized platform checkout.",
   alternates: { canonical: "/online-tutors" },
   openGraph: {
     title: "Find Verified Online Tutors Worldwide | TUTORERA",

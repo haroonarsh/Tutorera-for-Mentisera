@@ -1,6 +1,6 @@
 # TUTORERA Platform Description
 
-TUTORERA is Pakistan's student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. The platform connects students and parents with verified tutors for online and in-person educational support across Pakistan, Saudi Arabia, UAE, and other markets.
+TUTORERA is a global student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. The platform connects students and parents with verified tutors for online tutoring worldwide and local in-person home tuition where verified tutor inventory and local safeguards are available.
 
 ## Core Purpose
 TUTORERA enables students to post tuition requirements and receive transparent offers from qualified tutors. The platform uses an 8-layer smart matching engine with Bayesian ratings to recommend compatible tutors. All tutor verifications—including CNIC, education credentials, demo video, and police clearance—are tracked per-component with canonical status computation.
@@ -9,7 +9,7 @@ TUTORERA enables students to post tuition requirements and receive transparent o
 - Student-led tuition request posting with budget and schedule preferences
 - Verified tutor directory with match scoring, availability, and structured profiles
 - Structured negotiation with max 3 counter-offers per party
-- Secure payment flow with atomic booking creation and webhook confirmation
+- Authorized platform checkout with atomic booking creation, server-side payment verification, and webhook confirmation
 - Per-component tutor verification (identity, education, demo video, police)
 - Admin control tower with at-risk request rescue, supply-gap intelligence, and financial reconciliation
 - 11-role RBAC with granular permissions

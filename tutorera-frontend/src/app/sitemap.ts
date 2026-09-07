@@ -13,6 +13,7 @@ const routes = [
 ];
 
 const TARGET_COUNTRIES = ["pk", "ae", "gb", "sa", "us", "ca"] as const;
+const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
@@ -69,6 +70,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   );
 
+  const homeTutorResults = await Promise.all(
+    HOME_TUTOR_CITY_SLUGS.map(async (citySlug) => {
+      const city = CITIES[citySlug];
+      const { total } = await fetchTutors({ countryCode: "PK", city, teachingMode: "in-person" }, 1);
+      return total > 0
+        ? {
+            url: `${SITE_URL}/pk/home-tutors/${citySlug}`,
+            lastModified,
+            changeFrequency: "daily" as const,
+            priority: 0.9,
+          }
+        : null;
+    })
+  );
+
   const research: MetadataRoute.Sitemap =
     tutors.length >= 10
       ? [{ url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 }]
@@ -78,6 +94,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticPages,
     ...directories,
     ...countryHubResults.filter((page): page is NonNullable<typeof page> => page !== null),
+    ...homeTutorResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...localResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...research,
     ...profiles,

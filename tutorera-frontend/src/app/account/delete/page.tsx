@@ -158,7 +158,7 @@ export default function AccountDeletePage() {
             <li>Your direct personal contact information (email, phone, home address, photos) is anonymized.</li>
             <li>Your pending tuition requests and open offers are immediately canceled.</li>
             <li>
-              Completed financial transaction receipts, invoice numbers, and escrow settlement audit logs are
+              Completed financial transaction receipts, invoice numbers, and platform settlement audit logs are
               retained for statutory tax and financial compliance (5 to 7 years) as permitted under GDPR Art 17(3)(b).
             </li>
             <li>Reviews you have left or received will be anonymized to protect community trust.</li>

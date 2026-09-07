@@ -4,7 +4,7 @@ import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "TUTORERA Business Model | Global Student-Led Tutoring Marketplace",
-  description: "How TUTORERA by MENTISERA operates as a global student-led demand tutoring marketplace with multi-currency transparency and secure platform payment protection.",
+  description: "How TUTORERA by MENTISERA operates as a global student-led demand tutoring marketplace with multi-currency transparency, authorized checkout, and server-side payment verification.",
   alternates: { canonical: "/business-model" },
 };
 
@@ -21,7 +21,7 @@ const flow = [
   "Final tutoring rate is agreed and locked",
   "Booking schedule and payment order are generated",
   "Customer reviews final amount in preferred currency with transparent base conversion",
-  "Customer proceeds to secure platform payment",
+  "Customer proceeds to authorized platform checkout",
   "Payment is verified and secured",
   "Booking is confirmed with session calendar and room link",
   "Tutor delivers tutoring service independently",
@@ -42,7 +42,7 @@ const studentItems = [
   "Review tutor ratings, experience & past student feedback",
   "Select tutor independently with zero booking pressure",
   "Accept offer & confirm schedule",
-  "Pay transparent checkout total with secure platform payment protection",
+  "Pay transparent checkout total through authorized platform checkout",
   "Attend online or in-person tutoring session",
   "Rate tutor performance",
   "Access 100% money-back guarantee & dispute resolution",

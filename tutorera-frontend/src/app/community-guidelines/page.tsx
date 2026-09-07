@@ -120,7 +120,7 @@ export default function CommunityGuidelinesPage() {
             </li>
             <li>
               <strong>Platform Circumvention & Disintermediation:</strong> Demanding off-platform direct cash payments,
-              soliciting bank transfers, or attempting to bypass TUTORERA milestone escrow.
+              soliciting bank transfers, or attempting to bypass TUTORERA platform checkout, payment records, or dispute safeguards.
             </li>
             <li>
               <strong>Spam & Solicitation:</strong> Unsolicited promotional messages, pyramid schemes, or advertising

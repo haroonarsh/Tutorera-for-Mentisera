@@ -1,9 +1,9 @@
 import Link from "next/link";
 import TutorCard from "@/components/Tutors/TutorCard";
-import { fetchTutors, type DirectoryKind, tutorProfileHref } from "@/lib/tutor-directory";
+import { fetchTutors, type DirectoryKind, type TutorSearchFilters, tutorProfileHref } from "@/lib/tutor-directory";
 import styles from "@/app/tutors/page.module.css";
 
-interface Props { kind: DirectoryKind; value: string; filters?: Partial<Record<DirectoryKind, string>>; title: string; description: string; canonicalPath: string; currency?: string; }
+interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; }
 
 export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency }: Props) {
   const result = await fetchTutors(filters ?? { [kind]: value });

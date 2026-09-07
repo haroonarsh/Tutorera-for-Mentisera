@@ -137,7 +137,7 @@ export default function PrivacyCenterPage() {
             </div>
             <p className={s.cardText}>
               Obtain a machine-readable JSON archive containing your full profile attributes, tutoring
-              requests, submitted offers, booking milestones, escrow records, and legal consent logs.
+              requests, submitted offers, booking milestones, platform payment records, and legal consent logs.
             </p>
 
             {isLoggedIn ? (

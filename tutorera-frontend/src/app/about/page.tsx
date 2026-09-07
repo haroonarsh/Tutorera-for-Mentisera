@@ -27,7 +27,7 @@ export default function AboutPage() {
             A Global Student-Led Tutoring Marketplace
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1.1rem', lineHeight: '1.75', maxWidth: '650px', margin: '0 auto' }}>
-            TUTORERA® brings transparency, safety, and student empowerment to tutoring worldwide and locally — connecting learners with verified tutors through competitive custom offers and secure platform payment.
+            TUTORERA® brings transparency, safety, and student empowerment to tutoring worldwide and locally — connecting learners with verified tutors through competitive custom offers, platform checkout, and server-side payment verification.
           </p>
         </div>
       </section>
@@ -76,7 +76,7 @@ export default function AboutPage() {
               "Student compares profile credentials & price",
               "Final rate agreed with secure platform booking",
               "Booking is confirmed with structured schedule",
-              "Payment held securely until session completed",
+              "Payment is processed through authorized platform checkout",
               "Tutor delivers high-quality session",
               "Student reviews tutor & confirms session delivery",
             ].map((step, index) => (
@@ -87,7 +87,7 @@ export default function AboutPage() {
             ))}
           </div>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '1.5rem', textAlign: 'center' }}>
-            TUTORERA provides student-led marketplace technology, student requirement matching, tutor offer comparison, rate negotiation, booking management, international timezone scheduling, communication, payment facilitation, transparent currency display with platform payment security, tutor reviews, customer support, dispute administration, and platform governance. Tutors provide tutoring services as independent verified educators.
+            TUTORERA provides student-led marketplace technology, student requirement matching, tutor offer comparison, rate negotiation, booking management, international timezone scheduling, communication, payment facilitation through authorized checkout, transparent currency display, payment-status verification, tutor reviews, customer support, dispute administration, and platform governance. Tutors provide tutoring services as independent verified educators.
           </p>
           <p style={{ color: C.gray500, fontSize: '0.95rem', lineHeight: 1.75, marginTop: '0.5rem', textAlign: 'center' }}>
             TUTORERA is not affiliated with, endorsed by, or certified by any ride-hailing or third-party marketplace brand. The model similarity is limited to the general demand-marketplace model where students post demand and verified providers respond with offers.

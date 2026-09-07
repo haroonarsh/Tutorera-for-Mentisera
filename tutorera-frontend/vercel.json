@@ -13,5 +13,15 @@
       "destination": "https://tutorera.ac.pk/$1",
       "permanent": true
     }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "tutorera-frontend.vercel.app" }],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Link", "value": "<https://tutorera.ac.pk/$1>; rel=\"canonical\"" }
+      ]
+    }
   ]
 }

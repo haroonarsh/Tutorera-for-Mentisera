@@ -176,7 +176,7 @@ export default function AITransparencyPage() {
           <ul className={s.list}>
             <li>
               <strong>Off-Platform Leakage Filters:</strong> Detect patterns resembling external phone numbers,
-              private email addresses, banking IBANs, or unmonitored links designed to circumvent platform escrow.
+              private email addresses, banking IBANs, or unmonitored links designed to circumvent platform checkout and payment records.
             </li>
             <li>
               <strong>Child Safeguarding Classifiers:</strong> Detect suggestive language, harassment, predatory
