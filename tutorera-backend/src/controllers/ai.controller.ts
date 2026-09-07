@@ -85,15 +85,20 @@ export const chatWithAI = async (req: AuthRequest, res: Response): Promise<void>
     return;
   }
 
+  const stripImageRefs = (text: string) =>
+    text.replace(/https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp|svg)/gi, "[image]").replace(/data:image\/\w+;base64,\S+/gi, "[image]");
+
+  const cleanMessage = stripImageRefs(message);
+
   // Build OpenAI-style messages array for Groq:
   // system prompt -> conversation history -> current message
   const messages = [
     { role: "system", content: TUTORERA_SYSTEM_PROMPT },
     ...(history || []).map((msg: { role: string; text: string }) => ({
       role: msg.role === "user" ? "user" : "assistant",
-      content: msg.text,
+      content: stripImageRefs(msg.text),
     })),
-    { role: "user", content: message },
+    { role: "user", content: cleanMessage },
   ];
 
   const requestBody = {
@@ -104,11 +109,17 @@ export const chatWithAI = async (req: AuthRequest, res: Response): Promise<void>
   };
 
   try {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      res.status(503).json({ success: false, message: "AI service is not configured. Please contact support." });
+      return;
+    }
+
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${groqKey}`,
       },
       body: JSON.stringify(requestBody),
     });
