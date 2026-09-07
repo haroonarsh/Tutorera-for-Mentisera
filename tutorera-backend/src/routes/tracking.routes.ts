@@ -20,9 +20,6 @@ import { trackingLimiter, tutorRotateLimiter } from "../middlewares/rateLimiters
 
 const router = Router();
 
-// ─── Public token tracking ───────────────────────────────────────────────────
-router.get("/:token", trackingLimiter, getPublicTracking);
-
 // ─── Tutor authenticated ────────────────────────────────────────────────────
 router.get("/application-status", protect, authorize("tutor"), getApplicationStatus);
 router.post("/application-status/rotate-token", protect, authorize("tutor"), tutorRotateLimiter, rotateTrackingToken);
@@ -39,5 +36,8 @@ router.patch("/admin/applications/:id/marketplace", protect, authorize("admin"),
 router.patch("/admin/applications/:id/home-tuition", protect, authorize("admin"), setHomeTuitionEligibility);
 router.patch("/admin/applications/:id/suspended", protect, authorize("admin"), setSuspended);
 router.patch("/admin/applications/:id/reverification", protect, authorize("admin"), setReverification);
+
+// ─── Public token tracking — MUST be last (wildcard catches everything) ──────
+router.get("/:token", trackingLimiter, getPublicTracking);
 
 export default router;
