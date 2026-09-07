@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import type { FiltersState, PaginationMeta, TutorProfile } from "@/types/tutor";
 import { CITIES, INITIAL_FILTERS, SORT_OPTIONS } from "@/types/tutor";
@@ -19,14 +20,17 @@ interface Props {
   subtitle?: string;
 }
 
-function query(filters: FiltersState, page: number) {
+function query(filters: FiltersState, page: number, matchRequestId?: string|null) {
   const params = new URLSearchParams({ page: String(page), limit: "12" });
   Object.entries(filters).forEach(([key, value]) => value && key !== "sortBy" && params.set(key, value));
   if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (matchRequestId) params.set("matchRequestId", matchRequestId);
   return params.toString();
 }
 
 export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {}, title, subtitle }: Props) {
+  const searchParams = useSearchParams();
+  const matchRequestId = searchParams.get("matchRequestId");
   const [tutors, setTutors] = useState(initialTutors);
   const [pagination, setPagination] = useState(initialPagination);
   const [filters, setFilters] = useState<FiltersState>({ ...INITIAL_FILTERS, ...initialFilters });
@@ -35,15 +39,19 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => !["search", "sortBy"].includes(key) && value).length;
 
+  useEffect(() => {
+    if (matchRequestId) load(1, filters);
+  }, []);
+
   const load = useCallback(async (page: number, next: FiltersState) => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/tutors?${query(next, page)}`);
+      const { data } = await api.get(`/tutors?${query(next, page, matchRequestId)}`);
       const list = data.tutors ?? [];
       setTutors(list);
       setPagination({ total: data.total ?? list.length, page: data.page ?? page, pages: data.pages ?? 1, limit: 12 });
     } finally { setLoading(false); }
-  }, []);
+  }, [matchRequestId]);
 
   function change(key: keyof FiltersState, value: string) {
     const next = { ...filters, [key]: value }; setFilters(next);
@@ -117,7 +125,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
             <div className={styles.sortControl}><select aria-label="Sort tutors" value={filters.sortBy} onChange={(event) => change("sortBy", event.target.value)} className={styles.sortSelect}>{SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
           </div>
         </div>
-        {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} />)}</div> : <EmptyState onReset={reset} />}
+        {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} matchScore={tutor.matchScore} />)}</div> : <EmptyState onReset={reset} />}
         {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>}
       </section>
     </div>

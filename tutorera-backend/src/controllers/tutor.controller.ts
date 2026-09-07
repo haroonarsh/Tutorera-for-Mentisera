@@ -8,6 +8,7 @@ import Request from "../models/Request.model";
 import { computeAndStoreTutorResponseTime, formatResponseTime } from "../services/tutorStats.service";
 import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary";
+import { MatchingService } from "../services/matching.service";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
@@ -145,6 +146,7 @@ export const getAllTutors = async (
     page = "1",
     limit = "10",
     sort = "-averageRating",
+    matchRequestId,
   } = req.query;
 
   // Build filter object
@@ -245,6 +247,17 @@ export const getAllTutors = async (
     obj.responseTimeFormatted = formatResponseTime(obj.averageResponseMinutes || 0);
     return obj;
   });
+
+  if (matchRequestId && typeof matchRequestId === "string") {
+    const matchRequest = await Request.findById(matchRequestId).lean();
+    if (matchRequest) {
+      const ranked = await MatchingService.rankTutors(matchRequest as any, tutorsWithResponse as any[]);
+      const scoreMap = new Map(ranked.map((s) => [s.tutor._id.toString(), s.matchScore]));
+      tutorsWithResponse.forEach((t: any) => {
+        t.matchScore = scoreMap.get(t._id.toString()) ?? null;
+      });
+    }
+  }
 
   res.status(200).json({
     success: true,
