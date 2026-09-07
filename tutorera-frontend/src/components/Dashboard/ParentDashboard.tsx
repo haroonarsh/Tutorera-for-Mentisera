@@ -191,7 +191,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
   const [parentId, setParentId] = useState<string>("");
 
   const fetchProfile = () => {
-    api.get("/parent/profile/me")
+    api.get("/parent/profile")
       .then(res => {
         setData(res.data);
         setParentId(res.data.profile?._id ?? "");

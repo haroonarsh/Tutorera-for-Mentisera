@@ -4,6 +4,7 @@ import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import StudentProfile from "../models/StudentProfile.model";
 import Booking from "../models/Booking.model";
+import { advanceAccountStatus } from "../services/accountLifecycle.service";
 
 export const getMyParentProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "parent") {
@@ -149,4 +150,42 @@ export const updateParentSettings = async (req: AuthRequest, res: Response): Pro
   );
 
   res.status(200).json({ success: true, profile });
+};
+
+// @desc    Save parent onboarding
+// @route   POST /api/parent/onboarding
+// @access  Private (parent)
+export const saveParentOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
+    return;
+  }
+
+  const { name, phone, city, approvalRequiredForBookings, spendingLimitMonthly, notificationsEnabled } = req.body;
+
+  await User.findByIdAndUpdate(req.user._id, {
+    name: name || req.user.name,
+    phone: phone || req.user.phone,
+    city: city || req.user.city,
+  });
+
+  const profile = await ParentProfile.findOneAndUpdate(
+    { user: req.user._id },
+    {
+      $set: {
+        ...(approvalRequiredForBookings !== undefined && { approvalRequiredForBookings }),
+        ...(spendingLimitMonthly !== undefined && { spendingLimitMonthly }),
+        ...(notificationsEnabled !== undefined && { notificationsEnabled }),
+      },
+    },
+    { new: true, upsert: true }
+  );
+
+  await advanceAccountStatus(req.user._id.toString(), "profile_complete");
+
+  res.status(200).json({
+    success: true,
+    message: "Parent onboarding completed successfully",
+    profile,
+  });
 };

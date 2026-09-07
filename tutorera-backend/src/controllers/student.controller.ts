@@ -128,3 +128,125 @@ export const getFavouriteIds = async (req: AuthRequest, res: Response): Promise<
     favouriteIds: profile?.favouriteTutors.map((id) => id.toString()) || [],
   });
 };
+
+// @desc    Link a parent guardian to my account
+// @route   POST /api/students/guardians
+// @access  Private (student)
+export const linkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { parentProfileId, parentUserId, name, email } = req.body;
+
+  if (!parentProfileId && !parentUserId && !email) {
+    res.status(400).json({ success: false, message: "parentProfileId, parentUserId, or email is required." });
+    return;
+  }
+
+  let parentProfile;
+  if (parentProfileId) {
+    const ParentProfile = (await import("../models/ParentProfile.model")).default;
+    parentProfile = await ParentProfile.findById(parentProfileId);
+  } else if (parentUserId) {
+    const ParentProfile = (await import("../models/ParentProfile.model")).default;
+    parentProfile = await ParentProfile.findOne({ user: new Types.ObjectId(parentUserId) });
+  } else if (email) {
+    const parentUser = await User.findOne({ email: email.toLowerCase(), role: "parent" });
+    if (!parentUser) {
+      res.status(404).json({ success: false, message: "No parent account found with that email." });
+      return;
+    }
+    const ParentProfile = (await import("../models/ParentProfile.model")).default;
+    parentProfile = await ParentProfile.findOne({ user: parentUser._id });
+  }
+
+  if (!parentProfile) {
+    res.status(404).json({ success: false, message: "Parent profile not found." });
+    return;
+  }
+
+  const alreadyLinked = parentProfile.children.some(
+    (c) => c.studentUser?.toString() === req.user?._id?.toString()
+  );
+
+  if (alreadyLinked) {
+    res.status(409).json({ success: false, message: "This parent is already linked to your account." });
+    return;
+  }
+
+  parentProfile.children.push({
+    studentUser: req.user!._id,
+    name: name || req.user?.name || "Student",
+    level: "",
+    subjects: [],
+    relationship: "child",
+  } as any);
+
+  await parentProfile.save();
+
+  const parentUser = await User.findById(parentProfile.user).select("email");
+  await User.findByIdAndUpdate(req.user?._id, {
+    parentGuardianEmail: parentUser?.email || email || "",
+    parentGuardianName: name || "",
+  });
+
+  res.status(200).json({ success: true, message: "Parent guardian linked successfully.", parentProfile });
+};
+
+// @desc    Remove a parent guardian from my account
+// @route   DELETE /api/students/guardians/:parentProfileId
+// @access  Private (student)
+export const unlinkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { parentProfileId } = req.params;
+
+  const ParentProfile = (await import("../models/ParentProfile.model")).default;
+  const parentProfile = await ParentProfile.findById(parentProfileId);
+
+  if (!parentProfile) {
+    res.status(404).json({ success: false, message: "Parent profile not found." });
+    return;
+  }
+
+  const before = parentProfile.children.length;
+  parentProfile.children = parentProfile.children.filter(
+    (c) => c.studentUser?.toString() !== req.user?._id?.toString()
+  );
+
+  if (parentProfile.children.length === before) {
+    res.status(404).json({ success: false, message: "Parent guardian not found in your account." });
+    return;
+  }
+
+  await parentProfile.save();
+
+  await User.findByIdAndUpdate(req.user?._id, {
+    parentGuardianEmail: "",
+    parentGuardianName: "",
+  });
+
+  res.status(200).json({ success: true, message: "Parent guardian unlinked." });
+};
+
+// @desc    Get my linked parent guardians
+// @route   GET /api/students/guardians
+// @access  Private (student)
+export const getMyParentGuardians = async (req: AuthRequest, res: Response): Promise<void> => {
+  const UserModel = await import("../models/User.model");
+  const ParentProfile = (await import("../models/ParentProfile.model")).default;
+
+  const allParentProfiles = await ParentProfile.find({ "children.studentUser": req.user?._id }).lean();
+
+  const guardians = await Promise.all(
+    allParentProfiles.map(async (p) => {
+      const parentUser = await UserModel.default.findById(p.user).select("name email").lean();
+      const childEntry = p.children.find((c) => c.studentUser?.toString() === req.user?._id?.toString());
+      return {
+        parentProfileId: p._id,
+        parentUserId: p.user,
+        parentName: parentUser?.name || "",
+        parentEmail: parentUser?.email || "",
+        relationship: childEntry?.relationship || "parent",
+        linkedAt: childEntry?._id?.getTimestamp ? childEntry._id.getTimestamp() : new Date(),
+      };
+    })
+  );
+
+  res.status(200).json({ success: true, guardians });
+};
