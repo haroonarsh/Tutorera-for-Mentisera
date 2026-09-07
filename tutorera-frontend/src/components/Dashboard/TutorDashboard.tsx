@@ -636,7 +636,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     setLoadingRec(true);
     try {
       const res = await axiosInstance.get("/matching/tutors/recommended-requests?limit=15");
-      setRecommended(res.data.recommendations ?? []);
+      setRecommended(res.data.requests ?? []);
     } catch {
       setRecommended([]);
     } finally {
