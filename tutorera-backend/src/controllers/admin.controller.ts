@@ -33,6 +33,7 @@ import {
   homeTuitionActivatedEmail,
   homeTuitionDeactivatedEmail,
 } from "../utils/trackingEmails";
+import { generateTutorPayoutReport } from "../services/payoutReport.service";
 
 
 // @desc    Get dashboard stats
@@ -1594,4 +1595,27 @@ export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Prom
 
   const signedUrl = getSignedViewUrl(publicId, "image", 300);
   res.status(200).json({ success: true, url: signedUrl });
+};
+
+// @desc    Download tutor payout report as PDF (admin)
+// @route   GET /api/admin/tutors/:tutorId/payout-report/pdf
+// @access  Private (admin)
+export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response): Promise<void> => {
+  const tutorId = req.params.tutorId as string;
+
+  try {
+    const periodEnd = new Date();
+    const periodStart = new Date();
+    periodStart.setFullYear(periodStart.getFullYear() - 1);
+
+    const { pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd);
+
+    const filename = `tutorera-payout-report-${tutorId}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("Failed to generate tutor payout report:", error);
+    res.status(500).json({ success: false, message: "Failed to generate payout report." });
+  }
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, ArrowLeft, RefreshCw, Search, ShieldCheck, Star, X } from "lucide-react";
+import { BookOpen, ArrowLeft, RefreshCw, Search, ShieldCheck, Star, X, Download } from "lucide-react";
 import api from "@/lib/axios";
 
 interface TutorItem {
@@ -73,6 +73,24 @@ export default function TutorsDirectoryPage() {
       console.error("Failed to load Tutor 360:", err);
     } finally {
       setLoading360(false);
+    }
+  };
+
+  const handleDownloadPayoutReport = async (tutorId: string) => {
+    try {
+      const res = await api.get(`/admin/tutors/${tutorId}/payout-report/pdf`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tutorera-payout-report-${tutorId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download payout report:", err);
     }
   };
 
@@ -233,9 +251,29 @@ export default function TutorsDirectoryPage() {
                     <span style={{ fontSize: "0.72rem", background: tutor360.policeVerificationStatus === "approved" ? "#ecfdf5" : "#fee2e2", color: tutor360.policeVerificationStatus === "approved" ? "#059669" : "#b91c1c", padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
                       {tutor360.policeVerificationStatus === "approved" ? "✓ Police Cleared (Home Eligible)" : "⚠️ No Police Clearance"}
                     </span>
-                  </div>
+                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem", marginTop: "1rem" }}>
+                   <button
+                     onClick={() => handleDownloadPayoutReport(tutor360._id)}
+                     style={{
+                       marginTop: "0.75rem",
+                       display: "inline-flex",
+                       alignItems: "center",
+                       gap: "0.4rem",
+                       padding: "0.45rem 0.85rem",
+                       backgroundColor: "#16a34a",
+                       color: "white",
+                       border: "none",
+                       borderRadius: "0.4rem",
+                       fontSize: "0.8rem",
+                       fontWeight: 700,
+                       cursor: "pointer",
+                     }}
+                   >
+                     <Download size={14} /> Print Payout Report
+                   </button>
+
+                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem", marginTop: "1rem" }}>
                     <div style={{ backgroundColor: "white", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0", textAlign: "center" }}>
                       <span style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700 }}>Offers Sent</span>
                       <strong style={{ display: "block", fontSize: "1.1rem", color: "#0f172a" }}>{tutor360.offersSubmittedCount}</strong>
