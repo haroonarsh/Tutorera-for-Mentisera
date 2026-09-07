@@ -164,17 +164,32 @@ export const paymentConfirmedEmail = (
   return { subject: "TUTORERA® — Payment Confirmed", html };
 };
 
-export const paymentFailedEmail = (studentName: string, tutorName: string, amount: number) => {
+interface BookingDetails {
+  bookingId: string;
+  subject?: string;
+  schedule?: string;
+  teachingMode?: string;
+  sessionCount?: number;
+}
+
+export const paymentFailedEmail = (
+  studentName: string,
+  tutorName: string,
+  amount: number,
+  details?: BookingDetails
+) => {
+  const bookingId = details?.bookingId || `PAY-${Date.now()}`;
+  const subject = details?.subject ? ` — ${details.subject}` : "";
   const html = renderTransactionalEmail({
     subject: "TUTORERA® — Payment Could Not Be Processed",
     emailCategory: "Payment Update",
     emailHeading: "Payment Not Completed",
     emailSubheading: "We couldn't process your payment for this session.",
     firstName: studentName,
-    openingMessage: `We were unable to complete the payment of PKR ${amount.toLocaleString()} for your session with ${tutorName}.`,
+    openingMessage: `We were unable to complete the payment of PKR ${amount.toLocaleString()} for your${subject} session with ${tutorName}.`,
     mainMessage: "This could be due to insufficient funds, an expired card, or a network issue. Please try again using the same or a different payment method. If the problem persists, contact your bank or our support team.",
     transaction: {
-      referenceId: `PAY-${Date.now()}`,
+      referenceId: bookingId,
       date: today(),
       status: "Failed",
       amount: `PKR ${amount.toLocaleString()}`,
@@ -185,6 +200,36 @@ export const paymentFailedEmail = (studentName: string, tutorName: string, amoun
     deliverability: "This transactional notification was sent because a payment attempt on your TUTORERA booking was not successful.",
   });
   return { subject: "TUTORERA® — Payment Could Not Be Processed", html };
+};
+
+export const paymentFailedNotifyTutorEmail = (
+  tutorName: string,
+  studentName: string,
+  amount: number,
+  details?: BookingDetails
+) => {
+  const bookingId = details?.bookingId || `PAY-${Date.now()}`;
+  const subject = details?.subject ? ` — ${details.subject}` : "";
+  const html = renderTransactionalEmail({
+    subject: "TUTORERA® — Student Payment Delayed",
+    emailCategory: "Booking Update",
+    emailHeading: "Student Payment Delayed",
+    emailSubheading: `A booking with ${studentName} could not be confirmed.`,
+    firstName: tutorName,
+    openingMessage: `The student's payment of PKR ${amount.toLocaleString()} for your${subject} session with ${studentName} could not be processed.`,
+    mainMessage: "The student has been notified to retry payment. The booking will be confirmed automatically once payment is successful. No action is needed from your side at this time.",
+    transaction: {
+      referenceId: bookingId,
+      date: today(),
+      status: "Pending",
+      amount: `PKR ${amount.toLocaleString()}`,
+    },
+    cta: { label: "View Booking", url: "https://tutorera.ac.pk/dashboard" },
+    additionalInformation: "If the student does not complete payment within 48 hours, the slot will be released. Contact hello@mentisera.pk for assistance.",
+    includeSecurityNotice: false,
+    deliverability: "This transactional notification was sent because a student payment on your TUTORERA booking was not successful.",
+  });
+  return { subject: "TUTORERA® — Student Payment Delayed", html };
 };
 
 export const bookingCancelledEmail = (name: string, otherPartyName: string, subject?: string) => {
