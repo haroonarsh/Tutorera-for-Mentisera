@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
 
+
 const routes = [
   "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
   "help", "help/for-parents", "help/for-tutors", "how-it-works", "how-tutor-offers-work", "levels", "locations", "pricing",
@@ -91,6 +92,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ? [{ url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 }]
       : [];
 
+  const TARGET_DEMAND_SLUGS = PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
+    LOCAL_SUBJECT_SLUGS.map((subjectSlug) => ({ citySlug, subjectSlug }))
+  );
+
+  const tuitionRequestDemandPages: MetadataRoute.Sitemap = TARGET_DEMAND_SLUGS.map(({ citySlug, subjectSlug }) => ({
+    url: `${SITE_URL}/tuition-requests/pk/${citySlug}/${subjectSlug}`,
+    lastModified,
+    changeFrequency: "daily" as const,
+    priority: 0.8,
+  }));
+
   return [
     ...staticPages,
     ...directories,
@@ -99,5 +111,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...research,
     ...profiles,
+    ...tuitionRequestDemandPages,
   ];
 }

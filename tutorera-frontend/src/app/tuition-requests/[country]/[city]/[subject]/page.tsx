@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import TuitionRequestsExplorer from "@/components/TuitionRequests/TuitionRequestsExplorer";
 import { fetchRequests } from "@/lib/tuition-requests";
 import type { RequestFilters } from "@/lib/tuition-requests";
-import { CITIES, SUBJECTS } from "@/lib/tutor-directory";
+import { CITIES, SUBJECTS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS } from "@/lib/tutor-directory";
 
 type Props = {
   params: Promise<{ country: string; city: string; subject: string }>;
@@ -15,6 +15,16 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 function slugToLabel(slug: string, map: Record<string, string>): string {
   return map[slug] || slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export async function generateStaticParams() {
+  return PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
+    LOCAL_SUBJECT_SLUGS.map((subjectSlug) => ({
+      country: "pk",
+      city: citySlug,
+      subject: subjectSlug,
+    }))
+  );
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -45,8 +55,31 @@ export default async function SubjectTuitionRequestsPage({ params, searchParams 
 
   const result = await fetchRequests(filters, 12);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${subjectLabel} tuition requests in ${cityLabel}, ${countryName}`,
+    description: `Active ${subjectLabel} tuition requests from verified students in ${cityLabel}, ${countryName}. Tutors can submit offers directly.`,
+    url: `https://tutorera.ac.pk/tuition-requests/${country}/${city}/${subject}`,
+    isPartOf: {
+      "@type": "WebSite",
+      name: "TUTORERA",
+      url: "https://tutorera.ac.pk",
+    },
+    about: {
+      "@type": "Thing",
+      name: `${subjectLabel} tutoring`,
+      description: `Tuition requests for ${subjectLabel} in ${cityLabel}`,
+    },
+    numberOfItems: result.total,
+  };
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div style={{ background: "linear-gradient(135deg, #021550 0%, #0329B2 100%)", color: "white", padding: "2rem 1rem", textAlign: "center" }}>
         <p style={{ opacity: 0.7, fontSize: "0.875rem", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tuition Requests</p>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: "0 0 0.4rem" }}>{subjectLabel} in {cityLabel}, {countryName}</h1>
