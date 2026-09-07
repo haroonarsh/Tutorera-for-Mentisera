@@ -27,6 +27,10 @@ import {
   getAllClaims,
   updateClaimStatus,
 } from "../controllers/guaranteeClaim.controller";
+import {
+  getAllRefundRequests,
+  updateRefundRequestStatus,
+} from "../controllers/refundRequest.controller";
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
@@ -115,6 +119,8 @@ router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updat
 router.get("/reports", requirePermission("analytics.read"), generateReport);
 router.get("/guarantee-claims", requirePermission("claims.read"), getAllClaims);
 router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), validateGuarantee(updateClaimStatusSchema), updateClaimStatus);
+router.get("/refund-requests", requirePermission("claims.read"), getAllRefundRequests);
+router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateRefundRequestStatus);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
