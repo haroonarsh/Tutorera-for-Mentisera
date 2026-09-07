@@ -9,6 +9,7 @@ import sendEmail from "../utils/sendEmail";
 import { welcomeEmail, tutorPendingEmail, planUpgradedEmail, adminNewUserSignupEmail } from "../utils/emailTemplates";
 import StudentProfile from "../models/StudentProfile.model";
 import TutorProfile from "../models/TutorProfile.model";
+import ParentProfile from "../models/ParentProfile.model";
 import RequestModel from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
@@ -51,6 +52,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     user.applicationSubmittedAt = new Date();
     await user.save();
     trackingToken = t.plaintext;
+  } else if (user.role === "parent") {
+    await ParentProfile.create({ user: user._id, children: [], approvalRequiredForBookings: false });
   }
 
   await logAudit({

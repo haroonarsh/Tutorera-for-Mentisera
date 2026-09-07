@@ -5,6 +5,7 @@ export interface IBooking extends Document {
   tutor: Types.ObjectId;
   request: Types.ObjectId;
   bid: Types.ObjectId;
+  parent?: Types.ObjectId;
   amount: number;
   finalAgreedRate: number;
   pricingUnit: "hour" | "session" | "month" | "course";
@@ -36,6 +37,7 @@ const bookingSchema = new Schema<IBooking>(
     tutor: { type: Schema.Types.ObjectId, ref: "User", required: true },
     request: { type: Schema.Types.ObjectId, ref: "Request" },
     bid: { type: Schema.Types.ObjectId, ref: "Bid" },
+    parent: { type: Schema.Types.ObjectId, ref: "User" },
     amount: { type: Number, required: true },
     finalAgreedRate: { type: Number, required: true },
     pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },

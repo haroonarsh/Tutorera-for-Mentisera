@@ -21,10 +21,10 @@ const FRONTEND_URL = process.env.CLIENT_URL as string;
 // @route   POST /api/v1/payments/booking/:bookingId/checkout
 // @access  Private (student who owns the booking)
 export const createBookingCheckout = async (req: AuthRequest, res: Response): Promise<void> => {
-  const booking = await Booking.findOne({
-    _id: req.params.bookingId,
-    student: req.user?._id,
-  });
+  const isParent = req.user?.role === "parent";
+  const booking = isParent
+    ? await Booking.findOne({ _id: req.params.bookingId, parent: req.user?._id })
+    : await Booking.findOne({ _id: req.params.bookingId, student: req.user?._id });
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
@@ -36,11 +36,13 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     return;
   }
 
-  const student = await User.findById(req.user?._id).select("name email phone");
+  const student = await User.findById(isParent ? booking.student : req.user?._id).select("name email phone");
   if (!student) {
     res.status(404).json({ success: false, message: "Student not found" });
     return;
   }
+
+  const payer = isParent ? await User.findById(req.user?._id).select("name email phone") : student;
 
   const basketId = booking._id.toString();
 
@@ -48,8 +50,8 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: booking.amount,
       currency: "PKR",
-      customerMobileNo: student.phone || "03000000000",
-      customerEmail: student.email,
+      customerMobileNo: payer?.phone || "03000000000",
+      customerEmail: payer?.email || student.email,
       basketId,
       bookingId: booking._id.toString(),
       studentId: booking.student.toString(),
