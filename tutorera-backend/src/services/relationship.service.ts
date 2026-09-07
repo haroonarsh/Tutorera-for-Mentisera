@@ -1,15 +1,20 @@
 import { ClientSession, Types } from "mongoose";
 import Booking, { IBooking } from "../models/Booking.model";
+import Request from "../models/Request.model";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
 
 type RelationshipBooking = IBooking & {
   request?: Types.ObjectId | { subject?: string } | null;
 };
 
-function bookingSubject(booking: RelationshipBooking): string {
+async function bookingSubject(booking: RelationshipBooking, session?: ClientSession): Promise<string> {
   const request = booking.request as { subject?: string } | Types.ObjectId | undefined;
   if (request && typeof request === "object" && "subject" in request && request.subject) {
     return request.subject;
+  }
+  if (request) {
+    const row = await Request.findById(request).select("subject").session(session || null).lean();
+    if (row?.subject) return row.subject;
   }
   return "Tutoring";
 }
@@ -18,7 +23,7 @@ export async function syncStudentTutorRelationship(
   booking: RelationshipBooking,
   session?: ClientSession
 ) {
-  const subject = bookingSubject(booking);
+  const subject = await bookingSubject(booking, session);
   const timestamped = booking as RelationshipBooking & { updatedAt?: Date };
   const completedBookings = await Booking.countDocuments({
     student: booking.student,

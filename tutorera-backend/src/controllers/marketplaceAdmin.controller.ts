@@ -4,9 +4,11 @@ import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
+import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
 
 export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response): Promise<void> => {
   const now = new Date();
+  const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const [
     totalRequests,
     activeRequests,
@@ -22,7 +24,12 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
     cancelled,
     disputed,
     firstOffers,
-    negotiations
+    negotiations,
+    activeRelationships,
+    repeatRelationships,
+    relationships30d,
+    relationships60d,
+    relationships90d
   ] = await Promise.all([
     Request.countDocuments(),
     Request.countDocuments({ status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, expiresAt: { $gt: now } }),
@@ -50,6 +57,11 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
     Request.countDocuments({ status: "disputed" }),
     Bid.aggregate([{ $group: { _id: "$request", first: { $min: "$createdAt" } } }]),
     OfferNegotiation.countDocuments(),
+    StudentTutorRelationship.countDocuments({ relationshipStatus: "active" }),
+    StudentTutorRelationship.countDocuments({ repeatBookingCount: { $gt: 0 } }),
+    StudentTutorRelationship.countDocuments({ lastSessionAt: { $gte: daysAgo(30) } }),
+    StudentTutorRelationship.countDocuments({ lastSessionAt: { $gte: daysAgo(60) } }),
+    StudentTutorRelationship.countDocuments({ lastSessionAt: { $gte: daysAgo(90) } }),
   ]);
   const requestDates = await Request.find({ _id: { $in: firstOffers.map(x => x._id) } }).select("createdAt").lean(); const dateMap=new Map(requestDates.map(r=>[r._id.toString(),r.createdAt.getTime()]));
   const averageMinutesToFirstOffer=firstOffers.length?firstOffers.reduce((s,x)=>s+Math.max(0,x.first.getTime()-(dateMap.get(x._id.toString())||x.first.getTime())),0)/firstOffers.length/60000:0;
@@ -83,6 +95,12 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
       cancellationRate: bookings.length ? cancelled / bookings.length * 100 : 0,
       disputeRate: totalRequests ? disputed / totalRequests * 100 : 0,
       negotiationEvents: negotiations,
+      activeRelationships,
+      repeatRelationships,
+      repeatRelationshipRate: activeRelationships ? (repeatRelationships / activeRelationships) * 100 : 0,
+      activeRelationships30d: relationships30d,
+      activeRelationships60d: relationships60d,
+      activeRelationships90d: relationships90d,
     },
   });
 };

@@ -293,6 +293,24 @@ function BookingCard({ booking, onClaimSubmitted }: {
         )}
       </div>
 
+      {booking.status === "completed" && (
+        <div style={{ background: "linear-gradient(135deg, #EEF5FF 0%, #F8FAFF 100%)", border: "1px solid #bfdbfe", borderRadius: "0.75rem", padding: "0.9rem", marginBottom: "0.75rem" }}>
+          <p style={{ margin: "0 0 0.5rem", color: "#021550", fontWeight: 800, fontSize: "0.85rem" }}>
+            Continue Learning
+          </p>
+          <p style={{ margin: "0 0 0.75rem", color: "#475569", fontSize: "0.75rem", lineHeight: 1.5 }}>
+            Rebook this tutor using the previous subject, mode, and agreed rate as a starting point. Package and recurring-plan checkout will stay disabled until the provider flow is configured.
+          </p>
+          <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }} aria-label="Future learning options">
+            {["Book Again", "Weekly Schedule", "4-Session Package", "8-Session Package"].map((option) => (
+              <span key={option} style={{ border: "1px solid #dbeafe", background: option === "Book Again" ? "#0329B2" : "white", color: option === "Book Again" ? "white" : "#0329B2", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
+                {option}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Secure checkout instructions — only when payment is pending ── */}
       {booking.paymentStatus === "pending" && booking.status !== "cancelled" && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
