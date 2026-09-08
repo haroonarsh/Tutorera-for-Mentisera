@@ -20,12 +20,6 @@ interface Overview {
   pendingPayouts: number;
 }
 
-interface PlanBreakdown {
-  plan: string;
-  count: number;
-  percent: number;
-}
-
 interface SignupPoint {
   week: string;
   label: string;
@@ -56,7 +50,6 @@ interface RecentPayment {
 
 interface AnalyticsData {
   overview: Overview;
-  planBreakdown: PlanBreakdown[];
   signupTrend: SignupPoint[];
   bookingStatusBreakdown: BookingStatus;
   topTutors: TopTutor[];
@@ -84,12 +77,6 @@ function ChartTooltip({ active, payload, label }: {
     </div>
   );
 }
-
-const planColors: Record<string, { bar: string; bg: string; text: string }> = {
-  free:     { bar: '#6b7280', bg: '#f3f4f6', text: '#6b7280' },
-  standard: { bar: '#0329B2', bg: '#EEF5FF', text: '#0329B2' },
-  premium:  { bar: '#9333ea', bg: '#fdf4ff', text: '#9333ea' },
-};
 
 const bookingStatusConfig: {
   key: keyof BookingStatus; label: string; color: string; bg: string;
@@ -215,38 +202,6 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Plan Breakdown */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.25rem' }}>Active Subscriptions</h3>
-          <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem' }}>Users by plan</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-            {(data?.planBreakdown ?? []).map(item => {
-              const meta = planColors[item.plan] || planColors.free;
-              return (
-                <div key={item.plan}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: meta.text, textTransform: 'capitalize', padding: '0.15rem 0.5rem', backgroundColor: meta.bg, borderRadius: '999px' }}>
-                      {item.plan}
-                    </span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.primary }}>
-                      {item.count} <span style={{ color: C.gray500, fontWeight: '500' }}>({item.percent}%)</span>
-                    </span>
-                  </div>
-                  <div style={{ height: '8px', backgroundColor: '#f3f4f6', borderRadius: '999px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${item.percent}%`, backgroundColor: meta.bar, borderRadius: '999px', transition: 'width 0.6s ease' }} />
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* No paid subscriptions note */}
-            {(data?.planBreakdown.filter(p => p.plan !== "free").every(p => p.count === 0)) && (
-              <p style={{ fontSize: '0.78rem', color: C.gray500, fontStyle: 'italic', marginTop: '0.5rem' }}>
-                No paid subscriptions currently active.
-              </p>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* ── Booking Status Breakdown ── */}

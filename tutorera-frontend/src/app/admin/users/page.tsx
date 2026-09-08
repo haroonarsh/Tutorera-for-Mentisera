@@ -12,18 +12,11 @@ interface User {
   name: string;
   email: string;
   role: string;
-  plan: string;
   city: string;
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;
 }
-
-const planColors: Record<string, { bg: string; color: string }> = {
-  free:     { bg: '#f3f4f6', color: '#6b7280' },
-  standard: { bg: '#EEF5FF', color: '#0329B2' },
-  premium:  { bg: '#fdf4ff', color: '#9333ea' },
-};
 
 const roleColors: Record<string, { bg: string; color: string }> = {
   student: { bg: '#EEF5FF', color: '#0329B2' },
@@ -37,8 +30,6 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [planLoading, setPlanLoading] = useState<string | null>(null);
-  const [planDropdown, setPlanDropdown] = useState<string | null>(null); // userId with open dropdown
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
   const fetchUsers = (page: number = 1, searchTerm: string = search, role: string = roleFilter) => {
@@ -83,20 +74,6 @@ export default function UsersPage() {
     }
   };
 
-  const handleChangePlan = async (userId: string, plan: string) => {
-    setPlanLoading(userId);
-    setPlanDropdown(null);
-    try {
-      await api.patch(`/admin/users/${userId}/plan`, { plan });
-      setUsers(prev => prev.map(u => u._id === userId ? { ...u, plan } : u));
-      showSuccess(`Plan updated to ${plan}`);
-    } catch (err) {
-      showError(err, "Failed to update plan");
-    } finally {
-      setPlanLoading(null);
-    }
-  };
-
   // const filtered = users.filter(u => {
   //   const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
   //     u.email.toLowerCase().includes(search.toLowerCase());
@@ -108,7 +85,7 @@ export default function UsersPage() {
     <div style={{ padding: '2rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Users</h1>
-        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Manage all registered users and their plans.</p>
+        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Manage registered users and account access.</p>
       </div>
 
       {/* Filters */}
@@ -133,8 +110,8 @@ export default function UsersPage() {
       <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'visible' }}>
 
         {/* Desktop Table Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="admin-table-header">
-          {["Name", "Email", "Role", "Plan", "City", "Status", "Actions"].map(h => (
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="admin-table-header">
+          {["Name", "Email", "Role", "City", "Status", "Actions"].map(h => (
             <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
           ))}
         </div>
@@ -151,7 +128,7 @@ export default function UsersPage() {
             <div key={user._id} style={{ borderBottom: idx < users.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
 
               {/* Desktop Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
 
                 {/* Name */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -168,30 +145,6 @@ export default function UsersPage() {
                 <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize', width: 'fit-content' }}>
                   {user.role}
                 </span>
-
-                {/* Plan — click to change */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setPlanDropdown(planDropdown === user._id ? null : user._id)}
-                    disabled={planLoading === user._id}
-                    style={{ fontSize: '0.75rem', fontWeight: '700', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: planColors[user.plan]?.bg || '#f3f4f6', color: planColors[user.plan]?.color || '#6b7280', textTransform: 'capitalize', border: '1px dashed currentColor', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    {planLoading === user._id ? '...' : user.plan || 'free'}
-                    <span style={{ fontSize: '0.6rem' }}>▾</span>
-                  </button>
-
-                  {/* Plan Dropdown */}
-                  {planDropdown === user._id && (
-                    <div style={{ position: 'absolute', top: '110%', left: 0, backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '110px', overflow: 'hidden' }}>
-                      {["free", "standard", "premium"].map(plan => (
-                        <button key={plan}
-                          onClick={() => handleChangePlan(user._id, plan)}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 0.875rem', fontSize: '0.8rem', fontWeight: user.plan === plan ? '700' : '500', color: user.plan === plan ? C.accent : C.primary, backgroundColor: user.plan === plan ? '#EEF5FF' : 'transparent', border: 'none', cursor: 'pointer', textTransform: 'capitalize' }}>
-                          {plan} {user.plan === plan && '✓'}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
 
                 {/* City */}
                 <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
@@ -224,9 +177,6 @@ export default function UsersPage() {
                     <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: roleColors[user.role]?.bg, color: roleColors[user.role]?.color, textTransform: 'capitalize' }}>
                       {user.role}
                     </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '999px', backgroundColor: planColors[user.plan]?.bg || '#f3f4f6', color: planColors[user.plan]?.color || '#6b7280', textTransform: 'capitalize' }}>
-                      {user.plan || 'free'}
-                    </span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -237,17 +187,6 @@ export default function UsersPage() {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {/* Mobile plan change */}
-                    <select
-                      title="Change Plan"
-                      value={user.plan || 'free'}
-                      onChange={e => handleChangePlan(user._id, e.target.value)}
-                      disabled={planLoading === user._id}
-                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', cursor: 'pointer', color: C.primary, backgroundColor: 'white' }}>
-                      <option value="free">Free</option>
-                      <option value="standard">Standard</option>
-                      <option value="premium">Premium</option>
-                    </select>
                     <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a' }}>
                       {user.isActive ? "Deactivate" : "Activate"}

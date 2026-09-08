@@ -8,7 +8,7 @@ import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
 import PostRequestModal from "./PostRequestModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2, Clock } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
@@ -658,6 +658,11 @@ function RequestCard({
         </span>
         <span className={s.infoChip}>{request.teachingMode}</span>
         <span className={s.infoChip}>{request.schedule}</span>
+        {request.sessionDurationMinutes && request.sessionsPerWeek && (
+          <span className={s.infoChip}>
+            <Clock size={12} aria-hidden="true" /> {request.sessionsPerWeek}x/wk · {request.sessionDurationMinutes} min
+          </span>
+        )}
       </div>
 
       {/* Action triggers: Expand tutor offers, Extend, Repost, Close, & Smart matched tutors */}
@@ -1162,7 +1167,7 @@ const fetchRequests = useCallback(async () => {
         </button>
         <Link href="/offers" className={s.tab}>Tutor Offers & Negotiations</Link>
         <Link href="/chat" className={s.tab}>Messages</Link>
-        <Link href="/billing" className={s.tab}>Payments</Link>
+        <Link href="/transactions" className={s.tab}>Payments</Link>
         <Link href="/notifications" className={s.tab}>Notifications</Link>
         <Link href="/settings" className={s.tab}>Settings</Link>
         </nav>

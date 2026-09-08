@@ -36,7 +36,7 @@ function getActionStyle(action: string): { bg: string; color: string } {
   if (action.includes("registered") || action.includes("created") || action.includes("placed")) {
     return { bg: '#EEF5FF', color: '#0329B2' };
   }
-  if (action.includes("plan_changed") || action.includes("updated")) {
+  if (action.includes("updated")) {
     return { bg: '#fdf4ff', color: '#9333ea' };
   }
   return { bg: '#f3f4f6', color: '#6b7280' };

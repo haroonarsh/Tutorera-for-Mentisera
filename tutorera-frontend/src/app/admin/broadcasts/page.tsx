@@ -15,13 +15,12 @@ interface Broadcast {
   createdAt: string;
 }
 
-type Audience = "all" | "students" | "tutors" | "premium";
+type Audience = "all" | "students" | "tutors";
 
 const AUDIENCE_OPTIONS: { value: Audience; label: string; desc: string; color: string; bg: string }[] = [
   { value: "all",      label: "All Users",      desc: "Students + Tutors",    color: '#0329B2', bg: '#EEF5FF' },
   { value: "students", label: "Students Only",  desc: "All active students",  color: '#7c3aed', bg: '#f5f3ff' },
   { value: "tutors",   label: "Tutors Only",    desc: "All active tutors",    color: '#16a34a', bg: '#f0fdf4' },
-  { value: "premium",  label: "Premium Users",  desc: "Premium plan only",    color: '#d97706', bg: '#fffbeb' },
 ];
 
 function audienceMeta(audience: string) {

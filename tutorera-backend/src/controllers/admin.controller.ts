@@ -771,82 +771,6 @@ export const updateBookingStatus = async (
   });
 };
 
-// @desc    Update a user's plan (admin manually activates after NayaPay payment confirmation)
-// @route   PATCH /api/admin/users/:id/plan
-// @access  Private (admin)
-export const updateUserPlan = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { plan } = req.body;
-  if (!["free", "standard", "premium"].includes(plan)) {
-    res.status(400).json({ success: false, message: "Invalid plan" });
-    return;
-  }
-  const user = await User.findByIdAndUpdate(
-    new Types.ObjectId(req.params.id as string),
-    { plan },
-    { new: true }
-  );
-
-  if (user) {
-    await logAudit({
-      action: "plan_changed",
-      actor: req.user?.name || "Admin",
-      actorId: req.user?._id?.toString(),
-      entity: "User",
-      targetId: user._id.toString(),
-      targetName: user.name,
-      metadata: { newPlan: plan },
-    });
-  }
-
-  if (!user) {
-    res.status(404).json({ success: false, message: "User not found" });
-    return;
-  }
-  res.status(200).json({ success: true, message: `Plan updated to ${plan}`, user });
-};
-
-// @desc    Get all Standard/Premium subscribers for quick management
-// @route   GET /api/admin/subscriptions
-// @access  Private (admin)
-export const getSubscriptions = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { plan, page = "1", limit = "30" } = req.query;
-
-  const filter: Record<string, unknown> = { plan: { $ne: "free" } };
-  if (plan && ["standard", "premium"].includes(plan as string)) {
-    filter.plan = plan;
-  }
-
-  const pageNum = Math.max(1, parseInt(page as string) || 1);
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 30));
-  const skip = (pageNum - 1) * limitNum;
-
-  const total = await User.countDocuments(filter);
-
-  const users = await User.find(filter)
-    .select("name email role plan bidsThisMonth requestsThisMonth createdAt")
-    .sort("-createdAt")
-    .skip(skip)
-    .limit(limitNum);
-
-  const counts = {
-    standard: await User.countDocuments({ plan: "standard" }),
-    premium: await User.countDocuments({ plan: "premium" }),
-  };
-
-  res.status(200).json({
-    success: true,
-    total,
-    counts,
-    users,
-    pagination: {
-      total,
-      page: pageNum,
-      pages: Math.ceil(total / limitNum),
-      limit: limitNum,
-    },
-  });
-};
-
 // @desc    Get all payouts (bookings where student payment is confirmed)
 // @route   GET /api/admin/payouts
 // @access  Private (admin)
@@ -908,7 +832,6 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
     totalBookings,
     allBookings,
     monthBookings,
-    allUsersForPlan,
     recentSignups,
     pendingPayoutBookings,
   ] = await Promise.all([
@@ -921,7 +844,6 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
       .populate("tutor", "name"),
     Booking.find({ createdAt: { $gte: monthStart }, paymentStatus: "confirmed" })
       .select("amount platformFee tutorPayout"),
-    User.find().select("plan"),
     User.find({ createdAt: { $gte: eightWeeksAgo } }).select("createdAt"),
     Booking.find({ paymentStatus: "confirmed", payoutStatus: "pending" }).select("tutorPayout"),
   ]);
@@ -932,18 +854,6 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
   const pendingPayouts       = pendingPayoutBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
 
   // ── Plan breakdown ──
-  const planCounts: Record<string, number> = { free: 0, standard: 0, premium: 0 };
-  allUsersForPlan.forEach(u => {
-    const p = (u.plan || "free") as string;
-    planCounts[p] = (planCounts[p] || 0) + 1;
-  });
-  const totalForPlan = allUsersForPlan.length || 1;
-  const planBreakdown = Object.entries(planCounts).map(([plan, count]) => ({
-    plan,
-    count,
-    percent: Math.round((count / totalForPlan) * 100),
-  }));
-
   // ── Booking status breakdown ──
   const bookingStatusBreakdown = {
     upcoming:  allBookings.filter(b => b.status === "upcoming").length,
@@ -1001,7 +911,6 @@ export const getAnalytics = async (req: AuthRequest, res: Response): Promise<voi
       platformFeeThisMonth,
       pendingPayouts,
     },
-    planBreakdown,
     signupTrend,
     bookingStatusBreakdown,
     topTutors,
@@ -1109,7 +1018,6 @@ export const sendBroadcast = async (req: AuthRequest, res: Response): Promise<vo
   switch (audience) {
     case "students": filter.role = "student"; break;
     case "tutors":   filter.role = "tutor";   break;
-    case "premium":  filter.plan = "premium"; break;
     default:         filter.role = { $in: ["student", "tutor"] }; // "all" excludes admins
   }
  

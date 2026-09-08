@@ -31,7 +31,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   trust_and_safety: "Incident case management, harassment investigations, and emergency account bans.",
   finance: "Settlement reconciliation, commission engine config, payout approvals, and chargebacks.",
   support: "Contact ticketing, booking issue resolution, and customer inquiry response.",
-  growth: "Referral campaign tracking, tutor subscription plans, and platform growth analytics.",
+  growth: "Referral campaign tracking and platform growth analytics.",
   content: "Blog editorial reviews, public SEO pages, and communication broadcasts.",
   analyst: "Read-only access across marketplace analytics, cohorts, and business intelligence.",
 };

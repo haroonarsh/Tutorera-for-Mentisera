@@ -32,7 +32,6 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/analytics": "analytics.read",
   "/admin/contacts": "student.read",
   "/admin/broadcasts": "broadcast.send",
-  "/admin/subscriptions": "growth.read",
   "/admin/student-ratings": "student.read",
   "/admin/referrals": "growth.read",
 };

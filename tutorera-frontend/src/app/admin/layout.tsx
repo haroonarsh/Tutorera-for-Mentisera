@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen,
   CreditCard, MessageSquare, Menu, FileText, Shield, Gift,
   Star, Banknote, BarChart2, ClipboardList,
-  Radio, Layers, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
+  Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
   KeyRound, Activity, X,
 } from "lucide-react";
@@ -95,7 +95,6 @@ const navSections: NavSection[] = [
     title: "Growth",
     items: [
       { href: "/admin/referrals", label: "Referrals", icon: <Gift size={17} />, permission: "growth.read" },
-      { href: "/admin/subscriptions", label: "Subscriptions", icon: <Layers size={17} />, permission: "growth.read" },
       { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={17} />, permission: "analytics.read" },
     ],
   },

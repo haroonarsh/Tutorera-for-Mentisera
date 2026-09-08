@@ -27,7 +27,6 @@ const navItems: NavItem[] = [
   { href: "/offers",     label: "Offers & Negotiations", icon: <CreditCard size={18} /> },
   { href: "/chat",       label: "Messages",         icon: <MessageSquare size={18} /> },
   { href: "/settings",   label: "Settings",         icon: <Settings size={18} /> },
-  { href: "/billing",    label: "Plans & Billing",  icon: <CreditCard size={18} />, roles: ["student", "tutor"] },
 ];
 
 const tutorItems: NavItem[] = [
@@ -48,7 +47,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/notifications': 'Notifications',
   '/offers':        'Offers & Negotiations',
   '/settings':      'Settings',
-  '/billing':       'Plans & Billing',
   '/opportunities': 'Teaching Opportunities',
   '/profile':       'My Profile',
 };

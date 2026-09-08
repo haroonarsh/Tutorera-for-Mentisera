@@ -6,7 +6,7 @@ import { sendTokenResponse } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail";
-import { welcomeEmail, tutorPendingEmail, planUpgradedEmail, adminNewUserSignupEmail } from "../utils/emailTemplates";
+import { welcomeEmail, tutorPendingEmail, adminNewUserSignupEmail } from "../utils/emailTemplates";
 import StudentProfile from "../models/StudentProfile.model";
 import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
@@ -386,26 +386,6 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
   res.status(200).json({ success: true, user });
 };
 
-// @desc    Get current user's plan usage
-// @route   GET /api/auth/me/usage
-// @access  Private
-export const getMyUsage = async (req: AuthRequest, res: Response): Promise<void> => {
-  const user = await User.findById(req.user?._id);
-  if (!user) {
-    res.status(404).json({ success: false, message: "User not found" });
-    return;
-  }
-  
-  const plan = user.plan || "free";
-  
-  res.status(200).json({
-    success: true,
-    usage: {
-      plan,
-    },
-  });
-};
-
 // @desc    Update personal info
 // @route   PATCH /api/auth/update-profile
 // @access  Private
@@ -559,47 +539,6 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
   });
 
   res.status(200).json({ success: true, message: "Password reset successfully. You can now log in." });
-};
-
-// @desc    Upgrade user plan — ADMIN ONLY
-// @route   PATCH /api/auth/upgrade-plan
-// @access  Private (admin)
-export const upgradePlan = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  const { plan, userId } = req.body;
-
-  if (!["free", "standard", "premium"].includes(plan)) {
-    res.status(400).json({ success: false, message: "Invalid plan" });
-    return;
-  }
-
-  const targetId = userId || req.user?._id;
-
-  const user = await User.findByIdAndUpdate(
-    targetId,
-    { plan },
-    { new: true }
-  );
-
-  if (!user) {
-    res.status(404).json({ success: false, message: "User not found" });
-    return;
-  }
-
-  try {
-    const { subject, html } = planUpgradedEmail(user.name, plan);
-    await sendEmail({ to: user.email, subject, html });
-  } catch (err) {
-    console.error("Failed to send plan upgrade email:", err);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: `Plan updated to ${plan}`,
-    user,
-  });
 };
 
 // @desc    Export all user data (GDPR / Data Rights)

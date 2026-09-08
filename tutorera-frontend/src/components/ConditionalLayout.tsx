@@ -14,7 +14,6 @@ const HIDE_NAVBAR_AND_FOOTER = [
   "/dashboard",
   "/settings",
   "/notifications",
-  "/billing",
   "/profile",
   "/admin",
   "/login",

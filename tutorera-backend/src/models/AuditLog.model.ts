@@ -1,13 +1,13 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IAuditLog extends Document {
-  action: string;        // e.g. "tutor_approved", "plan_changed", "user_registered"
+  action: string;        // e.g. "tutor_approved", "user_registered"
   actor: string;         // "System" or admin/user name
   actorId?: string;      // user ID of who performed the action
   entity: string;        // "User" | "Booking" | "TutorProfile" | "Auth" | "GuaranteeClaim"
   targetId?: string;     // ID of the affected record
   targetName?: string;   // human-readable name (e.g. tutor's name)
-  metadata?: Record<string, unknown>; // extra context (e.g. { from: "free", to: "premium" })
+  metadata?: Record<string, unknown>;
   createdAt: Date;
 }
 

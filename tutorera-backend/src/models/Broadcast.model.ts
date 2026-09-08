@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IBroadcast extends Document {
   title: string;
   message: string;
-  audience: "all" | "students" | "tutors" | "premium";
+  audience: "all" | "students" | "tutors";
   sentCount: number;
   sentBy?: mongoose.Types.ObjectId;
   sentByName?: string;
@@ -14,7 +14,7 @@ const broadcastSchema = new Schema<IBroadcast>(
   {
     title:      { type: String, required: true, trim: true },
     message:    { type: String, required: true, trim: true },
-    audience:   { type: String, enum: ["all", "students", "tutors", "premium"], required: true },
+    audience:   { type: String, enum: ["all", "students", "tutors"], required: true },
     sentCount:  { type: Number, default: 0 },
     sentBy:     { type: Schema.Types.ObjectId, ref: "User" },
     sentByName: { type: String },

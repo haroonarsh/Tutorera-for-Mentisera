@@ -3,7 +3,6 @@ import { Document, Types } from "mongoose";
 
 // User Roles
 export type UserRole = "student" | "tutor" | "admin" | "pending" | "parent";
-export type UserPlan = "free" | "standard" | "premium";
 export type AuthProvider = "local" | "google";
 export type AccountStatus = "registered" | "onboarding" | "profile_complete" | "submitted" | "verified" | "rejected";
 
@@ -16,11 +15,6 @@ export interface IUser extends Document {
   role: UserRole;
   adminRole?: string;
   adminPermissions?: string[];
-  plan: UserPlan;
-  bidsThisMonth: number;
-  bidsResetDate: Date;
-  requestsThisMonth: number;
-  requestsResetDate: Date;
   phone?: string;
   city?: string;
   avatar?: string;

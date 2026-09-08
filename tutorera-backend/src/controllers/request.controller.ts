@@ -1085,7 +1085,7 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum)
-    .select("subject level budget maximumBudget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt expiresAt student");
+    .select("subject level budget maximumBudget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt expiresAt student sessionDurationMinutes sessionsPerWeek");
 
   const Bid = (await import("../models/Bid.model")).default;
   const sanitizedRequests = await Promise.all(
@@ -1117,6 +1117,8 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
         createdAt: r.createdAt,
         expiresAt: r.expiresAt,
         offersCount,
+        sessionDurationMinutes: r.sessionDurationMinutes,
+        sessionsPerWeek: r.sessionsPerWeek,
         student: {
           displayTitle: `${sanitizedName} in ${r.city || r.countryName || "Online"}`,
           name: sanitizedName,

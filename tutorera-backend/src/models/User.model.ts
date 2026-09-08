@@ -50,27 +50,6 @@ const userSchema = new Schema<IUser>(
       default: "super_admin",
     },
     adminPermissions: [{ type: String }],
-    plan: {
-      type: String,
-      enum: ["free", "standard", "premium"],
-      default: "free",
-    },
-    bidsThisMonth: {
-      type: Number,
-      default: 0,
-    },
-    bidsResetDate: {
-      type: Date,
-      default: Date.now,
-    },
-    requestsThisMonth: {
-      type: Number,
-      default: 0,
-    },
-    requestsResetDate: {
-      type: Date,
-      default: Date.now,
-    },
     phone: { type: String, trim: true },
     countryCode: { type: String, trim: true, default: "PK" },
     countryName: { type: String, trim: true, default: "Pakistan" },

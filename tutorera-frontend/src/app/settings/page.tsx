@@ -126,22 +126,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Billing & Subscription */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            💳 Billing & Subscription
-          </h2>
-          <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.25rem' }}>Your current plan, payment method, and subscription status.</p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <a href="/billing" style={{ padding: '0.65rem 1.25rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', textDecoration: 'none', color: C.primary, fontSize: '0.875rem', fontWeight: '600' }}>
-              Manage Subscription
-            </a>
-            <a href="/billing" style={{ padding: '0.65rem 1.25rem', backgroundColor: C.accent, color: 'white', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '600' }}>
-              View Plans
-            </a>
-          </div>
-        </div>
-
         {/* Device Sessions */}
         <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

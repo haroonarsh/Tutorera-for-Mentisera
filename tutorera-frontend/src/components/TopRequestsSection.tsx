@@ -19,6 +19,8 @@ interface RequestPreview {
   createdAt: string;
   expiresAt?: string;
   student: { name: string; city?: string; avatar?: string };
+  sessionDurationMinutes?: number;
+  sessionsPerWeek?: number;
 }
 
 const LIMIT = 12;
@@ -136,6 +138,11 @@ export default function TopRequestsSection() {
                     <li>
                       <Clock size={13} aria-hidden="true" /> {r.schedule}
                     </li>
+                    {r.sessionDurationMinutes && r.sessionsPerWeek && (
+                      <li>
+                        <Clock size={13} aria-hidden="true" /> {r.sessionsPerWeek}x/wk · {r.sessionDurationMinutes} min
+                      </li>
+                    )}
                   </ul>
                   <footer className={s.cardFooter}>
                     <span className={s.avatar} aria-hidden="true">

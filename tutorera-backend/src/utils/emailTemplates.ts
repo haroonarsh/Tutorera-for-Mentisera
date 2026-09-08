@@ -112,21 +112,6 @@ export const tutorRejectedEmail = (name: string, reason?: string) => {
   return { subject: "TUTORERA® — Update on Your Application", html };
 };
 
-export const planUpgradedEmail = (name: string, plan: string) => {
-  const html = renderTransactionalEmail({
-    subject: `TUTORERA® — Your Plan is Now ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
-    emailCategory: "Plan Update",
-    emailHeading: "Plan Upgraded",
-    emailSubheading: "Your TUTORERA® plan has been updated.",
-    firstName: name,
-    openingMessage: `Your TUTORERA® plan has been upgraded to ${plan}.`,
-    mainMessage: "Log in to your dashboard to see your new limits and features. Plan upgrades take effect immediately and your new bidding / request limits are now active.",
-    cta: { label: "View Dashboard", url: "https://tutorera.ac.pk/dashboard" },
-    includeSecurityNotice: true,
-  });
-  return { subject: `TUTORERA® — Your Plan is Now ${plan.charAt(0).toUpperCase() + plan.slice(1)}`, html };
-};
-
 interface BookingDetails {
   bookingId: string;
   subject?: string;

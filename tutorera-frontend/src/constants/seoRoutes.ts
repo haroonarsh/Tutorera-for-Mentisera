@@ -6,7 +6,6 @@
 export const SEO_PRIVATE_PATHS = [
   "/admin",
   "/dashboard",
-  "/billing",
   "/chat",
   "/earnings",
   "/notifications",

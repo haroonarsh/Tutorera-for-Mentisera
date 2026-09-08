@@ -19,24 +19,3 @@ export function calculateMarketplaceFees(subtotal: number) {
   return { subtotal, studentFee, tutorFee, tax, studentTotal: subtotal + studentFee, tutorNet: subtotal - tutorFee - tax, feeConfig: MARKETPLACE_FEES };
 }
 
-// Subscription plans
-export const PLANS = {
-  free: {
-    name: "Free",
-    price: 0,
-    bidsPerMonth: 3,
-    requestsPerMonth: 2,
-  },
-  standard: {
-    name: "Standard",
-    price: 500,
-    bidsPerMonth: 10,
-    requestsPerMonth: 10,
-  },
-  premium: {
-    name: "Premium",
-    price: 1000,
-    bidsPerMonth: -1, // unlimited
-    requestsPerMonth: -1, // unlimited
-  },
-};

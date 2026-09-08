@@ -13,14 +13,12 @@ import {
   updateContactStatus,
   generateReport,
   updateBookingStatus,
-  updateUserPlan,
   getPayouts,
   getAnalytics,
   getAuditLogs,
   getEmailLogs,
   getBroadcasts,
   sendBroadcast,
-  getSubscriptions,
   getTutorDocumentUrl,
   downloadTutorPayoutReport,
 } from "../controllers/admin.controller";
@@ -106,10 +104,8 @@ router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
 router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
 router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
 router.get("/broadcasts",  requirePermission("broadcast.send"), getBroadcasts);
-router.get("/subscriptions", requirePermission("growth.read"), getSubscriptions);
 router.get("/tutors/:id/document/:field", requirePermission("tutor.read"), getTutorDocumentUrl);
 router.get("/tutors/:tutorId/payout-report/pdf", requirePermission("payout.read"), downloadTutorPayoutReport);
-router.patch("/users/:id/plan", protect, authorize("admin"), requirePermission("users.manage"), updateUserPlan);
 router.get("/tutors/:id", requirePermission("tutor.read"), getTutorFullData);
 router.patch("/verify/bulk", requirePermission("tutor.verify"), bulkVerifyTutors);
 router.patch("/verify/:id", requirePermission("tutor.verify"), verifyTutor);
