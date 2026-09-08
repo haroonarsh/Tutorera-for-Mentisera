@@ -3,7 +3,7 @@ import { expect, Page, test } from "@playwright/test";
 const apiPattern = "https://tutorera-backend.onrender.com/api/v1/**";
 const pdfBody = Buffer.from("%PDF-1.7\n% TUTORERA payout E2E fixture\n");
 
-async function authenticate(page: Page, user: Record<string, unknown>) {
+async function authenticate(page: Page, user: Record<string, unknown>, options: { pdfFailure?: boolean; onPdfRequest?: () => void } = {}) {
   await page.addInitScript(() => localStorage.setItem("token", "e2e-token"));
   await page.route(apiPattern, async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -24,8 +24,13 @@ async function authenticate(page: Page, user: Record<string, unknown>) {
       return;
     }
     if (path.endsWith("/earnings/report/pdf")) {
+      options.onPdfRequest?.();
       expect(route.request().url()).toContain("from=");
       expect(route.request().url()).toContain("to=");
+      if (options.pdfFailure) {
+        await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Statement service is temporarily unavailable." }) });
+        return;
+      }
       await route.fulfill({ status: 200, contentType: "application/pdf", headers: { "Access-Control-Expose-Headers": "Content-Disposition", "Content-Disposition": 'attachment; filename="tutor-statement.pdf"' }, body: pdfBody });
       return;
     }
@@ -78,4 +83,44 @@ test("analytics-only admin is not shown payout controls", async ({ page }) => {
   await page.goto("/admin/tutors");
   await page.getByRole("button", { name: /Tutor 360/ }).click();
   await expect(page.getByRole("button", { name: "Download payout PDF" })).toHaveCount(0);
+});
+
+test("invalid tutor date range is rejected before an API request", async ({ page }) => {
+  let pdfRequests = 0;
+  await authenticate(
+    page,
+    { _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com", role: "tutor", isVerified: true, isApproved: true, plan: "free" },
+    { onPdfRequest: () => { pdfRequests += 1; } },
+  );
+  await page.goto("/earnings");
+  await page.getByLabel("From").fill("2026-09-08");
+  await page.getByRole("textbox", { name: "To", exact: true }).fill("2026-09-01");
+  await page.getByRole("button", { name: "Download payout PDF" }).click();
+  await expect(page.getByText("Choose a valid report date range.")).toBeVisible();
+  expect(pdfRequests).toBe(0);
+});
+
+test("failed tutor report can be retried without a frozen control", async ({ page }) => {
+  await authenticate(
+    page,
+    { _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com", role: "tutor", isVerified: true, isApproved: true, plan: "free" },
+    { pdfFailure: true },
+  );
+  await page.goto("/earnings");
+  const button = page.getByRole("button", { name: "Download payout PDF" });
+  await button.click();
+  await expect(page.getByText("Statement service is temporarily unavailable.")).toBeVisible();
+  await expect(button).toBeEnabled();
+  await expect(button).toHaveAttribute("aria-busy", "false");
+});
+
+test("tutor payout controls remain usable on a mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await authenticate(page, { _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com", role: "tutor", isVerified: true, isApproved: true, plan: "free" });
+  await page.goto("/earnings");
+  const button = page.getByRole("button", { name: "Download payout PDF" });
+  await expect(button).toBeVisible();
+  const box = await button.boundingBox();
+  expect(box).not.toBeNull();
+  expect((box?.x || 0) + (box?.width || 0)).toBeLessThanOrEqual(390);
 });

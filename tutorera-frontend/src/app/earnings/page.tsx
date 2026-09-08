@@ -191,7 +191,7 @@ export default function EarningsPage() {
             </p>
           </div>
           {isTutor && (
-            <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
+            <div className="earnings-header-actions" style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
               <button onClick={() => setShowCalculator(v => !v)}
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: showCalculator ? C.accent : "white", color: showCalculator ? "white" : C.primary, padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: `1.5px solid ${showCalculator ? C.accent : "#e5e7eb"}`, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
                 <Calculator size={16} /> {showCalculator ? "Hide Calculator" : "Rate Calculator"}
@@ -420,6 +420,8 @@ export default function EarningsPage() {
 
       <style>{`
         @media (max-width: 768px) {
+          .earnings-header-actions { width: 100%; min-width: 0; flex-direction: column; flex-shrink: 1 !important; }
+          .earnings-header-actions > button { width: 100%; justify-content: center; }
           .earnings-chart-row    { grid-template-columns: 1fr !important; }
           .earnings-table-header { display: none !important; }
           .earnings-table-row    { display: none !important; }

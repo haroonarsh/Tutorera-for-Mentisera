@@ -50,6 +50,12 @@ describe("payout PDF reports", () => {
     const verified = await getPayoutReportById(data.reportId);
     expect(verified?.digest).toBe(data.digest);
     expect(verified?.reportReference).toBe(data.reportReference);
+
+    const publicVerification = await request(app).get(`/api/v1/public/verify/report/${data.reportId}`).expect(200);
+    expect(publicVerification.body.data).toMatchObject({ reportReference: data.reportReference, tutorName: "Statement Tutor", verified: true });
+    expect(publicVerification.body.data).not.toHaveProperty("tutorEmail");
+    expect(publicVerification.body.data).not.toHaveProperty("tutorId");
+    expect(publicVerification.body.data).not.toHaveProperty("transactions");
   });
 
   it("limits reports to a valid 12-month period", () => {

@@ -47,7 +47,17 @@ export default function PayoutReportDownload({ endpoint, label = "Download payou
       URL.revokeObjectURL(url);
       showSuccess("Verified payout report downloaded.");
     } catch (error) {
-      showError(error, "Unable to generate the payout report.");
+      const responseData = (error as { response?: { data?: unknown } })?.response?.data;
+      if (responseData instanceof Blob && responseData.type.includes("json")) {
+        try {
+          const parsed = JSON.parse(await responseData.text()) as { message?: string };
+          showError(parsed.message || "Unable to generate the payout report.");
+        } catch {
+          showError("Unable to generate the payout report.");
+        }
+      } else {
+        showError(error, "Unable to generate the payout report.");
+      }
     } finally {
       setDownloading(false);
     }
