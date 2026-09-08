@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CANONICAL_HOST, REDIRECT_HOSTS, SEO_PRIVATE_PATHS } from "@/constants/seoRoutes";
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const host = request.nextUrl.hostname.toLowerCase();
   if (REDIRECT_HOSTS.has(host)) {
     const destination = request.nextUrl.clone();
@@ -18,4 +18,6 @@ export function proxy(request: NextRequest) {
   return response;
 }
 
+// OpenNext's Cloudflare build currently requires the legacy runtime identifier.
+export const runtime = "experimental-edge";
 export const config = { matcher: "/((?!_next/static|_next/image|favicon.ico).*)" };
