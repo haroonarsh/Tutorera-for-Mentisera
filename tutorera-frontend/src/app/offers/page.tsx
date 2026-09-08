@@ -39,6 +39,16 @@ type Offer = {
   availability?: string;
   renewalCount?: number;
   matchScore?: number;
+  profile?: {
+    averageRating?: number;
+    totalReviews?: number;
+    experience?: number;
+    degreeVerificationStatus?: string;
+    policeVerificationStatus?: string;
+    videoIntro?: string;
+    demoVideoStatus?: string;
+    homeTuitionEligible?: boolean;
+  };
   tutor: { 
     _id: string; 
     name: string; 
@@ -556,17 +566,21 @@ function OffersContent() {
               avatar: o.tutor.avatar,
               city: o.tutor.city,
               teachingMode: o.tutor.teachingMode,
-              policeVerificationStatus: "approved",
-              rating: 4.8,
-              reviewsCount: 12,
-              experience: 3,
+              policeVerificationStatus: o.profile?.policeVerificationStatus,
+              degreeVerificationStatus: o.profile?.degreeVerificationStatus,
+              rating: o.profile?.averageRating,
+              reviewsCount: o.profile?.totalReviews,
+              experience: o.profile?.experience,
+              videoIntro: o.profile?.videoIntro,
+              demoVideoStatus: o.profile?.demoVideoStatus,
+              homeTuitionEligible: o.profile?.homeTuitionEligible,
             },
             amount: o.amount,
             currency: o.request?.pricingUnit === "month" ? "PKR" : "PKR",
             pricingUnit: o.request?.pricingUnit || "hour",
             message: o.message,
-            matchScore: o.matchScore || 85,
-            matchReasons: ["Subject match", "Schedule compatible", "Budget aligned"],
+            matchScore: o.matchScore,
+            matchReasons: [],
             status: o.status as any,
             createdAt: o.expiresAt,
           }))}
@@ -583,6 +597,11 @@ function OffersContent() {
               setCountering({ ...offer, amount });
               setShowComparison(false);
             }
+          }}
+          onDeclineOffer={(offerId) => {
+            const offer = offers.find((o) => o._id === offerId);
+            if (offer) action(offer, "decline");
+            setShowComparison(false);
           }}
         />
       )}

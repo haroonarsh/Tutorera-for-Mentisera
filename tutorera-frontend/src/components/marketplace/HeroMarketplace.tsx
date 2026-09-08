@@ -56,8 +56,8 @@ export default function HeroMarketplace() {
                 marginBottom: "1rem",
               }}
             >
-              Tell Us What You Need. <br />
-              <span style={{ color: "#016ef8" }}>Let the Right Tutors Come to You.</span>
+              You Set the Requirement. <br />
+              <span style={{ color: "#016ef8" }}>Tutors Make Offers. You Choose.</span>
             </h1>
 
             <p
@@ -134,7 +134,7 @@ export default function HeroMarketplace() {
               </Link>
 
               <Link
-                href="/#marketplace-flow-title"
+                href="/tutors"
                 style={{
                   background: "white",
                   color: "#021550",
@@ -152,7 +152,7 @@ export default function HeroMarketplace() {
                   maxWidth: "240px",
                 }}
               >
-                See How It Works
+                Browse Tutors
               </Link>
             </div>
 
@@ -170,6 +170,10 @@ export default function HeroMarketplace() {
                 Prefer browsing? Browse Tuition Requests →
               </Link>
             </div>
+
+            <p style={{ margin: "0 0 1.25rem", color: "#021550", fontSize: "0.9rem", fontWeight: 800 }}>
+              Budget bhi aap ka. Time bhi aap ka. Tutor bhi aap ki choice.
+            </p>
 
             <div
               style={{

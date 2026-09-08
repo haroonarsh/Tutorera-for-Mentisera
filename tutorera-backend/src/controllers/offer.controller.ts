@@ -24,6 +24,7 @@ const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as c
 const expiry = () => new Date(Date.now() + 24 * 60 * 60 * 1000);
 const terminalOfferStates = ["accepted", "rejected", "withdrawn", "expired", "not_selected"];
 const PAYMENT_HOLD_MINUTES = 30;
+const OFFER_PROFILE_FIELDS = "isVerified averageRating totalReviews experience education subjects qualifications languages teachingMode availability videoIntro demoVideoStatus cnicVerificationStatus degreeVerificationStatus policeVerificationStatus homeTuitionEligible";
 
 function moderationReasons(message = "", amount?: number, baseline?: number) {
   const reasons: string[] = [];
@@ -250,12 +251,12 @@ export const getRequestOffers = async (req: AuthRequest, res: Response): Promise
   const request = await Request.findOne({ _id: req.params.requestId, student: req.user?._id });
   if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
   await Bid.updateMany({ request: request._id, expiresAt: { $lte: new Date() }, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" });
-  const offers = await Bid.find({ request: request._id }).populate("tutor", "name avatar city countryCode countryName phone averageRating").lean();
+  const offers = await Bid.find({ request: request._id }).populate("tutor", "name avatar city countryCode countryName").lean();
 
   const enriched = await Promise.all(offers.map(async offer => {
     const tutorId = (offer.tutor as any)._id;
     const [profile, completedSessions, offerStats, counterRows, latestNegotiation] = await Promise.all([
-      TutorProfile.findOne({ user: tutorId }).lean(),
+      TutorProfile.findOne({ user: tutorId }).select(OFFER_PROFILE_FIELDS).lean(),
       Booking.countDocuments({ tutor: tutorId, status: "completed" }),
       Bid.aggregate([
         { $match: { tutor: tutorId } },
@@ -337,6 +338,27 @@ export const getMyOffers = async (req: AuthRequest, res: Response): Promise<void
   await Bid.updateMany({ expiresAt: { $lte: new Date() }, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" });
   const filter = req.user?.role === "tutor" ? { tutor: userId } : { request: { $in: (await Request.find({ student: userId }).select("_id").lean()).map(item => item._id) } };
   const offers = await Bid.find(filter).populate("tutor", "name avatar city").populate("request", "subject level budget pricingUnit teachingMode city area schedule status allowCounterOffers student").sort("-updatedAt").lean();
-  const result = await Promise.all(offers.map(async offer => ({ ...offer, history: await OfferNegotiation.find({ offer: offer._id }).sort("sequenceNumber").lean() })));
+  const result = await Promise.all(offers.map(async offer => {
+    const tutorId = (offer.tutor as any)?._id;
+    const request = offer.request as any;
+    const [history, profile, completedSessions] = await Promise.all([
+      OfferNegotiation.find({ offer: offer._id }).sort("sequenceNumber").lean(),
+      tutorId ? TutorProfile.findOne({ user: tutorId }).select(OFFER_PROFILE_FIELDS).lean() : null,
+      tutorId ? Booking.countDocuments({ tutor: tutorId, status: "completed" }) : 0,
+    ]);
+    const match = profile && request?._id
+      ? await MatchingService.calculateMatchScore(request, profile as any)
+      : null;
+    return {
+      ...offer,
+      history,
+      profile,
+      completedSessions,
+      matchScore: match?.score,
+      matchTier: match?.tier,
+      matchReasons: match?.reasons || [],
+      matchScoreBreakdown: match?.scoreBreakdown || {},
+    };
+  }));
   res.json({ success: true, offers: result });
 };

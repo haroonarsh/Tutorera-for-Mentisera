@@ -8,7 +8,7 @@ import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
 import PostRequestModal from "./PostRequestModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
-import { Trash2, Clock } from "lucide-react";
+import { Trash2, Clock, Video, ShieldCheck } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
@@ -834,6 +834,12 @@ function RequestCard({
 
                       <p className={s.bidMessage}>{bid.profile?.isVerified ? "✓ Fully Verified · " : ""}{bid.profile?.averageRating?.toFixed(1) || "New"} rating ({bid.profile?.totalReviews || 0} reviews) · {bid.profile?.experience || 0} years · {bid.completedSessions || 0} completed · {bid.responseRate || 0}% response</p>
                       {!!bid.profile?.education?.length && <p className={s.bidMessage}>{bid.profile.education[0].degree} · {bid.profile.subjects?.join(", ")}</p>}
+                      <p className={s.bidMessage} aria-label="Tutor trust and eligibility checks">
+                        {bid.profile?.degreeVerificationStatus === "approved" && <><ShieldCheck size={13} aria-hidden="true" /> Educational Documents Verified · </>}
+                        {bid.profile?.cnicVerificationStatus === "approved" && <>Identity Verified · </>}
+                        {bid.profile?.policeVerificationStatus === "approved" && <>Background Check Approved · </>}
+                        {bid.profile?.homeTuitionEligible && <>Home Tuition Eligible</>}
+                      </p>
                       {bid.availability && <p className={s.bidMessage}>Availability: {bid.availability}</p>}
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
@@ -843,6 +849,11 @@ function RequestCard({
                             borderRadius: 8, color: "#374151", fontWeight: 500 }}>
                           View Profile
                         </Link>
+                        {bid.profile?.demoVideoStatus === "approved" && bid.profile.videoIntro && (
+                          <a href={bid.profile.videoIntro} target="_blank" rel="noopener noreferrer" className={s.btnOutline}>
+                            <Video size={14} aria-hidden="true" /> Watch Demo
+                          </a>
+                        )}
                         {["pending", "submitted", "viewed", "countered"].includes(bid.status) && (<>
                           <button
                             onClick={() => acceptBid(bid._id)}

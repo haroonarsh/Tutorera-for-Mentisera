@@ -29,6 +29,9 @@ export interface TutorOfferItem {
     rating?: number;
     reviewsCount?: number;
     experience?: number;
+    videoIntro?: string;
+    demoVideoStatus?: string;
+    homeTuitionEligible?: boolean;
   };
   amount: number;
   currency?: string;
@@ -51,6 +54,7 @@ interface OfferComparisonModalProps {
   offers: TutorOfferItem[];
   onAcceptOffer: (offerId: string) => void;
   onCounterOffer: (offerId: string, counterAmount: number) => void;
+  onDeclineOffer?: (offerId: string) => void;
 }
 
 export default function OfferComparisonModal({
@@ -63,6 +67,7 @@ export default function OfferComparisonModal({
   offers,
   onAcceptOffer,
   onCounterOffer,
+  onDeclineOffer,
 }: OfferComparisonModalProps) {
   const [counteringOfferId, setCounteringOfferId] = useState<string | null>(null);
   const [counterAmount, setCounterAmount] = useState<string>("");
@@ -73,7 +78,7 @@ export default function OfferComparisonModal({
 
   const handleSendCounter = (offerId: string) => {
     const amt = parseFloat(counterAmount);
-    if (!amt || isNaN(amt) || isNaN(amt)) return;
+    if (!amt || isNaN(amt) || amt <= 0) return;
     onCounterOffer(offerId, amt);
     setCounteringOfferId(null);
     setCounterAmount("");
@@ -279,6 +284,9 @@ export default function OfferComparisonModal({
                             <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
                               {isPoliceVerified ? "Police Cleared" : "No police check"}
                             </span>
+                            <span style={{ fontSize: "0.72rem", color: offer.tutor?.homeTuitionEligible ? "#059669" : "#64748b" }}>
+                              {offer.tutor?.homeTuitionEligible ? "Home tuition eligible" : "Online tuition only"}
+                            </span>
                           </div>
                         </td>
                         <td style={cellStyle}>
@@ -378,6 +386,22 @@ export default function OfferComparisonModal({
                               >
                                 Counter Rate
                               </button>
+                              <Link
+                                href={`/tutors/${offer.tutor._id}`}
+                                style={{ color: "#0329b2", fontWeight: 700, fontSize: "0.78rem", textDecoration: "none" }}
+                              >
+                                View Profile
+                              </Link>
+                              {offer.tutor.demoVideoStatus === "approved" && offer.tutor.videoIntro && (
+                                <a href={offer.tutor.videoIntro} target="_blank" rel="noopener noreferrer" style={{ color: "#0329b2", fontWeight: 700, fontSize: "0.78rem" }}>
+                                  Watch Demo Video
+                                </a>
+                              )}
+                              {onDeclineOffer && (
+                                <button type="button" onClick={() => onDeclineOffer(offer._id)} style={{ background: "transparent", color: "#b91c1c", border: 0, fontWeight: 700, fontSize: "0.78rem", cursor: "pointer" }}>
+                                  Reject Offer
+                                </button>
+                              )}
                             </div>
                           )}
                         </td>

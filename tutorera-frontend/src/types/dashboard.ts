@@ -73,6 +73,13 @@ export interface DashBid {
     experience?: number;
     education?: { degree: string; institution: string; year: number }[];
     subjects?: string[];
+    videoIntro?: string;
+    demoVideoStatus?: string;
+    cnicVerificationStatus?: string;
+    degreeVerificationStatus?: string;
+    policeVerificationStatus?: string;
+    homeTuitionEligible?: boolean;
+    teachingMode?: string;
   };
   createdAt: string;
 }

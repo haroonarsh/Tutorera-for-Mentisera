@@ -127,6 +127,23 @@ export default function OfferComparisonModal({
         ),
     },
     {
+      label: "Trust & Eligibility",
+      render: (bid) => (
+        <span style={{ fontSize: "0.82em", lineHeight: 1.5 }}>
+          {bid.profile?.degreeVerificationStatus === "approved" ? "Education verified" : "Education pending"}<br />
+          {bid.profile?.cnicVerificationStatus === "approved" ? "Identity verified" : "Identity pending"}<br />
+          {bid.profile?.policeVerificationStatus === "approved" ? "Background check approved" : "No approved background check"}<br />
+          {bid.profile?.homeTuitionEligible ? "Home tuition eligible" : "Online tuition only"}
+        </span>
+      ),
+    },
+    {
+      label: "Demo Video",
+      render: (bid) => bid.profile?.demoVideoStatus === "approved" && bid.profile.videoIntro ? (
+        <a href={bid.profile.videoIntro} target="_blank" rel="noopener noreferrer">Watch demo</a>
+      ) : <span style={{ color: "#9ca3af" }}>Not available</span>,
+    },
+    {
       label: "Message",
       render: (bid) => (
         <span style={{ fontSize: "0.85em", color: "#374151" }}>
