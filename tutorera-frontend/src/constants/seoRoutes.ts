@@ -11,6 +11,7 @@ export const SEO_PRIVATE_PATHS = [
   "/earnings",
   "/notifications",
   "/offers",
+  "/opportunities",
   "/onboarding",
   "/profile",
   "/referral",
