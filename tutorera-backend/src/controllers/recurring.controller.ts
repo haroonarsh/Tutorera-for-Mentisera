@@ -3,6 +3,15 @@ import { AuthRequest } from "../types";
 import RecurringPlan from "../models/RecurringPlan.model";
 import RecurringBooking from "../models/RecurringBooking.model";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
+import ParentProfile from "../models/ParentProfile.model";
+
+const recurringStatuses = new Set(["active", "paused", "completed", "cancelled"]);
+
+async function managedStudentIds(req: AuthRequest): Promise<any[]> {
+  if (req.user?.role !== "parent") return req.user?._id ? [req.user._id] : [];
+  const profile = await ParentProfile.findOne({ user: req.user._id }).select("children.studentUser").lean();
+  return profile?.children.map(child => child.studentUser) || [];
+}
 
 const recurringBillingCapability = {
   enabled: false,
@@ -19,13 +28,23 @@ export const getAvailablePlans = async (_req: AuthRequest, res: Response): Promi
 };
 
 export const getMyRecurringBookings = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { status } = req.query;
-  const filter: any = { student: req.user?._id };
+  const { status, childId } = req.query;
+  if (status && !recurringStatuses.has(String(status))) {
+    res.status(400).json({ success: false, message: "Invalid recurring plan status." });
+    return;
+  }
+  const studentIds = await managedStudentIds(req);
+  if (childId && !studentIds.some(id => id.toString() === String(childId))) {
+    res.status(403).json({ success: false, message: "This child account is not linked to you." });
+    return;
+  }
+  const filter: any = { student: childId || { $in: studentIds } };
 
   if (status) filter.status = status;
 
   const bookings = await RecurringBooking.find(filter)
     .populate("tutor", "name")
+    .populate("student", "name")
     .populate("plan", "name type sessionCount totalPrice")
     .sort("-createdAt")
     .lean();
@@ -35,6 +54,10 @@ export const getMyRecurringBookings = async (req: AuthRequest, res: Response): P
 
 export const getRecurringBookingsForTutor = async (req: AuthRequest, res: Response): Promise<void> => {
   const { status } = req.query;
+  if (status && !recurringStatuses.has(String(status))) {
+    res.status(400).json({ success: false, message: "Invalid recurring plan status." });
+    return;
+  }
   const filter: any = { tutor: req.user?._id };
 
   if (status) filter.status = status;
@@ -57,9 +80,10 @@ export const subscribeToPlan = async (_req: AuthRequest, res: Response): Promise
 
 export const pauseRecurringBooking = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
+  const studentIds = await managedStudentIds(req);
 
   const booking = await RecurringBooking.findOneAndUpdate(
-    { _id: id, student: req.user?._id, status: "active" },
+    { _id: id, student: { $in: studentIds }, status: "active", paymentStatus: "confirmed" },
     { status: "paused" },
     { new: true }
   );
@@ -70,7 +94,7 @@ export const pauseRecurringBooking = async (req: AuthRequest, res: Response): Pr
   }
 
   await StudentTutorRelationship.findOneAndUpdate(
-    { student: req.user?._id, tutor: booking.tutor, subject: booking.subject },
+    { student: booking.student, tutor: booking.tutor, subject: booking.subject },
     { currentRecurringArrangement: "none", relationshipStatus: "paused" }
   );
 
@@ -79,9 +103,10 @@ export const pauseRecurringBooking = async (req: AuthRequest, res: Response): Pr
 
 export const resumeRecurringBooking = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
+  const studentIds = await managedStudentIds(req);
 
   const booking = await RecurringBooking.findOneAndUpdate(
-    { _id: id, student: req.user?._id, status: "paused", paymentStatus: "confirmed" },
+    { _id: id, student: { $in: studentIds }, status: "paused", paymentStatus: "confirmed" },
     { status: "active" },
     { new: true }
   );
@@ -92,7 +117,7 @@ export const resumeRecurringBooking = async (req: AuthRequest, res: Response): P
   }
 
   await StudentTutorRelationship.findOneAndUpdate(
-    { student: req.user?._id, tutor: booking.tutor, subject: booking.subject },
+    { student: booking.student, tutor: booking.tutor, subject: booking.subject },
     { currentRecurringArrangement: booking.planType, relationshipStatus: "active" }
   );
 
@@ -101,9 +126,10 @@ export const resumeRecurringBooking = async (req: AuthRequest, res: Response): P
 
 export const cancelRecurringBooking = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
+  const studentIds = await managedStudentIds(req);
 
   const booking = await RecurringBooking.findOneAndUpdate(
-    { _id: id, student: req.user?._id },
+    { _id: id, student: { $in: studentIds }, status: { $in: ["active", "paused"] } },
     { status: "cancelled" },
     { new: true }
   );
@@ -114,7 +140,7 @@ export const cancelRecurringBooking = async (req: AuthRequest, res: Response): P
   }
 
   await StudentTutorRelationship.findOneAndUpdate(
-    { student: req.user?._id, tutor: booking.tutor, subject: booking.subject },
+    { student: booking.student, tutor: booking.tutor, subject: booking.subject },
     { currentRecurringArrangement: "none", relationshipStatus: "ended" }
   );
 

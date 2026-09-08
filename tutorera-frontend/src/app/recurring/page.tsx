@@ -39,6 +39,7 @@ type RecurringBooking = {
   student?: { _id: string; name: string };
   plan?: Plan;
 };
+type LinkedChild = { studentUser: string; name: string; level?: string };
 
 const C = UI_COLORS;
 
@@ -62,13 +63,20 @@ function RecurringLearningContent() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [children, setChildren] = useState<LinkedChild[]>([]);
+  const [selectedChild, setSelectedChild] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const parentRes = user?.role === "parent" ? await api.get("/parent/profile") : null;
+      const linkedChildren: LinkedChild[] = (parentRes?.data?.profile?.children || []).map((child: any) => ({ studentUser: String(child.studentUser), name: child.name, level: child.level }));
+      if (user?.role === "parent") setChildren(linkedChildren);
+      const childId = selectedChild && linkedChildren.some(child => child.studentUser === selectedChild) ? selectedChild : linkedChildren[0]?.studentUser || "";
+      if (user?.role === "parent" && childId !== selectedChild) setSelectedChild(childId);
       const [planRes, bookingRes] = await Promise.all([
         api.get("/recurring/plans"),
-        user?.role === "tutor" ? api.get("/recurring/tutor-bookings") : api.get("/recurring/my-bookings"),
+        user?.role === "tutor" ? api.get("/recurring/tutor-bookings") : api.get("/recurring/my-bookings", { params: childId ? { childId } : undefined }),
       ]);
       setPlans(planRes.data?.plans || []);
       setSubscription(planRes.data?.subscription || { enabled: false, message: "Recurring plan checkout is not available yet." });
@@ -78,7 +86,7 @@ function RecurringLearningContent() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [selectedChild, setSelectedChild, user]);
 
   useEffect(() => { if (user) void load(); }, [load, user]);
 
@@ -168,6 +176,8 @@ function RecurringLearningContent() {
 
       <section aria-labelledby="active-heading" style={{ marginTop: "3rem" }}>
         <div style={styles.sectionHeader}><div><p style={styles.eyebrow}>YOUR PLANS · {activeCount} ACTIVE</p><h2 id="active-heading" style={styles.sectionTitle}>{user.role === "tutor" ? "Students on recurring plans" : "Your learning plans"}</h2></div></div>
+        {user.role === "parent" && children.length > 0 && <label style={styles.childPicker}><span>Manage plans for</span><select value={selectedChild} onChange={event=>setSelectedChild(event.target.value)}>{children.map(child=><option key={child.studentUser} value={child.studentUser}>{child.name}{child.level?` · ${child.level}`:""}</option>)}</select></label>}
+        {user.role === "parent" && !loading && children.length === 0 && <div style={styles.notice} role="status"><ShieldCheck size={18}/><span>Link a student account with their consent before managing recurring plans. <Link href="/parents" style={styles.textLink}>Manage linked students.</Link></span></div>}
         {loading ? <div style={styles.loading}><RefreshCw className="spin" size={20} /> Loading your plans…</div> : bookings.length === 0 ? <div style={styles.empty}>No recurring plans yet. Start with a tutor profile when you are ready for a consistent schedule.</div> : <div style={{ display: "grid", gap: "0.9rem" }}>
           {bookings.map((booking) => <article key={booking._id} style={styles.bookingCard}><div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}><div><h3 style={styles.bookingTitle}>{booking.subject}</h3><p style={styles.muted}>{user.role === "tutor" ? `Student: ${booking.student?.name || "Student"}` : `Tutor: ${booking.tutor?.name || "Tutor"}`} · Started {date(booking.startDate)}</p></div><span style={styles.status}>{booking.status}</span></div><div style={styles.progressRow}><span>{booking.sessionsCompleted} delivered</span><strong>{booking.sessionsRemaining} remaining</strong></div><div style={styles.progress}><span style={{ width: `${Math.min(100, (booking.sessionsCompleted / Math.max(1, booking.sessionsCompleted + booking.sessionsRemaining)) * 100)}%` }} /></div><p style={styles.muted}>Next billing: {date(booking.nextBillingDate)} · Payment: {booking.paymentStatus || "pending"} · Paid: {money(booking.totalPaid)}</p><div style={styles.actions}>{user.role === "tutor" && booking.status === "active" && booking.paymentStatus === "confirmed" && <button type="button" onClick={() => void recordSession(booking)} disabled={actionId === booking._id} style={styles.secondary}>{actionId === booking._id ? "Saving…" : "Mark session delivered"}</button>}{user.role !== "tutor" && booking.status === "active" && <button type="button" onClick={() => void action(booking._id, "pause")} disabled={actionId === booking._id} style={styles.secondary}><Pause size={15} /> Pause</button>}{user.role !== "tutor" && booking.status === "paused" && booking.paymentStatus === "confirmed" && <button type="button" onClick={() => void action(booking._id, "resume")} disabled={actionId === booking._id} style={styles.secondary}><Play size={15} /> Resume</button>}{user.role !== "tutor" && ["active", "paused"].includes(booking.status) && <button type="button" onClick={() => void action(booking._id, "cancel")} disabled={actionId === booking._id} style={styles.danger}><X size={15} /> Cancel plan</button>}</div></article>)}
         </div>}
@@ -204,6 +214,7 @@ const styles: Record<string, React.CSSProperties> = {
   progressRow: { display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#475569", marginTop: "1rem" },
   progress: { background: "#e2e8f0", borderRadius: 999, height: 8, overflow: "hidden", margin: "0.4rem 0 0.7rem" },
   actions: { display: "flex", gap: "0.5rem", flexWrap: "wrap" },
+  childPicker: { display: "grid", gap: "0.35rem", maxWidth: 420, color: "#475569", fontSize: "0.8rem", fontWeight: 800, marginBottom: "1rem" },
   muted: { color: "#64748b", lineHeight: 1.55, fontSize: "0.82rem", margin: "0.35rem 0" },
   loading: { display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", padding: "2.5rem", color: "#64748b" },
   empty: { border: "1px dashed #cbd5e1", background: "#f8fafc", borderRadius: "0.9rem", padding: "2rem", color: "#64748b", textAlign: "center" },
