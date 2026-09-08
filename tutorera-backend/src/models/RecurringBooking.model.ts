@@ -15,6 +15,8 @@ export interface IRecurringBooking extends Document {
   nextBillingDate?: Date;
   endDate?: Date;
   status: "active" | "paused" | "completed" | "cancelled";
+  paymentStatus: "pending" | "authorized" | "confirmed" | "failed" | "refunded";
+  paymentReference?: string;
   totalPaid: number;
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +47,13 @@ const recurringBookingSchema = new Schema<IRecurringBooking>(
       default: "active",
       index: true,
     },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "authorized", "confirmed", "failed", "refunded"],
+      default: "pending",
+      index: true,
+    },
+    paymentReference: { type: String, trim: true },
     totalPaid: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
@@ -52,5 +61,6 @@ const recurringBookingSchema = new Schema<IRecurringBooking>(
 
 recurringBookingSchema.index({ student: 1, tutor: 1, status: 1 });
 recurringBookingSchema.index({ nextBillingDate: 1 });
+recurringBookingSchema.index({ status: 1, paymentStatus: 1, nextBillingDate: 1 });
 
 export default mongoose.model<IRecurringBooking>("RecurringBooking", recurringBookingSchema);

@@ -3,14 +3,19 @@ import { AuthRequest } from "../types";
 import RecurringPlan from "../models/RecurringPlan.model";
 import RecurringBooking from "../models/RecurringBooking.model";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
-import Booking from "../models/Booking.model";
+
+const recurringBillingCapability = {
+  enabled: false,
+  code: "RECURRING_BILLING_UNAVAILABLE",
+  message: "Recurring plan checkout is not available yet. Book an individual lesson instead.",
+} as const;
 
 export const getAvailablePlans = async (_req: AuthRequest, res: Response): Promise<void> => {
   const plans = await RecurringPlan.find({ isActive: true })
     .sort({ sessionCount: 1 })
     .lean();
 
-  res.status(200).json({ success: true, plans });
+  res.status(200).json({ success: true, plans, subscription: recurringBillingCapability });
 };
 
 export const getMyRecurringBookings = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -43,59 +48,11 @@ export const getRecurringBookingsForTutor = async (req: AuthRequest, res: Respon
   res.status(200).json({ success: true, bookings });
 };
 
-export const subscribeToPlan = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { tutorId, subject, planId, dayOfWeek, timeOfDay } = req.body;
-
-  if (!tutorId || !subject || !planId) {
-    res.status(400).json({ success: false, message: "tutorId, subject, and planId are required." });
-    return;
-  }
-
-  const plan = await RecurringPlan.findById(planId);
-  if (!plan || !plan.isActive) {
-    res.status(404).json({ success: false, message: "Plan not found or inactive." });
-    return;
-  }
-
-  const existingActive = await RecurringBooking.findOne({
-    student: req.user?._id,
-    tutor: tutorId,
-    subject,
-    status: "active",
-  });
-
-  if (existingActive) {
-    res.status(409).json({ success: false, message: "You already have an active recurring plan for this tutor and subject." });
-    return;
-  }
-
-  const nextBillingDate = new Date();
-  nextBillingDate.setDate(nextBillingDate.getDate() + 7 * plan.durationWeeks);
-
-  const recurringBooking = await RecurringBooking.create({
-    student: req.user?._id,
-    tutor: tutorId,
-    subject,
-    plan: plan._id,
-    planType: plan.type,
-    sessionsRemaining: plan.sessionCount,
-    sessionsCompleted: 0,
-    sessionsUsed: [],
-    dayOfWeek,
-    timeOfDay,
-    startDate: new Date(),
-    nextBillingDate,
-    status: "active",
-    totalPaid: 0,
-  });
-
-  await StudentTutorRelationship.findOneAndUpdate(
-    { student: req.user?._id, tutor: tutorId, subject },
-    { currentRecurringArrangement: plan.type },
-    { upsert: true, new: true }
-  );
-
-  res.status(201).json({ success: true, recurringBooking });
+export const subscribeToPlan = async (_req: AuthRequest, res: Response): Promise<void> => {
+  // A subscription must only be created by a verified payment callback. There
+  // is no recurring mandate/checkout provider configured yet, so this endpoint
+  // deliberately fails closed instead of creating an unpaid active booking.
+  res.status(503).json({ success: false, ...recurringBillingCapability });
 };
 
 export const pauseRecurringBooking = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -124,13 +81,13 @@ export const resumeRecurringBooking = async (req: AuthRequest, res: Response): P
   const { id } = req.params;
 
   const booking = await RecurringBooking.findOneAndUpdate(
-    { _id: id, student: req.user?._id, status: "paused" },
+    { _id: id, student: req.user?._id, status: "paused", paymentStatus: "confirmed" },
     { status: "active" },
     { new: true }
   );
 
   if (!booking) {
-    res.status(404).json({ success: false, message: "Paused recurring booking not found." });
+    res.status(409).json({ success: false, message: "Only a paid, paused recurring booking can be resumed." });
     return;
   }
 
@@ -167,37 +124,41 @@ export const cancelRecurringBooking = async (req: AuthRequest, res: Response): P
 export const recordSessionUse = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id, bookingId } = req.params;
 
-  const recurringBooking = await RecurringBooking.findOne({
-    _id: bookingId,
-    tutor: req.user?._id,
-    status: "active",
-  });
+  const sessionIndex = Number(id);
+  if (!Number.isSafeInteger(sessionIndex) || sessionIndex < 1) {
+    res.status(400).json({ success: false, message: "A valid positive session number is required." });
+    return;
+  }
+
+  const recurringBooking = await RecurringBooking.findOneAndUpdate(
+    {
+      _id: bookingId,
+      tutor: req.user?._id,
+      status: "active",
+      paymentStatus: "confirmed",
+      sessionsRemaining: { $gt: 0 },
+      sessionsUsed: { $ne: sessionIndex },
+    },
+    {
+      $addToSet: { sessionsUsed: sessionIndex },
+      $inc: { sessionsCompleted: 1, sessionsRemaining: -1 },
+    },
+    { new: true }
+  );
 
   if (!recurringBooking) {
-    res.status(404).json({ success: false, message: "Active recurring booking not found." });
+    res.status(409).json({ success: false, message: "This session was already recorded, or the recurring plan is not active and paid." });
     return;
   }
-
-  const sessionIndex = parseInt(id as string, 10);
-  if (recurringBooking.sessionsUsed.includes(sessionIndex)) {
-    res.status(400).json({ success: false, message: "Session already recorded." });
-    return;
-  }
-
-  recurringBooking.sessionsUsed.push(sessionIndex);
-  recurringBooking.sessionsCompleted += 1;
-  recurringBooking.sessionsRemaining = Math.max(0, recurringBooking.sessionsRemaining - 1);
 
   if (recurringBooking.sessionsRemaining === 0) {
     recurringBooking.status = "completed";
+    await recurringBooking.save();
   }
-
-  await recurringBooking.save();
 
   await StudentTutorRelationship.findOneAndUpdate(
     { student: recurringBooking.student, tutor: req.user?._id, subject: recurringBooking.subject },
     {
-      $inc: { completedBookings: 1, repeatBookingCount: 1 },
       lastSessionAt: new Date(),
     }
   );

@@ -33,6 +33,7 @@ type RecurringBooking = {
   startDate: string;
   nextBillingDate?: string;
   status: "active" | "paused" | "completed" | "cancelled";
+  paymentStatus?: "pending" | "authorized" | "confirmed" | "failed" | "refunded";
   totalPaid: number;
   tutor?: { _id: string; name: string };
   student?: { _id: string; name: string };
@@ -56,6 +57,7 @@ function RecurringLearningContent() {
   const subject = searchParams.get("subject") || "";
   const tutorName = searchParams.get("tutorName") || "your tutor";
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [subscription, setSubscription] = useState({ enabled: false, message: "Recurring plan checkout is not available yet." });
   const [bookings, setBookings] = useState<RecurringBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -69,6 +71,7 @@ function RecurringLearningContent() {
         user?.role === "tutor" ? api.get("/recurring/tutor-bookings") : api.get("/recurring/my-bookings"),
       ]);
       setPlans(planRes.data?.plans || []);
+      setSubscription(planRes.data?.subscription || { enabled: false, message: "Recurring plan checkout is not available yet." });
       setBookings(bookingRes.data?.bookings || []);
     } catch (error) {
       showError(error, "Unable to load recurring learning plans.");
@@ -149,22 +152,24 @@ function RecurringLearningContent() {
       {user.role !== "tutor" && (
         <section aria-labelledby="plans-heading">
           <div style={styles.sectionHeader}><div><p style={styles.eyebrow}>PLANS</p><h2 id="plans-heading" style={styles.sectionTitle}>Pick a rhythm that fits</h2></div><Link href="/tutors" style={styles.textLink}>Browse tutors</Link></div>
+          {!loading && !subscription.enabled && <div style={styles.notice} role="status"><ShieldCheck size={18} /><span>{subscription.message} <Link href="/tutors" style={styles.textLink}>Find a tutor for a single booking.</Link></span></div>}
           {loading ? <div style={styles.loading}><RefreshCw className="spin" size={20} /> Loading plans…</div> : plans.length === 0 ? <div style={styles.empty}>Recurring plans are being prepared. You can still book individual sessions today.</div> : <div style={styles.grid}>
             {plans.map((plan) => <article key={plan._id} style={styles.planCard}>
               {plan.discountPercent > 0 && <span style={styles.discount}>{plan.discountPercent}% package saving</span>}
               <h3 style={styles.planName}>{plan.name}</h3><p style={styles.muted}>{plan.description || `${plan.sessionCount} sessions over ${plan.durationWeeks} weeks.`}</p>
               <div style={styles.price}>{money(plan.totalPrice)} <small>{money(plan.pricePerSession)}/session</small></div>
               <ul style={styles.features}><li><Check size={15} /> {plan.sessionCount} sessions</li><li><Check size={15} /> Valid for {plan.durationWeeks} weeks</li><li><Check size={15} /> Pause or cancel from your dashboard</li></ul>
-              <button type="button" onClick={() => void subscribe(plan)} disabled={submitting !== null} style={{ ...styles.primary, width: "100%", opacity: submitting && submitting !== plan._id ? 0.55 : 1 }}>{submitting === plan._id ? "Starting…" : tutorId && subject ? "Start this plan" : "Choose from a tutor profile"}</button>
+              <button type="button" onClick={() => void subscribe(plan)} disabled={!subscription.enabled || submitting !== null} aria-describedby={!subscription.enabled ? "recurring-unavailable" : undefined} style={{ ...styles.primary, width: "100%", opacity: !subscription.enabled || (submitting && submitting !== plan._id) ? 0.55 : 1, cursor: subscription.enabled ? "pointer" : "not-allowed" }}>{submitting === plan._id ? "Starting…" : subscription.enabled ? tutorId && subject ? "Start this plan" : "Choose from a tutor profile" : "Recurring checkout unavailable"}</button>
             </article>)}
           </div>}
+          {!subscription.enabled && <span id="recurring-unavailable" style={styles.srOnly}>Recurring checkout is unavailable.</span>}
         </section>
       )}
 
       <section aria-labelledby="active-heading" style={{ marginTop: "3rem" }}>
         <div style={styles.sectionHeader}><div><p style={styles.eyebrow}>YOUR PLANS · {activeCount} ACTIVE</p><h2 id="active-heading" style={styles.sectionTitle}>{user.role === "tutor" ? "Students on recurring plans" : "Your learning plans"}</h2></div></div>
         {loading ? <div style={styles.loading}><RefreshCw className="spin" size={20} /> Loading your plans…</div> : bookings.length === 0 ? <div style={styles.empty}>No recurring plans yet. Start with a tutor profile when you are ready for a consistent schedule.</div> : <div style={{ display: "grid", gap: "0.9rem" }}>
-          {bookings.map((booking) => <article key={booking._id} style={styles.bookingCard}><div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}><div><h3 style={styles.bookingTitle}>{booking.subject}</h3><p style={styles.muted}>{user.role === "tutor" ? `Student: ${booking.student?.name || "Student"}` : `Tutor: ${booking.tutor?.name || "Tutor"}`} · Started {date(booking.startDate)}</p></div><span style={styles.status}>{booking.status}</span></div><div style={styles.progressRow}><span>{booking.sessionsCompleted} delivered</span><strong>{booking.sessionsRemaining} remaining</strong></div><div style={styles.progress}><span style={{ width: `${Math.min(100, (booking.sessionsCompleted / Math.max(1, booking.sessionsCompleted + booking.sessionsRemaining)) * 100)}%` }} /></div><p style={styles.muted}>Next billing: {date(booking.nextBillingDate)} · Paid: {money(booking.totalPaid)}</p><div style={styles.actions}>{user.role === "tutor" && booking.status === "active" && <button type="button" onClick={() => void recordSession(booking)} disabled={actionId === booking._id} style={styles.secondary}>{actionId === booking._id ? "Saving…" : "Mark session delivered"}</button>}{user.role !== "tutor" && booking.status === "active" && <button type="button" onClick={() => void action(booking._id, "pause")} disabled={actionId === booking._id} style={styles.secondary}><Pause size={15} /> Pause</button>}{user.role !== "tutor" && booking.status === "paused" && <button type="button" onClick={() => void action(booking._id, "resume")} disabled={actionId === booking._id} style={styles.secondary}><Play size={15} /> Resume</button>}{user.role !== "tutor" && ["active", "paused"].includes(booking.status) && <button type="button" onClick={() => void action(booking._id, "cancel")} disabled={actionId === booking._id} style={styles.danger}><X size={15} /> Cancel plan</button>}</div></article>)}
+          {bookings.map((booking) => <article key={booking._id} style={styles.bookingCard}><div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}><div><h3 style={styles.bookingTitle}>{booking.subject}</h3><p style={styles.muted}>{user.role === "tutor" ? `Student: ${booking.student?.name || "Student"}` : `Tutor: ${booking.tutor?.name || "Tutor"}`} · Started {date(booking.startDate)}</p></div><span style={styles.status}>{booking.status}</span></div><div style={styles.progressRow}><span>{booking.sessionsCompleted} delivered</span><strong>{booking.sessionsRemaining} remaining</strong></div><div style={styles.progress}><span style={{ width: `${Math.min(100, (booking.sessionsCompleted / Math.max(1, booking.sessionsCompleted + booking.sessionsRemaining)) * 100)}%` }} /></div><p style={styles.muted}>Next billing: {date(booking.nextBillingDate)} · Payment: {booking.paymentStatus || "pending"} · Paid: {money(booking.totalPaid)}</p><div style={styles.actions}>{user.role === "tutor" && booking.status === "active" && booking.paymentStatus === "confirmed" && <button type="button" onClick={() => void recordSession(booking)} disabled={actionId === booking._id} style={styles.secondary}>{actionId === booking._id ? "Saving…" : "Mark session delivered"}</button>}{user.role !== "tutor" && booking.status === "active" && <button type="button" onClick={() => void action(booking._id, "pause")} disabled={actionId === booking._id} style={styles.secondary}><Pause size={15} /> Pause</button>}{user.role !== "tutor" && booking.status === "paused" && booking.paymentStatus === "confirmed" && <button type="button" onClick={() => void action(booking._id, "resume")} disabled={actionId === booking._id} style={styles.secondary}><Play size={15} /> Resume</button>}{user.role !== "tutor" && ["active", "paused"].includes(booking.status) && <button type="button" onClick={() => void action(booking._id, "cancel")} disabled={actionId === booking._id} style={styles.danger}><X size={15} /> Cancel plan</button>}</div></article>)}
         </div>}
       </section>
       <style jsx>{`.spin{animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.spin{animation:none}}`}</style>
@@ -180,6 +185,7 @@ const styles: Record<string, React.CSSProperties> = {
   lede: { maxWidth: 620, color: "#dbeafe", lineHeight: 1.65, margin: "0.9rem 0 0" },
   trust: { alignSelf: "flex-end", display: "inline-flex", gap: "0.45rem", alignItems: "center", background: "rgba(255,255,255,.12)", padding: "0.65rem 0.8rem", borderRadius: 999, fontSize: "0.8rem", fontWeight: 700 },
   context: { display: "flex", alignItems: "center", gap: "0.6rem", background: "#eef5ff", border: "1px solid #bfdbfe", padding: "0.9rem 1rem", borderRadius: "0.75rem", marginBottom: "2rem", color: C.primary },
+  notice: { display: "flex", alignItems: "center", gap: "0.6rem", background: "#fffbeb", border: "1px solid #fcd34d", padding: "0.9rem 1rem", borderRadius: "0.75rem", marginBottom: "1rem", color: "#713f12" },
   sectionHeader: { display: "flex", justifyContent: "space-between", alignItems: "end", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" },
   sectionTitle: { margin: 0, fontSize: "1.55rem", fontWeight: 850 },
   textLink: { color: "#0329B2", fontWeight: 800, textDecoration: "none" },
@@ -201,6 +207,7 @@ const styles: Record<string, React.CSSProperties> = {
   muted: { color: "#64748b", lineHeight: 1.55, fontSize: "0.82rem", margin: "0.35rem 0" },
   loading: { display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", padding: "2.5rem", color: "#64748b" },
   empty: { border: "1px dashed #cbd5e1", background: "#f8fafc", borderRadius: "0.9rem", padding: "2rem", color: "#64748b", textAlign: "center" },
+  srOnly: { position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 },
 };
 
 export default function RecurringLearningPage() {

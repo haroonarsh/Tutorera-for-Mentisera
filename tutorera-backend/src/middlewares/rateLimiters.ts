@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import jwt from "jsonwebtoken";
 
 // General API-wide limiter — generous, just to stop obvious abuse/scraping
@@ -71,10 +71,11 @@ export const aiChatLimiter = rateLimit({
             if (auth?.startsWith("Bearer ")) {
                 const token = auth.slice(7);
                 const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id?: string };
-                if (payload.id) return payload.id;
+                if (payload.id) return `user:${payload.id}`;
             }
         } catch { /* fall through to IP */ }
-        return (req as any).ip ?? (req as any).socket?.remoteAddress ?? "unknown";
+        const address = req.ip || req.socket.remoteAddress;
+        return address ? `ip:${ipKeyGenerator(address)}` : "ip:unknown";
     },
 });
 
