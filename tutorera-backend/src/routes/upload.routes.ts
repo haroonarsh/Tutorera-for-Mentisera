@@ -15,17 +15,31 @@ router.post(
   uploadAvatar
 );
 
-// Verification docs — tutor only
+// Verification docs — tutor only (initial submission or resubmission)
+const verificationFields = uploadVerificationMulter.fields([
+  { name: "cnicFront", maxCount: 1 },
+  { name: "cnicBack", maxCount: 1 },
+  { name: "degree", maxCount: 1 },
+  { name: "policeCertificate", maxCount: 1 },
+  { name: "videoIntro", maxCount: 1 },
+]);
+
 router.post(
   "/verification",
   uploadLimiter,
   protect,
   authorize("tutor"),
-  uploadVerificationMulter.fields([
-    { name: "cnic", maxCount: 1 },
-    { name: "degree", maxCount: 1 },
-    { name: "videoIntro", maxCount: 1 },
-  ]),
+  verificationFields,
+  uploadVerificationDocs
+);
+
+// Alias: /resubmit — same handler, same file fields, used from the resubmit panel
+router.post(
+  "/resubmit",
+  uploadLimiter,
+  protect,
+  authorize("tutor"),
+  verificationFields,
   uploadVerificationDocs
 );
 

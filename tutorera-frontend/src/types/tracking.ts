@@ -76,6 +76,20 @@ export interface TrackingPayloadBase {
   history: StatusHistoryEntry[];
 }
 
+export interface VerificationComponent {
+  status: ComponentStatus;
+  rejectionReason: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export interface VerificationComponents {
+  cnic: VerificationComponent;
+  degree: VerificationComponent;
+  demoVideo: VerificationComponent;
+  police: VerificationComponent;
+}
+
 export interface AuthenticatedTrackingPayload extends TrackingPayloadBase {
   reVerificationRequired: boolean;
   suspended: boolean;
@@ -84,6 +98,7 @@ export interface AuthenticatedTrackingPayload extends TrackingPayloadBase {
   actionRequired: ActionRequired | null;
   publicTrackingPath: string;
   trackingToken?: string;
+  verificationComponents: VerificationComponents;
 }
 
 export type PublicTrackingPayload = TrackingPayloadBase;

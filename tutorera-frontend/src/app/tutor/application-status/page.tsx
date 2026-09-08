@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import api from "@/lib/axios";
 import { AuthenticatedTrackingPayload } from "@/types/tracking";
 import s from "@/components/Tracking/tracking.module.css";
@@ -102,6 +103,59 @@ export default function TutorApplicationStatusPage() {
           lastUpdatedAt={payload.lastUpdatedAt}
           submittedAt={payload.submittedAt}
         />
+
+        {/* Rejection alert — shown when any component is rejected */}
+        {payload.verificationComponents && (
+          (() => {
+            const vc = payload.verificationComponents;
+            const rejectedItems = [
+              vc.cnic.status === "rejected" && "CNIC",
+              vc.degree.status === "rejected" && "Degree document",
+              vc.demoVideo.status === "rejected" && "Demo video",
+              vc.police.status === "rejected" && "Police certificate",
+            ].filter(Boolean) as string[];
+            if (rejectedItems.length === 0) return null;
+            return (
+              <div style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 12,
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
+                marginBottom: 8,
+              }}>
+                <div>
+                  <p style={{ margin: "0 0 4px", fontWeight: 700, color: "#991b1b", fontSize: 15 }}>
+                    <AlertTriangle aria-hidden="true" size={17} style={{ verticalAlign: "text-bottom", marginRight: 6 }} /> Action Required — {rejectedItems.length} document{rejectedItems.length !== 1 ? "s" : ""} rejected
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13, color: "#7f1d1d" }}>
+                    {rejectedItems.join(", ")} — please re-upload corrected files.
+                  </p>
+                </div>
+                <Link
+                  href="/tutor/resubmit-docs"
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 20px",
+                    background: "#dc2626",
+                    color: "#fff",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    textDecoration: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Re-upload Documents →
+                </Link>
+              </div>
+            );
+          })()
+        )}
 
         {showActionRequired && payload.actionRequired && (
           <ActionRequiredPanel action={payload.actionRequired} danger={payload.canonicalStatus === "RE_VERIFICATION_REQUIRED"} />

@@ -68,6 +68,7 @@ export const uploadVerificationDocs = async (
 
   const updateData: Record<string, any> = {};
   const resubmittedDocs: string[] = [];
+  const replacedAssets: { publicId: string; resourceType?: "video" }[] = [];
 
   // ── CNIC Front (private — sensitive identity document) ──
   if (files.cnicFront?.[0]) {
@@ -76,19 +77,15 @@ export const uploadVerificationDocs = async (
       res.status(400).json({ success: false, message: `CNIC front file is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
-    if (existingProfile.cnicFrontPublicId) {
-      await deleteFromCloudinary(existingProfile.cnicFrontPublicId).catch(() => {});
-    }
     try {
       const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
       updateData.cnicFront = result.secure_url;
       updateData.cnicFrontPublicId = result.public_id;
       updateData.cnicSubmittedAt = new Date();
-      if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
-        updateData.cnicVerificationStatus = "pending";
-        updateData.cnicRejectionReason = "";
-        resubmittedDocs.push("CNIC");
-      }
+      updateData.cnicVerificationStatus = "pending";
+      updateData.cnicRejectionReason = "";
+      resubmittedDocs.push("CNIC");
+      if (existingProfile.cnicFrontPublicId) replacedAssets.push({ publicId: existingProfile.cnicFrontPublicId });
     } catch (err: any) {
       if (err.message?.includes("content policy")) {
         res.status(400).json({ success: false, message: "CNIC front image contains prohibited content and could not be uploaded." });
@@ -105,18 +102,14 @@ export const uploadVerificationDocs = async (
       res.status(400).json({ success: false, message: `CNIC back file is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
-    if (existingProfile.cnicBackPublicId) {
-      await deleteFromCloudinary(existingProfile.cnicBackPublicId).catch(() => {});
-    }
     try {
       const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
       updateData.cnicBack = result.secure_url;
       updateData.cnicBackPublicId = result.public_id;
-      if (existingProfile.cnicVerificationStatus === "approved" || existingProfile.cnicVerificationStatus === "rejected") {
-        updateData.cnicVerificationStatus = "pending";
-        updateData.cnicRejectionReason = "";
-        if (!resubmittedDocs.includes("CNIC")) resubmittedDocs.push("CNIC");
-      }
+      updateData.cnicVerificationStatus = "pending";
+      updateData.cnicRejectionReason = "";
+      if (!resubmittedDocs.includes("CNIC")) resubmittedDocs.push("CNIC");
+      if (existingProfile.cnicBackPublicId) replacedAssets.push({ publicId: existingProfile.cnicBackPublicId });
     } catch (err: any) {
       if (err.message?.includes("content policy")) {
         res.status(400).json({ success: false, message: "CNIC back image contains prohibited content and could not be uploaded." });
@@ -126,6 +119,27 @@ export const uploadVerificationDocs = async (
     }
   }
 
+  // Degree / educational document (private)
+  if (files.degree?.[0]) {
+    const { valid, detectedType } = await verifyFileSignature(files.degree[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: `Degree document is invalid (detected: ${detectedType || "unknown"})` });
+      return;
+    }
+    const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
+    const education: Array<Record<string, unknown>> = existingProfile.education.map((entry) => ({ ...entry }));
+    if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
+    const previousPublicId = String(education[0].degreeDocPublicId || "");
+    education[0].degreeDoc = result.secure_url;
+    education[0].degreeDocPublicId = result.public_id;
+    updateData.education = education;
+    updateData.degreeVerificationStatus = "pending";
+    updateData.degreeRejectionReason = "";
+    updateData.degreeSubmittedAt = new Date();
+    resubmittedDocs.push("Educational document");
+    if (previousPublicId) replacedAssets.push({ publicId: previousPublicId });
+  }
+
   // ── Police Certificate (private) ──
   if (files.policeCertificate?.[0]) {
     const { valid, detectedType } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
@@ -133,19 +147,15 @@ export const uploadVerificationDocs = async (
       res.status(400).json({ success: false, message: `Police certificate file is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
-    if (existingProfile.policeCertificatePublicId) {
-      await deleteFromCloudinary(existingProfile.policeCertificatePublicId).catch(() => {});
-    }
     try {
       const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
       updateData.policeCertificate = result.secure_url;
       updateData.policeCertificatePublicId = result.public_id;
       updateData.policeSubmittedAt = new Date();
-      if (existingProfile.policeVerificationStatus === "approved" || existingProfile.policeVerificationStatus === "rejected") {
-        updateData.policeVerificationStatus = "pending";
-        updateData.policeRejectionReason = "";
-        resubmittedDocs.push("Police verification");
-      }
+      updateData.policeVerificationStatus = "pending";
+      updateData.policeRejectionReason = "";
+      resubmittedDocs.push("Police verification");
+      if (existingProfile.policeCertificatePublicId) replacedAssets.push({ publicId: existingProfile.policeCertificatePublicId });
     } catch (err: any) {
       if (err.message?.includes("content policy")) {
         res.status(400).json({ success: false, message: "Police certificate image contains prohibited content and could not be uploaded." });
@@ -162,18 +172,14 @@ export const uploadVerificationDocs = async (
       res.status(400).json({ success: false, message: `Video file is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
-    if (existingProfile.videoIntroPublicId) {
-      await deleteFromCloudinary(existingProfile.videoIntroPublicId, "video").catch(() => {});
-    }
     const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/verification/videos", "video", false);
     updateData.videoIntro = result.secure_url;
     updateData.videoIntroPublicId = result.public_id;
     updateData.demoVideoSubmittedAt = new Date();
-    if (existingProfile.demoVideoStatus === "approved" || existingProfile.demoVideoStatus === "rejected") {
-      updateData.demoVideoStatus = "pending";
-      updateData.demoVideoRejectionReason = "";
-      resubmittedDocs.push("Demo video");
-    }
+    updateData.demoVideoStatus = "pending";
+    updateData.demoVideoRejectionReason = "";
+    resubmittedDocs.push("Demo video");
+    if (existingProfile.videoIntroPublicId) replacedAssets.push({ publicId: existingProfile.videoIntroPublicId, resourceType: "video" });
   }
 
   if (Object.keys(updateData).length === 0) {
@@ -189,6 +195,15 @@ export const uploadVerificationDocs = async (
     updateData,
     { new: true }
   );
+
+  if (!updated) {
+    res.status(404).json({ success: false, message: "Tutor profile no longer exists." });
+    return;
+  }
+
+  await Promise.all(replacedAssets.map(({ publicId, resourceType }) =>
+    deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
+  ));
 
   if (resubmittedDocs.length > 0) {
     const tutorUser = await User.findById(req.user?._id).select("name email applicationId");

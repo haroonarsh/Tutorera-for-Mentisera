@@ -93,6 +93,20 @@ export interface TrackingPayloadBase {
   history: StatusHistoryEntry[];
 }
 
+export interface VerificationComponent {
+  status: ComponentStatus;
+  rejectionReason: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export interface VerificationComponents {
+  cnic: VerificationComponent;
+  degree: VerificationComponent;
+  demoVideo: VerificationComponent;
+  police: VerificationComponent;
+}
+
 export interface AuthenticatedTrackingPayload extends TrackingPayloadBase {
   reVerificationRequired: boolean;
   suspended: boolean;
@@ -104,6 +118,7 @@ export interface AuthenticatedTrackingPayload extends TrackingPayloadBase {
   actionRequired: ActionRequired | null;
   publicTrackingPath: string;
   trackingToken?: string;
+  verificationComponents: VerificationComponents;
 }
 
 export type PublicTrackingPayload = TrackingPayloadBase;
@@ -404,13 +419,14 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
 }
 
 function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
+  const RESUBMIT_URL = "/tutor/resubmit-docs";
   const reasons: { key: string; title: string; body: string; cta: { label: string; href: string } }[] = [];
   if (profile.cnicVerificationStatus === "rejected") {
     reasons.push({
       key: "cnic",
       title: "CNIC image needs to be re-uploaded",
       body: profile.cnicRejectionReason || "Your CNIC image could not be verified. Please upload a clearer image.",
-      cta: { label: "Upload new CNIC", href: "/onboarding/tutor" },
+      cta: { label: "Re-upload CNIC", href: RESUBMIT_URL },
     });
   }
   if (profile.degreeVerificationStatus === "rejected") {
@@ -418,7 +434,7 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       key: "degree",
       title: "Educational document needs to be re-uploaded",
       body: profile.degreeRejectionReason || "Your educational document was not accepted. Please upload a clearer copy.",
-      cta: { label: "Upload new document", href: "/onboarding/tutor" },
+      cta: { label: "Re-upload degree document", href: RESUBMIT_URL },
     });
   }
   if (profile.demoVideoStatus === "rejected") {
@@ -426,7 +442,7 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       key: "demoVideo",
       title: "Demo video needs to be re-recorded",
       body: profile.demoVideoRejectionReason || "Please record your demo video again in a well-lit environment and clearly introduce the subjects you teach.",
-      cta: { label: "Upload new demo video", href: "/onboarding/tutor" },
+      cta: { label: "Re-upload demo video", href: RESUBMIT_URL },
     });
   }
   if (profile.policeVerificationStatus === "rejected") {
@@ -434,7 +450,7 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       key: "police",
       title: "Police verification needs to be re-submitted",
       body: profile.policeRejectionReason || "Your police verification certificate could not be accepted. Please submit a fresh certificate.",
-      cta: { label: "Submit police verification", href: "/onboarding/tutor" },
+      cta: { label: "Re-submit police verification", href: RESUBMIT_URL },
     });
   }
   if (policeIsRequired(profile) && profile.policeVerificationStatus === "not_submitted") {
@@ -442,7 +458,7 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       key: "policeMissing",
       title: "Police verification required",
       body: "Police verification is mandatory before you can provide Home or In-Person Tuition through TUTORERA.",
-      cta: { label: "Submit police verification", href: "/onboarding/tutor" },
+      cta: { label: "Submit police verification", href: RESUBMIT_URL },
     });
   }
   if (reasons.length === 0) return null;
@@ -548,6 +564,32 @@ export async function buildAuthenticatedTrackingPayload(
     actionRequired: buildActionRequired(profile),
     publicTrackingPath: "/track/tutor/[secure-token]",
     trackingToken: opts.includePlainToken,
+    verificationComponents: {
+      cnic: {
+        status: (profile.cnicVerificationStatus as ComponentStatus) || "not_submitted",
+        rejectionReason: profile.cnicRejectionReason || null,
+        submittedAt: profile.cnicSubmittedAt?.toISOString() || null,
+        reviewedAt: profile.cnicReviewedAt?.toISOString() || null,
+      },
+      degree: {
+        status: (profile.degreeVerificationStatus as ComponentStatus) || "not_submitted",
+        rejectionReason: profile.degreeRejectionReason || null,
+        submittedAt: profile.degreeSubmittedAt?.toISOString() || null,
+        reviewedAt: profile.degreeReviewedAt?.toISOString() || null,
+      },
+      demoVideo: {
+        status: (profile.demoVideoStatus as ComponentStatus) || "not_submitted",
+        rejectionReason: profile.demoVideoRejectionReason || null,
+        submittedAt: profile.demoVideoSubmittedAt?.toISOString() || null,
+        reviewedAt: profile.demoVideoReviewedAt?.toISOString() || null,
+      },
+      police: {
+        status: (profile.policeVerificationStatus as ComponentStatus) || "not_required",
+        rejectionReason: profile.policeRejectionReason || null,
+        submittedAt: profile.policeSubmittedAt?.toISOString() || null,
+        reviewedAt: profile.policeReviewedAt?.toISOString() || null,
+      },
+    },
   };
 }
 
