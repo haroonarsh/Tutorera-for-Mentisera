@@ -127,7 +127,9 @@ export const uploadVerificationDocs = async (
       return;
     }
     const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
-    const education: Array<Record<string, unknown>> = existingProfile.education.map((entry) => ({ ...entry }));
+    const education: Array<Record<string, unknown>> = existingProfile.education.map((entry) =>
+      typeof (entry as any).toObject === "function" ? (entry as any).toObject() : { ...entry }
+    );
     if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
     const previousPublicId = String(education[0].degreeDocPublicId || "");
     education[0].degreeDoc = result.secure_url;
@@ -212,10 +214,10 @@ export const uploadVerificationDocs = async (
         applicationId: tutorUser.applicationId || "TUT-PENDING",
         statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
       };
-      for (const docType of resubmittedDocs) {
+      await Promise.allSettled(resubmittedDocs.map(async (docType) => {
         const { subject, html } = documentResubmittedEmail(tutorUser.name, docType, cta);
         await sendEmail({ to: tutorUser.email, subject, html });
-      }
+      }));
     }
   }
 

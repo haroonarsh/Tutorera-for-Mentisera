@@ -310,7 +310,17 @@ export const saveOnboardingStep = async (
   let updateData: Record<string, unknown> = {};
 
   // Parse data
-  const parsedData = typeof data === "string" ? JSON.parse(data) : data;
+  let parsedData: Record<string, any>;
+  try {
+    parsedData = typeof data === "string" ? JSON.parse(data) : data;
+  } catch {
+    res.status(400).json({ success: false, message: "The onboarding form data is invalid. Please refresh and try again." });
+    return;
+  }
+  if (!parsedData || typeof parsedData !== "object" || !Number.isInteger(stepNum) || stepNum < 1 || stepNum > 5) {
+    res.status(400).json({ success: false, message: "A valid onboarding step and form data are required." });
+    return;
+  }
 
   if (stepNum === 1) {
     // Personal Info & Global Location
@@ -389,7 +399,9 @@ export const saveOnboardingStep = async (
           applicationId: tutorUser.applicationId || "TUT-PENDING",
           statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
         });
-        await sendEmail({ to: tutorUser.email, subject, html });
+        await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
+          console.error("[TutorApplicationTracking] Degree resubmission email failed:", emailErr);
+        });
       }
     }
   }
@@ -564,15 +576,21 @@ export const saveOnboardingStep = async (
         };
         if (resubmitCnic) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "CNIC", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
+            console.error("[TutorApplicationTracking] CNIC resubmission email failed:", emailErr);
+          });
         }
         if (resubmitDemo) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "Demo video", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
+            console.error("[TutorApplicationTracking] Demo resubmission email failed:", emailErr);
+          });
         }
         if (resubmitPolice) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "Police verification", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
+            console.error("[TutorApplicationTracking] Police-document resubmission email failed:", emailErr);
+          });
         }
       }
     }
@@ -584,6 +602,10 @@ export const saveOnboardingStep = async (
     updateData,
     { new: true }
   );
+  if (!updated) {
+    res.status(404).json({ success: false, message: "Tutor profile no longer exists. Please refresh and try again." });
+    return;
+  }
 
   // ── Tutor Application Tracking: ensure applicationId + token exist ──
   try {
