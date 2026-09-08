@@ -158,7 +158,7 @@ export default function HeroMarketplace() {
 
             <div style={{ marginBottom: "1.25rem" }}>
               <Link
-                href="/tutors"
+                href="/tuition-requests"
                 style={{
                   color: "#64748b",
                   fontSize: "0.85rem",
@@ -167,7 +167,7 @@ export default function HeroMarketplace() {
                   textUnderlineOffset: "3px",
                 }}
               >
-                Prefer browsing? View tutor directory →
+                Prefer browsing? Browse Tuition Requests →
               </Link>
             </div>
 

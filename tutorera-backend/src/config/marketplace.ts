@@ -19,7 +19,6 @@ export const ACTIVE_REQUEST_STATUSES = [
 ] as const;
 
 export const NON_EXPIRABLE_STATUSES = [
-  "offer_accepted",
   "awaiting_payment",
   "booked",
   "in_progress",

@@ -61,7 +61,7 @@ Parents should supervise arrangements appropriately in either mode. In-person se
 **How to decide**
 
 Shortlist tutors with relevant curriculum experience, then use the first session to assess clarity, engagement, technology, punctuality, and whether the mode supports the student's needs.` },
-  { ...identity, _id: "parent-checklist", slug: "what-to-look-for-before-hiring-a-tutor-pakistan", title: "What Parents Should Check Before Hiring a Tutor in Pakistan", excerpt: "A due-diligence checklist covering credentials, curriculum fit, lesson plans, safeguarding, rates, and reviews.", tags: ["parents", "checklist", "verification"], content: `A tutor should be evaluated on evidence relevant to the student's needs. Use this checklist before agreeing to recurring lessons.
+  { ...identity, _id: "parent-checklist", slug: "what-to-look-for-before-hiring-a-tutor-pakistan", title: "What Parents Should Check Before Hiring a Tutor in Pakistan", excerpt: "A due-diligence checklist covering credentials, curriculum fit, lesson plans, safeguarding, rates, and reviews.", tags: ["parents", "checklist", "verification"], content: `A tutor should be evaluated on evidence relevant to the student's needs. Use this checklist before agreeing to ongoing lessons.
 
 **Identity and qualifications**
 

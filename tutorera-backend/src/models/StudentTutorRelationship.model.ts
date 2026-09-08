@@ -8,7 +8,6 @@ export interface IStudentTutorRelationship extends Document {
   lastBooking: Types.ObjectId;
   completedBookings: number;
   repeatBookingCount: number;
-  currentRecurringArrangement?: "none" | "weekly" | "twice_weekly" | "package_4" | "package_8" | "monthly";
   relationshipStatus: "active" | "paused" | "ended";
   lastSessionAt?: Date;
   createdAt: Date;
@@ -24,11 +23,6 @@ const studentTutorRelationshipSchema = new Schema<IStudentTutorRelationship>(
     lastBooking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
     completedBookings: { type: Number, default: 0, min: 0 },
     repeatBookingCount: { type: Number, default: 0, min: 0 },
-    currentRecurringArrangement: {
-      type: String,
-      enum: ["none", "weekly", "twice_weekly", "package_4", "package_8", "monthly"],
-      default: "none",
-    },
     relationshipStatus: { type: String, enum: ["active", "paused", "ended"], default: "active" },
     lastSessionAt: { type: Date },
   },

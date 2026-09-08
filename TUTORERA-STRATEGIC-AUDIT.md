@@ -25,7 +25,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 4. **Missing Google OAuth `/select-role` page** — Google sign-ups who need to pick a role hit a 404
 5. **Tracking emails lack branding** — `trackingEmails.ts` returns raw HTML without the `renderTransactionalEmail` wrapper
 6. **Matching scoring duplication** — `utils/marketplaceRules.ts` has a simpler, inconsistent scorer used only by offer listing pages
-7. **No parent/guardian accounts, no recurring bookings, no packages/subscriptions** — retention mechanics are missing
+7. **Parent/guardian controls and repeat-offer convenience need expansion** — retention should remain within the request-and-offer model
 8. **No `llms.txt`** — LLMO/LLM optimization is absent
 9. **Accessibility gaps** — 4 modals missing focus traps, clickable divs without keyboard support, fixed-width overflow risks
 10. **Payment edge cases** — stale `awaiting_payment` if webhook never arrives, no failed-payment notification, no receipt email
@@ -104,7 +104,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | Bayseian ratings | Implemented in `matching.service.ts`, but not exposed on tutor cards or profile pages in the frontend |
 | Email deliverability tracking | `EmailLog` model + Resend webhook exist, but admin email logs page shows basic status only — no delivery rate trends, bounce analysis, or per-template metrics |
 | Notification preferences | Frontend has a decorative preferences UI (`notifications/page.tsx`) but preferences are never persisted or enforced server-side |
-| Rebooking/retention | `Book Again` CTA exists in dashboard, but no recurring lesson scheduling, no packages, no subscription model |
+| Rebooking/retention | `Book Again` CTA exists in dashboard and should create a fresh requirement for tutor offers |
 | Pricing intelligence | No "similar tutors in your area charge X-Y" guidance anywhere |
 | LLMO/LLM optimization | No `llms.txt`, no machine-readable platform description in standardized format |
 | WCAG 2.2 AA | Partial — focus traps in some modals, but missing in 4 modals, no skip link styles confirmed, touch targets below 44px in 3 places |
@@ -152,7 +152,6 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | `/select-role` page | Google OAuth flow | Google users who need to pick student/tutor role hit 404 |
 | `llms.txt` | PART 45 — LLMO | No machine-readable platform description for AI/LLM consumption |
 | Parent/guardian accounts | PART 40 | No parent model, no child profile linking, no parent dashboard |
-| Recurring bookings / packages | PART 19, 21 | No `StudentTutorRelationship`, no package/subscription model, no recurring schedule |
 | Review request automation | PART 57 | Reviews are manually submitted — no post-session review request email or in-app prompt |
 | Tutor payout notifications | PART 60 | No email/socket notification when tutor payout is processed |
 | Failed payment notification/email | PART 60 | Webhook silently ignores `transaction.failed` |
@@ -208,7 +207,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | **Tutor verification** | ✅ COMPLETE (per-component) | ✅ | ✅ | ❌ | ❌ | ✅ | **Equal or better.** Add content moderation on uploads (P1). |
 | **Identity verification** | ✅ COMPLETE (CNIC + hash) | ✅ | ✅ | ❌ | ❌ | ✅ | Keep. Add liveness check (P2). |
 | **Education verification** | ✅ COMPLETE | ❌ | ✅ | ❌ | ❌ | ✅ | Keep. |
-| **Background verification** | ✅ COMPLETE (police cert) | ✅ | ✅ | ❌ | ❌ | ❌ | Keep. Add recurring re-verification (P1). |
+| **Background verification** | ✅ COMPLETE (police cert) | ✅ | ✅ | ❌ | ❌ | ❌ | Keep. Add periodic re-verification (P1). |
 | **Home tuition safety** | ✅ COMPLETE (police + jurisdiction) | ✅ | ✅ | ❌ | ❌ | ❌ | Add parent/guardian controls (P1). |
 | **Tutor offers** | ✅ COMPLETE | N/A | N/A | ✅ | ✅ | N/A | Keep. Add offer quality scoring (P1). |
 | **Counter-offers** | ✅ COMPLETE (max 3/party) | ❌ | ❌ | ❌ | ❌ | ❌ | **Differentiator.** Improve negotiation UI (P0). |
@@ -216,14 +215,13 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | **Offer comparison** | ⚠️ PARTIAL (demo only) | ❌ | ❌ | ✅ | ✅ | N/A | **P0: Build real comparison workspace.** |
 | **Tutor reviews** | ✅ COMPLETE (verified booking) | ✅ | ✅ | ✅ | ✅ | ✅ | Add post-session review request automation (P1). |
 | **Response time tracking** | ✅ COMPLETE | ❌ | ❌ | ✅ | ✅ | ✅ | Expose in tutor cards (P0). |
-| **Availability management** | ✅ COMPLETE | ✅ | ✅ | ✅ | ✅ | ✅ | Add recurring schedule templates (P1). |
+| **Availability management** | ✅ COMPLETE | ✅ | ✅ | ✅ | ✅ | ✅ | Keep weekly availability aligned with offer matching. |
 | **Pricing transparency** | ⚠️ PARTIAL | ✅ | ✅ | ❌ | ❌ | ✅ | Add pricing intelligence (P1). |
 | **Payments (gateway)** | ✅ COMPLETE (Rapid Gateway) | ✅ | ✅ | ✅ | ✅ | ✅ | Add receipt email (P0). Fix stale holds (P0). |
 | **Refunds** | ⚠️ PARTIAL (guarantee claims) | ✅ | ✅ | ✅ | ✅ | ✅ | Add formal refund flow (P1). |
 | **Disputes** | ✅ COMPLETE (guarantee claims + safety) | ✅ | ✅ | ✅ | ✅ | ✅ | Keep. Add mediation workflow (P1). |
 | **Lesson records** | ✅ COMPLETE (Booking model) | ✅ | ✅ | ✅ | ✅ | ✅ | Add session notes (P1). |
-| **Rebooking** | ⚠️ PARTIAL (CTA only) | ✅ | ✅ | ✅ | ✅ | ✅ | **P1: One-click rebooking with recurring options.** |
-| **Recurring lessons** | ❌ MISSING | ❌ | ❌ | ❌ | ❌ | ✅ | **P1: Packages, subscriptions, recurring schedules.** |
+| **Rebooking** | ⚠️ PARTIAL (CTA only) | ✅ | ✅ | ✅ | ✅ | ✅ | **P1: One-click creation of a new student requirement.** |
 | **Subscriptions/packages** | ❌ MISSING | ❌ | ❌ | ❌ | ❌ | ✅ | **P1: 4-session, 8-session, monthly packages.** |
 | **Tutor earnings dashboard** | ✅ COMPLETE + PDF | ✅ | ✅ | ✅ | ✅ | ✅ | Add payout status timeline (P0). |
 | **Tutor payouts** | ⚠️ PARTIAL (NayaPay manual) | ✅ | ✅ | ✅ | ✅ | ✅ | Automate payout processing (P1). |
@@ -264,7 +262,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | Frontend RBAC | IlmGhar has role-enforced admin screens | P0: Enforce RBAC in AdminGuard + per-page |
 | Dashboard gate bypass | Mera Ustad has strict verification gates | P0: Remove error-state bypass |
 | No parent accounts | Mera Ustad, IlmGhar support parent-managed child profiles | P1: Parent model, child profiles, parent dashboard |
-| No recurring bookings | Preply has 28-day recurring cycles | P1: StudentTutorRelationship, packages, recurring schedules |
+| Repeat-booking friction | Competitors streamline repeat lessons | P1: Create a new requirement from prior booking details and collect fresh offers |
 | No pricing intelligence | UrbanPro shows market rate ranges | P1: "Similar tutors charge X-Y" guidance |
 | No demand SEO pages | TeacherOn has city×subject×level pages | P1: Generate demand SEO with real anonymized data |
 | No `llms.txt` | Modern platforms optimize for LLM discovery | P1: Add `llms.txt` with canonical platform description |
@@ -299,7 +297,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 
 ### P1 — GROWTH (Ship in sprints 3-6)
 
-**Goal:** Close retention, parent, and demand-SEO gaps. Build the recurring learning economy.
+**Goal:** Close retention, parent, and demand-SEO gaps while preserving the student-led offer economy.
 
 | # | Task | Files | Validation |
 |---|---|---|---|
@@ -307,7 +305,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | P1-2 | Add parent/guardian accounts | New `ParentGuardian.model.ts`, `StudentProfile.model.ts` extension, parent dashboard | Parent can manage child profiles, view requests/bookings, set safety preferences |
 | P1-3 | Add StudentTutorRelationship model | New model + `Booking` extension | Track first booking, completed sessions, repeat count, current arrangement |
 | P1-4 | Rebooking with one click | `StudentDashboard.tsx`, `TutorDashboard.tsx` | "Book Again" pre-fills tutor, subject, mode, availability, agreed rate |
-| P1-5 | Recurring lesson scheduling | `BookedSlot.model.ts` extension, new `RecurringBooking.model.ts` | Weekly, twice-weekly, monthly schedules |
+| P1-5 | Repeat-booking convenience | Existing request and offer lifecycle | Let students efficiently repost requirements without introducing preset plans |
 | P1-6 | Session packages | New `Package.model.ts`, `PackageType` enum (4-session, 8-session, monthly) | Student buys package, bookings deduct from balance |
 | P1-7 | Post-session review request automation | `requestLifecycle.service.ts`, `emailTemplates.ts` | Student receives review request 1h after session completion |
 | P1-8 | Pricing intelligence | `matching.service.ts` extension, new `PricingInsight.model.ts` | "Similar tutors in Lahore charge PKR X-Y/hour" shown during request creation |
@@ -333,7 +331,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | P2-6 | Tutor quality score (public) | `TutorProfile.model.ts` extension, `TutorCard.tsx` | Composite score from verification, completion rate, ratings, response time, disputes |
 | P2-7 | Tutor payout automation | `earnings.controller.ts`, payout provider integration | Auto-payout on booking completion + confirmation period |
 | P2-8 | Off-platform circumvention detection | `contentFilter.ts` + `antiCircumvention.ts` (activate) | Scan chat messages for phone/email/WhatsApp/bank details, risk-flag |
-| P2-9 | Recurring re-verification | `requestLifecycle.service.ts`, tracking system | Police cert expiry alerts, CNIC expiry monitoring |
+| P2-9 | Periodic re-verification | `requestLifecycle.service.ts`, tracking system | Police cert expiry alerts, CNIC expiry monitoring |
 | P2-10 | Parent/guardian controls | Extend P1-2 | Safety preferences, spending limits, tutor approval workflow |
 | P2-11 | Global market expansion | `MarketConfig.model.ts`, `geo.controller.ts` | Launch gates for new countries (legal, payment, verification, supply threshold) |
 | P2-12 | TUTORERA Tutoring Index | New `ResearchPage` + data pipeline | Anonymized aggregate reports: tutor rates by city, most requested subjects, home vs online demand |
@@ -400,7 +398,6 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 | Gap | Phase | Notes |
 |---|---|---|
 | Parent/guardian accounts | P1 | Child profile management, spending controls |
-| Recurring bookings/packages | P1 | 4-session, 8-session, monthly plans |
 | ML reranking | P2 | Train on MatchLog.feedbackScore + booking outcomes |
 | Match Graph | P2 | Proprietary data moat |
 | Pricing intelligence | P1 | Anonymized rate ranges |
@@ -422,7 +419,7 @@ TUTORERA's backend is **unexpectedly sophisticated**. Beneath the tracking-syste
 3. **Start P0-4 (tracking email branding)** — quick win, visible quality improvement
 4. **Start P0-10 (match score on tutor cards)** — core differentiator, low effort
 5. **Plan P1-1 (real offer comparison workspace)** — highest user-facing gap after P0 fixes
-6. **Schedule P1-2 (parent accounts) and P1-3 (recurring bookings)** for sprint after P1-1
+6. **Schedule P1-2 parent controls and repeat-offer convenience** for the sprint after P1-1
 
 ---
 

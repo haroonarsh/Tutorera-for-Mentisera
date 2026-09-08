@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
 import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
 import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
-import TrustSafetySection from "@/components/marketplace/TrustSafetySection";
-import TopTutorsSection from "@/components/TopTutorsSection";
 import TopRequestsSection from "@/components/TopRequestsSection";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
 import { ArrowRight, Star, MapPin } from "lucide-react";
@@ -182,13 +180,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 8. Featured Verified Tutors */}
-      <TopTutorsSection />
-
-      {/* 9. Trust & Safety Standards */}
-      <TrustSafetySection />
-
-      {/* 10. Educational Guidance & Reading */}
+      {/* 8. Educational Guidance & Reading */}
       <section style={{ padding: "4rem 1.5rem", background: "white" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ textAlign: "center", maxWidth: 600, margin: "0 auto 3rem" }}>

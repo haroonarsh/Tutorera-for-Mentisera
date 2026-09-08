@@ -290,11 +290,11 @@ function BookingCard({ booking, onClaimSubmitted }: {
             Continue Learning
           </p>
           <p style={{ margin: "0 0 0.75rem", color: "#475569", fontSize: "0.75rem", lineHeight: 1.5 }}>
-            Rebook this tutor using the previous subject, mode, and agreed rate as a starting point. Package and recurring-plan checkout will stay disabled until the provider flow is configured.
+            Rebook this tutor by posting a new requirement using the previous subject, mode, and agreed rate as a starting point. Tutors can then respond with a fresh offer.
           </p>
           <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }} aria-label="Future learning options">
-            {["Book Again", "Weekly Schedule", "4-Session Package", "8-Session Package"].map((option) => (
-              <span key={option} style={{ border: "1px solid #dbeafe", background: option === "Book Again" ? "#0329B2" : "white", color: option === "Book Again" ? "white" : "#0329B2", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
+            {["Book Again"].map((option) => (
+              <span key={option} style={{ border: "1px solid #dbeafe", background: "#0329B2", color: "white", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
                 {option}
               </span>
             ))}
@@ -662,7 +662,7 @@ function RequestCard({
 
       {/* Action triggers: Expand tutor offers, Extend, Repost, Close, & Smart matched tutors */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem", alignItems: "center" }}>
-        {["open", "published", "receiving_offers", "negotiating", "offer_accepted", "awaiting_payment", "booked", "closed"].includes(request.status) && (
+        {["open", "published", "receiving_offers", "negotiating", "awaiting_payment", "booked", "closed"].includes(request.status) && (
           <button
             onClick={() => loadBids()}
             className={s.expandBtn}

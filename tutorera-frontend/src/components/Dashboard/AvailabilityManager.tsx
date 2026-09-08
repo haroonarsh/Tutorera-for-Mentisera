@@ -68,7 +68,7 @@ export default function AvailabilityManager() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <p style={{ fontWeight: 700, color: '#021550', fontSize: '0.95rem', margin: 0 }}>Weekly Availability</p>
-          <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: '2px 0 0' }}>Set your recurring weekly slots. Students will see your next 2 weeks of availability.</p>
+          <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: '2px 0 0' }}>Set your standard weekly availability. Students will see your next 2 weeks of open slots.</p>
         </div>
         <button onClick={handleSave} disabled={saving}
           style={{ padding: '0.5rem 1.25rem', backgroundColor: saving ? '#93c5fd' : saved ? '#16a34a' : '#0329B2', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.8rem', cursor: saving ? 'not-allowed' : 'pointer' }}>

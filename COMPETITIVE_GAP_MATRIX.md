@@ -96,7 +96,6 @@
 | Capability | TUTORERA | Mera Ustad | IlmGhar | TeacherOn | UrbanPro | Preply | Required TUTORERA Improvement |
 |---|---|---|---|---|---|---|---|
 | **Rebooking in one click** | ⚠️ PARTIAL (CTA only) | ✅ | ✅ | ✅ | ✅ | ✅ | **P1:** "Book Again" pre-fills tutor, subject, mode, availability, agreed rate with one click. |
-| **Recurring learning** | 🚫 MISSING | ❌ | ❌ | ❌ | ❌ | ✅ | **P1:** Weekly, twice-weekly, monthly recurring schedules. |
 | **Packages/subscriptions** | 🚫 MISSING | ❌ | ❌ | ❌ | ❌ | ✅ | **P1:** 4-session, 8-session, monthly packages with balance deduction. |
 | **Learning relationship tracking** | 🚫 MISSING | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | **P1:** StudentTutorRelationship model tracking sessions, repeat count, relationship health. |
 | **Student retention metrics** | ⚠️ PARTIAL (admin only) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ✅ | **P1:** Surface retention metrics in student dashboard (sessions completed, repeat rate). |
@@ -165,7 +164,6 @@
 | Real offer comparison workspace | P0 | Core negotiation UX |
 | Match score on tutor cards | P0 | Differentiation visibility |
 | Parent/guardian accounts | P1 | Market expansion (families) |
-| Recurring bookings & packages | P1 | Retention engine |
 | Demand SEO pages | P1 | Organic traffic growth |
 | Liquidity score (0-100) | P2 | Market intelligence moat |
 | TUTORERA Tutoring Index | P2 | SEO/PR/backlink asset |
@@ -177,7 +175,7 @@
 | Phase | Timeline | Focus | Key Deliverables |
 |---|---|---|---|
 | **P0** | 1-2 sprints | Security, correctness, basic UX | RBAC enforcement, design tokens, verification gate fix, offer comparison workspace, match score badges |
-| **P1** | 3-6 sprints | Growth, retention, discovery | Parent accounts, recurring bookings, packages, demand SEO, pricing intelligence |
+| **P1** | 3-6 sprints | Growth, retention, discovery | Parent accounts, repeat-offer convenience, demand SEO, pricing intelligence |
 | **P2** | 7-12+ sprints | Market leadership, intelligence | ML reranking, liquidity score, Tutoring Index, global expansion, payout automation |
 
 ---

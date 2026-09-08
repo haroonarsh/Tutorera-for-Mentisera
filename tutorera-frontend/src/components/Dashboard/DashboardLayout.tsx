@@ -8,7 +8,7 @@ import BrandLogo from "@/components/BrandLogo";
 import {
   LayoutDashboard, Bell, Settings, LogOut,
   ChevronLeft, ChevronRight, MessageSquare,
-  CreditCard, User, Search, Menu, TrendingUp, CalendarDays, BriefcaseBusiness,
+  CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness,
 } from "lucide-react";
 
 const C = UI_COLORS;
@@ -28,7 +28,6 @@ const navItems: NavItem[] = [
   { href: "/chat",       label: "Messages",         icon: <MessageSquare size={18} /> },
   { href: "/settings",   label: "Settings",         icon: <Settings size={18} /> },
   { href: "/billing",    label: "Plans & Billing",  icon: <CreditCard size={18} />, roles: ["student", "tutor"] },
-  { href: "/recurring",  label: "Recurring Learning", icon: <CalendarDays size={18} />, roles: ["student", "parent", "tutor"] },
 ];
 
 const tutorItems: NavItem[] = [
@@ -50,7 +49,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/offers':        'Offers & Negotiations',
   '/settings':      'Settings',
   '/billing':       'Plans & Billing',
-  '/recurring':     'Recurring Learning',
   '/opportunities': 'Teaching Opportunities',
   '/profile':       'My Profile',
 };

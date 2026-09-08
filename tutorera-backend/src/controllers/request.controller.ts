@@ -11,7 +11,6 @@ import { calculateMarketplaceFees } from "../config/constants";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import { containsContactInfo } from "../utils/contentFilter";
 import { logAudit } from "../utils/logAudit";
-import { incrementBidCount } from "../middlewares/bidLimit.middleware";
 import BookedSlot from "../models/BookedSlot.model";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
@@ -29,19 +28,6 @@ import {
   REQUEST_EXTENSION_DAYS,
 } from "../config/marketplace";
 
-// ─── Plan Limits ───────────────────────────────────────────────────────────────
-const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
-const PLAN_REQUEST_LIMITS: Record<string, number> = { free: 2, standard: 10, premium: -1 };
-
-// Returns true if the stored reset date is from a previous calendar month
-function isNewMonth(resetDate: Date): boolean {
-  const now = new Date();
-  return (
-    now.getMonth() !== resetDate.getMonth() ||
-    now.getFullYear() !== resetDate.getFullYear()
-  );
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -53,28 +39,6 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   const user = await User.findById(req.user?._id);
   if (!user) {
     res.status(404).json({ success: false, message: "User not found." });
-    return;
-  }
-
-  // ── Reset monthly count if new month has started ──
-  const resetDate = (user as any).requestsResetDate as Date | undefined;
-  if (!resetDate || isNewMonth(resetDate)) {
-    (user as any).requestsThisMonth = 0;
-    (user as any).requestsResetDate = new Date();
-    await user.save();
-  }
-
-  // ── Enforce plan limit ──
-  const limit = PLAN_REQUEST_LIMITS[user.plan || "free"];
-  const used = (user as any).requestsThisMonth || 0;
-
-  if (limit !== -1 && used >= limit) {
-    const planNames: Record<string, string> = { free: "Free", standard: "Standard", premium: "Premium" };
-    res.status(403).json({
-      success: false,
-      code: "REQUEST_LIMIT_REACHED",
-      message: `You've used all ${limit} tuition requests included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to post more requests.`,
-    });
     return;
   }
 
@@ -94,11 +58,6 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     { user: req.user?._id, type: "student_request", completedAt: { $exists: false } },
     { $set: { completedAt: new Date() } }
   );
-
-  // ── Increment monthly counter ──
-  await User.findByIdAndUpdate(req.user?._id, {
-    $inc: { requestsThisMonth: 1 },
-  });
 
   // Progressive Tiered Notification Dispatch via Smart Matching Engine
   const { notifiedCount, tier1Count } = await MatchingService.dispatchProgressiveNotifications(request, req.app.get("io"));
@@ -385,33 +344,6 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
-  // ── Enforce bid limit ──
-  const user = await User.findById(req.user?._id);
-  if (!user) {
-    res.status(404).json({ success: false, message: "User not found." });
-    return;
-  }
-
-  // Reset monthly count if new month has started
-  if (!user.bidsResetDate || isNewMonth(new Date(user.bidsResetDate))) {
-    user.bidsThisMonth = 0;
-    user.bidsResetDate = new Date();
-    await user.save();
-  }
-
-  const bidLimit = PLAN_BID_LIMITS[user.plan || "free"];
-  const bidsUsed = user.bidsThisMonth || 0;
-
-  if (bidLimit !== -1 && bidsUsed >= bidLimit) {
-    const planNames: Record<string, string> = { free: "Free", standard: "Standard", premium: "Premium" };
-    res.status(403).json({
-      success: false,
-      code: "BID_LIMIT_REACHED",
-      message: `You've used all ${bidLimit} offers included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to send more offers.`,
-    });
-    return;
-  }
-
   const request = requested;
   if (!request || request.status === "expired" || (request.expiresAt && request.expiresAt.getTime() <= Date.now())) {
     res.status(410).json({
@@ -494,7 +426,6 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   });
 
   await Request.updateOne({ _id: request._id, status: { $in: ["open", "published"] } }, { status: "receiving_offers" });
-  await incrementBidCount(req.user?._id?.toString() || "");
   computeAndStoreTutorResponseTime(req.user?._id?.toString() || "").catch(() => {});
 
   // Notify student
@@ -1284,30 +1215,6 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
-  // Enforce monthly plan limits
-  const user = await User.findById(req.user?._id);
-  if (!user) {
-    res.status(404).json({ success: false, message: "User not found." });
-    return;
-  }
-  const resetDate = (user as any).requestsResetDate as Date | undefined;
-  if (!resetDate || isNewMonth(resetDate)) {
-    (user as any).requestsThisMonth = 0;
-    (user as any).requestsResetDate = new Date();
-    await user.save();
-  }
-  const limit = PLAN_REQUEST_LIMITS[user.plan || "free"];
-  const used = (user as any).requestsThisMonth || 0;
-  if (limit !== -1 && used >= limit) {
-    const planNames: Record<string, string> = { free: "Free", standard: "Standard", premium: "Premium" };
-    res.status(403).json({
-      success: false,
-      code: "REQUEST_LIMIT_REACHED",
-      message: `You've used all ${limit} tuition requests included in your ${planNames[user.plan || "free"]} plan this month. Upgrade your plan to repost.`,
-    });
-    return;
-  }
-
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
@@ -1353,10 +1260,6 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
     extensionCount: 0,
     maxExtensions: MAX_REQUEST_EXTENSIONS,
     repostedFromRequestId: oldRequest._id,
-  });
-
-  await User.findByIdAndUpdate(req.user?._id, {
-    $inc: { requestsThisMonth: 1 },
   });
 
   // Dispatch progressive notifications via Smart Matching Engine

@@ -56,7 +56,6 @@ interface TutorData {
     totalStudentsWorkedWith: number;
     repeatStudentCount: number;
     rebookRate: number;
-    studentsWithRecurring: number;
   };
 }
 
@@ -76,9 +75,7 @@ interface StudentData {
   retentionStats?: {
     totalRelationships: number;
     repeatRelationships: number;
-    activeRecurringArrangements: number;
     retentionRate: number;
-    topRecurringArrangements: { tutorId: string; arrangement: string; sessionsCompleted: number }[];
   };
 }
 

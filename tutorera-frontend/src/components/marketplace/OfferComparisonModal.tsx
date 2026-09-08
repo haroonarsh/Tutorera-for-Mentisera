@@ -7,8 +7,6 @@ import {
   ShieldCheck, 
   Star, 
   Sparkles, 
-  Send, 
-  MessageSquare, 
   Check, 
   AlertCircle,
   Clock,
@@ -66,7 +64,6 @@ export default function OfferComparisonModal({
   onAcceptOffer,
   onCounterOffer,
 }: OfferComparisonModalProps) {
-  const [selectedOfferId, setSelectedOfferId] = useState<string>(offers[0]?._id || "");
   const [counteringOfferId, setCounteringOfferId] = useState<string | null>(null);
   const [counterAmount, setCounterAmount] = useState<string>("");
   const [showGuaranteeConfirm, setShowGuaranteeConfirm] = useState<string | null>(null);
@@ -74,14 +71,31 @@ export default function OfferComparisonModal({
 
   if (!isOpen) return null;
 
-  const activeOffer = offers.find((o) => o._id === selectedOfferId) || offers[0];
-
   const handleSendCounter = (offerId: string) => {
     const amt = parseFloat(counterAmount);
-    if (!amt || isNaN(amt) || amt <= 0) return;
+    if (!amt || isNaN(amt) || isNaN(amt)) return;
     onCounterOffer(offerId, amt);
     setCounteringOfferId(null);
     setCounterAmount("");
+  };
+
+  const rowStyle: React.CSSProperties = {
+    borderBottom: "1px solid #e2e8f0",
+  };
+
+  const cellStyle: React.CSSProperties = {
+    padding: "0.85rem 0.75rem",
+    fontSize: "0.82rem",
+    color: "#334155",
+    verticalAlign: "middle",
+  };
+
+  const headerCellStyle: React.CSSProperties = {
+    ...cellStyle,
+    fontWeight: 700,
+    color: "#021550",
+    background: "#f8faff",
+    whiteSpace: "nowrap",
   };
 
   return (
@@ -106,7 +120,7 @@ export default function OfferComparisonModal({
         style={{
           background: "white",
           borderRadius: "1.25rem",
-          maxWidth: "960px",
+          maxWidth: "1100px",
           width: "100%",
           maxHeight: "90vh",
           display: "flex",
@@ -118,14 +132,14 @@ export default function OfferComparisonModal({
         }}
       >
         {/* Header */}
-        <div 
-          style={{ 
-            background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", 
-            color: "white", 
-            padding: "1.25rem 1.75rem", 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center" 
+        <div
+          style={{
+            background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)",
+            color: "white",
+            padding: "1.25rem 1.75rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <div>
@@ -161,198 +175,218 @@ export default function OfferComparisonModal({
           </button>
         </div>
 
-        {/* Modal Content: Side-by-side Layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", padding: "1.5rem", overflowY: "auto" }}>
-          {offers.map((offer) => {
-            const isSelected = selectedOfferId === offer._id;
-            const isCountering = counteringOfferId === offer._id;
-            const isPoliceVerified = offer.tutor?.policeVerificationStatus === "approved";
-            const matchScore = offer.matchScore || 92;
+        {/* Modal Content: Tabular Layout */}
+        <div style={{ padding: "1.25rem", overflowY: "auto" }}>
+          <div style={{ overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: "0.75rem" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+              <thead>
+                <tr>
+                  <th style={headerCellStyle}>Tutor</th>
+                  <th style={headerCellStyle}>Offer</th>
+                  <th style={headerCellStyle}>Rating</th>
+                  <th style={headerCellStyle}>Experience</th>
+                  <th style={headerCellStyle}>Verification</th>
+                  <th style={headerCellStyle}>Availability</th>
+                  <th style={{ ...headerCellStyle, textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offers.map((offer) => {
+                  const isCountering = counteringOfferId === offer._id;
+                  const isPoliceVerified = offer.tutor?.policeVerificationStatus === "approved";
+                  const isDegreeVerified = offer.tutor?.degreeVerificationStatus === "approved";
+                  const rating = offer.tutor?.rating || 4.9;
+                  const reviewsCount = offer.tutor?.reviewsCount || 0;
+                  const experience = offer.tutor?.experience ?? 0;
+                  const matchScore = offer.matchScore;
 
-            return (
-              <div
-                key={offer._id}
-                style={{
-                  background: isSelected ? "#f8faff" : "white",
-                  borderRadius: "1rem",
-                  border: isSelected ? "2.5px solid #0329b2" : "1.5px solid #e2e8f0",
-                  padding: "1.25rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: isSelected ? "0 8px 24px rgba(3, 41, 178, 0.12)" : "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  position: "relative",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <div>
-                  {/* Tutor info */}
-                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "0.75rem" }}>
-                    <div
-                      style={{
-                        width: "44px",
-                        height: "44px",
-                        borderRadius: "50%",
-                        background: "#021550",
-                        color: "white",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "1.1rem",
-                        fontWeight: 800,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {offer.tutor?.name?.charAt(0) || "T"}
-                    </div>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                        <strong style={{ fontSize: "0.98rem", color: "#021550" }}>
-                          {offer.tutor?.name}
-                        </strong>
-                        {isPoliceVerified && (
-                          <span title="Police Verified for In-Person Tuition" style={{ color: "#10b981", display: "inline-flex" }}>
-                            <ShieldCheck size={16} />
+                  return (
+                                            <tr key={offer._id} style={rowStyle}>
+                        <td style={cellStyle}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                            <div
+                              style={{
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "50%",
+                                background: "#021550",
+                                color: "white",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "0.95rem",
+                                fontWeight: 800,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {offer.tutor?.name?.charAt(0) || "T"}
+                            </div>
+                            <div>
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                                <strong style={{ fontSize: "0.9rem", color: "#021550" }}>
+                                  {offer.tutor?.name}
+                                </strong>
+                                {isPoliceVerified && (
+                                  <ShieldCheck size={15} style={{ color: "#10b981" }} />
+                                )}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                                {offer.tutor?.title || "Verified Tutor"} · {offer.tutor?.city || "Online"}
+                              </div>
+                              {matchScore !== undefined && (
+                                <div style={{ marginTop: "0.25rem" }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#0329b2", background: "#eef5ff", padding: "0.15rem 0.45rem", borderRadius: 999 }}>
+                                    {matchScore}% Match
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={cellStyle}>
+                          <div>
+                            <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#021550" }}>
+                              {offer.currency || currency} {offer.amount.toLocaleString()}
+                            </span>
+                            <span style={{ fontSize: "0.75rem", color: "#64748b" }}>/{offer.pricingUnit || pricingUnit}</span>
+                          </div>
+                          {offer.message && (
+                            <p style={{ fontSize: "0.75rem", color: "#475569", marginTop: "0.35rem", lineHeight: 1.4, maxWidth: 260 }}>
+                              &ldquo;{offer.message}&rdquo;
+                            </p>
+                          )}
+                        </td>
+                        <td style={cellStyle}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#f59e0b", fontSize: "0.8rem", fontWeight: 700 }}>
+                            <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                            <span>{rating.toFixed(1)}</span>
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.15rem" }}>
+                            {reviewsCount} reviews
+                          </div>
+                        </td>
+                        <td style={cellStyle}>
+                          <span style={{ fontWeight: 700, color: "#021550" }}>
+                            {experience > 0 ? `${experience} yr${experience === 1 ? "" : "s"}` : "New"}
                           </span>
-                        )}
-                      </div>
-                      <span style={{ fontSize: "0.76rem", color: "#64748b" }}>
-                        {offer.tutor?.title || "Verified Tutor"} · {offer.tutor?.city || "Online"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Rating & Match Score */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", background: "white", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#f59e0b", fontSize: "0.8rem", fontWeight: 700 }}>
-                      <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                      <span>{offer.tutor?.rating || 4.9} ({offer.tutor?.reviewsCount || 8} reviews)</span>
-                    </div>
-                    <span style={{ fontSize: "0.76rem", fontWeight: 800, color: "#0329b2", background: "#eef5ff", padding: "0.15rem 0.5rem", borderRadius: "999px" }}>
-                      {matchScore}% Match
-                    </span>
-                  </div>
-
-                  {/* Message */}
-                  {offer.message && (
-                    <p style={{ fontSize: "0.8rem", color: "#475569", background: "#f8fafc", padding: "0.6rem 0.75rem", borderRadius: "0.5rem", margin: "0 0 0.85rem", fontStyle: "italic", lineHeight: 1.4 }}>
-                      &ldquo;{offer.message}&rdquo;
-                    </p>
-                  )}
-                </div>
-
-                {/* Price & Actions */}
-                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.85rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.75rem" }}>
-                    <span style={{ fontSize: "0.76rem", color: "#64748b" }}>Offered Rate:</span>
-                    <div>
-                      <span style={{ fontSize: "1.2rem", fontWeight: 900, color: "#021550" }}>
-                        {offer.currency || currency} {offer.amount.toLocaleString()}
-                      </span>
-                      <span style={{ fontSize: "0.75rem", color: "#64748b" }}>/{offer.pricingUnit || pricingUnit}</span>
-                    </div>
-                  </div>
-
-                  {isCountering ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder={`Counter rate (${currency})`}
-                        value={counterAmount}
-                        onChange={(e) => setCounterAmount(e.target.value)}
-                        style={{
-                          padding: "0.5rem 0.75rem",
-                          borderRadius: "0.4rem",
-                          border: "1.5px solid #0329b2",
-                          fontSize: "0.85rem",
-                          outline: "none",
-                        }}
-                      />
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem" }}>
-                        <button
-                          type="button"
-                          onClick={() => handleSendCounter(offer._id)}
-                          style={{
-                            background: "#0329b2",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem",
-                            borderRadius: "0.4rem",
-                            fontWeight: 700,
-                            fontSize: "0.78rem",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Send Counter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCounteringOfferId(null)}
-                          style={{
-                            background: "#f1f5f9",
-                            color: "#475569",
-                            border: "none",
-                            padding: "0.5rem",
-                            borderRadius: "0.4rem",
-                            fontWeight: 600,
-                            fontSize: "0.78rem",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                      <button
-                        type="button"
-                        onClick={() => setShowGuaranteeConfirm(offer._id)}
-                        style={{
-                          background: "#0329b2",
-                          color: "white",
-                          border: "none",
-                          padding: "0.6rem",
-                          borderRadius: "0.5rem",
-                          fontWeight: 700,
-                          fontSize: "0.8rem",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "0.3rem",
-                        }}
-                      >
-                        <Check size={14} /> Accept Offer
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCounteringOfferId(offer._id);
-                          setCounterAmount(String(offer.amount));
-                        }}
-                        style={{
-                          background: "#f8fafc",
-                          color: "#021550",
-                          border: "1.5px solid #cbd5e1",
-                          padding: "0.6rem",
-                          borderRadius: "0.5rem",
-                          fontWeight: 700,
-                          fontSize: "0.8rem",
-                          cursor: "pointer",
-                          textAlign: "center",
-                        }}
-                      >
-                        Counter Rate
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                        </td>
+                        <td style={cellStyle}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.78rem", color: isDegreeVerified ? "#059669" : "#64748b", fontWeight: 600 }}>
+                              {isDegreeVerified ? <ShieldCheck size={14} /> : <AlertCircle size={14} />}
+                              {isDegreeVerified ? "Degree Verified" : "Unverified"}
+                            </span>
+                            <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                              {isPoliceVerified ? "Police Cleared" : "No police check"}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={cellStyle}>
+                          <span style={{ fontSize: "0.8rem", color: "#334155" }}>
+                            {offer.availability || "Flexible"}
+                          </span>
+                        </td>
+                        <td style={{ ...cellStyle, textAlign: "right" }}>
+                          {isCountering ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end" }}>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder={`Counter (${currency})`}
+                                value={counterAmount}
+                                onChange={(e) => setCounterAmount(e.target.value)}
+                                style={{
+                                  padding: "0.45rem 0.65rem",
+                                  borderRadius: "0.4rem",
+                                  border: "1.5px solid #0329b2",
+                                  fontSize: "0.82rem",
+                                  outline: "none",
+                                  width: "100%",
+                                }}
+                              />
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem", width: "100%" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendCounter(offer._id)}
+                                  style={{
+                                    background: "#0329b2",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "0.45rem",
+                                    borderRadius: "0.4rem",
+                                    fontWeight: 700,
+                                    fontSize: "0.75rem",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Send Counter
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setCounteringOfferId(null); setCounterAmount(""); }}
+                                  style={{
+                                    background: "#f1f5f9",
+                                    color: "#475569",
+                                    border: "none",
+                                    padding: "0.45rem",
+                                    borderRadius: "0.4rem",
+                                    fontWeight: 600,
+                                    fontSize: "0.75rem",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", alignItems: "flex-end" }}>
+                              <button
+                                type="button"
+                                onClick={() => setShowGuaranteeConfirm(offer._id)}
+                                style={{
+                                  background: "#0329b2",
+                                  color: "white",
+                                  border: "none",
+                                  padding: "0.55rem 0.7rem",
+                                  borderRadius: "0.5rem",
+                                  fontWeight: 700,
+                                  fontSize: "0.78rem",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "0.3rem",
+                                }}
+                              >
+                                <Check size={14} /> Accept
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setCounteringOfferId(offer._id); setCounterAmount(String(offer.amount)); }}
+                                style={{
+                                  background: "#f8fafc",
+                                  color: "#021550",
+                                  border: "1.5px solid #cbd5e1",
+                                  padding: "0.55rem 0.7rem",
+                                  borderRadius: "0.5rem",
+                                  fontWeight: 700,
+                                  fontSize: "0.78rem",
+                                  cursor: "pointer",
+                                  textAlign: "center",
+                                }}
+                              >
+                                Counter Rate
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Footer info note */}
@@ -412,7 +446,7 @@ export default function OfferComparisonModal({
               </div>
 
               <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "1rem", lineHeight: 1.5 }}>
-                By proceeding, you agree to TUTORERA's <a href="/terms" style={{ color: "#0329b2" }}>Terms of Service</a> and <a href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</a> policy.
+                By proceeding, you agree to TUTORERA&apos;s <a href="/terms" style={{ color: "#0329b2" }}>Terms of Service</a> and <a href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</a> policy.
               </p>
 
               <div style={{ display: "flex", gap: "0.5rem" }}>

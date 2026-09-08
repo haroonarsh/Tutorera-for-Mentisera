@@ -24,10 +24,6 @@ import { trackingWelcomeEmail } from "../utils/trackingEmails";
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
 
-// Plan limits reference
-const PLAN_BID_LIMITS: Record<string, number> = { free: 3, standard: 10, premium: -1 };
-const PLAN_REQUEST_LIMITS: Record<string, number> = { free: 2, standard: 10, premium: -1 };
-
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Register user
@@ -399,19 +395,13 @@ export const getMyUsage = async (req: AuthRequest, res: Response): Promise<void>
     res.status(404).json({ success: false, message: "User not found" });
     return;
   }
- 
+  
   const plan = user.plan || "free";
-  const bidLimit = PLAN_BID_LIMITS[plan];
-  const requestLimit = PLAN_REQUEST_LIMITS[plan];
- 
+  
   res.status(200).json({
     success: true,
     usage: {
       plan,
-      bidsThisMonth: user.bidsThisMonth || 0,
-      bidLimit,
-      requestsThisMonth: (user as any).requestsThisMonth || 0,
-      requestLimit,
     },
   });
 };

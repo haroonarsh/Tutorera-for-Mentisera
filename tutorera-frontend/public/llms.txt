@@ -18,7 +18,6 @@ TUTORERA enables students to post tuition requirements and receive transparent o
 - Multi-country market configuration (PK, AE, SA, GB, US, CA, AU, QA, OM, KW, BH, IN, MY, SG)
 - One-click rebooking with pre-filled tutor, subject, mode, and rate from previous sessions
 - Post-session review request automation
-- Recurring lesson scheduling (weekly, twice-weekly, monthly plans) with session packages (4-session, 8-session)
 - Parent/guardian accounts with child profile management and approval workflows
 - Self-service refund request flow for completed bookings
 - Guest checkout for parent accounts — parents can pay for their children's bookings

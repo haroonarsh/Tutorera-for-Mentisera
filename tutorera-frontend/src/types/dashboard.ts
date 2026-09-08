@@ -23,7 +23,7 @@ export interface DashRequest {
   preferredTutorCountries?: string[];
   city: string;
   schedule: string;
-  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "offer_accepted" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
+  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   createdAt: string;
   publishedAt?: string;
   expiresAt?: string;

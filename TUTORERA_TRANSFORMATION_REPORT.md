@@ -146,7 +146,7 @@ Extracts:
 | **Zero-Offer Rescue** | Automated tiered matching expansion when no offers received | High |
 | **Offer Cap System** | Limit to 3-5 qualified offers per request (UrbanPro model) | Medium |
 | **Rebooking in One Click** | Pre-fill tutor, subject, mode, availability, agreed rate | Medium |
-| **Recurring Learning Packages** | 4-session, 8-session, monthly packages | Medium |
+| **Offer-led repeat bookings** | Repost or negotiate a new tutor offer from a prior booking | Medium |
 | **Parent Account** | Parent/guardian model with child profiles | Medium |
 | **Student Success Operations** | Admin queue for no-offer, expiring, unpaid situations | Medium |
 | **Supply Gap Engine** | Dynamic liquidity score (0-100) per city/subject/mode | Medium |

@@ -11,7 +11,6 @@ import {
   initiateAcceptBid,
 } from "../controllers/request.controller";
 import { protect, authorize, optionalAuth } from "../middlewares/auth.middleware";
-import { checkBidLimit } from "../middlewares/bidLimit.middleware";
 import { validate, createRequestSchema, placeBidSchema, createDirectBookingRequestSchema } from "../validators/request.validator";
 
 const router = Router();
@@ -28,7 +27,7 @@ router.patch("/:id/cancel", protect, authorize("student"), cancelRequest);
 router.patch("/:id/close", protect, authorize("student"), closeRequest);
 router.post("/:id/extend", protect, authorize("student"), extendRequest);
 router.post("/:id/repost", protect, authorize("student"), repostRequest);
-router.post("/:id/bids", protect, authorize("tutor"), checkBidLimit, validate(placeBidSchema), placeBid);
+router.post("/:id/bids", protect, authorize("tutor"), validate(placeBidSchema), placeBid);
 router.get("/:id/bids", protect, authorize("student"), getBidsForRequest);
 router.patch("/:id/bids/:bidId/accept", protect, initiateAcceptBid);
 

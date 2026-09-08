@@ -50,7 +50,6 @@ test("only active demand statuses are eligible for expiration", () => {
 
   // Successful and transactional states must NEVER be expired by worker
   const protectedStatuses = [
-    "offer_accepted",
     "awaiting_payment",
     "booked",
     "in_progress",
