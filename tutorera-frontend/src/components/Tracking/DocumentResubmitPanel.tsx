@@ -72,7 +72,7 @@ export function DocumentResubmitPanel({ components, policeRequired, onResubmitte
     try {
       const form = new FormData();
       for (const [key, file] of Object.entries(files)) form.append(key, file as File);
-      const res = await api.post("/upload/resubmit", form, { headers: { "Content-Type": "multipart/form-data" } });
+      const res = await api.post("/upload/resubmit", form);
       if (res.data.success) {
         setSuccess("Documents submitted. Our team will review within 24-48 hours.");
         setFiles({});

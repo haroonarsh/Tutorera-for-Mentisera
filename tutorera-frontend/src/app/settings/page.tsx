@@ -42,7 +42,7 @@ export default function SettingsPage() {
       if (avatarFile) {
         const formData = new FormData();
         formData.append("avatar", avatarFile);
-        await api.post("/upload/avatar", formData, { headers: { "Content-Type": "multipart/form-data" } });
+        await api.post("/upload/avatar", formData);
       }
       await api.patch("/auth/update-profile", profile);
       setSuccess("Profile updated successfully!");

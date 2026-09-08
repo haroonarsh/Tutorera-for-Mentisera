@@ -105,9 +105,7 @@ export default function ProfilePage() {
       if (avatarFile) {
         const formData = new FormData();
         formData.append("avatar", avatarFile);
-        await api.post("/upload/avatar", formData, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
+        await api.post("/upload/avatar", formData);
       }
       // 2. Update personal info (name, phone, city)
       await api.patch("/auth/update-profile", {

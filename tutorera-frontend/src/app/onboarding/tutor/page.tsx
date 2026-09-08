@@ -313,9 +313,14 @@ export default function TutorOnboardingPage() {
         if (policeCertificate) formData.append("policeCertificate", policeCertificate);
       }
 
-      await api.post("/tutors/onboarding/step", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      try {
+        await api.post("/tutors/onboarding/step", formData);
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "Failed to save. Please try again.";
+        setError(msg);
+        setSaving(false);
+        return;
+      }
 
       setSuccessMsg("Step saved successfully.");
 
