@@ -4,12 +4,9 @@ import { useEffect, useState } from "react";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
-import { TOTAL_FEE_PERCENT } from "@/lib/site";
+import { useAuth } from "@/context/AuthContext";
 
 const C = UI_COLORS;
-
-// Platform fee: 20% base + 15% GST on that fee = 3% GST = 23% total
-const PLATFORM_FEE_PERCENT = TOTAL_FEE_PERCENT;
 
 interface Booking {
   _id: string;
@@ -23,15 +20,19 @@ interface Booking {
   payoutStatus: string;
   paymentNote: string;
   payoutNote: string;
+  platformFee: number;
+  tutorPayout: number;
   createdAt: string;
 }
 
 export default function PaymentsPage() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"payments" | "payouts">("payments");
   const [updating, setUpdating] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
+  const canManagePayments = user?.adminRole === "super_admin" || user?.adminRole === "finance" || user?.adminPermissions?.includes("*") || user?.adminPermissions?.includes("payment.manage");
 
   useEffect(() => {
     api.get("/admin/bookings")
@@ -56,17 +57,11 @@ export default function PaymentsPage() {
     }
   };
 
-  const calculateFees = (amount: number) => {
-    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT / 100);
-    const tutorPayout = amount - platformFee;
-    return { platformFee, tutorPayout };
-  };
-
   // Summary stats
   const confirmedBookings = bookings.filter(b => b.paymentStatus === "confirmed");
   const totalReceived     = confirmedBookings.reduce((sum, b) => sum + b.amount, 0);
   const totalPending      = bookings.filter(b => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
-  const totalPlatformFees = Math.round(totalReceived * PLATFORM_FEE_PERCENT / 100);
+  const totalPlatformFees = confirmedBookings.reduce((sum, booking) => sum + (booking.platformFee || 0), 0);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
@@ -125,7 +120,8 @@ export default function PaymentsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {bookings.map(booking => {
-            const { platformFee, tutorPayout } = calculateFees(booking.amount);
+            const platformFee = booking.platformFee || 0;
+            const tutorPayout = booking.tutorPayout || 0;
             const curr = booking.currency || "PKR";
             return (
               <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
@@ -165,7 +161,7 @@ export default function PaymentsPage() {
                     </p>
                     {activeTab === "payments" ? (
                       <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
-                        Platform keeps: {curr} {platformFee.toLocaleString()} ({PLATFORM_FEE_PERCENT}%)
+                        Stored fee snapshot: {curr} {platformFee.toLocaleString()}
                       </p>
                     ) : (
                       <p style={{ fontSize: '0.75rem', color: C.gray500, marginTop: '0.25rem' }}>
@@ -185,6 +181,7 @@ export default function PaymentsPage() {
                           <select
                             title="Payment status"
                             value={booking.paymentStatus}
+                            disabled={!canManagePayments}
                             onChange={e => setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, paymentStatus: e.target.value } : b))}
                             style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: 'white' }}>
                             <option value="pending">Pending</option>
@@ -194,12 +191,14 @@ export default function PaymentsPage() {
                           </select>
                           <input
                             value={note[booking._id] || ""}
+                            disabled={!canManagePayments}
                             onChange={e => setNote(prev => ({ ...prev, [booking._id]: e.target.value }))}
-                            placeholder="Add note (optional)..."
+                            placeholder="Required change reason (8+ characters)"
                             style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
                           <button
+                            type="button"
                             onClick={() => updatePayment(booking._id, booking.paymentStatus)}
-                            disabled={updating === booking._id}
+                            disabled={updating === booking._id || !canManagePayments || (note[booking._id] || "").trim().length < 8}
                             style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
                             {updating === booking._id ? "Saving..." : "Update Payment"}
                           </button>

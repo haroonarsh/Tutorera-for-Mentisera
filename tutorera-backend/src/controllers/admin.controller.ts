@@ -7,7 +7,8 @@ import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
-import { GST_PERCENT, PLATFORM_FEE_PERCENT, TOTAL_FEE_PERCENT } from "../config/constants";
+import { GST_PERCENT, PLATFORM_FEE_PERCENT } from "../config/constants";
+import { hasPermission } from "../config/rbac";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import Request from "../models/Request.model";
@@ -515,13 +516,46 @@ export const updatePaymentStatus = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { paymentStatus, paymentNote, payoutStatus, payoutNote, status } = req.body;
+  const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
+
+  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : "payout.process";
+  if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
+    return;
+  }
 
   const booking = await Booking.findById(req.params.id)
     .populate("student", "name")
     .populate("tutor", "name");
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
+    return;
+  }
+
+  const paymentTransitions: Record<string, string[]> = {
+    pending: ["received", "failed", "disputed"], received: ["confirmed", "failed", "disputed"],
+    confirmed: ["partially_refunded", "refunded", "chargeback", "disputed"], failed: ["pending"],
+    partially_refunded: ["refunded", "chargeback", "disputed"], disputed: ["confirmed", "refunded", "chargeback"],
+    refunded: [], chargeback: [],
+  };
+  const payoutTransitions: Record<string, string[]> = {
+    pending: ["approved", "held"], approved: ["processing", "held"], processing: ["paid", "failed", "held"],
+    failed: ["approved", "processing", "held"], held: ["approved", "processing"], paid: [],
+  };
+  if (paymentStatus === booking.paymentStatus || payoutStatus === booking.payoutStatus) {
+    res.status(409).json({ success: false, message: "The booking already has that financial status." });
+    return;
+  }
+  if (paymentStatus !== undefined && paymentStatus !== booking.paymentStatus && !paymentTransitions[booking.paymentStatus]?.includes(paymentStatus)) {
+    res.status(409).json({ success: false, message: `Payment cannot move from ${booking.paymentStatus} to ${paymentStatus}.` });
+    return;
+  }
+  if (payoutStatus !== undefined && payoutStatus !== booking.payoutStatus && !payoutTransitions[booking.payoutStatus]?.includes(payoutStatus)) {
+    res.status(409).json({ success: false, message: `Payout cannot move from ${booking.payoutStatus} to ${payoutStatus}.` });
+    return;
+  }
+  if (payoutStatus !== undefined && booking.paymentStatus !== "confirmed") {
+    res.status(409).json({ success: false, message: "A payout cannot change until student payment is confirmed." });
     return;
   }
 
@@ -532,18 +566,9 @@ export const updatePaymentStatus = async (
   if (payoutNote !== undefined) booking.payoutNote = payoutNote;
 
   // Handle booking status change from admin
-  if (status !== undefined) {
-    booking.status = status;
-  }
+  // Booking lifecycle changes use the dedicated status endpoint.
 
   // ← ADD: Auto-calculate fees with new 23% when payment confirmed
-  if (paymentStatus === "confirmed" && booking.amount) {
-    const platformFee = Math.round(booking.amount * TOTAL_FEE_PERCENT / 100);
-    const tutorPayout = booking.amount - platformFee;
-    booking.platformFee = platformFee;
-    booking.tutorPayout = tutorPayout;
-  }
-  
   await booking.save();
 
   if (paymentStatus === "confirmed") {
@@ -584,10 +609,6 @@ export const updatePaymentStatus = async (
   }
 
   // ── trigger referral credit when admin marks booking completed ──
-  if (status === "completed" && booking.isFirstSession) {
-    await creditReferrerOnFirstBooking(booking.student.toString());
-  }
-
   res.status(200).json({
     success: true,
     message: "Updated successfully",
@@ -1552,7 +1573,6 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       drawTableRow([s.name, s.email, String(s.requests), String(s.bookings)], sWidths)
     );
 
-    // ── Footer ──
     doc.fontSize(8).fillColor(COL_GRAY)
       .text(`TUTORERA® — Confidential · Generated ${now.toLocaleDateString("en-PK")}`, 50, 780, { align: "center" });
 
