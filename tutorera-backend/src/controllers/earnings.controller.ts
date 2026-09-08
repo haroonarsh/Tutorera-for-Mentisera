@@ -276,6 +276,9 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
 
   booking.payoutStatus = "processing";
   booking.payoutNote = "Payout requested by tutor";
+  const requestedAt = new Date();
+  booking.payoutRequestedAt = requestedAt;
+  booking.payoutProcessingAt = requestedAt;
   await booking.save();
 
   const tutorUser = await User.findById(tutorId).select("name email");
@@ -295,8 +298,17 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
 // @route   GET /api/earnings/payouts
 // @access  Private (tutor)
 export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "tutor") {
+    res.status(403).json({ success: false, message: "Only tutors can view payout history." });
+    return;
+  }
   const tutorId = req.user?._id;
   const { page = "1", limit = "20", status } = req.query;
+  const allowedStatuses = new Set(["all", "pending", "approved", "processing", "paid", "failed", "held"]);
+  if (status && !allowedStatuses.has(String(status))) {
+    res.status(400).json({ success: false, message: "Invalid payout status." });
+    return;
+  }
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
@@ -312,19 +324,21 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
     filter.payoutStatus = status;
   }
 
-  const total = await Booking.countDocuments(filter);
-
-  const payouts = await Booking.find(filter)
-    .populate("student", "name email")
+  const [total, payouts, summaryRows] = await Promise.all([
+    Booking.countDocuments(filter),
+    Booking.find(filter)
+    .populate("student", "name")
     .populate("request", "subject level")
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum)
-    .lean();
+    .lean(),
+    Booking.find(filter).select("payoutStatus tutorPayout").lean(),
+  ]);
 
-  const totalPayoutAmount = payouts.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
-  const pendingAmount = payouts.filter(b => b.payoutStatus === "pending" || b.payoutStatus === "processing").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
-  const paidAmount = payouts.filter(b => b.payoutStatus === "paid").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const totalPayoutAmount = summaryRows.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const pendingAmount = summaryRows.filter(b => ["pending", "approved", "processing", "held"].includes(b.payoutStatus)).reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const paidAmount = summaryRows.filter(b => b.payoutStatus === "paid").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
 
   res.status(200).json({
     success: true,
@@ -340,10 +354,21 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
       studentName: (p.student as unknown as { name?: string } | null)?.name || "Student",
       subject: (p.request as unknown as { subject?: string } | null)?.subject || "General",
       amount: p.amount,
+      currency: "PKR",
+      subtotal: p.subtotal,
+      tutorFee: p.tutorFee,
+      tax: p.tax,
+      tutorNet: p.tutorNet,
       tutorPayout: p.tutorPayout,
       payoutStatus: p.payoutStatus,
       payoutNote: p.payoutNote,
+      payoutRequestedAt: p.payoutRequestedAt,
+      payoutApprovedAt: p.payoutApprovedAt,
+      payoutProcessingAt: p.payoutProcessingAt,
+      payoutPaidAt: p.payoutPaidAt,
+      payoutFailedAt: p.payoutFailedAt,
       createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
     })),
   });
 };

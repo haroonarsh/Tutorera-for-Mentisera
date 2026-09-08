@@ -564,7 +564,11 @@ export const updatePaymentStatus = async (
   if (paymentNote !== undefined) booking.paymentNote = paymentNote;
   if (payoutStatus !== undefined) {
     booking.payoutStatus = payoutStatus;
-    if (payoutStatus === "paid") booking.payoutPaidAt = new Date();
+    const changedAt = new Date();
+    if (payoutStatus === "approved") booking.payoutApprovedAt = changedAt;
+    if (payoutStatus === "processing") booking.payoutProcessingAt = changedAt;
+    if (payoutStatus === "paid") booking.payoutPaidAt = changedAt;
+    if (payoutStatus === "failed") booking.payoutFailedAt = changedAt;
   }
   if (payoutNote !== undefined) booking.payoutNote = payoutNote;
 

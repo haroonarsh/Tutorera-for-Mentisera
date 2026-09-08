@@ -27,7 +27,11 @@ export interface IBooking extends Document {
   paymentNote?: string;
   payoutStatus: "pending" | "approved" | "processing" | "paid" | "failed" | "held";
   payoutNote?: string;
+  payoutRequestedAt?: Date;
+  payoutApprovedAt?: Date;
+  payoutProcessingAt?: Date;
   payoutPaidAt?: Date;
+  payoutFailedAt?: Date;
   isFirstSession: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -69,7 +73,11 @@ const bookingSchema = new Schema<IBooking>(
       default: "pending",
     },
     payoutNote: { type: String, default: "" },
+    payoutRequestedAt: { type: Date },
+    payoutApprovedAt: { type: Date },
+    payoutProcessingAt: { type: Date },
     payoutPaidAt: { type: Date },
+    payoutFailedAt: { type: Date },
     isFirstSession: { type: Boolean, default: false },
   },
   { timestamps: true }

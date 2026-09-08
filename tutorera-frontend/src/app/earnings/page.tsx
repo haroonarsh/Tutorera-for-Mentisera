@@ -12,6 +12,7 @@ import { Calculator } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 import CommissionCalculator from "@/components/Dashboard/CommissionCalculator";
+import PayoutTimeline from "@/components/Finance/PayoutTimeline";
 
 const C = UI_COLORS;
 
@@ -200,6 +201,8 @@ export default function EarningsPage() {
             </div>
           )}
         </div>
+
+        {isTutor && <PayoutTimeline />}
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>

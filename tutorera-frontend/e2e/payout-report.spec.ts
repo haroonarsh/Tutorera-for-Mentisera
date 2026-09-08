@@ -23,6 +23,14 @@ async function authenticate(page: Page, user: Record<string, unknown>, options: 
       });
       return;
     }
+    if (path.endsWith("/earnings/payouts")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ stats: { totalPayouts: 1, totalPayoutAmount: 1540, pendingAmount: 1540, paidAmount: 0 }, pagination: { total: 1, page: 1, pages: 1, limit: 10 }, payouts: [{ _id: "booking-1", studentName: "Test Student", subject: "Mathematics", currency: "PKR", tutorPayout: 1540, payoutStatus: "pending", createdAt: "2026-09-01T10:00:00.000Z" }] }),
+      });
+      return;
+    }
     if (path.endsWith("/earnings/report/pdf")) {
       options.onPdfRequest?.();
       expect(route.request().url()).toContain("from=");
@@ -64,6 +72,15 @@ test("verified tutor downloads a date-filtered payout PDF", async ({ page }) => 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("tutor-statement.pdf");
   await expect(page.getByText("Verified payout report downloaded.")).toBeVisible();
+});
+
+test("tutor sees a truthful payout timeline and can request settlement", async ({ page }) => {
+  await authenticate(page, { _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com", role: "tutor", isVerified: true, isApproved: true, plan: "free" });
+  await page.goto("/earnings");
+  await expect(page.getByRole("heading", { name: "Payout tracking" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Payout timeline for Mathematics" })).toContainText("Eligible");
+  await expect(page.getByRole("list", { name: "Payout timeline for Mathematics" })).toContainText("Not reached");
+  await expect(page.getByRole("button", { name: "Request payout" })).toBeVisible();
 });
 
 test("finance admin downloads a selected tutor payout PDF", async ({ page }) => {
