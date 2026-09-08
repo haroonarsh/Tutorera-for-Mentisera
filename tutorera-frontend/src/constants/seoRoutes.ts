@@ -1,6 +1,6 @@
 /**
  * Canonical configuration of private, authenticated, operational, and non-indexable routes.
- * Used uniformly across middleware.ts, robots.ts, and header directives.
+ * Used uniformly across proxy.ts, robots.ts, and header directives.
  */
 
 export const SEO_PRIVATE_PATHS = [
