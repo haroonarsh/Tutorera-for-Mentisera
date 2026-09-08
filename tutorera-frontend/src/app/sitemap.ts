@@ -14,7 +14,7 @@ const routes = [
   "blog/what-to-look-for-before-hiring-a-tutor-pakistan",
 ];
 
-const TARGET_COUNTRIES = ["pk", "ae", "gb", "sa", "us", "ca"] as const;
+const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

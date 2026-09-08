@@ -13,6 +13,8 @@ export interface IRequest extends Document {
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
   learningObjectives?: string;
   countryCode?: string; countryName?: string; city?: string; timezone?: string;
+  country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
+  lessonLanguage?: string;
   area?: string; travelRadiusKm?: number;
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];
@@ -66,14 +68,19 @@ const requestSchema = new Schema<IRequest>(
     budget: { type: Number, required: true, min: 0 },
     maximumBudget: { type: Number, min: 0, select: false },
     pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },
-    currency: { type: String, trim: true, default: "PKR" },
+    currency: { type: String, uppercase: true, trim: true },
     allowCounterOffers: { type: Boolean, default: true },
     classGrade: { type: String, trim: true }, curriculum: { type: String, trim: true }, examType: { type: String, trim: true }, studentLevel: { type: String, trim: true },
     learningObjectives: { type: String, trim: true }, 
-    countryCode: { type: String, trim: true, default: "PK" },
-    countryName: { type: String, trim: true, default: "Pakistan" },
+    countryCode: { type: String, uppercase: true, trim: true },
+    countryName: { type: String, trim: true },
+    country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
+    region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
+    cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
+    locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
-    timezone: { type: String, trim: true, default: "Asia/Karachi" },
+    timezone: { type: String, trim: true },
+    lessonLanguage: { type: String, trim: true, default: "English" },
     area: { type: String, trim: true }, 
     travelRadiusKm: { type: Number, min: 0, max: 100 },
     isWorldwideEligible: { type: Boolean, default: true },
@@ -125,6 +132,7 @@ const requestSchema = new Schema<IRequest>(
 requestSchema.index({ status: 1, expiresAt: 1 });
 requestSchema.index({ student: 1, status: 1, createdAt: -1 });
 requestSchema.index({ teachingMode: 1, countryCode: 1, status: 1, expiresAt: 1 });
+requestSchema.index({ countryCode: 1, cityRef: 1, currency: 1, status: 1, createdAt: -1 });
 requestSchema.index({ lossReason: 1, lossClassifiedAt: -1 });
 
 export default mongoose.model<IRequest>("Request", requestSchema);

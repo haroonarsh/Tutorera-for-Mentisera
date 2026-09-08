@@ -15,6 +15,7 @@ export interface IUser extends Document {
   role: UserRole;
   adminRole?: string;
   adminPermissions?: string[];
+  allowedCountryCodes?: string[];
   phone?: string;
   city?: string;
   avatar?: string;
@@ -30,6 +31,11 @@ export interface IUser extends Document {
   authProvider: AuthProvider;
   countryCode?: string;
   countryName?: string;
+  country?: Types.ObjectId;
+  region?: Types.ObjectId;
+  cityRef?: Types.ObjectId;
+  locality?: Types.ObjectId;
+  preferredLanguage?: string;
   timezone?: string;
   currency?: string;
   applicationId?: string;

@@ -16,6 +16,7 @@ const VALID_ADMIN_ROLES: AdminRole[] = [
   "growth",
   "content",
   "analyst",
+  "country_admin",
 ];
 
 /**

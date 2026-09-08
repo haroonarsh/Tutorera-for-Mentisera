@@ -8,6 +8,9 @@ export interface IBooking extends Document {
   parent?: Types.ObjectId;
   amount: number;
   finalAgreedRate: number;
+  currency?: string;
+  countryCode?: string;
+  timezone?: string;
   pricingUnit: "hour" | "session" | "month" | "course";
   sessionCount: number;
   subtotal: number;
@@ -46,6 +49,9 @@ const bookingSchema = new Schema<IBooking>(
     parent: { type: Schema.Types.ObjectId, ref: "User" },
     amount: { type: Number, required: true },
     finalAgreedRate: { type: Number, required: true },
+    currency: { type: String, uppercase: true, trim: true, index: true },
+    countryCode: { type: String, uppercase: true, trim: true, index: true },
+    timezone: { type: String, trim: true },
     pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },
     sessionCount: { type: Number, default: 1, min: 1 },
     subtotal: { type: Number, required: true },
@@ -84,5 +90,6 @@ const bookingSchema = new Schema<IBooking>(
 );
 
 bookingSchema.index({ tutor: 1, payoutStatus: 1, payoutPaidAt: -1 });
+bookingSchema.index({ countryCode: 1, currency: 1, createdAt: -1 });
 
 export default mongoose.model<IBooking>("Booking", bookingSchema);

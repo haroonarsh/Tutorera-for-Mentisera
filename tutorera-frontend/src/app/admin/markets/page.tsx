@@ -12,6 +12,12 @@ interface MarketConfig {
   currency: string;
   currencySymbol: string;
   timezone: string;
+  timezones?: string[];
+  supportedLanguages?: string[];
+  paymentProvider?: string;
+  paymentsEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  featureFlags?: Record<string, boolean>;
   onlineEnabled: boolean;
   homeTuitionEnabled: boolean;
   backgroundCheckRequired: boolean;
@@ -213,11 +219,11 @@ export default function MarketsPage() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem" }}>
                   <ShieldCheck size={16} color={market.backgroundCheckRequired ? "#059669" : "#94a3b8"} />
-                  <span style={{ color: market.backgroundCheckRequired ? "#0f172a" : "#94a3b8", fontWeight: 500 }}>Police Clearance</span>
+                  <span style={{ color: market.backgroundCheckRequired ? "#0f172a" : "#94a3b8", fontWeight: 500 }}>Safety verification</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem" }}>
                   <DollarSign size={16} color="#0329b2" />
-                  <span style={{ color: "#0f172a", fontWeight: 600 }}>Fee: {market.platformFeePercent}%</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>{market.paymentsEnabled ? `${market.paymentProvider || "Configured"} payments` : "Discovery only"}</span>
                 </div>
               </div>
 

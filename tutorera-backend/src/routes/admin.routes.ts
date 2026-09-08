@@ -34,6 +34,7 @@ import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
+import { enforceCountryScope } from "../middlewares/countryScope.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 import { validate as validateBooking } from "../validators/booking.validator";
 import { updateAdminPaymentSchema } from "../validators/adminFinance.validator";
@@ -61,6 +62,7 @@ import {
 const router = Router();
 
 router.use(protect, authorize("admin"));
+router.use(enforceCountryScope);
 
 // Control Tower & Liquidity
 router.get("/control-tower/pulse", requirePermission("system.monitor"), getControlTowerPulse);

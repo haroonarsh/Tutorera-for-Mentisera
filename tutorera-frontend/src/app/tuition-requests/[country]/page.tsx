@@ -9,27 +9,11 @@ interface Props {
 const COUNTRY_NAMES: Record<string, string> = {
   pk: "Pakistan",
   ae: "United Arab Emirates",
-  sa: "Saudi Arabia",
   gb: "United Kingdom",
-  us: "United States",
-  ca: "Canada",
-  au: "Australia",
-  qa: "Qatar",
-  om: "Oman",
-  kw: "Kuwait",
-  bh: "Bahrain",
-  in: "India",
-  my: "Malaysia",
-  sg: "Singapore",
 };
 
 export async function generateStaticParams() {
-  return [
-    { country: "pk" }, { country: "ae" }, { country: "sa" }, { country: "gb" },
-    { country: "us" }, { country: "ca" }, { country: "au" }, { country: "qa" },
-    { country: "om" }, { country: "kw" }, { country: "bh" }, { country: "in" },
-    { country: "my" }, { country: "sg" },
-  ];
+  return [{ country: "pk" }, { country: "ae" }, { country: "gb" }];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

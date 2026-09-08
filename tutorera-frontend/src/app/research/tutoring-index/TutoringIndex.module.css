@@ -1,0 +1,25 @@
+.main { color: #021550; background: #f8faff; min-height: 70vh; }
+.hero { background: linear-gradient(135deg, #021550, #0329b2 70%, #016ef8); color: #fff; padding: 4.5rem 1.25rem; text-align: center; }
+.hero p { color: #76ddff; font-weight: 800; letter-spacing: .14em; font-size: .78rem; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); margin: .4rem 0 1rem; }
+.hero span { display: block; max-width: 48rem; margin: auto; color: #dbeafe; line-height: 1.7; }
+.content { max-width: 70rem; margin: auto; padding: 2rem 1.25rem 5rem; }
+.filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.filters a { border: 1px solid #cbd5e1; border-radius: .7rem; padding: .65rem .85rem; background: #fff; color: #0329b2; text-decoration: none; font-weight: 750; transition: transform 160ms cubic-bezier(.23,1,.32,1), border-color 160ms ease; }
+.filters a:active { transform: scale(.97); }
+.filters a[aria-current="page"] { background: #0329b2; color: #fff; border-color: #0329b2; }
+.empty, .card { background: #fff; border: 1px solid #dbe5f3; border-radius: 1rem; padding: 1.4rem; margin-bottom: 1.25rem; }
+.empty { text-align: center; max-width: 44rem; margin: 0 auto; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .8rem; }
+.stats div, .trends article { display: grid; gap: .3rem; background: #fff; border: 1px solid #dbe5f3; border-radius: .9rem; padding: 1rem; }
+.stats strong { font-size: 1.7rem; }
+.note { color: #526176; font-size: .875rem; line-height: 1.6; }
+.card h2, .method h2 { font-size: 1.35rem; }
+.tableWrap { overflow-x: auto; }
+.tableWrap table { width: 100%; border-collapse: collapse; min-width: 56rem; }
+.tableWrap th, .tableWrap td { text-align: start; padding: .75rem; border-bottom: 1px solid #edf1f7; font-size: .82rem; vertical-align: top; }
+.tableWrap thead th { background: #f1f5ff; color: #475569; }
+.trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; }
+.method { color: #475569; line-height: 1.75; padding: 1rem 0; }
+@media (prefers-reduced-motion: reduce) { .filters a { transition: none; } }
+@media (max-width: 430px) { .hero { padding: 3rem 1rem; } .content { padding-inline: 1rem; } .filters a { flex: 1 1 auto; text-align: center; } }

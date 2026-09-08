@@ -22,6 +22,7 @@ import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
 import { classifyRequestLoss } from "../services/requestLoss.service";
+import { assertAcceptanceAvailable, resolveMarket } from "../services/market.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -42,12 +43,26 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
+  const market = await resolveMarket(req.body.countryCode || user.countryCode || "PK");
+  if (!market || !market.isActive || !market.studentRegistration) {
+    res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tuition requests are not available in the selected market." });
+    return;
+  }
+  if (["in-person", "both"].includes(req.body.teachingMode) && !market.homeTuitionEnabled) {
+    res.status(422).json({ success: false, code: "HOME_TUITION_UNAVAILABLE", message: "Home tuition is not available in the selected market." });
+    return;
+  }
+
   // ── Create request ──
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
   const request = await Request.create({
     student: req.user?._id,
     ...req.body,
+    countryCode: market.countryCode,
+    countryName: market.countryName,
+    currency: market.currency,
+    timezone: req.body.timezone || market.timezone,
     status: req.body.status || "open",
     publishedAt: now,
     expiresAt,
@@ -512,6 +527,13 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  try {
+    await assertAcceptanceAvailable(request.countryCode);
+  } catch (marketError: any) {
+    res.status(marketError.statusCode || 409).json({ success: false, code: marketError.code, message: marketError.message, market: request.countryCode });
+    return;
+  }
+
   const bid = await Bid.findOne({
     _id: bidId,
     request: requestId,
@@ -549,6 +571,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       bid: bid._id,
       amount: bid.amount,
       finalAgreedRate: bid.amount,
+      currency: bid.currency || request.currency,
+      countryCode: request.countryCode,
+      timezone: request.timezone,
       pricingUnit: bid.pricingUnit || "hour",
       sessionCount: 1,
       ...fees,
@@ -727,6 +752,9 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         bid: bid._id,
         amount: bid.amount,
         finalAgreedRate: bid.amount,
+        currency: bid.currency || request.currency,
+        countryCode: request.countryCode,
+        timezone: request.timezone,
         pricingUnit: bid.pricingUnit || "hour",
         sessionCount: 1,
         ...fees,
@@ -1062,6 +1090,7 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
       ? { $in: cityTerms.map((term) => new RegExp(`^${escapeRegExp(term)}$`, "i")) }
       : new RegExp(`^${escapeRegExp(cityTerms[0] || String(city).replace(/-/g, " "))}$`, "i");
   }
+
   if (subject) filter.subject = new RegExp(`^${escapeRegExp(String(subject).replace(/-/g, " "))}$`, "i");
   if (level) filter.level = String(level);
   if (currency) filter.currency = String(currency).toUpperCase();

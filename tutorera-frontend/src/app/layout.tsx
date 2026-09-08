@@ -133,9 +133,6 @@ export default function RootLayout({
           { "@type": "Country", name: "Pakistan" },
           { "@type": "Country", name: "United Arab Emirates" },
           { "@type": "Country", name: "United Kingdom" },
-          { "@type": "Country", name: "Saudi Arabia" },
-          { "@type": "Country", name: "United States" },
-          { "@type": "Country", name: "Canada" },
         ],
         sameAs: [
           "https://mentisera.com",

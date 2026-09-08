@@ -10,6 +10,8 @@ export interface ITutorProfile extends Document {
   countryName: string;
   city: string;
   timezone: string;
+  country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
+  nationalityCountryCode?: string; residenceCountryCode?: string; onlineCountryReach?: string[];
   gender: string;
   dateOfBirth: string;
   languages?: { language: string; proficiency: string }[];
@@ -51,6 +53,9 @@ export interface ITutorProfile extends Document {
   videoIntroPublicId: string;
   policeCertificate: string;
   policeCertificatePublicId: string;
+  identityDocumentType?: string;
+  identityDocumentSubtype?: string;
+  safetyVerificationType?: string;
 
   // Status
   onboardingStep: number;
@@ -106,10 +111,17 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     // Step 1
     fullName: { type: String, trim: true, default: "" },
     phone: { type: String, trim: true, default: "" },
-    countryCode: { type: String, trim: true, default: "PK" },
-    countryName: { type: String, trim: true, default: "Pakistan" },
+    countryCode: { type: String, uppercase: true, trim: true },
+    countryName: { type: String, trim: true },
+    country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
+    region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
+    cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
+    locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
+    nationalityCountryCode: { type: String, uppercase: true, trim: true },
+    residenceCountryCode: { type: String, uppercase: true, trim: true },
+    onlineCountryReach: [{ type: String, uppercase: true, trim: true }],
     city: { type: String, trim: true, default: "" },
-    timezone: { type: String, trim: true, default: "Asia/Karachi" },
+    timezone: { type: String, trim: true },
     gender: { type: String, enum: ["male", "female", "other"], default: "male" },
     dateOfBirth: { type: String, default: "" },
     languages: [{
@@ -139,7 +151,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     // Step 4
     bio: { type: String, trim: true, default: "" },
     hourlyRate: { type: Number, default: 0 },
-    currency: { type: String, trim: true, default: "PKR" },
+    currency: { type: String, uppercase: true, trim: true },
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
     serviceAreas: [{ type: String, trim: true }],
     travelRadiusKm: { type: Number, default: 10, min: 0, max: 100 },
@@ -157,6 +169,9 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     videoIntroPublicId: { type: String, default: "" },
     policeCertificate: { type: String, default: "" },
     policeCertificatePublicId: { type: String, default: "" },
+    identityDocumentType: { type: String, trim: true, default: "identity_document" },
+    identityDocumentSubtype: { type: String, trim: true, select: false },
+    safetyVerificationType: { type: String, trim: true, default: "background_safety_verification" },
 
     // Status
     onboardingStep: { type: Number, default: 1 },

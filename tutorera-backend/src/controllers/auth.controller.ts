@@ -20,6 +20,7 @@ import {
   recordStatusEvent,
 } from "../services/tracking.service";
 import { trackingWelcomeEmail } from "../utils/trackingEmails";
+import { resolveMarket } from "../services/market.service";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
@@ -29,7 +30,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // @desc    Register user
 // @route   POST /api/auth/register
 export const register = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password, role, phone, city } = req.body;
+  const { name, email, password, role, phone, city, countryCode = "PK" } = req.body;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -37,7 +38,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const user = await User.create({ name, email, password, role, phone, city, accountStatus: "registered" });
+  const market = await resolveMarket(countryCode);
+  if (!market || !market.isActive) {
+    res.status(422).json({ success: false, message: "Registration is not available in the selected market." });
+    return;
+  }
+  const user = await User.create({
+    name, email, password, role, phone, city,
+    countryCode: market.countryCode, countryName: market.countryName,
+    timezone: market.timezone, currency: market.currency,
+    preferredLanguage: req.body.preferredLanguage || market.defaultLanguage,
+    accountStatus: "registered",
+  });
 
   let trackingToken: string | undefined;
   if (user.role === "tutor") {

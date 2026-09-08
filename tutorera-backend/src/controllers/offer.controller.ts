@@ -18,6 +18,7 @@ import { createTransaction } from "../utils/rapidGateway";
 import { releaseExpiredPaymentHold } from "./request.controller";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
+import { assertAcceptanceAvailable } from "../services/market.service";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
@@ -70,8 +71,8 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     offer.amount = req.body.amount; offer.status = "countered"; offer.expiresAt = expiresAt; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save({ session });
     request.status = "negotiating"; await request.save({ session }); savedOffer = offer; recipient = isStudent ? offer.tutor.toString() : request.student.toString(); finalCounterOffer = roleCount === 2;
   }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
-  await sendNotification(req.app.get("io"), recipient, { title: "Counter Offer Received", message: `${role === "student" ? "The student" : "The tutor"} proposed PKR ${req.body.amount.toLocaleString()}/${savedOffer.pricingUnit}.`, type: "bid", link: "/offers" });
-  await offerEmail(recipient, "Counter Offer Received", `${role === "student" ? "The student" : "The tutor"} proposed PKR ${req.body.amount.toLocaleString()} per ${savedOffer.pricingUnit}.`);
+  await sendNotification(req.app.get("io"), recipient, { title: "Counter Offer Received", message: `${role === "student" ? "The student" : "The tutor"} proposed ${savedOffer.currency} ${req.body.amount.toLocaleString()}/${savedOffer.pricingUnit}.`, type: "bid", link: "/offers" });
+  await offerEmail(recipient, "Counter Offer Received", `${role === "student" ? "The student" : "The tutor"} proposed ${savedOffer.currency} ${req.body.amount.toLocaleString()} per ${savedOffer.pricingUnit}.`);
   await logAudit({ action: "offer_countered", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: savedOffer.id, metadata: { amount: req.body.amount, role, sequenceNumber: negotiation.sequenceNumber, flaggedForModeration: negotiation.flaggedForModeration } });
   res.status(201).json({ success: true, message: "Counter offer sent.", offer: savedOffer, negotiation, finalCounterOffer });
 };
@@ -123,6 +124,18 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     const request = await Request.findOne({ _id: offer.request, status: { $in: [...ACTIVE_REQUEST_STATES] } });
     if (!request) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
+
+    try {
+      await assertAcceptanceAvailable(request.countryCode);
+    } catch (marketError: any) {
+      res.status(marketError.statusCode || 409).json({
+        success: false,
+        code: marketError.code || "MARKET_DISCOVERY_ONLY",
+        message: marketError.message,
+        market: request.countryCode,
+      });
+      return;
+    }
 
     const userId = req.user?._id?.toString();
     const isStudentOwner = request.student.toString() === userId;

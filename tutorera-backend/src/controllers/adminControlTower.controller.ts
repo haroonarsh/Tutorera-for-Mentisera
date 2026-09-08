@@ -507,6 +507,8 @@ export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<
 // ─── 8. Global Market Configuration ──────────────────────────────────────────
 
 export const getMarketConfigs = async (_req: AuthRequest, res: Response): Promise<void> => {
+  const { ensureLaunchMarkets } = await import("../services/market.service");
+  await ensureLaunchMarkets();
   let markets = await MarketConfig.find().sort("countryCode").lean();
   if (markets.length === 0) {
     // Seed standard initial markets
@@ -579,7 +581,14 @@ export const getMarketConfigs = async (_req: AuthRequest, res: Response): Promis
 
 export const updateMarketConfig = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
-  const updated = await MarketConfig.findByIdAndUpdate(id, req.body, { new: true });
+  const current = await MarketConfig.findById(id);
+  if (!current) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
+  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
+  const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
+  // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
+  if (["AE", "GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
+  const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
+  await logAudit({ action: "market_config_updated", actor: req.user?.name || "Administrator", actorId: req.user?._id?.toString(), entity: "MarketConfig", targetId: id as string, metadata: { countryCode: current.countryCode, changes } });
   res.json({ success: true, market: updated });
 };
 

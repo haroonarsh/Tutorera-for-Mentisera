@@ -19,9 +19,6 @@ export function generateStaticParams() {
     { countryCode: "pk" },
     { countryCode: "ae" },
     { countryCode: "gb" },
-    { countryCode: "sa" },
-    { countryCode: "us" },
-    { countryCode: "ca" },
   ];
 }
 

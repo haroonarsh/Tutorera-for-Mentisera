@@ -12,7 +12,8 @@ export type AdminRole =
   | "support"
   | "growth"
   | "content"
-  | "analyst";
+  | "analyst"
+  | "country_admin";
 
 export const ALL_PERMISSIONS = [
   // Tutors & Verification
@@ -184,6 +185,12 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "market.read",
     "audit.read",
     "system.monitor",
+  ],
+  country_admin: [
+    "tutor.read", "tutor.verify", "tutor.reject", "student.read", "request.read",
+    "request.extend", "request.rematch", "request.close", "matching.read", "bookings.read",
+    "bookings.manage", "payment.read", "payout.read", "safety.read", "claims.read",
+    "analytics.read", "market.read", "audit.read", "system.monitor",
   ],
 };
 
