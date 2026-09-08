@@ -15,6 +15,7 @@ export const SEO_PRIVATE_PATHS = [
   "/onboarding",
   "/profile",
   "/referral",
+  "/recurring",
   "/settings",
   "/tutor",
   "/browse-requests",
