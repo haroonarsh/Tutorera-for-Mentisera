@@ -8,7 +8,7 @@ import { payoutProcessedEmail } from "../utils/emailTemplates";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
-import { generateTutorPayoutReport } from "../services/payoutReport.service";
+import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -237,19 +237,20 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
   }
 
   try {
-    const periodEnd = new Date();
-    const periodStart = new Date();
-    periodStart.setFullYear(periodStart.getFullYear() - 1);
+    const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { data: reportData, pdfBuffer } = await generateTutorPayoutReport(userId.toString(), periodStart, periodEnd);
+    const { data: reportData, pdfBuffer } = await generateTutorPayoutReport(userId.toString(), periodStart, periodEnd, { userId: userId.toString(), role: "tutor" });
 
     const filename = `tutorera-payout-report-${reportData.reportId}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Length", pdfBuffer.length.toString());
     res.send(pdfBuffer);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to generate payout report:", error);
-    res.status(500).json({ success: false, message: "Failed to generate payout report." });
+    res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
   }
 };
 

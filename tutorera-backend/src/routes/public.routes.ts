@@ -60,7 +60,25 @@ router.get("/verify/report/:reportId", async (req, res) => {
       res.status(404).json({ success: false, message: "Report not found." });
       return;
     }
-    res.status(200).json({ success: true, data: report });
+    res.status(200).json({
+      success: true,
+      data: {
+        reportReference: report.reportReference,
+        tutorName: report.tutorName,
+        periodStart: report.periodStart,
+        periodEnd: report.periodEnd,
+        grossAmount: report.grossAmount,
+        netPayout: report.netPayout,
+        totalDeduction: report.totalDeduction,
+        sessionsCompleted: report.sessionsCompleted,
+        paymentDate: report.paymentDate,
+        complianceStatus: report.complianceStatus,
+        generatedAt: report.generatedAt,
+        expiresAt: report.expiresAt,
+        digest: report.digest,
+        verified: true,
+      },
+    });
   } catch (err) {
     console.error("Verification error:", err);
     res.status(500).json({ success: false, message: "Verification failed." });

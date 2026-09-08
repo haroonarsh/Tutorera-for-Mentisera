@@ -8,9 +8,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Download, Calculator } from "lucide-react";
+import { Calculator } from "lucide-react";
 import { useAppGuard } from "@/hooks/useAppGuard";
-import { showSuccess, showError } from "@/lib/toast";
+import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 import CommissionCalculator from "@/components/Dashboard/CommissionCalculator";
 
 const C = UI_COLORS;
@@ -147,24 +147,6 @@ export default function EarningsPage() {
 
   if (guardStatus !== "ok" || !user) return null;
 
-  const handleDownloadPDF = async () => {
-    try {
-      const res = await api.get("/earnings/report/pdf", { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `tutorera-earnings-report-${new Date().toISOString().slice(0, 10)}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      showSuccess("Report downloaded successfully.");
-    } catch (err) {
-      console.error("Failed to download report:", err);
-      showError("Failed to download report. Please try again.");
-    }
-  };
-
   const isTutor    = user.role === "tutor";
   const tutorData  = isTutor ? data as TutorData   : null;
   const studentData = !isTutor ? data as StudentData : null;
@@ -214,10 +196,7 @@ export default function EarningsPage() {
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: showCalculator ? C.accent : "white", color: showCalculator ? "white" : C.primary, padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: `1.5px solid ${showCalculator ? C.accent : "#e5e7eb"}`, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
                 <Calculator size={16} /> {showCalculator ? "Hide Calculator" : "Rate Calculator"}
               </button>
-              <button onClick={handleDownloadPDF}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: C.primary, color: "white", padding: "0.65rem 1.25rem", borderRadius: "0.5rem", border: "none", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
-                <Download size={16} /> Download PDF
-              </button>
+              <PayoutReportDownload endpoint="/earnings/report/pdf" label="Download payout PDF" />
             </div>
           )}
         </div>

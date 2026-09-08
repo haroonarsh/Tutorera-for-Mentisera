@@ -27,8 +27,10 @@ export interface IBooking extends Document {
   paymentNote?: string;
   payoutStatus: "pending" | "approved" | "processing" | "paid" | "failed" | "held";
   payoutNote?: string;
+  payoutPaidAt?: Date;
   isFirstSession: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const bookingSchema = new Schema<IBooking>(
@@ -67,9 +69,12 @@ const bookingSchema = new Schema<IBooking>(
       default: "pending",
     },
     payoutNote: { type: String, default: "" },
+    payoutPaidAt: { type: Date },
     isFirstSession: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+bookingSchema.index({ tutor: 1, payoutStatus: 1, payoutPaidAt: -1 });
 
 export default mongoose.model<IBooking>("Booking", bookingSchema);

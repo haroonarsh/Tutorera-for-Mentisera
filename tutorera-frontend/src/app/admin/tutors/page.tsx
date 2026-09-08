@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, ArrowLeft, RefreshCw, Search, ShieldCheck, Star, X, Download } from "lucide-react";
+import { ArrowLeft, RefreshCw, Search, X } from "lucide-react";
 import api from "@/lib/axios";
+import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
+import { useAuth } from "@/context/AuthContext";
 
 interface TutorItem {
   _id: string;
@@ -40,6 +42,11 @@ interface Tutor360Data {
 }
 
 export default function TutorsDirectoryPage() {
+  const { user } = useAuth();
+  const canReadPayouts = user?.adminRole === "super_admin"
+    || user?.adminRole === "finance"
+    || user?.adminPermissions?.includes("*")
+    || user?.adminPermissions?.includes("payout.read");
   const [tutors, setTutors] = useState<TutorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -73,24 +80,6 @@ export default function TutorsDirectoryPage() {
       console.error("Failed to load Tutor 360:", err);
     } finally {
       setLoading360(false);
-    }
-  };
-
-  const handleDownloadPayoutReport = async (tutorId: string) => {
-    try {
-      const res = await api.get(`/admin/tutors/${tutorId}/payout-report/pdf`, {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `tutorera-payout-report-${tutorId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Failed to download payout report:", err);
     }
   };
 
@@ -253,25 +242,9 @@ export default function TutorsDirectoryPage() {
                     </span>
                    </div>
 
-                   <button
-                     onClick={() => handleDownloadPayoutReport(tutor360._id)}
-                     style={{
-                       marginTop: "0.75rem",
-                       display: "inline-flex",
-                       alignItems: "center",
-                       gap: "0.4rem",
-                       padding: "0.45rem 0.85rem",
-                       backgroundColor: "#16a34a",
-                       color: "white",
-                       border: "none",
-                       borderRadius: "0.4rem",
-                       fontSize: "0.8rem",
-                       fontWeight: 700,
-                       cursor: "pointer",
-                     }}
-                   >
-                     <Download size={14} /> Print Payout Report
-                   </button>
+                   {canReadPayouts && (
+                     <PayoutReportDownload endpoint={`/admin/tutors/${tutor360._id}/payout-report/pdf`} label="Download payout PDF" compact />
+                   )}
 
                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem", marginTop: "1rem" }}>
                     <div style={{ backgroundColor: "white", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0", textAlign: "center" }}>

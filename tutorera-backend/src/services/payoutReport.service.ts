@@ -1,17 +1,33 @@
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
-import sendEmail from "../utils/sendEmail";
 import logger from "../config/logger";
 import QRCode from "qrcode";
 import PDFDocument from "pdfkit";
-import fs from "fs";
+import { PassThrough } from "stream";
 import { COLORS } from "../utils/emailBrand";
-
-const payoutReportStore = new Map<string, PayoutReportData>();
+import crypto from "crypto";
+import PayoutReport from "../models/PayoutReport.model";
 
 export async function getPayoutReportById(reportId: string): Promise<PayoutReportData | null> {
-  return payoutReportStore.get(reportId) || null;
+  const report = await PayoutReport.findOne({ reportId, expiresAt: { $gt: new Date() } }).lean();
+  if (!report) return null;
+  const calculatedDigest = crypto.createHash("sha256").update(JSON.stringify(report.snapshot)).digest("hex");
+  if (calculatedDigest !== report.digest) {
+    logger.error({ reportId }, "Payout report snapshot digest mismatch");
+    return null;
+  }
+  return { ...(report.snapshot as unknown as PayoutReportData), digest: report.digest };
+}
+
+export interface PayoutLineItem {
+  bookingId: string;
+  subject: string;
+  payoutDate: Date;
+  grossAmount: number;
+  tutorFee: number;
+  taxOnFee: number;
+  netPayout: number;
 }
 
 export interface PayoutReportData {
@@ -30,9 +46,8 @@ export interface PayoutReportData {
   hoursTaught: number;
   subjectsTaught: string[];
   studentFeedback?: number;
-  paymentType: "bank_transfer" | "upi" | "wallet";
-  paymentDate: Date;
-  transactionId: string;
+  paymentDate: Date | null;
+  reportReference: string;
   complianceStatus: "verified" | "pending" | "rejected";
   verificationUrl: string;
   qrCodeUrl: string;
@@ -40,39 +55,59 @@ export interface PayoutReportData {
   pdfUrl: string;
   generatedAt: Date;
   expiresAt: Date;
+  transactions: PayoutLineItem[];
+  digest?: string;
+}
+
+export function resolvePayoutReportPeriod(from?: unknown, to?: unknown): { periodStart: Date; periodEnd: Date } {
+  const periodEnd = to ? new Date(String(to)) : new Date();
+  const periodStart = from ? new Date(String(from)) : new Date(periodEnd);
+  if (!from) periodStart.setFullYear(periodStart.getFullYear() - 1);
+  if (Number.isNaN(periodStart.getTime()) || Number.isNaN(periodEnd.getTime()) || periodStart > periodEnd) {
+    throw Object.assign(new Error("Use a valid payout report date range."), { statusCode: 400 });
+  }
+  if (periodEnd.getTime() - periodStart.getTime() > 366 * 24 * 60 * 60 * 1000) {
+    throw Object.assign(new Error("Payout reports are limited to a 12-month period."), { statusCode: 400 });
+  }
+  periodEnd.setHours(23, 59, 59, 999);
+  return { periodStart, periodEnd };
 }
 
 export async function generateTutorPayoutReport(
   tutorId: string,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
+  generatedBy?: { userId?: string; role: "admin" | "tutor" }
 ): Promise<{ data: PayoutReportData; pdfBuffer: Buffer }> {
   try {
     const tutor = await User.findById(tutorId);
     if (!tutor || tutor.role !== "tutor") {
-      throw new Error("Tutor not found");
+      throw Object.assign(new Error("Tutor not found."), { statusCode: 404 });
     }
 
     const tutorProfile = await TutorProfile.findOne({ user: tutor._id });
     if (!tutorProfile) {
-      throw new Error("Tutor profile not found");
+      throw Object.assign(new Error("Tutor profile not found."), { statusCode: 404 });
     }
 
     const completedBookings = await Booking.find({
       tutor: tutor._id,
       status: "completed",
-      createdAt: { $gte: periodStart, $lte: periodEnd },
+      payoutStatus: "paid",
+      $or: [
+        { payoutPaidAt: { $gte: periodStart, $lte: periodEnd } },
+        { payoutPaidAt: { $exists: false }, updatedAt: { $gte: periodStart, $lte: periodEnd } },
+      ],
     })
       .populate("student", "name")
       .populate("request", "subject sessionDurationMinutes")
       .lean();
 
-    const payoutData = await calculatePayoutData(completedBookings, tutorProfile, tutorId);
+    const payoutData = await calculatePayoutData(completedBookings);
 
-    const crypto = require("crypto");
     const reportId = crypto.randomBytes(16).toString("hex");
-    const baseUrl = process.env.CLIENT_URL || "https://tutorera.ac.pk";
-    const reportUrl = `${baseUrl}/api/public/verify/report/${reportId}`;
+    const apiBaseUrl = process.env.PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+    const reportUrl = `${apiBaseUrl}/public/verify/report/${reportId}`;
 
     const reportData: PayoutReportData = {
       tutorId,
@@ -90,19 +125,33 @@ export async function generateTutorPayoutReport(
       hoursTaught: payoutData.hoursTaught,
       subjectsTaught: payoutData.subjectsTaught,
       studentFeedback: payoutData.studentFeedback,
-      paymentType: "bank_transfer",
-      paymentDate: new Date(),
-      transactionId: `TXN-${reportId.substring(0, 8).toUpperCase()}`,
+      paymentDate: payoutData.paymentDate,
+      reportReference: `RPT-${reportId.substring(0, 12).toUpperCase()}`,
       complianceStatus: tutorProfile.verificationStatus === "approved" ? "verified" : "pending",
       verificationUrl: reportUrl,
       qrCodeUrl: reportUrl,
       reportId,
-      pdfUrl: `${baseUrl}/api/reports/pdf/${reportId}`,
+      pdfUrl: "",
       generatedAt: new Date(),
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      transactions: payoutData.transactions,
     };
 
-    payoutReportStore.set(reportId, reportData);
+    const snapshot = { ...reportData };
+    delete snapshot.digest;
+    const digest = crypto.createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+    reportData.digest = digest;
+    await PayoutReport.create({
+      reportId,
+      tutor: tutor._id,
+      generatedBy: generatedBy?.userId,
+      generatedByRole: generatedBy?.role || "tutor",
+      periodStart,
+      periodEnd,
+      snapshot: snapshot as unknown as Record<string, unknown>,
+      digest,
+      expiresAt: reportData.expiresAt,
+    });
 
     const pdfBuffer = await generateReportPDF(reportData);
 
@@ -113,15 +162,12 @@ export async function generateTutorPayoutReport(
   }
 }
 
-export async function calculatePayoutData(bookings: any[], tutorProfile: any, tutorId: string) {
-  const platformFeeRate = 0.2; // 20%
-  const gstRate = 0.15; // 15%
-
-  const grossAmount = bookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);
-  const platformFee = Math.round((grossAmount * platformFeeRate));
-  const taxOnFee = Math.round((platformFee * gstRate));
+export async function calculatePayoutData(bookings: any[]) {
+  const grossAmount = bookings.reduce((sum, booking) => sum + (booking.subtotal ?? booking.amount ?? 0), 0);
+  const platformFee = bookings.reduce((sum, booking) => sum + (booking.tutorFee ?? 0), 0);
+  const taxOnFee = bookings.reduce((sum, booking) => sum + (booking.tax ?? 0), 0);
   const totalDeduction = platformFee + taxOnFee;
-  const netPayout = grossAmount - totalDeduction;
+  const netPayout = bookings.reduce((sum, booking) => sum + (booking.tutorNet ?? booking.tutorPayout ?? 0), 0);
 
   const sessionsCompleted = bookings.length;
   const hoursTaught = bookings.reduce((sum, booking) => {
@@ -129,6 +175,15 @@ export async function calculatePayoutData(bookings: any[], tutorProfile: any, tu
     return sum + minutes / 60;
   }, 0);
   const subjectsTaught = [...new Set(bookings.map(b => (b.request as any)?.subject).filter(Boolean))];
+  const transactions: PayoutLineItem[] = bookings.map((booking) => ({
+    bookingId: booking._id.toString(),
+    subject: (booking.request as any)?.subject || "Tutoring session",
+    payoutDate: booking.payoutPaidAt || booking.updatedAt,
+    grossAmount: booking.subtotal ?? booking.amount ?? 0,
+    tutorFee: booking.tutorFee ?? 0,
+    taxOnFee: booking.tax ?? 0,
+    netPayout: booking.tutorNet ?? booking.tutorPayout ?? 0,
+  }));
 
   return {
     grossAmount,
@@ -141,6 +196,8 @@ export async function calculatePayoutData(bookings: any[], tutorProfile: any, tu
     hoursTaught: Math.round(hoursTaught * 10) / 10,
     subjectsTaught,
     studentFeedback: undefined,
+    paymentDate: transactions.length ? new Date(Math.max(...transactions.map((item) => new Date(item.payoutDate).getTime()))) : null,
+    transactions,
   };
 }
 
@@ -157,6 +214,7 @@ export async function generateReportPDF(data: PayoutReportData): Promise<Buffer>
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
+      bufferPages: true,
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
         Title: `TUTORERA-Payout-Report-${data.tutorId}-${Date.now()}`,
@@ -167,25 +225,27 @@ export async function generateReportPDF(data: PayoutReportData): Promise<Buffer>
       },
     });
 
-    const stream = fs.createWriteStream(`/tmp/report-${data.reportId}.pdf`);
-    doc.pipe(stream);
+    const passThrough = new PassThrough();
+    const chunks: Buffer[] = [];
+    passThrough.on("data", (chunk: Buffer) => chunks.push(chunk));
+    passThrough.on("end", () => resolve(Buffer.concat(chunks)));
+    passThrough.on("error", reject);
+
+    doc.pipe(passThrough);
 
     addReportHeader(doc);
     addTutorInfoSection(doc, data);
     addPayoutSummary(doc, data);
     addTaxBreakdownSection(doc, data);
+    addLineItemsSection(doc, data);
     addVerificationSection(doc, data, qrCodeDataUrl);
-    addFooter(doc);
+    const pageRange = doc.bufferedPageRange();
+    for (let pageIndex = pageRange.start; pageIndex < pageRange.start + pageRange.count; pageIndex += 1) {
+      doc.switchToPage(pageIndex);
+      addFooter(doc, data, pageIndex + 1, pageRange.count);
+    }
 
     doc.end();
-
-    stream.on("finish", () => {
-      const pdfBuffer = fs.readFileSync(`/tmp/report-${data.reportId}.pdf`);
-      fs.unlinkSync(`/tmp/report-${data.reportId}.pdf`);
-      resolve(pdfBuffer);
-    });
-
-    stream.on("error", reject);
   });
 }
 
@@ -200,15 +260,15 @@ function addReportHeader(doc: any): void {
     .fill(COLORS.cyan)
     .font("Helvetica-Bold")
     .fontSize(22)
-    .text("TUTORERA®", { align: "center", y: 15 });
+    .text("TUTORERA", 50, 15, { align: "center", width: pageWidth - 100 });
 
   doc
     .fill(COLORS.footerText)
     .font("Helvetica")
     .fontSize(11)
-    .text("Official Payout Report", { align: "center", y: 42 });
+    .text("Official Payout Report", 50, 42, { align: "center", width: pageWidth - 100 });
 
-  doc.moveDown(2.5);
+  doc.y = 88;
 }
 
 function addTutorInfoSection(doc: any, data: PayoutReportData): void {
@@ -216,32 +276,30 @@ function addTutorInfoSection(doc: any, data: PayoutReportData): void {
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor(COLORS.deepNavy)
-    .text("Tutor Information", { continued: true })
+    .text("Tutor Information")
     .moveDown(0.5);
 
   const infoItems = [
     { label: "Tutor ID", value: data.tutorId },
     { label: "Full Name", value: data.tutorName },
     { label: "Email", value: data.tutorEmail },
-    { label: "Transaction ID", value: data.transactionId },
-    { label: "Payout Date", value: data.paymentDate.toLocaleDateString() },
-    { label: "Payout Period", value: `${data.periodStart.toLocaleDateString()} – ${data.periodEnd.toLocaleDateString()}` },
+    { label: "Report Reference", value: data.reportReference },
+    { label: "Latest Payout Date", value: data.paymentDate ? data.paymentDate.toLocaleDateString("en-PK") : "No paid payouts in period" },
+    { label: "Payout Period", value: `${data.periodStart.toLocaleDateString("en-PK")} - ${data.periodEnd.toLocaleDateString("en-PK")}` },
     { label: "Compliance Status", value: data.complianceStatus },
   ];
 
-  infoItems.forEach((item) => {
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor(COLORS.deepNavy)
-      .text(`${item.label}:`, { continued: true })
-      .font("Helvetica")
-      .fillColor(COLORS.text)
-      .text(` ${item.value}`, { continued: true })
-      .moveDown(0.3);
+  infoItems.forEach((item, index) => {
+    const rowY = doc.y;
+    const labelX = index % 2 === 0 ? 50 : 310;
+    if (index > 0 && index % 2 === 0) doc.y += 20;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(COLORS.deepNavy)
+      .text(`${item.label}:`, labelX, doc.y, { width: 95 });
+    doc.font("Helvetica").fillColor(COLORS.text)
+      .text(String(item.value), labelX + 95, doc.y, { width: 155 });
+    if (index % 2 !== 0) doc.y = rowY;
   });
-
-  doc.moveDown(0.5);
+  doc.y += 30;
 }
 
 function addPayoutSummary(doc: any, data: PayoutReportData): void {
@@ -249,12 +307,12 @@ function addPayoutSummary(doc: any, data: PayoutReportData): void {
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor(COLORS.deepNavy)
-    .text("Payout Summary", { continued: true })
+    .text("Payout Summary")
     .moveDown(0.5);
 
   const currentY = doc.y;
   doc
-    .rect(50, currentY, 500, 90)
+    .rect(50, currentY, 500, 170)
     .fill(COLORS.card)
     .stroke()
     .strokeColor(COLORS.cardBorder);
@@ -265,13 +323,12 @@ function addPayoutSummary(doc: any, data: PayoutReportData): void {
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor(COLORS.royalBlue)
-    .text(`Net Payout: Rs. ${data.netPayout.toLocaleString()}`, { align: "center", y })
-    .moveDown(0.5);
+    .text(`Net Payout: Rs. ${data.netPayout.toLocaleString()}`, 65, y, { align: "center", width: 470 });
 
   const summaryItems = [
     { label: "Gross Amount", value: `Rs. ${data.grossAmount.toLocaleString()}` },
-    { label: "Platform Fee (20%)", value: `Rs. ${data.platformFee.toLocaleString()}` },
-    { label: "GST on Platform Fee (15%)", value: `Rs. ${data.taxOnFee.toLocaleString()}` },
+    { label: "Tutor Service Fee", value: `Rs. ${data.platformFee.toLocaleString()}` },
+    { label: "Tax on Tutor Fee", value: `Rs. ${data.taxOnFee.toLocaleString()}` },
     { label: "Total Deductions", value: `Rs. ${data.totalDeduction.toLocaleString()}` },
     { label: "Period", value: `${data.periodStart.toLocaleDateString()} - ${data.periodEnd.toLocaleDateString()}` },
     { label: "Sessions Completed", value: data.sessionsCompleted.toString() },
@@ -279,20 +336,16 @@ function addPayoutSummary(doc: any, data: PayoutReportData): void {
   ];
 
   y += 25;
-  summaryItems.forEach((item) => {
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor(COLORS.text)
-      .text(`${item.label}:`, { continued: true, y })
-      .font("Helvetica-Bold")
-      .fillColor(COLORS.deepNavy)
-      .text(` ${item.value}`, { continued: true })
-      .moveDown(0.3);
-    y += 18;
+  summaryItems.forEach((item, index) => {
+    const columnX = index % 2 === 0 ? 75 : 310;
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.text)
+      .text(`${item.label}:`, columnX, y, { width: 105 });
+    doc.font("Helvetica-Bold").fillColor(COLORS.deepNavy)
+      .text(item.value, columnX + 105, y, { width: 120 });
+    if (index % 2 !== 0 || index === summaryItems.length - 1) y += 28;
   });
 
-  doc.y = y + 10;
+  doc.y = currentY + 185;
 }
 
 function addTaxBreakdownSection(doc: any, data: PayoutReportData): void {
@@ -300,33 +353,49 @@ function addTaxBreakdownSection(doc: any, data: PayoutReportData): void {
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor(COLORS.deepNavy)
-    .text("Tax & Fee Breakdown", { continued: true })
+    .text("Tax & Fee Breakdown")
     .moveDown(0.5);
 
+  const feePercent = data.grossAmount > 0 ? (data.platformFee / data.grossAmount) * 100 : 0;
+  const taxPercent = data.platformFee > 0 ? (data.taxOnFee / data.platformFee) * 100 : 0;
+  const deductionPercent = data.grossAmount > 0 ? (data.totalDeduction / data.grossAmount) * 100 : 0;
   const taxItems = [
     { label: "Gross Payout Amount", value: `Rs. ${data.grossAmount.toLocaleString()}`, rate: "100%", category: "Base" },
-    { label: "Platform Fee", value: `Rs. ${data.platformFee.toLocaleString()}`, rate: "20%", category: "Platform Fee" },
-    { label: "GST on Platform Fee", value: `Rs. ${data.taxOnFee.toLocaleString()}`, rate: "15%", category: "GST" },
-    { label: "Total Deductions", value: `Rs. ${data.totalDeduction.toLocaleString()}`, rate: "23% effective", category: "Combined" },
+    { label: "Tutor Service Fee", value: `Rs. ${data.platformFee.toLocaleString()}`, rate: `${feePercent.toFixed(1)}%`, category: "Stored snapshot" },
+    { label: "Tax on Tutor Fee", value: `Rs. ${data.taxOnFee.toLocaleString()}`, rate: `${taxPercent.toFixed(1)}% of fee`, category: "Stored snapshot" },
+    { label: "Total Deductions", value: `Rs. ${data.totalDeduction.toLocaleString()}`, rate: `${deductionPercent.toFixed(1)}% effective`, category: "Combined" },
     { label: "Net Payout (Take-Home)", value: `Rs. ${data.netPayout.toLocaleString()}`, rate: `${data.effectiveTakeHomePercent.toFixed(1)}%`, category: "Net" },
   ];
 
   let y = doc.y;
 
   taxItems.forEach((item) => {
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor(COLORS.text)
-      .text(`${item.label} [${item.category}]:`, { continued: true, y })
-      .font("Helvetica-Bold")
-      .fillColor(COLORS.deepNavy)
-      .text(` ${item.value} (${item.rate})`, { continued: true })
-      .moveDown(0.3);
-    y += 18;
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.text)
+      .text(`${item.label} [${item.category}]`, 55, y, { width: 230 });
+    doc.font("Helvetica-Bold").fillColor(COLORS.deepNavy)
+      .text(`${item.value} (${item.rate})`, 300, y, { width: 240, align: "right" });
+    y += 22;
   });
 
   doc.y = y + 10;
+}
+
+function addLineItemsSection(doc: any, data: PayoutReportData): void {
+  doc.addPage();
+  doc.font("Helvetica-Bold").fontSize(14).fillColor(COLORS.deepNavy).text("Paid Payout Line Items").moveDown(0.6);
+  if (data.transactions.length === 0) {
+    doc.font("Helvetica").fontSize(10).fillColor(COLORS.muted).text("No completed, paid payouts were recorded in this period.");
+    return;
+  }
+
+  data.transactions.forEach((item, index) => {
+    if (doc.y > doc.page.height - 100) doc.addPage();
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(COLORS.deepNavy)
+      .text(`${index + 1}. ${item.subject} - ${new Date(item.payoutDate).toLocaleDateString("en-PK")}`);
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.text)
+      .text(`Booking ${item.bookingId} | Gross Rs. ${item.grossAmount.toLocaleString()} | Fee Rs. ${item.tutorFee.toLocaleString()} | Tax Rs. ${item.taxOnFee.toLocaleString()} | Net Rs. ${item.netPayout.toLocaleString()}`)
+      .moveDown(0.7);
+  });
 }
 
 function addVerificationSection(doc: any, data: PayoutReportData, qrCodeDataUrl: string): void {
@@ -336,13 +405,14 @@ function addVerificationSection(doc: any, data: PayoutReportData, qrCodeDataUrl:
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor(COLORS.deepNavy)
-    .text("Verification & Security", { continued: true })
+    .text("Verification & Security")
     .moveDown(0.5);
 
   const qrSize = 120;
   const qrX = (doc.page.width - qrSize) / 2;
-  doc.image(qrCodeDataUrl, qrX, doc.y, { width: qrSize, height: qrSize });
-  doc.moveDown(4);
+  const qrY = doc.y;
+  doc.image(qrCodeDataUrl, qrX, qrY, { width: qrSize, height: qrSize });
+  doc.y = qrY + qrSize + 14;
 
   doc
     .font("Helvetica")
@@ -362,16 +432,15 @@ function addVerificationSection(doc: any, data: PayoutReportData, qrCodeDataUrl:
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(COLORS.gold)
-    .text("Security Features:", { continued: true })
+    .text("Verification controls:")
     .moveDown(0.5);
 
   const securityFeatures = [
-    "Digital signature using blockchain verification",
-    "QR code with unique verification ID",
-    "Tamper-evident audit trail",
-    "Official TUTORERA watermark",
-    "Encrypted PDF with read-only protection",
-    "Multi-factor authentication for access",
+    `Persistent verification record: ${data.reportReference}`,
+    `SHA-256 snapshot digest: ${data.digest || "Unavailable"}`,
+    "QR code links to the server-side report record",
+    `Verification expires on ${data.expiresAt.toLocaleDateString("en-PK")}`,
+    "Amounts come from stored booking fee snapshots",
   ];
 
   securityFeatures.forEach((feature) => {
@@ -379,22 +448,22 @@ function addVerificationSection(doc: any, data: PayoutReportData, qrCodeDataUrl:
       .font("Helvetica")
       .fontSize(10)
       .fillColor(COLORS.text)
-      .text(`• ${feature}`, { continued: true })
+      .text(`- ${feature}`)
       .moveDown(0.3);
   });
 }
 
-function addFooter(doc: any): void {
-  const footerY = doc.page.height - 40;
+function addFooter(doc: any, data: PayoutReportData, pageNumber: number, pageCount: number): void {
+  const footerY = doc.page.height - 60;
 
   doc
     .font("Helvetica")
     .fontSize(8)
     .fillColor(COLORS.footerMuted)
-    .text(`Generated on ${new Date().toLocaleDateString()}`, { align: "center", y: footerY })
-    .text(`TUTORERA® — Official Platform for Education Services`, { align: "center", y: footerY + 10 })
-    .text(`For verification: https://tutorera.ac.pk/verify`, { align: "center", y: footerY + 20 })
-    .text(`Support: hello@mentisera.pk`, { align: "center", y: footerY + 30 });
+    .text(
+      `TUTORERA payout statement | ${data.reportReference} | Page ${pageNumber} of ${pageCount} | hello@mentisera.pk`,
+      50,
+      footerY,
+      { align: "center", width: 495, lineBreak: false }
+    );
 }
-
-

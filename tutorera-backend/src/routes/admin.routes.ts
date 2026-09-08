@@ -108,7 +108,7 @@ router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
 router.get("/broadcasts",  requirePermission("broadcast.send"), getBroadcasts);
 router.get("/subscriptions", requirePermission("growth.read"), getSubscriptions);
 router.get("/tutors/:id/document/:field", requirePermission("tutor.read"), getTutorDocumentUrl);
-router.get("/tutors/:tutorId/payout-report/pdf", requirePermission("tutor.read"), downloadTutorPayoutReport);
+router.get("/tutors/:tutorId/payout-report/pdf", requirePermission("payout.read"), downloadTutorPayoutReport);
 router.patch("/users/:id/plan", protect, authorize("admin"), requirePermission("users.manage"), updateUserPlan);
 router.get("/tutors/:id", requirePermission("tutor.read"), getTutorFullData);
 router.patch("/verify/bulk", requirePermission("tutor.verify"), bulkVerifyTutors);

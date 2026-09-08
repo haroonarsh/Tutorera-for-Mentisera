@@ -34,7 +34,7 @@ import {
   homeTuitionActivatedEmail,
   homeTuitionDeactivatedEmail,
 } from "../utils/trackingEmails";
-import { generateTutorPayoutReport } from "../services/payoutReport.service";
+import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
 
 
 // @desc    Get dashboard stats
@@ -562,7 +562,10 @@ export const updatePaymentStatus = async (
   // Update only fields that are provided
   if (paymentStatus !== undefined) booking.paymentStatus = paymentStatus;
   if (paymentNote !== undefined) booking.paymentNote = paymentNote;
-  if (payoutStatus !== undefined) booking.payoutStatus = payoutStatus;
+  if (payoutStatus !== undefined) {
+    booking.payoutStatus = payoutStatus;
+    if (payoutStatus === "paid") booking.payoutPaidAt = new Date();
+  }
   if (payoutNote !== undefined) booking.payoutNote = payoutNote;
 
   // Handle booking status change from admin
@@ -1624,18 +1627,19 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
   const tutorId = req.params.tutorId as string;
 
   try {
-    const periodEnd = new Date();
-    const periodStart = new Date();
-    periodStart.setFullYear(periodStart.getFullYear() - 1);
+    const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd);
+    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" });
 
-    const filename = `tutorera-payout-report-${tutorId}.pdf`;
+    const filename = `tutorera-payout-report-${data.reportReference}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Length", pdfBuffer.length.toString());
     res.send(pdfBuffer);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to generate tutor payout report:", error);
-    res.status(500).json({ success: false, message: "Failed to generate payout report." });
+    res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
   }
 };
