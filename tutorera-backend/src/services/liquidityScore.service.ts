@@ -53,20 +53,24 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const baseFilter: Record<string, unknown> = {};
-  if (countryCode) baseFilter.countryCode = countryCode;
-  if (city) baseFilter.city = new RegExp(city, "i");
-  if (subject) baseFilter.subjects = new RegExp(subject, "i");
+  const requestFilter: Record<string, unknown> = {};
+  const tutorFilter: Record<string, unknown> = {};
+  if (countryCode) requestFilter.countryCode = tutorFilter.countryCode = countryCode.toUpperCase();
+  if (city) requestFilter.city = tutorFilter.city = new RegExp(`^${escapeRegExp(city)}$`, "i");
+  if (subject) {
+    requestFilter.subject = new RegExp(`^${escapeRegExp(subject)}$`, "i");
+    tutorFilter.subjects = new RegExp(`^${escapeRegExp(subject)}$`, "i");
+  }
   if (teachingMode && teachingMode !== "both") {
-    baseFilter.teachingMode = { $in: [teachingMode, "both"] };
+    requestFilter.teachingMode = tutorFilter.teachingMode = { $in: [teachingMode, "both"] };
   }
 
   const openStatus = ["open", "published", "receiving_offers"] as const;
-  const demandFilter = { ...baseFilter, status: { $in: openStatus }, expiresAt: { $gt: now } };
+  const demandFilter = { ...requestFilter, status: { $in: openStatus }, expiresAt: { $gt: now } };
   // Demand filters must exclude drafts/cancelled requests; those records are
   // not actionable marketplace demand and otherwise inflate liquidity.
   const recentFilter = {
-    ...baseFilter,
+    ...requestFilter,
     status: { $nin: ["draft", "cancelled"] },
     createdAt: { $gte: thirtyDaysAgo },
   };
@@ -74,7 +78,7 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
   const [openRequests, recentRequestDocs, tutors] = await Promise.all([
     Request.countDocuments(demandFilter),
     Request.find(recentFilter as any).select("_id").lean(),
-    TutorProfile.countDocuments({ ...baseFilter, verificationStatus: "approved", marketplaceEligible: true }),
+    TutorProfile.countDocuments({ ...tutorFilter, verificationStatus: "approved", marketplaceEligible: true }),
   ]);
 
   const recentRequestIds = recentRequestDocs.map((r) => r._id);
@@ -85,7 +89,7 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
     ? await Booking.find({
         request: { $in: recentRequestIds },
         createdAt: { $gte: thirtyDaysAgo },
-        status: { $in: ["completed", "upcoming", "in_progress"] } as any,
+        status: { $in: ["completed", "upcoming", "ongoing"] },
       }).select("finalAgreedRate tutorPayout").lean()
     : [];
 
@@ -153,20 +157,27 @@ export async function getAllLiquidityScores(countryCode?: string): Promise<Recor
   const filter: Record<string, unknown> = {};
   if (countryCode) filter.countryCode = countryCode;
 
-  const cities = await Request.distinct("city", { ...filter, city: { $exists: true, $ne: "" } });
-  const subjects = await Request.distinct("subject", { ...filter, subject: { $exists: true, $ne: "" } });
-  const modes = ["online", "in-person"] as const;
-
-  const results: Record<string, LiquidityScore> = {};
-
-  for (const city of cities) {
-    for (const subject of subjects) {
-      for (const mode of modes) {
-        const key = `${city}|${subject}|${mode}`;
-        results[key] = await computeLiquidityScore({ city, subject, teachingMode: mode, countryCode });
-      }
+  const requests = await Request.find({
+    ...filter,
+    city: { $exists: true, $ne: "" },
+    subject: { $exists: true, $ne: "" },
+    status: { $nin: ["draft", "cancelled", "archived"] },
+  }).select("city subject teachingMode").lean();
+  const segments = new Map<string, { city: string; subject: string; teachingMode: "online" | "in-person" }>();
+  for (const request of requests) {
+    const modes: Array<"online" | "in-person"> = request.teachingMode === "both" ? ["online", "in-person"] : [request.teachingMode];
+    for (const teachingMode of modes) {
+      const key = `${request.city}|${request.subject}|${teachingMode}`;
+      segments.set(key.toLocaleLowerCase(), { city: request.city!, subject: request.subject, teachingMode });
     }
   }
+  const scored = await Promise.all(Array.from(segments.values()).map(async (segment) => ({
+    key: `${segment.city}|${segment.subject}|${segment.teachingMode}`,
+    value: await computeLiquidityScore({ ...segment, countryCode }),
+  })));
+  return Object.fromEntries(scored.map(({ key, value }) => [key, value]));
+}
 
-  return results;
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
