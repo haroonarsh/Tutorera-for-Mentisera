@@ -5,6 +5,20 @@ import User from "../models/User.model";
 import StudentProfile from "../models/StudentProfile.model";
 import Booking from "../models/Booking.model";
 import { advanceAccountStatus } from "../services/accountLifecycle.service";
+import ParentLinkRequest from "../models/ParentLinkRequest.model";
+import sendEmail from "../utils/sendEmail";
+import crypto from "crypto";
+import mongoose from "mongoose";
+import { escapeHtml } from "../utils/escapeHtml";
+
+const LINK_CODE_TTL_MS = 15 * 60 * 1000;
+const MAX_LINK_ATTEMPTS = 5;
+
+function linkCodeHash(code: string) {
+  return crypto.createHmac("sha256", process.env.JWT_SECRET || "parent-link-fallback")
+    .update(code)
+    .digest("hex");
+}
 
 export const getMyParentProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "parent") {
@@ -61,14 +75,15 @@ export const addChildAccount = async (req: AuthRequest, res: Response): Promise<
     return;
   }
 
-  const { studentUserId, name, level, subjects, relationship } = req.body;
+  const { studentEmail, name, level, subjects, relationship } = req.body;
 
-  if (!studentUserId || !name) {
-    res.status(400).json({ success: false, message: "studentUserId and name are required." });
+  if (!studentEmail || !name) {
+    res.status(400).json({ success: false, message: "Student email and name are required." });
     return;
   }
 
-  const student = await User.findById(studentUserId);
+  const normalizedEmail = String(studentEmail).trim().toLowerCase();
+  const student = await User.findOne({ email: normalizedEmail });
   if (!student || student.role !== "student") {
     res.status(404).json({ success: false, message: "Student account not found." });
     return;
@@ -80,24 +95,100 @@ export const addChildAccount = async (req: AuthRequest, res: Response): Promise<
   }
 
   const alreadyLinked = profile.children.some(
-    (c) => c.studentUser?.toString() === studentUserId
+    (c) => c.studentUser?.toString() === student._id.toString()
   );
   if (alreadyLinked) {
     res.status(409).json({ success: false, message: "This student account is already linked." });
     return;
   }
 
-  profile.children.push({
-    studentUser: new (require("mongoose").Types.ObjectId)(studentUserId),
-    name: name.trim(),
-    level: level || "",
-    subjects: subjects || [],
-    relationship: relationship || "child",
-  } as any);
+  await ParentLinkRequest.updateMany(
+    { parent: req.user._id, student: student._id, status: "pending" },
+    { status: "cancelled" }
+  );
 
-  await profile.save();
+  const code = crypto.randomInt(100000, 1000000).toString();
+  const linkRequest = await ParentLinkRequest.create({
+    parent: req.user._id,
+    student: student._id,
+    codeHash: linkCodeHash(code),
+    name: String(name).trim().slice(0, 100),
+    level: String(level || "").trim().slice(0, 100),
+    subjects: Array.isArray(subjects) ? subjects.map((item) => String(item).trim()).filter(Boolean).slice(0, 12) : [],
+    relationship: ["child", "sibling", "other"].includes(relationship) ? relationship : "child",
+    expiresAt: new Date(Date.now() + LINK_CODE_TTL_MS),
+  });
 
-  res.status(200).json({ success: true, message: "Child account linked.", profile });
+  try {
+    await sendEmail({
+      to: student.email,
+      userId: student._id.toString(),
+      eventType: "account.parent_link_verification_requested",
+      templateId: "parent_link_verification_code",
+      relatedEntityType: "ParentLinkRequest",
+      relatedEntityId: linkRequest._id.toString(),
+      subject: "TUTORERA® — Confirm parent account access",
+      preheader: "Use this code only if you approve parent access to your tutoring account.",
+      html: `<h2>Confirm parent account access</h2><p>Hello ${escapeHtml(student.name)},</p><p>A parent account requested access to view and manage your TUTORERA tutoring activity.</p><p style="font-size:28px;font-weight:800;letter-spacing:6px">${code}</p><p>This code expires in 15 minutes. Share it only if you approve this access. If you did not expect this request, do not share the code.</p>`,
+    });
+  } catch (error) {
+    await ParentLinkRequest.findByIdAndUpdate(linkRequest._id, { status: "cancelled" });
+    throw error;
+  }
+
+  res.status(202).json({ success: true, message: "A verification code was sent to the student.", requestId: linkRequest._id, expiresInSeconds: LINK_CODE_TTL_MS / 1000 });
+};
+
+export const confirmChildAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
+    return;
+  }
+
+  const { requestId, code } = req.body;
+  if (!mongoose.isValidObjectId(requestId) || !/^\d{6}$/.test(String(code || ""))) {
+    res.status(400).json({ success: false, message: "A valid request and six-digit code are required." });
+    return;
+  }
+
+  const linkRequest = await ParentLinkRequest.findOne({
+    _id: requestId,
+    parent: req.user._id,
+    status: "pending",
+  }).select("+codeHash");
+
+  if (!linkRequest || linkRequest.expiresAt <= new Date() || linkRequest.attempts >= MAX_LINK_ATTEMPTS) {
+    res.status(410).json({ success: false, message: "This verification request has expired. Request a new code." });
+    return;
+  }
+
+  const suppliedHash = linkCodeHash(String(code));
+  const matches = crypto.timingSafeEqual(Buffer.from(linkRequest.codeHash, "hex"), Buffer.from(suppliedHash, "hex"));
+  if (!matches) {
+    linkRequest.attempts += 1;
+    await linkRequest.save();
+    res.status(400).json({ success: false, message: "The verification code is incorrect.", attemptsRemaining: Math.max(0, MAX_LINK_ATTEMPTS - linkRequest.attempts) });
+    return;
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const profile = await ParentProfile.findOneAndUpdate(
+        { user: req.user?._id, "children.studentUser": { $ne: linkRequest.student } },
+        { $push: { children: { studentUser: linkRequest.student, name: linkRequest.name, level: linkRequest.level, subjects: linkRequest.subjects, relationship: linkRequest.relationship } } },
+        { new: true, upsert: true, session }
+      );
+      if (!profile) throw Object.assign(new Error("This student account is already linked."), { statusCode: 409 });
+      linkRequest.status = "confirmed";
+      linkRequest.confirmedAt = new Date();
+      await linkRequest.save({ session });
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  res.status(200).json({ success: true, message: "Student consent confirmed. The account is now linked." });
 };
 
 export const removeChildAccount = async (req: AuthRequest, res: Response): Promise<void> => {

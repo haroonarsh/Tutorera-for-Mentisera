@@ -8,6 +8,7 @@ import { UI_COLORS } from "@/lib/brand";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import { formatPKR } from "@/lib/site";
+import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
 
 const C = UI_COLORS;
 
@@ -251,7 +252,7 @@ export default function ParentDashboardPage() {
 
       {/* Link Child Modal */}
       {showLinkModal && (
-        <LinkChildModalStandalone onClose={() => setShowLinkModal(false)} onLinked={fetchProfile} />
+        <ConsentLinkChildModal onClose={() => setShowLinkModal(false)} onLinked={fetchProfile} />
       )}
 
       <style>{`

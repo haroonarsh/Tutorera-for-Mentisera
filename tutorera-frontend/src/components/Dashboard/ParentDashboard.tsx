@@ -6,6 +6,7 @@ import DashboardLayout from "./DashboardLayout";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import { formatPKR } from "@/lib/site";
+import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
 
 const C = UI_COLORS;
 
@@ -355,7 +356,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
       )}
 
       {/* Link modal */}
-      {showLinkModal && <LinkChildModal onClose={() => setShowLinkModal(false)} onLinked={fetchProfile} />}
+      {showLinkModal && <ConsentLinkChildModal onClose={() => setShowLinkModal(false)} onLinked={fetchProfile} />}
 
       <style>{`
         @media (max-width: 640px) {
