@@ -23,8 +23,8 @@ beforeAll(() => {
   process.env.JWT_SECRET = "test-secret-at-least-16-chars";
 });
 
-describe("BE-09: malformed ObjectId in route params (documented gap)", () => {
-  it("KNOWN GAP: PATCH /bookings/:id/status with a malformed id currently returns 500, not 400", async () => {
+describe("BE-09: malformed ObjectId in route params", () => {
+  it("returns a safe 400 response", async () => {
     const email = "objectid-test@test.com";
     const password = "password123";
     await User.create({ name: "ObjectId Test", email, password, role: "student" });
@@ -39,6 +39,8 @@ describe("BE-09: malformed ObjectId in route params (documented gap)", () => {
     // Documents today's actual behavior. Once param-level ObjectId
     // validation is added (BE-09's recommended fix), change this
     // expectation to 400 — that will be the sign the fix landed correctly.
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(expect.objectContaining({ success: false }));
+    expect(res.body.message).toMatch(/^Invalid /);
   });
 });

@@ -37,6 +37,4 @@ const parentProfileSchema = new Schema<IParentProfile>(
   { timestamps: true }
 );
 
-parentProfileSchema.index({ user: 1 });
-
 export default mongoose.model<IParentProfile>("ParentProfile", parentProfileSchema);
