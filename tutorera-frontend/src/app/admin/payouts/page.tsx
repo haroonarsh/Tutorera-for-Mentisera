@@ -3,13 +3,14 @@ import { UI_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
+import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 
 const C = UI_COLORS;
 
 interface Booking {
   _id: string;
   student: { name: string; email: string };
-  tutor: { name: string; email: string; phone?: string; city?: string };
+  tutor: { _id: string; name: string; email: string; phone?: string; city?: string };
   amount: number;
   currency?: string;
   platformFee: number;
@@ -258,6 +259,9 @@ export default function PayoutsPage() {
                     {booking.payoutNote && (
                       <p style={{ fontSize: '0.7rem', color: C.gray500, margin: 0 }}>{booking.payoutNote}</p>
                     )}
+                    {booking.tutor?._id && (
+                      <PayoutReportDownload endpoint={`/admin/tutors/${booking.tutor._id}/payout-report/pdf`} label="Statement PDF" compact />
+                    )}
                   </div>
                 ) : (
                   <button
@@ -320,6 +324,9 @@ export default function PayoutsPage() {
                       }}>
                       {actionLoading === booking._id ? 'Saving...' : '✓ Mark as Paid'}
                     </button>
+                  )}
+                  {booking.payoutStatus === "paid" && booking.tutor?._id && (
+                    <PayoutReportDownload endpoint={`/admin/tutors/${booking.tutor._id}/payout-report/pdf`} label="Statement PDF" compact />
                   )}
                 </div>
               </div>

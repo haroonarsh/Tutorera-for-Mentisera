@@ -64,6 +64,7 @@ describe("payout PDF reports", () => {
     const response = await agent.get("/api/v1/earnings/report/pdf").expect(200);
     expect(response.headers["content-type"]).toContain("application/pdf");
     expect(response.headers["content-disposition"]).toContain("attachment");
+    expect(response.headers["access-control-expose-headers"]).toContain("Content-Disposition");
   });
 
   it("requires payout-read permission on the admin endpoint", async () => {

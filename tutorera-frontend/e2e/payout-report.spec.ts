@@ -1,0 +1,81 @@
+import { expect, Page, test } from "@playwright/test";
+
+const apiPattern = "https://tutorera-backend.onrender.com/api/v1/**";
+const pdfBody = Buffer.from("%PDF-1.7\n% TUTORERA payout E2E fixture\n");
+
+async function authenticate(page: Page, user: Record<string, unknown>) {
+  await page.addInitScript(() => localStorage.setItem("token", "e2e-token"));
+  await page.route(apiPattern, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user }) });
+      return;
+    }
+    if (path.endsWith("/tracking/application-status")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ payload: { marketplaceEligibility: { eligible: true } } }) });
+      return;
+    }
+    if (path.endsWith("/earnings")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ role: "tutor", stats: { totalEarnings: 1540, sessionsCount: 1, hoursTaught: 1, subjectsCount: 1, onHoldAmount: 0, onHoldCount: 0 }, monthlyData: [], subjectBreakdown: [], recentSessions: [] }),
+      });
+      return;
+    }
+    if (path.endsWith("/earnings/report/pdf")) {
+      expect(route.request().url()).toContain("from=");
+      expect(route.request().url()).toContain("to=");
+      await route.fulfill({ status: 200, contentType: "application/pdf", headers: { "Access-Control-Expose-Headers": "Content-Disposition", "Content-Disposition": 'attachment; filename="tutor-statement.pdf"' }, body: pdfBody });
+      return;
+    }
+    if (path.endsWith("/admin/users")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ users: [{ _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com", city: "Lahore", createdAt: "2026-09-01", isActive: true, isVerified: true }] }) });
+      return;
+    }
+    if (path.endsWith("/admin/payouts")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ bookings: [{ _id: "booking-1", student: { name: "Student", email: "student@example.com" }, tutor: { _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com" }, amount: 2000, platformFee: 460, tutorPayout: 1540, status: "completed", paymentStatus: "confirmed", payoutStatus: "paid", createdAt: "2026-09-01" }], stats: { pendingCount: 0, paidCount: 1, totalPendingAmount: 0, totalPaidAmount: 1540 } }) });
+      return;
+    }
+    if (path.endsWith("/admin/customers/tutors/tutor-1/360")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ tutor: { _id: "tutor-1", fullName: "Test Tutor", hourlyRate: 2000, currency: "PKR", city: "Lahore", teachingMode: "online", subjects: ["Mathematics"], levels: ["O-Level"], policeVerificationStatus: "approved", isVerified: true, averageRating: 5, totalReviews: 1, winRate: 50, totalEarnings: 1540, offersSubmittedCount: 2, completedBookingsCount: 1, user: { name: "Test Tutor", email: "tutor@example.com" }, bids: [], bookings: [] } }) });
+      return;
+    }
+    if (path.endsWith("/admin/tutors/tutor-1/payout-report/pdf")) {
+      await route.fulfill({ status: 200, contentType: "application/pdf", headers: { "Access-Control-Expose-Headers": "Content-Disposition", "Content-Disposition": 'attachment; filename="admin-tutor-statement.pdf"' }, body: pdfBody });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+}
+
+test("verified tutor downloads a date-filtered payout PDF", async ({ page }) => {
+  await authenticate(page, { _id: "tutor-1", name: "Test Tutor", email: "tutor@example.com", role: "tutor", isVerified: true, isApproved: true, plan: "free" });
+  await page.goto("/earnings");
+  const button = page.getByRole("button", { name: "Download payout PDF" });
+  await expect(button).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await button.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("tutor-statement.pdf");
+  await expect(page.getByText("Verified payout report downloaded.")).toBeVisible();
+});
+
+test("finance admin downloads a selected tutor payout PDF", async ({ page }) => {
+  await authenticate(page, { _id: "finance-1", name: "Finance Admin", email: "finance@example.com", role: "admin", adminRole: "finance", isVerified: true, isApproved: true, plan: "free" });
+  await page.goto("/admin/payouts");
+  await page.getByRole("button", { name: /Paid/ }).click();
+  const button = page.getByRole("button", { name: "Statement PDF" }).first();
+  await expect(button).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await button.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("admin-tutor-statement.pdf");
+});
+
+test("analytics-only admin is not shown payout controls", async ({ page }) => {
+  await authenticate(page, { _id: "analyst-1", name: "Analyst", email: "analyst@example.com", role: "admin", adminRole: "analyst", isVerified: true, isApproved: true, plan: "free" });
+  await page.goto("/admin/tutors");
+  await page.getByRole("button", { name: /Tutor 360/ }).click();
+  await expect(page.getByRole("button", { name: "Download payout PDF" })).toHaveCount(0);
+});

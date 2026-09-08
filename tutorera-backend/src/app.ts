@@ -81,6 +81,7 @@ app.use(
         }
         },
         credentials: true,
+        exposedHeaders: ["Content-Disposition", "Content-Length", "X-Request-Id"],
     })
 );
 
