@@ -63,9 +63,20 @@ export default function StudentOnboardingPage() {
     if (!loading && !user) router.push("/login");
     if (!loading && user && user.role !== "student") router.push("/dashboard");
     if (!loading && user) {
-      setStep1(prev => ({ ...prev, fullName: user.name || "" }));
+      const selectedMarket = geo.countries.find((country) => country.code === user.countryCode);
+      setStep1(prev => ({
+        ...prev,
+        fullName: user.name || "",
+        ...(selectedMarket ? {
+          countryCode: selectedMarket.code,
+          countryName: selectedMarket.name,
+          city: user.city || "",
+          timezone: selectedMarket.defaultTimezone,
+          currency: selectedMarket.currency,
+        } : {}),
+      }));
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, geo.countries]);
 
   const toggleSubject = (subject: string) => {
     setSubjectsNeeded(prev =>
@@ -207,6 +218,7 @@ export default function StudentOnboardingPage() {
                     }}
                     showCurrency={true}
                     showTimezone={true}
+                    countries={geo.countries}
                   />
                 </div>
 

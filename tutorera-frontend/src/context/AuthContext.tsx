@@ -15,6 +15,7 @@ interface User {
   city?: string;
   countryCode?: string;
   currency?: string;
+  preferredLanguage?: string;
   adminRole?: string;
   adminPermissions?: string[];
 }
