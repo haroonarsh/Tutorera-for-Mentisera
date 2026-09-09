@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const name = formatName(tutor.user?.name || tutor.fullName);
   const primarySubject = tutor.subjects?.[0] || "Tuition";
-  const city = tutor.city || tutor.user?.city || "Pakistan";
+  const city = tutor.city || tutor.user?.city || "Online worldwide";
   const modeText =
     tutor.teachingMode === "both"
       ? "Online & In-Person"
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? "Online"
       : "In-Person";
   const rateText = tutor.hourlyRate
-    ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString("en-US")}/hr`
+    ? `${tutor.currency || "Market currency"} ${tutor.hourlyRate.toLocaleString("en-US")}/hr`
     : "Competitive rates";
 
   const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText}) | TUTORERA`;
@@ -132,10 +132,10 @@ export default async function TutorProfilePage({ params }: Props) {
   if (!tutor) notFound();
 
   const name = formatName(tutor.user?.name || tutor.fullName);
-  const city = tutor.city || tutor.user?.city || "Pakistan";
-  const countryCode = tutor.countryCode || tutor.user?.countryCode || "PK";
+  const city = tutor.city || tutor.user?.city || "";
+  const countryCode = tutor.countryCode || tutor.user?.countryCode || "";
   const countryName =
-    tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode);
+    tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode) || "Online worldwide";
   const locationDisplay = city ? `${city}, ${countryName}` : countryName;
   const avatarUrl = tutor.user?.avatar || null;
   const tutorUserId = tutor.user?._id || String(tutor.user || tutor._id);
@@ -193,7 +193,7 @@ export default async function TutorProfilePage({ params }: Props) {
         offers: {
           "@type": "Offer",
           price: tutor.hourlyRate || 0,
-          priceCurrency: tutor.currency || "PKR",
+          priceCurrency: tutor.currency || undefined,
           availability: "https://schema.org/InStock",
         },
       },
@@ -508,7 +508,7 @@ export default async function TutorProfilePage({ params }: Props) {
                       border: "1px solid rgba(147, 51, 234, 0.3)",
                     }}
                   >
-                    🛡️ Police Background Checked
+                    Background/Safety Verified
                   </span>
                 )}
 
@@ -598,7 +598,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   color: "#0329B2",
                 }}
               >
-                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString("en-US")}
+                {tutor.currency || "Market currency"} {tutor.hourlyRate?.toLocaleString("en-US")}
                 <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
                   /hr
                 </span>
@@ -674,7 +674,7 @@ export default async function TutorProfilePage({ params }: Props) {
             subjects={tutor.subjects || []}
             city={city}
             hourlyRate={tutor.hourlyRate}
-            currency={tutor.currency || "PKR"}
+            currency={tutor.currency || ""}
             tutorUserId={tutorUserId}
           />
 
@@ -716,7 +716,7 @@ export default async function TutorProfilePage({ params }: Props) {
                 <CheckCircle size={18} color="#16a34a" />
                 <div>
                   <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#166534" }}>
-                    CNIC & Identity
+                    Identity Document
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#15803d" }}>
                     Verified by Admin
@@ -763,7 +763,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   <ShieldCheck size={18} color="#9333ea" />
                   <div>
                     <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#6b21a8" }}>
-                      Police Character
+                      Background/Safety Review
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "#7e22ce" }}>
                       Home Tuition Safe
@@ -1126,7 +1126,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   color: "#0329B2",
                 }}
               >
-                {tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString("en-US")}
+                {tutor.currency || "Market currency"} {tutor.hourlyRate?.toLocaleString("en-US")}
                 <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
                   /hr
                 </span>
@@ -1158,7 +1158,7 @@ export default async function TutorProfilePage({ params }: Props) {
               tutorUserId={tutorUserId}
               tutorName={name}
               hourlyRate={tutor.hourlyRate}
-              currency={tutor.currency || "PKR"}
+              currency={tutor.currency || ""}
               subjects={tutor.subjects || []}
               teachingMode={tutor.teachingMode}
               city={city}
@@ -1173,7 +1173,7 @@ export default async function TutorProfilePage({ params }: Props) {
         tutorUserId={tutorUserId}
         tutorName={name}
         hourlyRate={tutor.hourlyRate}
-        currency={tutor.currency || "PKR"}
+        currency={tutor.currency || ""}
         rating={tutor.averageRating}
         teachingMode={tutor.teachingMode}
         city={city}

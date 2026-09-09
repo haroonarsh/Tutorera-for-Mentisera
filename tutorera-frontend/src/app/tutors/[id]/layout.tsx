@@ -50,8 +50,8 @@ export default async function TutorProfileLayout({ children, params }: Props) {
 
   const name = formatName(tutor.user?.name || tutor.fullName);
   const url = `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`;
-  const countryCode = tutor.countryCode || tutor.user?.countryCode || "PK";
-  const countryName = tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode);
+  const countryCode = tutor.countryCode || tutor.user?.countryCode || "";
+  const countryName = tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode) || "Online worldwide";
   const city = tutor.city || tutor.user?.city;
 
   const schema = {
@@ -82,7 +82,7 @@ export default async function TutorProfileLayout({ children, params }: Props) {
       makesOffer: {
         "@type": "Offer",
         price: tutor.hourlyRate || 0,
-        priceCurrency: tutor.currency || "PKR",
+        priceCurrency: tutor.currency || undefined,
         availability: "https://schema.org/InStock",
       },
     },
