@@ -42,9 +42,9 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
 
   const name = tutor.user?.name || tutor.fullName || "Tutor";
   const city = tutor.city || tutor.user?.city || "";
-  const countryName = tutor.countryName || tutor.user?.countryName || "Pakistan";
-  const locationLabel = city ? `${city}, ${countryName}` : countryName;
-  const currency = tutor.currency || "PKR";
+  const countryName = tutor.countryName || tutor.user?.countryName || "Online";
+  const locationLabel = city ? `${city}, ${countryName}` : countryName === "Online" ? "Online worldwide" : countryName;
+  const currency = tutor.currency || "";
   const hasVideo = Boolean(tutor.videoIntro);
 
   const rating = tutor.averageRating || 0;

@@ -3,29 +3,32 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Tutors by Academic Level", description: "Find verified tutors for Primary, Middle, Matric, Intermediate, O-Level, A-Level, and university students in Pakistan.", alternates: { canonical: "/levels" } };
+export const metadata: Metadata = { title: "Tutors by Academic Level", description: "Find verified tutors for primary, secondary, GCSE, IB, Cambridge, national curricula, university, and test preparation worldwide.", alternates: { canonical: "/levels" } };
 
 const C = UI_COLORS;
 
 const levels = [
-  { name: "Primary School", grades: "Grade 1–5", age: "Ages 5–10", desc: "Foundation subjects including English, Urdu, Mathematics, Science, and Islamiyat.", color: "#EEF5FF", textColor: "#0329B2" },
+  { name: "Primary School", grades: "Years / Grades 1–5", age: "Ages 5–10", desc: "Foundation tutoring in mathematics, science, literacy, languages, and local curricula.", color: "#EEF5FF", textColor: "#0329B2" },
   { name: "Middle School", grades: "Grade 6–8", age: "Ages 11–13", desc: "Core subjects with increasing complexity. Science, Math, Languages, and Social Studies.", color: "#f0fdf4", textColor: "#16a34a" },
-  { name: "Matriculation", grades: "Grade 9–10", age: "Ages 14–15", desc: "Board exam preparation for all Pakistani education boards (Punjab, Federal, Sindh, KPK).", color: "#fffbeb", textColor: "#d97706" },
+  { name: "Secondary School", grades: "Grades 9–10", age: "Ages 14–16", desc: "Exam preparation and subject support for national, international, and board curricula.", color: "#fffbeb", textColor: "#d97706" },
   { name: "O-Levels", grades: "Cambridge IGCSE", age: "Ages 14–16", desc: "Cambridge O-Level preparation across all subjects including Pure Math, Sciences, and Languages.", color: "#fdf4ff", textColor: "#7c3aed" },
-  { name: "Intermediate / FSc", grades: "Grade 11–12", age: "Ages 16–17", desc: "Pre-medical, Pre-engineering, ICS, and FA preparation for all boards.", color: "#fff1f2", textColor: "#C81B7F" },
+  { name: "Senior Secondary", grades: "Grades 11–12", age: "Ages 16–18", desc: "Advanced subject support for science, humanities, business, and university preparation.", color: "#fff1f2", textColor: "#C81B7F" },
   { name: "A-Levels", grades: "Cambridge AS & A2", age: "Ages 16–18", desc: "Advanced Cambridge A-Level preparation for university entrance.", color: "#EEF5FF", textColor: "#0329B2" },
   { name: "University Level", grades: "Bachelor's / Master's", age: "Ages 18+", desc: "University-level tutoring for engineering, medicine, business, CS, and more.", color: "#f0fdf4", textColor: "#16a34a" },
-  { name: "Test Preparation", grades: "Entry Tests", age: "All Ages", desc: "MDCAT, ECAT, NTS, IELTS, SAT, and other competitive exam preparation.", color: "#fffbeb", textColor: "#d97706" },
+  { name: "Test Preparation", grades: "Admissions & Language Tests", age: "All Ages", desc: "IELTS, SAT, ACT, GRE, GMAT and market-specific entrance examinations.", color: "#fffbeb", textColor: "#d97706" },
   { name: "Other", grades: "All Levels", age: "All Ages", desc: "Tutoring for any other subjects or levels not listed above.", color: "#fdf4ff", textColor: "#7c3aed" },
 ];
 
 function tutorHref(levelName: string) {
   const slugs: Record<string, string> = {
-    "Primary School": "primary", "Middle School": "middle", Matriculation: "matric",
-    "O-Levels": "o-level", "Intermediate / FSc": "intermediate", "A-Levels": "a-level",
+    "Primary School": "primary", "Middle School": "middle", "Secondary School": "secondary",
+    "O-Levels": "o-level", "Senior Secondary": "senior-secondary", "A-Levels": "a-level",
     "University Level": "university",
   };
-  return levelName === "Test Preparation" ? "/tutors/subject/mdcat" : `/tutors/level/${slugs[levelName]}`;
+  if (levelName === "Test Preparation") return "/tutors?search=test%20preparation";
+  if (levelName === "Secondary School") return "/tutors?search=secondary";
+  if (levelName === "Senior Secondary") return "/tutors?search=senior%20secondary";
+  return `/tutors/level/${slugs[levelName] || ""}`;
 }
 
 export default function LevelsPage() {
