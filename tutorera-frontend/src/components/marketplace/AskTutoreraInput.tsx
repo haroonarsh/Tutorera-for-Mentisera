@@ -109,6 +109,22 @@ const CITY_ALIASES: Record<string, string> = {
   "jeddah": "Jeddah",
 };
 
+const CITY_MARKETS: Record<string, { countryCode: string; countryName: string; currency: string; timezone: string }> = {
+  Lahore: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Karachi: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Islamabad: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Rawalpindi: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Faisalabad: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Multan: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Peshawar: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Quetta: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" },
+  Dubai: { countryCode: "AE", countryName: "United Arab Emirates", currency: "AED", timezone: "Asia/Dubai" },
+  "Abu Dhabi": { countryCode: "AE", countryName: "United Arab Emirates", currency: "AED", timezone: "Asia/Dubai" },
+  Sharjah: { countryCode: "AE", countryName: "United Arab Emirates", currency: "AED", timezone: "Asia/Dubai" },
+  London: { countryCode: "GB", countryName: "United Kingdom", currency: "GBP", timezone: "Europe/London" },
+  Manchester: { countryCode: "GB", countryName: "United Kingdom", currency: "GBP", timezone: "Europe/London" },
+};
+
 function parseNaturalLanguage(input: string): ParsedRequest {
   const result: ParsedRequest = {};
   const lower = input.toLowerCase();
@@ -140,8 +156,8 @@ function parseNaturalLanguage(input: string): ParsedRequest {
 
   if (lower.includes("cambridge") || lower.includes("edexcel")) {
     result.curriculum = "Cambridge";
-  } else if (lower.includes("board") || lower.includes("pakistani")) {
-    result.curriculum = "Federal Board";
+  } else if (lower.includes("board")) {
+    result.curriculum = "National Curriculum";
   }
 
   for (const [alias, mode] of Object.entries(MODE_ALIASES)) {
@@ -222,20 +238,22 @@ export default function AskTutoreraInput({ className }: AskTutoreraInputProps) {
   const handleConfirm = () => {
     if (!parsed) return;
 
+    const market = parsed.city ? CITY_MARKETS[parsed.city] : undefined;
+
     const quickPayload = {
       subject: parsed.subject || "General Studies",
       level: parsed.level || "O-Level",
       curriculum: parsed.curriculum || "",
       teachingMode: parsed.mode || "online",
-      countryCode: "PK",
-      countryName: "Pakistan",
-      currency: parsed.currency || "PKR",
-      timezone: "Asia/Karachi",
+      countryCode: market?.countryCode || "",
+      countryName: market?.countryName || "",
+      currency: parsed.currency || market?.currency || "",
+      timezone: market?.timezone || "",
       isWorldwideEligible: parsed.mode === "online" || parsed.mode === "both",
       city: parsed.city || "",
       area: parsed.area || "",
       schedule: parsed.schedule || "",
-      budget: parsed.budget || "2000",
+      budget: parsed.budget || "",
       pricingUnit: "hour",
       genderPreference: parsed.genderPreference || "",
     };
@@ -282,7 +300,7 @@ export default function AskTutoreraInput({ className }: AskTutoreraInputProps) {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder='e.g. "Need a female O-Level Mathematics tutor in DHA Lahore, evening sessions under PKR 15,000/month"'
+                placeholder='e.g. "Need an online GCSE Mathematics tutor, evenings, budget GBP 30/hour"'
                 style={{
                   width: "100%",
                   padding: "1rem 1rem 1rem 2.75rem",
@@ -321,7 +339,7 @@ export default function AskTutoreraInput({ className }: AskTutoreraInputProps) {
                   alignItems: "center",
                   gap: "0.5rem",
                   minHeight: "44px",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 150ms ease, box-shadow 150ms ease",
                 }}
               >
                 {isParsing ? (
@@ -391,7 +409,7 @@ export default function AskTutoreraInput({ className }: AskTutoreraInputProps) {
             {parsed?.budget && (
               <div style={{ background: "#f8fafc", padding: "0.65rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b", display: "block", marginBottom: "0.2rem" }}>Budget</span>
-                <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#021550" }}>{parsed.currency || "PKR"} {Number(parsed.budget).toLocaleString()}/hr</span>
+                <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#021550" }}>{parsed.currency || (parsed.city ? CITY_MARKETS[parsed.city]?.currency : "") || "Select currency"} {Number(parsed.budget).toLocaleString()}/hr</span>
               </div>
             )}
             {parsed?.schedule && (

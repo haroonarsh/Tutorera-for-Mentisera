@@ -20,10 +20,10 @@ export default function CoveragePage() {
     <div style={{ backgroundColor: 'white' }}>
       <section style={{ backgroundColor: C.primary, padding: '5rem 1.5rem', textAlign: 'center' }}>
         <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '800', color: 'white', marginBottom: '1rem' }}>
-          Coverage Areas
+          Global Learning, Local Choice
         </h1>
         <p style={{ color: '#9ca3af', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto' }}>
-          TUTORERA® is available across major cities in Pakistan — and online nationwide.
+          Learn online with educators worldwide. Local home tuition is available only in enabled markets and locations.
         </p>
       </section>
 
@@ -34,8 +34,8 @@ export default function CoveragePage() {
             <Wifi size={24} color="white" />
           </div>
           <div>
-            <h2 style={{ fontWeight: '800', color: C.primary, fontSize: '1.2rem', marginBottom: '0.3rem' }}>Online Tutoring — Available Pakistan-Wide</h2>
-            <p style={{ color: C.gray500, fontSize: '0.9rem' }}>No matter where you are in Pakistan, you can access tutors online via TUTORERA®. Video sessions, screen sharing, and real-time chat included.</p>
+            <h2 style={{ fontWeight: '800', color: C.primary, fontSize: '1.2rem', marginBottom: '0.3rem' }}>Online Tutoring — Available Worldwide</h2>
+            <p style={{ color: C.gray500, fontSize: '0.9rem' }}>Choose online learning across timezones, subjects, and curricula. Availability, offers, and checkout follow your selected market configuration.</p>
           </div>
           <Link href="/tutors?teachingMode=online" style={{ backgroundColor: '#0329B2', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             Find Online Tutors
@@ -47,7 +47,7 @@ export default function CoveragePage() {
       <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: C.primary, textAlign: 'center', marginBottom: '3rem' }}>
-            In-Person Coverage
+            Pakistan Home-Tuition Coverage
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
             {cities.map(city => (

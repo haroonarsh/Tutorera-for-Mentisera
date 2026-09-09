@@ -28,7 +28,7 @@ const onlineFaqs = [
   },
   {
     q: "In what currencies can I pay for online tutoring?",
-    a: "You can view and agree on rates in major international currencies (AED, USD, GBP, SAR, PKR, etc.). All transactions are processed through secure TUTORERA platform payments with full satisfaction guarantees.",
+    a: "You can view and agree on rates in the request currency. Checkout availability is determined by the selected market: Pakistan currently supports checkout, while UAE and UK discovery beta supports discovery, offers, and negotiation only.",
   },
   {
     q: "What timezone scheduling is supported?",

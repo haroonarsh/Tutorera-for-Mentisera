@@ -14,7 +14,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
-import { useGeoData, convertToPKR } from "@/lib/geoService";
+import { useGeoData } from "@/lib/geoService";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 export default function QuickRequestComposer() {
@@ -281,11 +281,6 @@ export default function QuickRequestComposer() {
                 {currentCountry.currency}
               </span>
             </div>
-            {currentCountry.currency !== "PKR" && Number(budget) > 0 && (
-              <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
-                ≈ Rs. {convertToPKR(Number(budget), currentCountry.currency).amountPKR.toLocaleString()} PKR/hr (Platform settlement in PKR)
-              </p>
-            )}
           </div>
         </div>
 

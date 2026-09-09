@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { GST_EFFECTIVE_PERCENT, PLATFORM_FEE_PERCENT, SUPPORT_EMAIL, formatPKR } from "@/lib/site";
+import { GST_EFFECTIVE_PERCENT, PLATFORM_FEE_PERCENT, SUPPORT_EMAIL } from "@/lib/site";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
@@ -9,14 +9,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/how-it-works" },
 };
 
-const customerJourney = ["Post Requirement", "Propose PKR Budget", "Receive Offers", "Compare Tutors", "Select Tutor", "Lock Final Rate", "Booking Generated", "Checkout", "Payment Confirmed", "Booking Confirmed", "Tutor Delivers Lesson"];
+const customerJourney = ["Post Requirement", "Propose a Budget", "Receive Offers", "Compare Tutors", "Select Tutor", "Lock Final Rate", "Booking Generated", "Checkout When Available", "Payment Confirmed", "Booking Confirmed", "Tutor Delivers Lesson"];
 
 const studentSteps = [
   ["Tell Us What You Need", "Post your subject, level, schedule, tutoring mode and preferred budget."],
   ["Receive Tutor Offers", "Relevant tutors can submit competitive tutoring offers."],
   ["Compare & Choose", "Compare tutor rates, qualifications, experience and reviews."],
   ["Confirm the Deal", "Accept the tutor's offer and lock the final tutoring rate."],
-  ["Pay Securely", "Review the final PKR amount and complete payment."],
+  ["Pay When Available", "In a checkout-enabled market, review the final agreed amount and complete payment."],
   ["Start Learning", "Attend your online or in-person tutoring session."],
 ];
 
@@ -34,7 +34,7 @@ export default function HowItWorksPage() {
     <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works</h1>
-        <p>A complete public walkthrough of how students post requirements, receive tutor offers, lock a final PKR rate, pay, receive confirmation, and complete tutoring services.</p>
+        <p>A complete public walkthrough of how students post requirements, receive tutor offers, lock a final rate in the request currency, and complete tutoring services.</p>
       </section>
 
       <section className={s.container}>
@@ -61,13 +61,13 @@ export default function HowItWorksPage() {
         <div className={s.grid}>
           <article className={s.card}>
             <h2>Final price is locked before checkout</h2>
-            <p>Example: student budget {formatPKR(1500, "hour")}; tutor offer {formatPKR(1800, "hour")}; student accepts tutor offer; final booking rate {formatPKR(1800, "hour")}.</p>
+            <p>Example: a student posts a rate in the selected market currency; a tutor sends an offer; the student accepts; and that final rate is locked into the booking.</p>
             <p>This amount is used consistently for booking, checkout, payment records, receipt, refund calculation, tutor settlement, and transaction history.</p>
             <Link className={s.cta} href="/student-journey">View student journey</Link>
           </article>
           <article className={s.card}>
             <h2>Payments happen after selection</h2>
-            <p>No payment is collected merely to post a request or receive offers. Payment begins only after tutor selection, final price acceptance, booking generation, and PKR checkout review.</p>
+            <p>No payment is collected merely to post a request or receive offers. In markets with checkout enabled, payment begins only after tutor selection, final price acceptance, and booking generation. Discovery-beta markets clearly show when acceptance and payment are unavailable.</p>
             <p>Tutor earnings are subject to {PLATFORM_FEE_PERCENT}% marketplace fee plus {GST_EFFECTIVE_PERCENT}% effective tax on that fee. Students currently pay no marketplace fee.</p>
             <p>Support: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
           </article>

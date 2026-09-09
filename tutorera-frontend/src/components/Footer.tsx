@@ -6,7 +6,7 @@ import { RiTwitterLine } from "react-icons/ri";
 import { SiInstagram } from "react-icons/si";
 import { SlSocialLinkedin } from "react-icons/sl";
 import s from "./Footer.module.css";
-import { LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
+import { SUPPORT_EMAIL } from "@/lib/site";
 import BrandLogo from "@/components/BrandLogo";
 
 const footerColumns = [
@@ -111,8 +111,8 @@ export default function Footer() {
         </div>
 
         <div className={s.bottom}>
-          <p>TUTORERA® is a digital tutoring marketplace operated by {LEGAL_OPERATOR}.</p>
-          <p>© 2026 {LEGAL_OPERATOR}. TUTORERA®. All rights reserved.</p>
+          <p>TUTORERA® is a global digital tutoring marketplace for online learning worldwide and locally enabled home tuition.</p>
+          <p>© 2026 TUTORERA®. All rights reserved.</p>
         </div>
       </div>
     </footer>

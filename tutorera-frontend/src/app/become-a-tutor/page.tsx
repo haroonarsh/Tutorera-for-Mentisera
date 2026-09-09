@@ -1,7 +1,6 @@
 import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { CheckCircle, Star, Users, Clock, Shield, BookOpen, ArrowRight } from "lucide-react";
-import { formatPKR } from "@/lib/site";
 
 const C = UI_COLORS;
 
@@ -71,7 +70,7 @@ export default function BecomeTutorPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem' }}>
             {[
               { step: "1", title: "Create Your Profile", desc: "Sign up and fill in your subjects, levels, hourly rate, bio, and availability." },
-              { step: "2", title: "Get Verified", desc: "Submit your CNIC and degree. Our team reviews and approves within 24 hours." },
+              { step: "2", title: "Get Verified", desc: "Submit your identity and education documents. Requirements vary by market and teaching mode." },
               { step: "3", title: "Start Teaching", desc: "Receive booking requests, accept sessions, and start earning." },
             ].map(item => (
               <div key={item.step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
@@ -99,7 +98,7 @@ export default function BecomeTutorPage() {
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {[
                   "Bachelor's degree or higher",
-                  "Valid CNIC (Pakistani citizen)",
+                  "A valid government-issued identity document",
                   "Minimum 1 year teaching experience",
                   "Reliable internet connection",
                   "Passion for teaching",
@@ -116,7 +115,7 @@ export default function BecomeTutorPage() {
                 {[
                   "Mathematics & Statistics",
                   "Physics, Chemistry, Biology",
-                  "English & Urdu Language",
+                  "English, Arabic and world languages",
                   "Computer Science & IT",
                   "Economics & Accounts",
                   "Entry Test Preparation",
@@ -139,8 +138,8 @@ export default function BecomeTutorPage() {
             {[
               { q: "Is it free to join as a tutor?", a: "Yes, creating a tutor profile on TUTORERA® is completely free. We only charge a small platform fee on successful bookings." },
               { q: "How long does verification take?", a: "Our team reviews tutor applications within 24–48 hours. You'll receive an email notification once approved." },
-              { q: "Can I set my own hourly rate?", a: `Absolutely. You set your own price. We recommend ${formatPKR(1500)}–${formatPKR(5000)} per hour depending on your level and subject.` },
-              { q: "Do I need to be in a specific city?", a: "No. TUTORERA® supports online tutoring across all of Pakistan. You can also offer in-person sessions in your city." },
+              { q: "Can I set my own hourly rate?", a: "Absolutely. You set a rate in your market currency based on your subject, level, experience, and the learning format." },
+              { q: "Do I need to be in a specific city?", a: "No. Verified tutors can offer online lessons worldwide. In-person tutoring is available only where the selected market and its local safety policy allow it." },
             ].map(item => (
               <div key={item.q} style={{ backgroundColor: C.gray50, borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.6rem' }}>{item.q}</h3>
