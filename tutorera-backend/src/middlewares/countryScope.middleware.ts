@@ -8,7 +8,10 @@ export const enforceCountryScope = (req: AuthRequest, res: Response, next: NextF
     res.status(403).json({ success: false, code: "COUNTRY_SCOPE_EMPTY", message: "No country scope is assigned to this administrator." });
     return;
   }
-  const requested = String(req.query.countryCode || req.query.country || req.body?.countryCode || "").toUpperCase();
+  const requestedInput = String(req.query.countryCode || req.query.country || req.body?.countryCode || "").toUpperCase();
+  // A single-country administrator has an unambiguous default scope. Multi-country
+  // administrators must select one explicitly so aggregated data is never exposed.
+  const requested = requestedInput || (allowed.length === 1 ? allowed[0] : "");
   if (!requested) {
     res.status(400).json({ success: false, code: "COUNTRY_SCOPE_REQUIRED", message: "A country filter is required for country-scoped administration." });
     return;
@@ -20,7 +23,7 @@ export const enforceCountryScope = (req: AuthRequest, res: Response, next: NextF
   // Do not allow a country administrator through a route that has not been
   // made country-aware yet. This is intentionally restrictive: a partial
   // filter must never become a cross-country data disclosure.
-  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets"].some((prefix) => req.path.startsWith(prefix));
+  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography"].some((prefix) => req.path.startsWith(prefix));
   if (!supported) {
     res.status(403).json({ success: false, code: "COUNTRY_SCOPE_ROUTE_UNSUPPORTED", message: "This administrative resource is not yet available in country-scoped mode." });
     return;
