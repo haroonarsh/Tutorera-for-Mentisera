@@ -43,6 +43,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(422).json({ success: false, message: "Registration is not available in the selected market." });
     return;
   }
+  if ((role === "tutor" && !market.tutorRegistration) || ((role === "student" || role === "parent") && !market.studentRegistration)) {
+    res.status(422).json({ success: false, message: "Registration for this account type is not available in the selected market." });
+    return;
+  }
   const user = await User.create({
     name, email, password, role, phone, city,
     countryCode: market.countryCode, countryName: market.countryName,

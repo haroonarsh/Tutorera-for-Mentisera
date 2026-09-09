@@ -18,7 +18,7 @@ import { createTransaction } from "../utils/rapidGateway";
 import { releaseExpiredPaymentHold } from "./request.controller";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
-import { assertAcceptanceAvailable } from "../services/market.service";
+import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
 import { convertAmount } from "../services/exchangeRate.service";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
@@ -57,6 +57,7 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
   try { await session.withTransaction(async () => {
     const offer = await Bid.findById(req.params.id).session(session); if (!offer) throw { statusCode: 404, message: "Offer not found." };
     const request = await Request.findById(offer.request).session(session); if (!request) throw { statusCode: 404, message: "Request not found." };
+    try { await assertMarketFeature(request.countryCode, "negotiation"); } catch (error: any) { throw { statusCode: error.statusCode || 422, code: error.code, message: error.message }; }
     if (!(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status) || !(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status)) throw { statusCode: 409, message: "Negotiation is closed." };
     if (offer.expiresAt.getTime() <= Date.now()) { offer.status = "expired"; await offer.save({ session }); throw { statusCode: 410, message: "This offer has expired." }; }
     const userId = req.user?._id?.toString(); const isStudent = request.student.toString() === userId; const isTutor = offer.tutor.toString() === userId;

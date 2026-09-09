@@ -22,7 +22,7 @@ import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
 import { classifyRequestLoss } from "../services/requestLoss.service";
-import { assertAcceptanceAvailable, resolveMarket } from "../services/market.service";
+import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from "../services/market.service";
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
 import { convertAmount } from "../services/exchangeRate.service";
 import {
@@ -48,6 +48,13 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   const market = await resolveMarket(req.body.countryCode || user.countryCode || "PK");
   if (!market || !market.isActive || !market.studentRegistration) {
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tuition requests are not available in the selected market." });
+    return;
+  }
+  try { await assertMarketFeature(market.countryCode, "requests"); } catch (error: any) {
+    res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
+  }
+  if (req.body.teachingMode === "online" && !market.onlineEnabled) {
+    res.status(422).json({ success: false, code: "ONLINE_TUITION_UNAVAILABLE", message: "Online tuition is not available in the selected market." });
     return;
   }
   if (["in-person", "both"].includes(req.body.teachingMode) && !market.homeTuitionEnabled) {
@@ -305,6 +312,9 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     res.status(404).json({ success: false, message: "Request not found." });
     return;
   }
+  try { await assertMarketFeature(requested.countryCode, "offers"); } catch (error: any) {
+    res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
+  }
 
   if (!isHomeTuitionEligible(tutorProfile) && requested.teachingMode === "in-person") {
     res.status(403).json({
@@ -540,7 +550,6 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     res.status(400).json({ success: false, message: "Request not available" });
     return;
   }
-
   try {
     await assertAcceptanceAvailable(request.countryCode);
   } catch (marketError: any) {
@@ -899,6 +908,13 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   const market = await resolveMarket(req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK");
   if (!market || !market.isActive || !market.studentRegistration) {
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Direct booking is not available in the selected market." });
+    return;
+  }
+  try { await assertMarketFeature(market.countryCode, "requests"); } catch (error: any) {
+    res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
+  }
+  if (requestedMode === "online" && !market.onlineEnabled) {
+    res.status(422).json({ success: false, code: "ONLINE_TUITION_UNAVAILABLE", message: "Online tuition is not available in the selected market." });
     return;
   }
   if (requestedMode === "in-person" && !market.homeTuitionEnabled) {

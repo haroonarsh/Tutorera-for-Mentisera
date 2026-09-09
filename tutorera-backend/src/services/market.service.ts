@@ -51,12 +51,27 @@ export async function resolveMarket(countryCode?: string): Promise<IMarketConfig
   return market;
 }
 
+export function marketFeatureEnabled(market: IMarketConfig, feature: string): boolean {
+  const flags = market.featureFlags;
+  if (flags instanceof Map) return flags.get(feature) !== false;
+  return (flags as Record<string, boolean> | undefined)?.[feature] !== false;
+}
+
+/** Reject an operation when its market has not been launched for that feature. */
+export async function assertMarketFeature(countryCode: string | undefined, feature: string): Promise<IMarketConfig> {
+  const market = await resolveMarket(countryCode);
+  if (!market || !market.isActive || !marketFeatureEnabled(market, feature)) {
+    const error = new Error("This marketplace feature is not available in the selected market.") as Error & { statusCode: number; code: string };
+    error.statusCode = 422;
+    error.code = "MARKET_FEATURE_UNAVAILABLE";
+    throw error;
+  }
+  return market;
+}
+
 export async function assertAcceptanceAvailable(countryCode?: string): Promise<IMarketConfig> {
   const market = await resolveMarket(countryCode);
-  const acceptance = market?.featureFlags instanceof Map
-    ? market.featureFlags.get("acceptance")
-    : (market?.featureFlags as Record<string, boolean> | undefined)?.acceptance;
-  if (!market || market.launchStatus !== "live" || !market.paymentsEnabled || acceptance === false) {
+  if (!market || market.launchStatus !== "live" || !market.paymentsEnabled || !marketFeatureEnabled(market, "acceptance")) {
     const error = new Error("Offer acceptance and payment are not available in this discovery-beta market yet.") as Error & { statusCode: number; code: string };
     error.statusCode = 409;
     error.code = "MARKET_DISCOVERY_ONLY";
