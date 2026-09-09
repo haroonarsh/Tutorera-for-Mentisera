@@ -205,7 +205,9 @@ function hasCnic(profile: ITutorProfile): boolean {
 }
 
 function hasDemoVideo(profile: ITutorProfile): boolean {
-  return Boolean(profile.videoIntro && profile.videoIntroPublicId);
+  // The onboarding flow also permits a validated hosted demo URL, which has no
+  // Cloudinary public ID. Visibility is still controlled by admin approval.
+  return Boolean(profile.videoIntro);
 }
 
 export function policeIsRequired(profile: ITutorProfile): boolean {

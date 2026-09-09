@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { I18nProvider } from "@/i18n/I18nProvider";
+import { defaultLocale, isPublishedLocale } from "@/i18n/config";
 
 /**
  * Applies a signed-in user's saved language preference to the existing i18n
@@ -11,6 +12,11 @@ import { I18nProvider } from "@/i18n/I18nProvider";
  */
 export default function LocaleBridge({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const locale = user?.preferredLanguage === "ar" ? "ar" : "en";
+  // Do not expose an incomplete or unreviewed translation because a saved
+  // market/profile preference happens to contain that language.  The saved
+  // value remains intact for the forthcoming reviewed locale release.
+  const locale = isPublishedLocale(user?.preferredLanguage)
+    ? user!.preferredLanguage
+    : defaultLocale;
   return <I18nProvider locale={locale}>{children}</I18nProvider>;
 }

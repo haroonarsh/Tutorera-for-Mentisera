@@ -57,6 +57,8 @@ import {
   updateAdminUserRole,
   getStudent360,
   getTutor360,
+  listTutorOnboarding,
+  listStudentOnboarding,
 } from "../controllers/adminControlTower.controller";
 import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
@@ -100,6 +102,8 @@ router.patch("/roles/users/:userId", requirePermission("roles.manage"), updateAd
 // Customer 360°
 router.get("/customers/students/:id/360", requirePermission("student.read"), getStudent360);
 router.get("/customers/tutors/:id/360", requirePermission("tutor.read"), getTutor360);
+router.get("/onboarding/tutors", requirePermission("tutor.read"), listTutorOnboarding);
+router.get("/onboarding/students", requirePermission("student.read"), listStudentOnboarding);
 
 // Existing Core Endpoints (Fully Preserved)
 router.get("/stats", requirePermission("analytics.read"), getDashboardStats);

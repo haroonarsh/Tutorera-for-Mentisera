@@ -16,7 +16,7 @@ import {
   recordStatusEvent,
   policeIsRequired,
 } from "../services/tracking.service";
-import { advanceAccountStatus } from "../services/accountLifecycle.service";
+import { setAccountStatus } from "../services/accountLifecycle.service";
 import {
   applicationSubmittedEmail,
   cnicRejectedEmail,
@@ -333,6 +333,10 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
     res.status(400).json({ success: false, message: "Invalid status" });
     return;
   }
+  if (status === "rejected" && !String(reason || "").trim()) {
+    res.status(400).json({ success: false, message: "A rejection reason is required so the tutor can correct the document." });
+    return;
+  }
   const { user, profile } = data;
   profile.cnicVerificationStatus = status;
   profile.cnicRejectionReason = status === "rejected" ? (reason || "") : "";
@@ -361,7 +365,7 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
       message: `CNIC rejected${reason ? `: ${reason}` : ""}`,
       statusAfter: "rejected",
     });
-    await advanceAccountStatus(user._id.toString(), "rejected");
+    await setAccountStatus(user._id.toString(), "submitted");
     await sendEmailSafely(() => cnicRejectedEmail(user.name, reason || "", ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Action required: CNIC re-upload", message: reason || "Please re-upload your CNIC.", link: "/tutor/application-status", type: "verification" });
   }
@@ -386,6 +390,10 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     res.status(400).json({ success: false, message: "Invalid status" });
     return;
   }
+  if (status === "rejected" && !String(reason || "").trim()) {
+    res.status(400).json({ success: false, message: "A rejection reason is required so the tutor can correct the document." });
+    return;
+  }
   const { user, profile } = data;
   profile.degreeVerificationStatus = status;
   profile.degreeRejectionReason = status === "rejected" ? (reason || "") : "";
@@ -402,7 +410,7 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "EDUCATIONAL_DOCUMENTS_REJECTED", message: `Educational documents rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
     await sendEmailSafely(() => educationalDocumentsRejectedEmail(user.name, reason || "", ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Action required: Educational documents", message: reason || "Please re-upload your documents.", link: "/tutor/application-status", type: "verification" });
-    await advanceAccountStatus(user._id.toString(), "rejected");
+    await setAccountStatus(user._id.toString(), "submitted");
   }
   await logAudit({ action: `degree_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
   await syncMarketplaceAndHomeTuition(req, user, profile);
@@ -415,6 +423,10 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
   const { status, reason } = req.body;
   if (!["approved", "rejected", "pending"].includes(status)) {
     res.status(400).json({ success: false, message: "Invalid status" });
+    return;
+  }
+  if (status === "rejected" && !String(reason || "").trim()) {
+    res.status(400).json({ success: false, message: "A rejection reason is required so the tutor can correct the document." });
     return;
   }
   const { user, profile } = data;
@@ -433,7 +445,7 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "DEMO_VIDEO_REJECTED", message: `Demo video rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
     await sendEmailSafely(() => demoVideoRejectedEmail(user.name, reason || "", ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Action required: Demo video", message: reason || "Please re-record your demo video.", link: "/tutor/application-status", type: "verification" });
-    await advanceAccountStatus(user._id.toString(), "rejected");
+    await setAccountStatus(user._id.toString(), "submitted");
   }
   await logAudit({ action: `demo_video_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
   await syncMarketplaceAndHomeTuition(req, user, profile);
@@ -446,6 +458,10 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
   const { status, reason } = req.body;
   if (!["approved", "rejected", "pending"].includes(status)) {
     res.status(400).json({ success: false, message: "Invalid status" });
+    return;
+  }
+  if (status === "rejected" && !String(reason || "").trim()) {
+    res.status(400).json({ success: false, message: "A rejection reason is required so the tutor can correct the document." });
     return;
   }
   const { user, profile } = data;
@@ -464,7 +480,7 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_REJECTED", message: `Police verification rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
     await sendEmailSafely(() => policeRejectedEmail(user.name, reason || "", ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Action required: Police verification", message: reason || "Please re-submit your police certificate.", link: "/tutor/application-status", type: "verification" });
-    await advanceAccountStatus(user._id.toString(), "rejected");
+    await setAccountStatus(user._id.toString(), "submitted");
   }
   await logAudit({ action: `police_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
   await syncMarketplaceAndHomeTuition(req, user, profile);
@@ -480,6 +496,10 @@ export const setMarketplaceEligibility = async (req: AuthRequest, res: Response)
     return;
   }
   const { user, profile } = data;
+  if (eligible && !isMarketplaceEligible(profile)) {
+    res.status(409).json({ success: false, message: "Marketplace access cannot be enabled until all required verification checks are approved." });
+    return;
+  }
   const wasEligible = profile.marketplaceEligible;
   profile.marketplaceEligible = eligible;
   if (eligible) {
@@ -495,9 +515,7 @@ export const setMarketplaceEligibility = async (req: AuthRequest, res: Response)
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated" });
     await sendEmailSafely(() => marketplaceActivatedEmail(user.name, ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", link: "/tutor/application-status", type: "verification" });
-    if (profile.isVerified) {
-      await advanceAccountStatus(user._id.toString(), "verified");
-    }
+    if (profile.isVerified) await setAccountStatus(user._id.toString(), "verified");
   } else if (!eligible && wasEligible) {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: `Marketplace profile deactivated${reason ? `: ${reason}` : ""}` });
     await sendEmailSafely(() => marketplaceDeactivatedEmail(user.name, reason || "", ctaArgs(user)), user.email);
@@ -619,6 +637,7 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.lastStatusChangeAt = now;
     await profile.save();
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile auto-activated after verification requirements were met" });
+    await setAccountStatus(user._id.toString(), "verified");
     await sendEmailSafely(() => marketplaceActivatedEmail(user.name, ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", link: "/tutor/application-status", type: "verification" });
   } else if (!mpEligible && profile.marketplaceEligible) {
@@ -627,6 +646,7 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.lastStatusChangeAt = now;
     await profile.save();
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile auto-deactivated after a verification requirement lapsed" });
+    await setAccountStatus(user._id.toString(), "submitted");
     await sendEmailSafely(() => marketplaceDeactivatedEmail(user.name, "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification" });
   }

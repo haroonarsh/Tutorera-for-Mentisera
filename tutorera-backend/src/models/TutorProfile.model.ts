@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { EDUCATION_LEVELS, normalizeEducationLevels } from "../config/educationLevels";
 
 export interface ITutorProfile extends Document {
   user: Types.ObjectId;
@@ -151,7 +152,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     subjects: [{ type: String, trim: true }],
     levels: [{
       type: String,
-      enum: ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"],
+      enum: EDUCATION_LEVELS,
     }],
     curricula: [{ type: String, trim: true }],
 
@@ -244,15 +245,17 @@ function policeIsRequired(profile: ITutorProfile): boolean {
 
 tutorProfileSchema.pre("save", function () {
   const p = this as ITutorProfile;
+  // Historic profiles used short labels such as "O-Level" and "University".
+  // Normalize before validation so a document-review action cannot be blocked by
+  // unrelated legacy profile data.
+  p.levels = normalizeEducationLevels(p.levels) as any;
   const allApproved =
-    p.verificationStatus === "approved" &&
     p.cnicVerificationStatus === "approved" &&
     p.degreeVerificationStatus === "approved" &&
     p.demoVideoStatus === "approved" &&
     (!policeIsRequired(p) || p.policeVerificationStatus === "approved");
-  if (allApproved && !p.isVerified) {
-    p.isVerified = true;
-  }
+  p.verificationStatus = allApproved ? "approved" : "pending";
+  p.isVerified = allApproved;
 });
 
 export default mongoose.model<ITutorProfile>("TutorProfile", tutorProfileSchema);

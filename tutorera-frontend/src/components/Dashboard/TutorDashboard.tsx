@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import AvailabilityManager from "./AvailabilityManager";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
-import { formatPKR } from "@/lib/site";
+import { formatMoney, formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import CommissionCalculator from "./CommissionCalculator";
@@ -122,6 +122,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
   const [showStudentRatingModal, setShowStudentRatingModal] = useState(false);
   const [studentRated, setStudentRated] = useState(false);
   const router = useRouter();
+  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "PKR", unit);
 
   const handleRateStudent = async (rating: number, comment: string) => {
     try {
@@ -220,7 +221,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         </span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
-      <details style={{marginTop:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {(booking.subtotal||booking.amount).toLocaleString()}</b></span><span>Tutor fee: <b>PKR {(booking.tutorFee||0).toLocaleString()}</b></span><span>Tax: <b>PKR {(booking.tax||0).toLocaleString()}</b></span><span>Tutor net: <b>PKR {(booking.tutorNet||booking.amount).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
+      <details style={{marginTop:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>{money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>{money(booking.subtotal||booking.amount)}</b></span><span>Tutor fee: <b>{money(booking.tutorFee||0)}</b></span><span>Tax: <b>{money(booking.tax||0)}</b></span><span>Tutor net: <b>{money(booking.tutorNet||booking.amount)}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>
 

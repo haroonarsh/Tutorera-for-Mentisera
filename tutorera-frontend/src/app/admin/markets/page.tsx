@@ -24,7 +24,7 @@ interface MarketConfig {
   platformFeePercent: number;
   taxPercent: number;
   isActive: boolean;
-  launchStatus: "planning" | "beta" | "live" | "paused";
+  launchStatus: "coming_soon" | "beta" | "live" | "paused";
   supportedCities: string[];
 }
 
@@ -317,14 +317,16 @@ export default function MarketsPage() {
                 </label>
                 <select
                   value={editingMarket.launchStatus}
-                  onChange={(e) => setEditingMarket({ ...editingMarket, launchStatus: e.target.value as "planning" | "beta" | "live" | "paused" })}
+                  disabled={["AE", "GB"].includes(editingMarket.countryCode)}
+                  onChange={(e) => setEditingMarket({ ...editingMarket, launchStatus: e.target.value as "coming_soon" | "beta" | "live" | "paused" })}
                   style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.88rem" }}
                 >
                   <option value="live">Live in Production</option>
                   <option value="beta">Beta (Restricted Access)</option>
-                  <option value="planning">Planning (Coming Soon)</option>
+                  <option value="coming_soon">Coming soon</option>
                   <option value="paused">Paused / Temporarily Suspended</option>
                 </select>
+                {["AE", "GB"].includes(editingMarket.countryCode) && <p style={{ fontSize: ".78rem", color: "#92400e", margin: ".4rem 0 0" }}>This discovery market is locked to beta until a compliant payment provider is configured.</p>}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
@@ -379,7 +381,7 @@ export default function MarketsPage() {
                     checked={editingMarket.backgroundCheckRequired}
                     onChange={(e) => setEditingMarket({ ...editingMarket, backgroundCheckRequired: e.target.checked })}
                   />
-                  <span>Require Mandatory Police Clearance for Tutors</span>
+                  <span>Require local background / safety verification for in-person tutors</span>
                 </label>
               </div>
 

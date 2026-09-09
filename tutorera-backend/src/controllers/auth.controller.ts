@@ -406,11 +406,28 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 // @route   PATCH /api/auth/update-profile
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { name, phone, city } = req.body;
+  const { name, phone, city, preferredLanguage } = req.body;
+  const updates: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries({ name, phone, city })) {
+    if (typeof value === "string") updates[key] = value.trim();
+  }
+
+  // English is the sole reviewed UI locale at launch.  Persisting an
+  // arbitrary language here previously caused the client to render an
+  // incomplete translation resource.  Additional locales can be enabled
+  // deliberately once their copy and accessibility review are complete.
+  if (preferredLanguage !== undefined) {
+    if (preferredLanguage !== "en") {
+      res.status(400).json({ success: false, message: "That interface language is not available yet." });
+      return;
+    }
+    updates.preferredLanguage = "en";
+  }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { name, phone, city },
+    { $set: updates },
     { new: true, runValidators: true }
   );
 

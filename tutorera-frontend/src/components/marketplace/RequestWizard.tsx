@@ -615,6 +615,8 @@ export default function RequestWizard({
                 onCountryChange={(c: Country) => {
                   update("countryCode", c.code);
                   update("countryName", c.name);
+                  update("country", c.id || undefined);
+                  update("cityRef", undefined);
                   update("currency", c.currency);
                   update("timezone", c.defaultTimezone);
                   if (c.code === "US" || c.code === "GB" || c.code === "CA" || c.code === "AU") {
@@ -623,7 +625,10 @@ export default function RequestWizard({
                     if (Number(form.budget) > 500) update("budget", "80");
                   }
                 }}
-                onCityChange={(cityName: string) => update("city", cityName)}
+                onCityChange={(cityName: string, cityRef?: string) => {
+                  update("city", cityName);
+                  update("cityRef", cityRef || undefined);
+                }}
                 showCurrency={true}
                 showTimezone={true}
                 countries={geo.countries}

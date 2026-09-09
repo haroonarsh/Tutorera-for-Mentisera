@@ -126,7 +126,7 @@ export default function RootLayout({
             telephone: SUPPORT_PHONE,
             contactType: "customer service",
             email: SUPPORT_EMAIL,
-            availableLanguage: ["English", "Urdu", "Arabic"],
+            availableLanguage: ["English"],
           },
         ],
         areaServed: [

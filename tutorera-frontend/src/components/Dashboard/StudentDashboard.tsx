@@ -12,7 +12,7 @@ import { Trash2, Clock, Video, ShieldCheck } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
-import { SUPPORT_EMAIL, formatPKR } from "@/lib/site";
+import { SUPPORT_EMAIL, formatMoney, formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
@@ -127,6 +127,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
   const router = useRouter();
   const [paying, setPaying] = useState(false);
   const [rebooking, setRebooking] = useState(false);
+  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "PKR", unit);
 
   const handlePay = async () => {
     setPaying(true);
@@ -309,14 +310,14 @@ function BookingCard({ booking, onClaimSubmitted }: {
             💳 Payment Required
           </p>
           <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-            Review the final PKR amount below. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. TUTORERA verifies payment server-side before marking a booking paid.
+            Review the final amount below. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. TUTORERA verifies payment server-side before marking a booking paid.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {[
-              { label: "Tutor Session", value: formatPKR(booking.subtotal || booking.amount || booking.totalAmount || 0) },
-              { label: "Student Marketplace Fee", value: formatPKR(booking.studentFee || 0) },
-              { label: "Tax", value: formatPKR(0) },
-              { label: "Total Payable", value: formatPKR(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
+              { label: "Tutor Session", value: money(booking.subtotal || booking.amount || booking.totalAmount || 0) },
+              { label: "Student Marketplace Fee", value: money(booking.studentFee || 0) },
+              { label: "Tax", value: money(booking.tax || 0) },
+              { label: "Total Payable", value: money(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
               { label: "Currency", value: "PKR — Pakistani Rupees" },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>

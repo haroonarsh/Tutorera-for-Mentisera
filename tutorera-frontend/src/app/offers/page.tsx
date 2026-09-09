@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
-import { calculateMarketplaceFees } from "@/lib/site";
+import { calculateMarketplaceFees, formatMoney } from "@/lib/site";
 import { 
   CheckCircle, 
   Clock, 
@@ -84,6 +84,9 @@ function remaining(value: string, now: number) {
   const s = Math.floor((ms % 60000) / 1000);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+
+const offerMoney = (offer: Offer, amount: number, unit?: string) =>
+  formatMoney(amount, offer.currency || offer.request.currency || "PKR", unit);
 
 import CounterOfferSheet from "@/components/marketplace/CounterOfferSheet";
 
@@ -381,7 +384,7 @@ function OffersContent() {
                       <li key={h._id} style={{ marginBottom: "0.75rem", position: "relative" }}>
                         <span style={{ position: "absolute", left: -24, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#0329b2" }} />
                         <strong style={{ fontSize: "0.85rem", color: "#021550" }}>
-                          {h.senderRole === "student" ? "Student" : "Tutor"} proposed PKR {h.amount.toLocaleString()}
+                          {h.senderRole === "student" ? "Student" : "Tutor"} proposed {offerMoney(o, h.amount)}
                         </strong>
                         <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
                           {new Date(h.createdAt).toLocaleString("en-PK")} · {h.status}
@@ -422,7 +425,7 @@ function OffersContent() {
                           boxShadow: "0 4px 14px rgba(16, 185, 129, 0.25)",
                         }}
                       >
-                        <CheckCircle size={18} /> Accept PKR {o.amount.toLocaleString()}
+                        <CheckCircle size={18} /> Accept {offerMoney(o, o.amount)}
                       </button>
                     )}
 

@@ -11,7 +11,9 @@
     "test:marketplace": "npm run build && node --test test/*.test.js",
     "backfill:tracking": "ts-node src/scripts/backfillTutorTracking.ts",
     "geo:import": "ts-node src/scripts/importGeoNames.ts",
-    "migrate:pk": "ts-node src/scripts/migrateLegacyPakistan.ts"
+    "migrate:pk": "ts-node src/scripts/migrateLegacyPakistan.ts",
+    "migrate:levels": "ts-node src/scripts/normalizeTutorProfileLevels.ts",
+    "migrate:launch-markets": "ts-node src/scripts/reconcileGlobalLaunchMarkets.ts"
   },
   "keywords": [],
   "author": "",

@@ -9,7 +9,7 @@ interface CountryCitySelectorProps {
   countryCode: string;
   city: string;
   onCountryChange: (country: Country) => void;
-  onCityChange: (cityName: string) => void;
+  onCityChange: (cityName: string, cityRef?: string) => void;
   showTimezone?: boolean;
   onTimezoneChange?: (timezone: string) => void;
   showCurrency?: boolean;
@@ -58,12 +58,12 @@ export default function CountryCitySelector({
     setModalOpen(true);
   };
 
-  const handleModalSelect = (pickedCountry: Country, pickedCity: string) => {
+  const handleModalSelect = (pickedCountry: Country, pickedCity: string, cityRef?: string) => {
     onCountryChange(pickedCountry);
     if (onTimezoneChange) onTimezoneChange(pickedCountry.defaultTimezone);
     if (onCurrencyChange) onCurrencyChange(pickedCountry.currency);
 
-    onCityChange(pickedCity);
+    onCityChange(pickedCity, cityRef);
   };
 
   return (

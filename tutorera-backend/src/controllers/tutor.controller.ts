@@ -14,6 +14,9 @@ import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from 
 import sendEmail from "../utils/sendEmail";
 import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/trackingEmails";
 import { sendNotification } from "../utils/socket";
+import { normalizeEducationLevels } from "../config/educationLevels";
+import { resolveLocationReferences } from "../services/locationReference.service";
+import { resolveMarket } from "../services/market.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
@@ -122,6 +125,15 @@ function extractObjectId(value: string): string {
   return value.match(/[a-f\d]{24}/i)?.[0] || value;
 }
 
+const escapeRegex = (value: unknown): string =>
+  String(value || "").slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const TUTOR_SORTS = new Set([
+  "-averageRating", "averageRating", "-hourlyRate", "hourlyRate",
+  "-experience", "experience", "-totalReviews", "totalReviews",
+  "-lastActiveAt", "lastActiveAt",
+]);
+
 // @desc    Get all tutors with global search & filter
 // @route   GET /api/tutors
 // @access  Public
@@ -157,7 +169,7 @@ export const getAllTutors = async (
   const andClauses: Record<string, unknown>[] = [];
 
   if (search) {
-    const pattern = new RegExp(search as string, "i");
+    const pattern = new RegExp(escapeRegex(search), "i");
     andClauses.push({
       $or: [
         { fullName: pattern },
@@ -230,15 +242,16 @@ export const getAllTutors = async (
     filter.averageRating = { $gte: Number(minRating) };
   }
 
-  const pageNum = parseInt(page as string, 10);
-  const limitNum = parseInt(limit as string, 10);
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 10));
+  const safeSort = TUTOR_SORTS.has(String(sort)) ? String(sort) : "-averageRating";
   const skip = (pageNum - 1) * limitNum;
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
     .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
-    .sort(sort as string)
+    .sort(safeSort)
     .skip(skip)
     .limit(limitNum);
 
@@ -324,14 +337,29 @@ export const saveOnboardingStep = async (
 
   if (stepNum === 1) {
     // Personal Info & Global Location
+    const market = await resolveMarket(parsedData.countryCode || "PK");
+    if (!market || !market.isActive || !market.tutorRegistration) {
+      res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tutor onboarding is not available in the selected market." });
+      return;
+    }
+    let locationReferences: Record<string, unknown>;
+    try {
+      locationReferences = await resolveLocationReferences(parsedData, market.countryCode);
+    } catch (error: any) {
+      res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+      return;
+    }
+    const resolvedCity = (locationReferences.city as string | undefined) || parsedData.city;
+    const resolvedTimezone = parsedData.timezone || (locationReferences.timezone as string | undefined) || market.timezone;
     updateData = {
       fullName: parsedData.fullName,
       phone: parsedData.phone,
-      countryCode: parsedData.countryCode || "PK",
-      countryName: parsedData.countryName || "Pakistan",
-      city: parsedData.city,
-      timezone: parsedData.timezone || "Asia/Karachi",
-      currency: parsedData.currency || "PKR",
+      countryCode: market.countryCode,
+      countryName: market.countryName,
+      city: resolvedCity,
+      timezone: resolvedTimezone,
+      currency: market.currency,
+      ...locationReferences,
       gender: parsedData.gender,
       dateOfBirth: parsedData.dateOfBirth,
       languages: parsedData.languages || [{ language: "English", proficiency: "Fluent" }],
@@ -340,11 +368,12 @@ export const saveOnboardingStep = async (
     await User.findByIdAndUpdate(req.user?._id, {
       name: parsedData.fullName,
       phone: parsedData.phone,
-      countryCode: parsedData.countryCode || "PK",
-      countryName: parsedData.countryName || "Pakistan",
-      city: parsedData.city,
-      timezone: parsedData.timezone || "Asia/Karachi",
-      currency: parsedData.currency || "PKR",
+      countryCode: market.countryCode,
+      countryName: market.countryName,
+      city: resolvedCity,
+      timezone: resolvedTimezone,
+      currency: market.currency,
+      ...locationReferences,
     });
   }
 
@@ -412,7 +441,7 @@ export const saveOnboardingStep = async (
       experience: parseInt(parsedData.experience),
       previousInstitutions: parsedData.previousInstitutions || [],
       subjects: parsedData.subjects || [],
-      levels: parsedData.levels || [],
+      levels: normalizeEducationLevels(parsedData.levels),
       curricula: parsedData.curricula || [],
       onboardingStep: 4,
     };
@@ -596,6 +625,19 @@ export const saveOnboardingStep = async (
     }
   }
 
+  // Replacing a verification artefact pauses any existing visibility until it
+  // has been reviewed again, regardless of whether the tutor used the wizard
+  // or the dedicated resubmission screen.
+  const verificationResubmitted = ["degreeVerificationStatus", "cnicVerificationStatus", "demoVideoStatus", "policeVerificationStatus"]
+    .some((key) => (updateData as any)[key] === "pending");
+  if (verificationResubmitted && (profile.marketplaceEligible || profile.homeTuitionEligible || profile.isVerified)) {
+    Object.assign(updateData, {
+      verificationStatus: "pending", isVerified: false,
+      marketplaceEligible: false, homeTuitionEligible: false,
+      marketplaceEligibleAt: null, homeTuitionEligibleAt: null,
+    });
+  }
+
   // Save to DB
   const updated = await TutorProfile.findOneAndUpdate(
     { user: req.user?._id },
@@ -623,6 +665,11 @@ export const saveOnboardingStep = async (
       if (firstCompletedSubmission) {
         tutorUser.applicationSubmittedAt = new Date();
         await advanceAccountStatus(tutorUser._id.toString(), "submitted");
+      }
+      // A corrected application is reviewable again; "rejected" is not terminal
+      // when the rejection concerns a resubmittable verification component.
+      if (updated?.onboardingComplete && updated.verificationStatus !== "approved") {
+        await User.findByIdAndUpdate(tutorUser._id, { accountStatus: "submitted" });
       }
       await tutorUser.save();
 

@@ -3,14 +3,9 @@
 
 import { defaultLocale, Locale } from "./config";
 import { en } from "./messages/en";
-import { ar } from "./messages/ar";
 
-// ar is typed loosely (Record<string, any>) to support Arabic strings.
-// We cast it here so callers get the full English type for autocomplete,
-// while still allowing translated values at runtime.
 const resources: Record<Locale, typeof en> = {
   en,
-  ar: ar as typeof en,
 };
 
 export function messages(locale: Locale = defaultLocale): typeof en {

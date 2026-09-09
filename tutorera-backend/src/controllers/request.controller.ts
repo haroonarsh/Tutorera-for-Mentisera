@@ -24,6 +24,7 @@ import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service
 import { classifyRequestLoss } from "../services/requestLoss.service";
 import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from "../services/market.service";
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
+import { resolveLocationReferences } from "../services/locationReference.service";
 import { convertAmount } from "../services/exchangeRate.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
@@ -61,11 +62,24 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(422).json({ success: false, code: "HOME_TUITION_UNAVAILABLE", message: "Home tuition is not available in the selected market." });
     return;
   }
+  let locationReferences: Record<string, unknown>;
+  try {
+    locationReferences = await resolveLocationReferences(req.body, market.countryCode);
+  } catch (error: any) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    return;
+  }
 
   // ── Create request ──
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-  const scheduleTimezone = isValidIanaTimezone(req.body.timezone) ? req.body.timezone : market.timezone;
+  if (req.body.timezone && !isValidIanaTimezone(req.body.timezone)) {
+    res.status(422).json({ success: false, code: "INVALID_TIMEZONE", message: "Please select a valid IANA timezone." });
+    return;
+  }
+  const scheduleTimezone = isValidIanaTimezone(req.body.timezone)
+    ? req.body.timezone
+    : (locationReferences.timezone as string | undefined) || market.timezone;
   let scheduledStartAt: Date | undefined;
   let scheduledEndAt: Date | undefined;
   if (req.body.selectedDate && req.body.selectedStartTime) {
@@ -74,9 +88,14 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       if (req.body.selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(req.body.selectedDate, req.body.selectedEndTime, scheduleTimezone);
     } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
   }
+  if (scheduledStartAt && scheduledEndAt && scheduledEndAt <= scheduledStartAt) {
+    res.status(422).json({ success: false, code: "INVALID_SCHEDULE_WINDOW", message: "Lesson end time must be after the start time." });
+    return;
+  }
   const request = await Request.create({
     student: req.user?._id,
     ...req.body,
+    ...locationReferences,
     countryCode: market.countryCode,
     countryName: market.countryName,
     currency: market.currency,
@@ -178,11 +197,12 @@ export const saveRequestDraftProgress = async (req: AuthRequest, res: Response):
 // @route   GET /api/requests
 // @access  Private
 export const getAllRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  let tutorProfile: any = null;
   // Block unapproved tutors
   if (req.user?.role === "tutor") {
     const TutorProfile = (await import("../models/TutorProfile.model")).default;
-    const profile = await TutorProfile.findOne({ user: req.user._id });
-    if (!profile || !isMarketplaceEligible(profile)) {
+    tutorProfile = await TutorProfile.findOne({ user: req.user._id });
+    if (!tutorProfile || !isMarketplaceEligible(tutorProfile)) {
       res.status(403).json({
         success: false,
         code: "TUTOR_NOT_APPROVED",
@@ -192,17 +212,19 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
     }
   }
 
-  const { subject, level, city, country, teachingMode, currency, page = "1", limit = "10" } = req.query;
+  const { subject, level, city, country, teachingMode, currency, curriculum, language, page = "1", limit = "10" } = req.query;
   const filter: Record<string, unknown> = {
     status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
     isDirect: { $ne: true },
     expiresAt: { $gt: new Date() },
   };
 
-  if (subject) filter.subject = new RegExp(subject as string, "i");
+  if (subject) filter.subject = new RegExp(escapeRegExp(String(subject).slice(0, 80)), "i");
   if (level) filter.level = level;
-  if (city) filter.city = new RegExp(city as string, "i");
+  if (city) filter.city = new RegExp(escapeRegExp(String(city).slice(0, 80)), "i");
   if (country) filter.countryCode = (country as string).toUpperCase();
+  if (curriculum) filter.curriculum = new RegExp(escapeRegExp(String(curriculum).slice(0, 80)), "i");
+  if (language) filter.lessonLanguage = new RegExp(escapeRegExp(String(language).slice(0, 80)), "i");
   if (teachingMode && teachingMode !== "all") {
     if (teachingMode === "online") {
       filter.teachingMode = { $in: ["online", "both"] };
@@ -214,8 +236,24 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   }
   if (currency) filter.currency = (currency as string).toUpperCase();
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  if (tutorProfile) {
+    const supportsOnline = ["online", "both"].includes(tutorProfile.teachingMode);
+    const supportsHome = ["in-person", "both"].includes(tutorProfile.teachingMode) && isHomeTuitionEligible(tutorProfile);
+    const localCities = [tutorProfile.city, ...(tutorProfile.serviceAreas || [])].filter(Boolean);
+    const eligibility: Record<string, unknown>[] = [];
+    if (supportsOnline) eligibility.push({ teachingMode: { $in: ["online", "both"] } });
+    if (supportsHome && tutorProfile.countryCode && localCities.length) {
+      eligibility.push({ teachingMode: { $in: ["in-person", "both"] }, countryCode: tutorProfile.countryCode, city: { $in: localCities.map((value: string) => new RegExp(`^${escapeRegExp(value)}$`, "i")) } });
+    }
+    if (!eligibility.length) {
+      res.status(200).json({ success: true, total: 0, page: 1, requests: [] });
+      return;
+    }
+    filter.$and = [...((filter.$and as Record<string, unknown>[]) || []), { $or: eligibility }];
+  }
+
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 10));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Request.countDocuments(filter);
@@ -944,7 +982,20 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     return;
   }
 
-  const scheduleTimezone = isValidIanaTimezone(req.body.timezone) ? req.body.timezone : market.timezone;
+  let locationReferences: Record<string, unknown>;
+  try {
+    locationReferences = await resolveLocationReferences(req.body, market.countryCode);
+  } catch (error: any) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    return;
+  }
+  if (req.body.timezone && !isValidIanaTimezone(req.body.timezone)) {
+    res.status(422).json({ success: false, code: "INVALID_TIMEZONE", message: "Please select a valid IANA timezone." });
+    return;
+  }
+  const scheduleTimezone = isValidIanaTimezone(req.body.timezone)
+    ? req.body.timezone
+    : (locationReferences.timezone as string | undefined) || market.timezone;
   let scheduledStartAt: Date | undefined;
   let scheduledEndAt: Date | undefined;
   if (selectedDate && selectedStartTime) {
@@ -952,6 +1003,10 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
       scheduledStartAt = zonedDateTimeToUtc(selectedDate, selectedStartTime, scheduleTimezone);
       if (selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(selectedDate, selectedEndTime, scheduleTimezone);
     } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
+  }
+  if (scheduledStartAt && scheduledEndAt && scheduledEndAt <= scheduledStartAt) {
+    res.status(422).json({ success: false, code: "INVALID_SCHEDULE_WINDOW", message: "Lesson end time must be after the start time." });
+    return;
   }
 
   // A tutor can be discovered across borders for online teaching. The request,
@@ -976,12 +1031,13 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     currency: market.currency,
     countryCode: market.countryCode,
     countryName: market.countryName,
+    ...locationReferences,
     timezone: scheduleTimezone,
     scheduleTimezone,
     scheduledStartAt,
     scheduledEndAt,
     teachingMode: teachingMode || tutorProfile.teachingMode,
-    city: city || tutorProfile.city,
+    city: (locationReferences.city as string | undefined) || city || tutorProfile.city,
     schedule: selectedDate && selectedStartTime
       ? `${selectedDate} ${selectedStartTime}–${selectedEndTime}`
       : schedule,
@@ -1176,8 +1232,8 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
   if (teachingMode && teachingMode !== "all") {
     if (teachingMode === "online") {
       filter.teachingMode = { $in: ["online", "both"] };
-    } else if (teachingMode === "in_person" || teachingMode === "home") {
-      filter.teachingMode = { $in: ["in_person", "home", "both"] };
+    } else if (teachingMode === "in_person" || teachingMode === "in-person" || teachingMode === "home") {
+      filter.teachingMode = { $in: ["in-person", "both"] };
     } else {
       filter.teachingMode = String(teachingMode);
     }

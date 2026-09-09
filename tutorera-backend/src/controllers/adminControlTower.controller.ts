@@ -8,16 +8,93 @@ import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import TutorProfile from "../models/TutorProfile.model";
+import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import SafetyCase from "../models/SafetyCase.model";
 import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
+import Country from "../models/Country.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
 import logger from "../config/logger";
 import { logAudit } from "../utils/logAudit";
+import { computeCanonicalStatus } from "../services/tracking.service";
+
+// ─── Onboarding operations ────────────────────────────────────────────────
+
+/** Phase-wise tutor pipeline, shared with the application-status state machine. */
+export const listTutorOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  const countryCode = String(req.countryScopeCode || req.query.countryCode || "").toUpperCase();
+  const userFilter: Record<string, unknown> = { role: "tutor" };
+  if (countryCode) userFilter.countryCode = countryCode;
+  const users = await User.find(userFilter).select("name email countryCode city accountStatus applicationId applicationSubmittedAt createdAt").lean();
+  const profiles = await TutorProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
+  const rows = users.map((user: any) => {
+    const profile: any = byUser.get(user._id.toString());
+    const phase = profile ? computeCanonicalStatus(profile as any) : "APPLICATION_STARTED";
+    return {
+      userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
+      countryCode: profile?.countryCode || user.countryCode || null, city: profile?.city || user.city || null,
+      applicationId: user.applicationId || null, phase, onboardingStep: profile?.onboardingStep || 1,
+      onboardingComplete: Boolean(profile?.onboardingComplete), accountStatus: user.accountStatus || "registered",
+      marketplaceEligible: Boolean(profile?.marketplaceEligible), homeTuitionEligible: Boolean(profile?.homeTuitionEligible),
+      lastUpdatedAt: profile?.lastStatusChangeAt || profile?.updatedAt || user.createdAt,
+      createdAt: user.createdAt,
+    };
+  });
+  const phase = String(req.query.phase || "");
+  const search = String(req.query.search || "").trim().toLowerCase();
+  const filteredRows = rows.filter((row: any) =>
+    (!phase || row.phase === phase) &&
+    (!search || [row.name, row.email, row.applicationId, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
+  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  const start = (page - 1) * limit;
+  res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
+};
+
+/** Student demand-readiness pipeline; no duplicate student application is created. */
+export const listStudentOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  const countryCode = String(req.countryScopeCode || req.query.countryCode || "").toUpperCase();
+  const userFilter: Record<string, unknown> = { role: "student" };
+  if (countryCode) userFilter.countryCode = countryCode;
+  const users = await User.find(userFilter).select("name email countryCode city accountStatus createdAt").lean();
+  const profiles = await StudentProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
+  const requestCounts = await Request.aggregate([
+    { $match: { student: { $in: users.map((user) => user._id) } } },
+    { $group: { _id: "$student", count: { $sum: 1 }, lastRequestAt: { $max: "$createdAt" } } },
+  ]);
+  const requestsByUser = new Map(requestCounts.map((entry) => [entry._id.toString(), entry]));
+  const rows = users.map((user: any) => {
+    const profile: any = byUser.get(user._id.toString());
+    const requestInfo: any = requestsByUser.get(user._id.toString());
+    const phase = requestInfo?.count ? "ACTIVE_REQUESTER" : profile?.onboardingComplete ? "READY_TO_POST" : profile ? "PROFILE_STARTED" : "REGISTERED";
+    return {
+      userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
+      countryCode: profile?.countryCode || user.countryCode || null, city: profile?.city || user.city || null,
+      phase, onboardingComplete: Boolean(profile?.onboardingComplete), accountStatus: user.accountStatus || "registered",
+      requestCount: requestInfo?.count || 0, lastRequestAt: requestInfo?.lastRequestAt || null,
+      lastUpdatedAt: profile?.updatedAt || requestInfo?.lastRequestAt || user.createdAt, createdAt: user.createdAt,
+    };
+  });
+  const phase = String(req.query.phase || "");
+  const search = String(req.query.search || "").trim().toLowerCase();
+  const filteredRows = rows.filter((row: any) =>
+    (!phase || row.phase === phase) &&
+    (!search || [row.name, row.email, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
+  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  const start = (page - 1) * limit;
+  res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
+};
 
 // ─── 1. Control Tower Operational Pulse & Action Triage ───────────────────────
 
@@ -584,11 +661,25 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   const current = await MarketConfig.findById(id);
   if (!current) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
   if (req.countryScopeCode && current.countryCode !== req.countryScopeCode) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
-  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
+  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "launchStatus", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
   const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
+  if (changes.defaultLanguage && changes.defaultLanguage !== "en") {
+    res.status(400).json({ success: false, message: "English is the only reviewed interface locale currently available." });
+    return;
+  }
+  if (Array.isArray(changes.supportedLanguages) && changes.supportedLanguages.some((language) => language !== "en")) {
+    res.status(400).json({ success: false, message: "Only English can be enabled as an interface language until additional translations are reviewed." });
+    return;
+  }
   // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
   if (["AE", "GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
   const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
+  if (updated) {
+    await Country.updateOne(
+      { iso2: updated.countryCode },
+      { $set: { enabled: updated.isActive, launchStatus: updated.launchStatus } },
+    );
+  }
   await logAudit({ action: "market_config_updated", actor: req.user?.name || "Administrator", actorId: req.user?._id?.toString(), entity: "MarketConfig", targetId: id as string, metadata: { countryCode: current.countryCode, changes } });
   res.json({ success: true, market: updated });
 };

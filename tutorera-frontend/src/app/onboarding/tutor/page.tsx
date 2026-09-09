@@ -63,6 +63,8 @@ export default function TutorOnboardingPage() {
     phone: "",
     countryCode: "PK",
     countryName: "Pakistan",
+    country: undefined as string | undefined,
+    cityRef: undefined as string | undefined,
     city: "Lahore",
     timezone: "Asia/Karachi",
     currency: "PKR",
@@ -121,6 +123,8 @@ export default function TutorOnboardingPage() {
               phone: p.user?.phone || p.phone || "",
               countryCode: p.countryCode || p.user?.countryCode || "PK",
               countryName: p.countryName || p.user?.countryName || "Pakistan",
+              country: p.country || undefined,
+              cityRef: p.cityRef || undefined,
               city: p.city || p.user?.city || "Lahore",
               timezone: p.timezone || p.user?.timezone || "Asia/Karachi",
               currency: p.currency || "PKR",
@@ -470,13 +474,15 @@ export default function TutorOnboardingPage() {
                         ...prev,
                         countryCode: c.code,
                         countryName: c.name,
+                        country: c.id,
+                        cityRef: undefined,
                         currency: c.currency,
                         timezone: c.defaultTimezone,
                       }));
                       setStep4(prev => ({ ...prev, currency: c.currency }));
                     }}
-                    onCityChange={(cityName: string) => {
-                      setStep1(prev => ({ ...prev, city: cityName }));
+                    onCityChange={(cityName: string, cityRef?: string) => {
+                      setStep1(prev => ({ ...prev, city: cityName, cityRef }));
                     }}
                     showCurrency={true}
                     showTimezone={true}

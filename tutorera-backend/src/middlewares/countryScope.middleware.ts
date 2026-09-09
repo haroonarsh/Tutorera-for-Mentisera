@@ -23,7 +23,7 @@ export const enforceCountryScope = (req: AuthRequest, res: Response, next: NextF
   // Do not allow a country administrator through a route that has not been
   // made country-aware yet. This is intentionally restrictive: a partial
   // filter must never become a cross-country data disclosure.
-  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography"].some((prefix) => req.path.startsWith(prefix));
+  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography", "/onboarding"].some((prefix) => req.path.startsWith(prefix));
   if (!supported) {
     res.status(403).json({ success: false, code: "COUNTRY_SCOPE_ROUTE_UNSUPPORTED", message: "This administrative resource is not yet available in country-scoped mode." });
     return;

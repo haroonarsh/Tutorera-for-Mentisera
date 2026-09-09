@@ -1,0 +1,36 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: tutorera-backend/package-lock.json }
+      - run: npm ci
+      - run: npm run build
+      - run: npm test -- --passWithNoTests
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      # The frontend has no committed lockfile yet; retain reproducible backend
+      # installs and avoid pretending npm ci can operate without one.
+      - run: npm install --ignore-scripts
+      - run: npm run lint -- --max-warnings=0
+      - run: npm run build

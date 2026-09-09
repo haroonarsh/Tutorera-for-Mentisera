@@ -9,6 +9,8 @@ export interface CityData {
 }
 
 export interface CountryData {
+  /** MongoDB Country id when supplied by the runtime GeoNames API. */
+  id?: string;
   code: string; // ISO 3166-1 alpha-2
   name: string;
   currency: string; // ISO 4217

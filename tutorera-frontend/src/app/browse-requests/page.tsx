@@ -8,6 +8,7 @@ import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { DashRequest } from "@/types/dashboard";
 import { formatMoney } from "@/lib/site";
 import { COUNTRIES, getCitiesForCountry } from "@/lib/location";
+import { useGeoData } from "@/lib/geoService";
 
 const C = UI_COLORS;
 
@@ -39,9 +40,13 @@ export default function BrowseRequestsPage() {
   const [level, setLevel] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
+  const [teachingMode, setTeachingMode] = useState("");
+  const [curriculum, setCurriculum] = useState("");
+  const [language, setLanguage] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [bidModalRequest, setBidModalRequest] = useState<RequestItem | null>(null);
+  const geo = useGeoData();
 
   const availableCities = country ? getCitiesForCountry(country) : [];
 
@@ -53,6 +58,9 @@ export default function BrowseRequestsPage() {
       if (level) params.level = level;
       if (country) params.country = country;
       if (city) params.city = city;
+      if (teachingMode) params.teachingMode = teachingMode;
+      if (curriculum) params.curriculum = curriculum;
+      if (language) params.language = language;
       const res = await api.get(`/requests?${new URLSearchParams(params).toString()}`);
       setRequests(res.data.requests);
       setTotalPages(Math.max(1, Math.ceil(res.data.total / 12)));
@@ -62,14 +70,16 @@ export default function BrowseRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [subject, level, country, city]);
+  }, [subject, level, country, city, teachingMode, curriculum, language]);
 
   useEffect(() => {
-    const timer = setTimeout(() => { setPage(1); fetchRequests(1); }, 400);
-    return () => clearTimeout(timer);
-  }, [subject, level, country, city, fetchRequests]);
+    setPage(1);
+  }, [subject, level, country, city, teachingMode, curriculum, language]);
 
-  useEffect(() => { fetchRequests(page); }, [page, fetchRequests]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void fetchRequests(page); }, 250);
+    return () => window.clearTimeout(timer);
+  }, [page, fetchRequests]);
 
   return (
     <div style={{ backgroundColor: C.gray50, minHeight: '100vh' }}>
@@ -107,7 +117,7 @@ export default function BrowseRequestsPage() {
             value={country} onChange={e => { setCountry(e.target.value); setCity(""); }}
             style={{ flex: '0 1 170px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: country ? C.primary : C.gray500, backgroundColor: 'white' }}>
             <option value="">All Countries</option>
-            {COUNTRIES.map(c => (
+            {(geo.countries.length ? geo.countries : COUNTRIES).map(c => (
               <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
             ))}
           </select>
@@ -127,6 +137,14 @@ export default function BrowseRequestsPage() {
               style={{ flex: '0 1 140px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary }}
             />
           )}
+          <select value={teachingMode} onChange={e => setTeachingMode(e.target.value)} aria-label="Teaching mode"
+            style={{ flex: '0 1 150px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: teachingMode ? C.primary : C.gray500, backgroundColor: 'white' }}>
+            <option value="">All modes</option><option value="online">Online</option><option value="in-person">In-person</option>
+          </select>
+          <input type="text" value={curriculum} onChange={e => setCurriculum(e.target.value)} placeholder="Curriculum..." aria-label="Filter by curriculum"
+            style={{ flex: '1 1 160px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary }} />
+          <input type="text" value={language} onChange={e => setLanguage(e.target.value)} placeholder="Lesson language..." aria-label="Filter by lesson language"
+            style={{ flex: '1 1 150px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary }} />
         </div>
 
         {/* Grid */}

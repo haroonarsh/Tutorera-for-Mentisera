@@ -56,6 +56,7 @@ const navSections: NavSection[] = [
     title: "Students",
     items: [
       { href: "/admin/students", label: "Students", icon: <Users size={17} />, permission: "student.read" },
+      { href: "/admin/onboarding", label: "Onboarding", icon: <ClipboardList size={17} />, permission: "student.read" },
       { href: "/admin/at-risk-requests", label: "At-Risk Requests", icon: <AlertTriangle size={17} />, badge: "Action", permission: "request.extend" },
       { href: "/admin/student-ratings", label: "Student Ratings", icon: <Star size={17} />, permission: "student.read" },
     ],

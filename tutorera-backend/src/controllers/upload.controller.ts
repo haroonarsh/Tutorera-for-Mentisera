@@ -6,6 +6,10 @@ import TutorProfile from "../models/TutorProfile.model";
 import { uploadToCloudinary, deleteFromCloudinary, getSignedViewUrl } from "../utils/uploadToCloudinary";
 import sendEmail from "../utils/sendEmail";
 import { documentResubmittedEmail } from "../utils/trackingEmails";
+import { recordStatusEvent } from "../services/tracking.service";
+import { logAudit } from "../utils/logAudit";
+import { sendNotification } from "../utils/socket";
+import { setAccountStatus } from "../services/accountLifecycle.service";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -190,6 +194,13 @@ export const uploadVerificationDocs = async (
   }
 
   updateData.verificationStatus = "pending";
+  // A replacement document immediately pauses visibility. A previously verified
+  // tutor must not remain searchable while the replacement is awaiting review.
+  updateData.isVerified = false;
+  updateData.marketplaceEligible = false;
+  updateData.homeTuitionEligible = false;
+  if (existingProfile.marketplaceEligible) updateData.marketplaceEligibleAt = null;
+  if (existingProfile.homeTuitionEligible) updateData.homeTuitionEligibleAt = null;
   updateData.lastStatusChangeAt = new Date();
 
   const updated = await TutorProfile.findOneAndUpdate(
@@ -218,6 +229,51 @@ export const uploadVerificationDocs = async (
         const { subject, html } = documentResubmittedEmail(tutorUser.name, docType, cta);
         await sendEmail({ to: tutorUser.email, subject, html });
       }));
+
+      const priorStatusFor: Record<string, string> = {
+        "CNIC": existingProfile.cnicVerificationStatus,
+        "Educational document": existingProfile.degreeVerificationStatus,
+        "Demo video": existingProfile.demoVideoStatus,
+        "Police verification": existingProfile.policeVerificationStatus,
+      };
+      const eventFor: Record<string, { submitted: any; resubmitted: any }> = {
+        "CNIC": { submitted: "CNIC_SUBMITTED", resubmitted: "CNIC_RESUBMITTED" },
+        "Educational document": { submitted: "EDUCATIONAL_DOCUMENTS_SUBMITTED", resubmitted: "EDUCATIONAL_DOCUMENTS_RESUBMITTED" },
+        "Demo video": { submitted: "DEMO_VIDEO_SUBMITTED", resubmitted: "DEMO_VIDEO_RESUBMITTED" },
+        "Police verification": { submitted: "POLICE_VERIFICATION_SUBMITTED", resubmitted: "POLICE_VERIFICATION_RESUBMITTED" },
+      };
+      await Promise.all(resubmittedDocs.map((docType) => recordStatusEvent({
+        tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
+        actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+        event: eventFor[docType][priorStatusFor[docType] === "rejected" ? "resubmitted" : "submitted"],
+        message: `${docType} ${priorStatusFor[docType] === "rejected" ? "resubmitted" : "submitted"} for review`,
+        statusBefore: priorStatusFor[docType], statusAfter: "pending",
+      })));
+      if (existingProfile.marketplaceEligible) {
+        await recordStatusEvent({
+          tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
+          actor: { name: "System", role: "system" }, event: "MARKETPLACE_DEACTIVATED",
+          message: "Marketplace visibility paused while replacement documents are reviewed",
+        });
+      }
+      if (existingProfile.homeTuitionEligible) {
+        await recordStatusEvent({
+          tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
+          actor: { name: "System", role: "system" }, event: "HOME_TUITION_DEACTIVATED",
+          message: "Home tuition eligibility paused while replacement documents are reviewed",
+        });
+      }
+      await logAudit({
+        action: "verification_documents_resubmitted", actor: tutorUser.name,
+        actorId: tutorUser._id.toString(), entity: "TutorProfile", targetId: updated._id.toString(),
+        targetName: tutorUser.name, metadata: { documents: resubmittedDocs },
+      });
+      await setAccountStatus(tutorUser._id.toString(), "submitted");
+      const io = req.app.get("io");
+      await sendNotification(io, tutorUser._id.toString(), {
+        title: "Documents resubmitted", message: "Your replacement documents are now under review.",
+        type: "verification", link: "/tutor/application-status",
+      });
     }
   }
 

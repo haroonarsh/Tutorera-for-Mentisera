@@ -36,6 +36,8 @@ export default function StudentOnboardingPage() {
     phone: "",
     countryCode: "PK",
     countryName: "Pakistan",
+    country: undefined as string | undefined,
+    cityRef: undefined as string | undefined,
     city: "Lahore",
     timezone: "Asia/Karachi",
     currency: "PKR",
@@ -209,12 +211,14 @@ export default function StudentOnboardingPage() {
                         ...prev,
                         countryCode: c.code,
                         countryName: c.name,
+                        country: c.id,
+                        cityRef: undefined,
                         currency: c.currency,
                         timezone: c.defaultTimezone,
                       }));
                     }}
-                    onCityChange={(cityName: string) => {
-                      setStep1(prev => ({ ...prev, city: cityName }));
+                    onCityChange={(cityName: string, cityRef?: string) => {
+                      setStep1(prev => ({ ...prev, city: cityName, cityRef }));
                     }}
                     showCurrency={true}
                     showTimezone={true}
