@@ -1,12 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { BookOpen, Mail, MapPin, ShieldCheck } from "lucide-react";
+import { BookOpen, Mail } from "lucide-react";
 import { FiFacebook } from "react-icons/fi";
 import { RiTwitterLine } from "react-icons/ri";
 import { SiInstagram } from "react-icons/si";
 import { SlSocialLinkedin } from "react-icons/sl";
 import s from "./Footer.module.css";
-import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import { LEGAL_OPERATOR, SUPPORT_EMAIL } from "@/lib/site";
 import BrandLogo from "@/components/BrandLogo";
 
 const footerColumns = [
@@ -79,8 +79,6 @@ export default function Footer() {
             </p>
             <div className={s.contactList} aria-label="Contact information">
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
-              <a href="https://wa.me/923348880859"><ShieldCheck size={16} aria-hidden="true" /> Phone / WhatsApp: {SUPPORT_PHONE}</a>
-              <span><MapPin size={16} aria-hidden="true" /> Business Address: {BUSINESS_ADDRESS}</span>
               <Link href="/"><BookOpen size={16} aria-hidden="true" /> Website: https://tutorera.ac.pk/</Link>
               <Link href="/contact"><Mail size={16} aria-hidden="true" /> Contact support</Link>
             </div>

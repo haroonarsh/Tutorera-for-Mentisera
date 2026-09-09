@@ -24,7 +24,7 @@ export default function QuickRequestComposer() {
   const [subject, setSubject] = useState("");
   const [level, setLevel] = useState("O-Level");
   const [countryCode, setCountryCode] = useState("PK");
-  const [city, setCity] = useState("Lahore");
+  const [city, setCity] = useState("");
   const [budget, setBudget] = useState("2000");
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);

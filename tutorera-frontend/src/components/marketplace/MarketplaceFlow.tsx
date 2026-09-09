@@ -5,7 +5,7 @@ const steps = [
     icon: FileEdit,
     number: "01",
     title: "Post Your Requirement",
-    desc: "Specify subject, class level, learning mode (home or online), city, schedule and your proposed PKR budget."
+    desc: "Specify subject, curriculum or level, learning mode, location, schedule, and your proposed budget in the market currency."
   },
   {
     icon: HandCoins,
@@ -45,7 +45,7 @@ export default function MarketplaceFlow() {
             How TUTORERA Works
           </h2>
           <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: 1.6 }}>
-            Stop endless directory browsing and phone calls. State what you need, let qualified tutors send offers to you, and choose with total transparency.
+            State what you need, let eligible tutors send offers to you, and choose with clear information across online and locally available markets.
           </p>
         </div>
 

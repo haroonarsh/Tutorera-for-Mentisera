@@ -16,21 +16,21 @@ export const metadata: Metadata = {
 };
 
 const popularSubjects = [
-  { name: "Mathematics", levels: "Matric, FSc, O/A Levels, University", href: "/tutors/subject/mathematics" },
-  { name: "Physics", levels: "FSc, Cambridge O/A Levels, MDCAT/ECAT", href: "/tutors/subject/physics" },
-  { name: "Chemistry", levels: "Matric, FSc, O/A Levels", href: "/tutors/subject/chemistry" },
-  { name: "Biology", levels: "MDCAT, O/A Levels, FSc Pre-Medical", href: "/tutors/subject/biology" },
-  { name: "English", levels: "Spoken, IELTS, Grammar, Academic", href: "/tutors/subject/english" },
-  { name: "Computer Science", levels: "Coding, Web Dev, O/A Levels, ICS", href: "/tutors/subject/computer-science" },
-  { name: "Accounting & Finance", levels: "ACCA, CA, ICOM, B.Com, O/A Levels", href: "/tutors/subject/accounting" },
-  { name: "Economics", levels: "O/A Levels, University, Business", href: "/tutors/subject/economics" },
+  { name: "Mathematics", levels: "Primary, GCSE, A-Level, IB, university", href: "/tutors/subject/mathematics" },
+  { name: "Sciences", levels: "Biology, chemistry, physics, AP, IB", href: "/tutors/subject/physics" },
+  { name: "English & Languages", levels: "Academic English, IELTS, spoken language", href: "/tutors/subject/english" },
+  { name: "Computer Science", levels: "Coding, data, web development, school curricula", href: "/tutors/subject/computer-science" },
+  { name: "Business & Economics", levels: "IGCSE, A-Level, AP, university", href: "/tutors/subject/economics" },
+  { name: "Test Preparation", levels: "SAT, IELTS, admissions and professional exams", href: "/subjects" },
+  { name: "Early Learning", levels: "Foundational skills and primary education", href: "/levels" },
+  { name: "Local Curricula", levels: "Country-specific boards and learning pathways", href: "/subjects" },
 ];
 
 const popularCities = [
-  { name: "Lahore", areas: "DHA, Gulberg, Model Town, Johar Town, Bahria", href: "/tutors/city/lahore" },
-  { name: "Islamabad & Rawalpindi", areas: "F-6 to F-11, Bahria Town, DHA, Saddar", href: "/tutors/city/islamabad" },
-  { name: "Karachi", areas: "DHA, Clifton, Gulshan, PECHS, Nazimabad", href: "/tutors/city/karachi" },
-  { name: "Faisalabad", areas: "Kohinoor, Peoples Colony, D Ground", href: "/tutors/city/faisalabad" },
+  { name: "Pakistan", areas: "Online nationwide and local home tuition where available", href: "/pk/home-tutors/lahore" },
+  { name: "United Arab Emirates", areas: "Discovery beta for local and online tutor matching", href: "/ae/tutors" },
+  { name: "United Kingdom", areas: "Discovery beta for local and online tutor matching", href: "/gb/tutors" },
+  { name: "Online Worldwide", areas: "Learn across borders in a timezone and language that work for you", href: "/online-tutors" },
 ];
 
 const blogPosts = [
@@ -78,7 +78,7 @@ export default function Home() {
                 Browse by Subject
               </span>
               <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>
-                Popular Subjects Demanded by Students
+                Subjects for every learning pathway
               </h2>
             </div>
             <Link href="/subjects" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>
@@ -97,7 +97,7 @@ export default function Home() {
                   padding: "1.25rem",
                   border: "1px solid #e2e8f0",
                   textDecoration: "none",
-                  transition: "all 0.15s ease",
+                  transition: "border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease-out",
                   display: "block"
                 }}
               >
@@ -111,7 +111,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. Popular Cities Coverage in Pakistan */}
+      {/* 7. Market coverage */}
       <section style={{ padding: "4rem 1.5rem", background: "white", borderBottom: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
@@ -120,7 +120,7 @@ export default function Home() {
                 Cities & Localities
               </span>
               <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>
-                Home Tuition Hubs & Verified Local Tutors
+                Global learning, local choice
               </h2>
             </div>
             <Link href="/locations" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>
@@ -144,7 +144,7 @@ export default function Home() {
                   <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>{city.name}</h3>
                 </div>
                 <p style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>
-                  Top areas: {city.areas}
+                  {city.areas}
                 </p>
                 <div style={{ display: "flex", gap: "0.75rem" }}>
                   <Link
@@ -159,7 +159,7 @@ export default function Home() {
                       textDecoration: "none"
                     }}
                   >
-                    Post in {city.name}
+                    Post a requirement
                   </Link>
                   <Link
                     href={city.href}
@@ -191,7 +191,7 @@ export default function Home() {
               Helpful Advice for Parents & Students
             </h2>
             <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-              Clear, transparent insights on tutor rates, screening, and academic excellence worldwide and locally.
+              Clear, transparent insights on choosing a tutor, comparing offers, and learning safely across markets.
             </p>
           </div>
 
@@ -230,7 +230,7 @@ export default function Home() {
                       textDecoration: "none"
                     }}
                   >
-                    Read guide <ArrowRight size={14} />
+                  Read Pakistan guide <ArrowRight size={14} />
                   </Link>
                 </div>
               </article>

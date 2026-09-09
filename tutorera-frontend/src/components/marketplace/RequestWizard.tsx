@@ -85,7 +85,7 @@ export default function RequestWizard({
     timezone: prefill.timezone || "Asia/Karachi",
     isWorldwideEligible: prefill.isWorldwideEligible !== undefined ? prefill.isWorldwideEligible : (initialMode === "online" || initialMode === "both"),
     teachingMode: prefill.teachingMode || initialMode,
-    city: prefill.city || "Lahore",
+    city: prefill.city || "",
     schedule: prefill.schedule || "",
     maximumBudget: prefill.maximumBudget || "",
     pricingUnit: prefill.pricingUnit || "hour",
@@ -108,6 +108,21 @@ export default function RequestWizard({
     sessionsPerWeek: prefill.sessionsPerWeek || "3",
     expectedStartDate: prefill.expectedStartDate || "",
   });
+
+  useEffect(() => {
+    if (prefill.countryCode || !user?.countryCode) return;
+    const market = geo.countries.find((country) => country.code === user.countryCode);
+    if (!market) return;
+    setForm((current) => ({
+      ...current,
+      countryCode: market.code,
+      countryName: market.name,
+      currency: market.currency,
+      timezone: market.defaultTimezone,
+      city: user.city || "",
+      budget: current.budget === "2000" && market.currency !== "PKR" ? (market.currency === "AED" ? "80" : market.currency === "GBP" ? "25" : "30") : current.budget,
+    }));
+  }, [geo.countries, prefill.countryCode, user?.countryCode, user?.city]);
 
   const hasContactInfo = Boolean(form.learningObjectives && CONTACT_INFO_REGEX.test(form.learningObjectives)) || Boolean(form.description && CONTACT_INFO_REGEX.test(form.description));
 
@@ -298,7 +313,7 @@ export default function RequestWizard({
           </div>
           <div>
             <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block" }}>Your Proposed Rate</span>
-            <strong style={{ fontSize: "0.95rem", color: "#0329b2" }}>PKR {Number(form.budget).toLocaleString()}/{form.pricingUnit}</strong>
+            <strong style={{ fontSize: "0.95rem", color: "#0329b2" }}>{form.currency} {Number(form.budget).toLocaleString()}/{form.pricingUnit}</strong>
           </div>
           <div>
             <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block" }}>Location / Area</span>
@@ -611,6 +626,7 @@ export default function RequestWizard({
                 onCityChange={(cityName: string) => update("city", cityName)}
                 showCurrency={true}
                 showTimezone={true}
+                countries={geo.countries}
               />
 
               {form.teachingMode !== "online" && (
@@ -760,7 +776,7 @@ export default function RequestWizard({
                       Marketplace Settlement Estimate:
                     </span>
                     <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                      All TUTORERA tuition payments are charged in PKR.
+                      This is an informational comparison only. Your request, offers, and booking use the selected market currency.
                     </span>
                   </div>
                   <span style={{ fontSize: "1.05rem", color: "#0329b2", fontWeight: 800 }}>

@@ -55,7 +55,7 @@ export default function HomeOnlineTuitionCards() {
             Need a Home Tutor?
           </h3>
           <p style={{ color: "#475569", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-            Post your subject, class, city, area and proposed budget. Verified female & male tutors near you can accept your rate or submit an offer.
+            Post your subject, level, city or locality, and proposed budget. Eligible local tutors can accept your rate or send a tailored offer.
           </p>
 
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "grid", gap: "0.5rem", fontSize: "0.825rem", color: "#334155" }}>
@@ -66,7 +66,7 @@ export default function HomeOnlineTuitionCards() {
               <ShieldCheck size={16} color="#0329b2" /> Exact address kept private until booking
             </li>
             <li style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <MapPin size={16} color="#0329b2" /> Lahore, Islamabad, Karachi & major cities
+              <MapPin size={16} color="#0329b2" /> Available where home tuition is enabled in your market
             </li>
           </ul>
 
@@ -87,7 +87,7 @@ export default function HomeOnlineTuitionCards() {
                 boxShadow: "0 4px 12px rgba(3, 41, 178, 0.25)"
               }}
             >
-              Post Home Tuition Request <ArrowRight size={15} />
+              Post a local request <ArrowRight size={15} />
             </Link>
             <Link
               href="/tutors?mode=in-person"
