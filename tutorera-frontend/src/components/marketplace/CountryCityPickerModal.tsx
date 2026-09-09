@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   X,
@@ -18,6 +18,7 @@ import {
   getCitiesForCountry,
 } from "@/lib/location";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import api from "@/lib/axios";
 
 
 interface CountryCityPickerModalProps {
@@ -54,6 +55,7 @@ export default function CountryCityPickerModal({
   const [countryQuery, setCountryQuery] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [customCityInput, setCustomCityInput] = useState("");
+  const [remoteCities, setRemoteCities] = useState<string[]>([]);
   const modalRef = useFocusTrap(isOpen, onClose);
 
   const filteredCountries = useMemo(() => {
@@ -68,12 +70,28 @@ export default function CountryCityPickerModal({
     );
   }, [countryQuery, countriesProp]);
 
-  const availableCities = useMemo(() => {
+  const fallbackCities = useMemo(() => {
     const list = countriesProp || COUNTRIES;
     const country = list.find((c) => c.code === tempCountry.code);
     if (!country) return [];
     return country.cities.map((ct) => typeof ct === "string" ? ct : ct.name);
   }, [tempCountry.code, countriesProp]);
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== "city") return;
+    let cancelled = false;
+    const query = cityQuery.trim();
+    const timer = window.setTimeout(() => {
+      api.get(`/geo/cities?country=${encodeURIComponent(tempCountry.code)}&limit=50${query ? `&q=${encodeURIComponent(query)}` : ""}`)
+        .then((res) => {
+          if (!cancelled) setRemoteCities((res.data?.cities || []).map((city: { name: string }) => city.name));
+        })
+        .catch(() => { if (!cancelled) setRemoteCities([]); });
+    }, query ? 180 : 0);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [isOpen, activeTab, tempCountry.code, cityQuery]);
+
+  const availableCities = remoteCities.length > 0 ? remoteCities : fallbackCities;
 
   const filteredCities = useMemo(() => {
     if (!cityQuery.trim()) return availableCities;

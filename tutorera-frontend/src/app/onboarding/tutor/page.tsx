@@ -103,6 +103,15 @@ export default function TutorOnboardingPage() {
     if (!loading && user && user.role !== "tutor") router.push("/dashboard");
 
     if (!loading && user && user.role === "tutor") {
+      // New tutors must start in the market selected at registration, not the
+      // historical Pakistan placeholder. A completed profile below still wins.
+      if (user.countryCode && user.countryCode !== "PK") {
+        const selectedMarket = geo.countries.find((country) => country.code === user.countryCode);
+        if (selectedMarket) {
+          setStep1((previous) => ({ ...previous, countryCode: selectedMarket.code, countryName: selectedMarket.name, city: user.city || "", timezone: selectedMarket.defaultTimezone, currency: selectedMarket.currency }));
+          setStep4((previous) => ({ ...previous, currency: selectedMarket.currency }));
+        }
+      }
       api.get("/tutors/profile/me")
         .then((res) => {
           const p = res.data?.profile;
@@ -183,7 +192,7 @@ export default function TutorOnboardingPage() {
         })
         .catch(() => {});
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, geo.countries]);
 
   useEffect(() => {
     if (currentStep !== 4 || !step1.city) return;

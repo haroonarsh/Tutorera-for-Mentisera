@@ -20,6 +20,7 @@ export const getCountries = async (_req: Request, res: Response): Promise<void> 
     return {
       id: geo?._id, code: market.countryCode, iso3: market.iso3 || geo?.iso3, name: market.countryName,
       currency: market.currency, currencySymbol: market.currencySymbol, phoneCode: market.dialCode || geo?.dialCode,
+      flag: geo?.flag || "🌐", curricula: geo?.curricula || [], cities: [],
       defaultTimezone: market.timezone, timezones: market.timezones?.length ? market.timezones : geo?.timezones || [market.timezone],
       languages: market.supportedLanguages, launchStatus: market.launchStatus, onlineEnabled: market.onlineEnabled,
       homeTuitionEnabled: market.homeTuitionEnabled, paymentsEnabled: market.paymentsEnabled,

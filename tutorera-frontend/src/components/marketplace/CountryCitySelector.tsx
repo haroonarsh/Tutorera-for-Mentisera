@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Globe, MapPin, ChevronDown, Sparkles } from "lucide-react";
-import { COUNTRIES, getCountryByCode, getCitiesForCountry, Country } from "@/lib/location";
+import { COUNTRIES, Country } from "@/lib/location";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 interface CountryCitySelectorProps {
@@ -63,12 +63,7 @@ export default function CountryCitySelector({
     if (onTimezoneChange) onTimezoneChange(pickedCountry.defaultTimezone);
     if (onCurrencyChange) onCurrencyChange(pickedCountry.currency);
 
-    if (pickedCity) {
-      onCityChange(pickedCity);
-    } else {
-      const newCities = getCitiesForCountry(pickedCountry.code);
-      onCityChange(newCities.length > 0 ? newCities[0].name : "");
-    }
+    onCityChange(pickedCity);
   };
 
   return (
