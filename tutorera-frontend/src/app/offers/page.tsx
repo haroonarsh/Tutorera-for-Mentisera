@@ -31,6 +31,7 @@ type History = {
 type Offer = {
   _id: string;
   amount: number;
+  currency?: string;
   initialStudentRate: number;
   pricingUnit: string;
   status: string;
@@ -61,6 +62,7 @@ type Offer = {
     subject: string;
     level: string;
     budget: number;
+    currency?: string;
     pricingUnit: string;
     teachingMode: string;
     city?: string;
@@ -311,7 +313,7 @@ function OffersContent() {
                   <div style={{ textAlign: "right" }}>
                     <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block" }}>Offered Rate</span>
                     <strong style={{ fontSize: "1.4rem", color: "#0329b2", fontWeight: 900 }}>
-                      PKR {o.amount.toLocaleString()}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>/{o.pricingUnit}</span>
+                      {o.currency || o.request.currency || "Market currency"} {o.amount.toLocaleString()}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>/{o.pricingUnit}</span>
                     </strong>
                     <div style={{ marginTop: "0.25rem" }}>
                       <span style={{
@@ -338,7 +340,7 @@ function OffersContent() {
                     <div>
                       <strong style={{ fontSize: "1rem", color: "#021550", display: "block" }}>{o.tutor.name}</strong>
                       <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                        Student proposed: PKR {(o.initialStudentRate ?? 0).toLocaleString()}/{o.pricingUnit}
+                        Student proposed: {o.currency || o.request.currency || "Market currency"} {(o.initialStudentRate ?? 0).toLocaleString()}/{o.pricingUnit}
                       </span>
                     </div>
                   </div>
@@ -542,7 +544,7 @@ function OffersContent() {
           currentAmount={countering.amount}
           initialRate={countering.initialStudentRate}
           pricingUnit={countering.pricingUnit}
-          currency="PKR"
+          currency={countering.currency || countering.request.currency || ""}
           tutorName={countering.tutor?.name || "Tutor"}
           role={user?.role === "tutor" ? "tutor" : "student"}
           onClose={() => setCountering(null)}
@@ -556,7 +558,7 @@ function OffersContent() {
           onClose={() => setShowComparison(false)}
           requestTitle={offers[0]?.request?.subject || "Tuition Request"}
           proposedBudget={offers[0]?.request?.budget || 0}
-          currency="PKR"
+          currency={offers[0]?.currency || offers[0]?.request?.currency || ""}
           pricingUnit={offers[0]?.request?.pricingUnit || "hour"}
           offers={offers.map((o) => ({
             _id: o._id,
@@ -576,7 +578,7 @@ function OffersContent() {
               homeTuitionEligible: o.profile?.homeTuitionEligible,
             },
             amount: o.amount,
-            currency: o.request?.pricingUnit === "month" ? "PKR" : "PKR",
+            currency: o.currency || o.request?.currency || "",
             pricingUnit: o.request?.pricingUnit || "hour",
             message: o.message,
             matchScore: o.matchScore,

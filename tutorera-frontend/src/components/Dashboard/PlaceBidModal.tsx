@@ -20,6 +20,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const ref = useFocusTrap(true, onClose);
+  const currency = request.currency || "Market currency";
 
   const value = Number(amount) || 0;
   const fee = Math.round((value * PLATFORM_FEE_PERCENT) / 100);
@@ -32,7 +33,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
       return;
     }
     if (!request.allowCounterOffers && value !== request.budget) {
-      setError(`This request only accepts the proposed rate of PKR ${request.budget.toLocaleString()}.`);
+      setError(`This request only accepts the proposed rate of ${currency} ${request.budget.toLocaleString()}.`);
       return;
     }
 
@@ -63,7 +64,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
         <div className={styles.modalBody}>
           <div style={{ background: "#f8fafc", padding: 14, borderRadius: 10 }}>
             <strong>{request.subject} · {request.level}</strong>
-            <p>Student proposed PKR {request.budget.toLocaleString()}/{request.pricingUnit || "hour"}</p>
+            <p>Student proposed {currency} {request.budget.toLocaleString()}/{request.pricingUnit || "hour"}</p>
             {!request.allowCounterOffers && (
               <p style={{ fontSize: 12, color: "#64748b" }}>
                 This student has disabled counter-offers, so tutors can only accept the proposed rate.
@@ -74,7 +75,7 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.field}>
-            <label className={styles.label}>Your offer (PKR/{request.pricingUnit || "hour"})</label>
+            <label className={styles.label}>Your offer ({currency}/{request.pricingUnit || "hour"})</label>
             <input
               className={styles.input}
               type="number"
@@ -108,17 +109,17 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
 
           <div style={{ background: "#fffbeb", padding: 14, borderRadius: 10, fontSize: 13, lineHeight: 1.7 }}>
             <strong>Estimated earnings</strong><br />
-            Agreed rate: PKR {value.toLocaleString()}<br />
-            TUTORERA fee ({PLATFORM_FEE_PERCENT}%): PKR {fee.toLocaleString()}<br />
-            Tax ({GST_ON_PLATFORM_FEE_PERCENT}% of fee): PKR {tax.toLocaleString()}<br />
-            <strong>Estimated net: PKR {net.toLocaleString()}</strong>
+            Agreed rate: {currency} {value.toLocaleString()}<br />
+            TUTORERA fee ({PLATFORM_FEE_PERCENT}%): {currency} {fee.toLocaleString()}<br />
+            Tax ({GST_ON_PLATFORM_FEE_PERCENT}% of fee): {currency} {tax.toLocaleString()}<br />
+            <strong>Estimated net: {currency} {net.toLocaleString()}</strong>
           </div>
         </div>
 
         <div className={styles.modalFooter}>
           <button className={styles.cancelBtn} onClick={onClose}>Pass</button>
           <button className={styles.submitBtn} disabled={loading} onClick={submit}>
-            {loading ? "Sending..." : value === request.budget ? `Accept PKR ${value.toLocaleString()}` : "Send Counter Offer"}
+            {loading ? "Sending..." : value === request.budget ? `Accept ${currency} ${value.toLocaleString()}` : "Send Counter Offer"}
           </button>
         </div>
       </div>
