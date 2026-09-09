@@ -153,7 +153,7 @@ export default function BrowseRequestsPage() {
                     <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: C.primary, marginBottom: '0.2rem' }}>{r.subject}</h3>
                     <span style={{ fontSize: '0.75rem', fontWeight: '600', color: C.accent, backgroundColor: C.accentLight, padding: '0.15rem 0.6rem', borderRadius: '999px' }}>{r.level}</span>
                   </div>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{formatMoney(r.budget || 0, r.currency || "PKR", r.pricingUnit || "hour")}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{r.currency ? formatMoney(r.budget || 0, r.currency, r.pricingUnit || "hour") : `${(r.budget || 0).toLocaleString()}/${r.pricingUnit || "hour"}`}</span>
                 </div>
 
                 <p style={{ color: C.gray500, fontSize: '0.85rem', lineHeight: '1.5', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
