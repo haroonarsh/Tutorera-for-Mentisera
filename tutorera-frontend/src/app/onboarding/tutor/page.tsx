@@ -222,7 +222,7 @@ export default function TutorOnboardingPage() {
     return availability.find(a => a.day === day)?.slots.includes(slot) || false;
   };
 
-  // Whether teaching mode mandates police verification report
+  // Whether teaching mode mandates the selected market's safety verification.
   const isHomeTuitionMandatory = step4.teachingMode === "in-person";
   const isOnlineOnly = step4.teachingMode === "online";
 
@@ -277,26 +277,26 @@ export default function TutorOnboardingPage() {
         const hasCnicBack = Boolean(cnicBack || existingDocs.cnicBack);
 
         if (!hasCnicFront || !hasCnicBack) {
-          setError("Please upload both CNIC front and back.");
+          setError("Please upload both sides of your identity document.");
           setSaving(false);
           return;
         }
 
         if (existingDocs.cnicVerificationStatus === "rejected" && !cnicFront && !cnicBack) {
-          setError(`Your CNIC was rejected (${existingDocs.cnicRejectionReason || "Action required"}). Please select new, clear images of your CNIC to re-submit.`);
+          setError(`Your identity document was rejected (${existingDocs.cnicRejectionReason || "Action required"}). Please select new, clear images to re-submit.`);
           setSaving(false);
           return;
         }
 
         const hasPolice = Boolean(policeCertificate || existingDocs.policeCertificate);
         if (isHomeTuitionMandatory && !hasPolice) {
-          setError("Police Verification Report is mandatory to offer Home Tuition. Please upload your Police Character Certificate.");
+          setError("Background and safety verification is mandatory for home tuition. Please upload the required local safety document.");
           setSaving(false);
           return;
         }
 
         if (isHomeTuitionMandatory && existingDocs.policeVerificationStatus === "rejected" && !policeCertificate) {
-          setError(`Your Police Certificate was rejected (${existingDocs.policeRejectionReason || "Action required"}). Please select a new certificate to re-submit.`);
+          setError(`Your background and safety document was rejected (${existingDocs.policeRejectionReason || "Action required"}). Please select a new document to re-submit.`);
           setSaving(false);
           return;
         }
@@ -713,7 +713,7 @@ export default function TutorOnboardingPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-                      CNIC Front & Back *
+                      Identity Document — Front & Back *
                     </label>
                     {existingDocs.cnicFront && (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.cnicVerificationStatus === 'approved' ? '#16a34a' : existingDocs.cnicVerificationStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
@@ -726,7 +726,7 @@ export default function TutorOnboardingPage() {
                   {existingDocs.cnicVerificationStatus === "rejected" && (
                     <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
                       <p style={{ color: '#b91c1c', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
-                        <strong>Admin rejection reason:</strong> {existingDocs.cnicRejectionReason || "Please upload fresh, clear photos of your CNIC front and back."}
+                        <strong>Admin rejection reason:</strong> {existingDocs.cnicRejectionReason || "Please upload fresh, clear photos of both sides of your identity document."}
                       </p>
                     </div>
                   )}
@@ -744,7 +744,7 @@ export default function TutorOnboardingPage() {
                             <p style={{ color: '#64748b', fontSize: '0.7rem' }}>Click to replace</p>
                           </div>
                         ) : (
-                          <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload CNIC Front</p>
+                          <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload identity document front</p>
                         )}
                       </div>
                       <input id="cnicFront" type="file" accept="image/*" onChange={e => setCnicFront(e.target.files?.[0] || null)} aria-label="upload" style={{ display: 'none' }} />
@@ -762,7 +762,7 @@ export default function TutorOnboardingPage() {
                             <p style={{ color: '#64748b', fontSize: '0.7rem' }}>Click to replace</p>
                           </div>
                         ) : (
-                          <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload CNIC Back</p>
+                          <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload identity document back</p>
                         )}
                       </div>
                       <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="image" style={{ display: 'none' }} />
@@ -774,7 +774,7 @@ export default function TutorOnboardingPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-                      Police Verification Report
+                      Background & Safety Verification
                       {isHomeTuitionMandatory ? (
                         <span style={{ color: '#ef4444', marginLeft: '4px' }}>* (Mandatory for Home Tuition)</span>
                       ) : (
@@ -791,7 +791,7 @@ export default function TutorOnboardingPage() {
                   {existingDocs.policeVerificationStatus === "rejected" && (
                     <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '0.75rem' }}>
                       <p style={{ color: '#b91c1c', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
-                        <strong>Admin rejection reason:</strong> {existingDocs.policeRejectionReason || "Please upload an official, legible Police Character Certificate."}
+                        <strong>Admin rejection reason:</strong> {existingDocs.policeRejectionReason || "Please upload an official, legible background or safety document accepted in your market."}
                       </p>
                     </div>
                   )}
@@ -828,7 +828,7 @@ export default function TutorOnboardingPage() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={e => setPoliceCertificate(e.target.files?.[0] || null)}
-                    aria-label="Police Certificate"
+                    aria-label="Background and safety document"
                     style={{ display: 'none' }}
                   />
                 </div>

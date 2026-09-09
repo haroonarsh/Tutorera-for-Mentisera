@@ -7,6 +7,9 @@ export interface IBookedSlot extends Document {
   date: Date;
   startTime: string;
   endTime: string;
+  timezone?: string;
+  startAt?: Date;
+  endAt?: Date;
   createdAt: Date;
 }
 
@@ -18,11 +21,15 @@ const bookedSlotSchema = new Schema<IBookedSlot>(
     date:      { type: Date, required: true },
     startTime: { type: String, required: true },
     endTime:   { type: String, required: true },
+    timezone: { type: String, trim: true },
+    startAt: { type: Date, index: true },
+    endAt: { type: Date },
   },
   { timestamps: true }
 );
 
 // Prevent double booking — same tutor, same date, same startTime
 bookedSlotSchema.index({ tutor: 1, date: 1, startTime: 1 }, { unique: true });
+bookedSlotSchema.index({ tutor: 1, startAt: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<IBookedSlot>("BookedSlot", bookedSlotSchema);

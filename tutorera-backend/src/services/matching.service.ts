@@ -266,7 +266,7 @@ export class MatchingService {
         score: 0,
         tier: "fair",
         scoreBreakdown: { verification: 0 },
-        reasons: ["Police certificate verification required for home tuition."],
+        reasons: ["Background and safety verification required for home tuition."],
         algorithmVersion: cfg.algorithmVersion,
         isColdStartExploration: false,
       };
@@ -503,7 +503,7 @@ export class MatchingService {
     if (tutor.isVerified || tutor.verificationStatus === "approved") verPoints += maxVer * 0.6;
     if (tutor.policeVerificationStatus === "approved" || (tutor as any).policeCertificateVerified === true) {
       verPoints += maxVer * 0.4;
-      if (!isOnline) reasons.push(`Police character verified for home tuition`);
+      if (!isOnline) reasons.push(`Background and safety verification completed for home tuition`);
     } else {
       reasons.push(`Credentials & degree verified`);
     }

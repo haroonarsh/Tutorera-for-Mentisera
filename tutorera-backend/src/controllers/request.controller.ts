@@ -23,6 +23,8 @@ import { syncStudentTutorRelationship } from "../services/relationship.service";
 import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
 import { classifyRequestLoss } from "../services/requestLoss.service";
 import { assertAcceptanceAvailable, resolveMarket } from "../services/market.service";
+import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
+import { convertAmount } from "../services/exchangeRate.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -56,13 +58,25 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   // ── Create request ──
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const scheduleTimezone = isValidIanaTimezone(req.body.timezone) ? req.body.timezone : market.timezone;
+  let scheduledStartAt: Date | undefined;
+  let scheduledEndAt: Date | undefined;
+  if (req.body.selectedDate && req.body.selectedStartTime) {
+    try {
+      scheduledStartAt = zonedDateTimeToUtc(req.body.selectedDate, req.body.selectedStartTime, scheduleTimezone);
+      if (req.body.selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(req.body.selectedDate, req.body.selectedEndTime, scheduleTimezone);
+    } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
+  }
   const request = await Request.create({
     student: req.user?._id,
     ...req.body,
     countryCode: market.countryCode,
     countryName: market.countryName,
     currency: market.currency,
-    timezone: req.body.timezone || market.timezone,
+    timezone: scheduleTimezone,
+    scheduleTimezone,
+    scheduledStartAt,
+    scheduledEndAt,
     status: req.body.status || "open",
     publishedAt: now,
     expiresAt,
@@ -296,7 +310,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     res.status(403).json({
       success: false,
       code: "HOME_TUITION_POLICE_REQUIRED",
-      message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
+      message: "Home tuition requests require an approved background and safety verification. Please submit the required local safety document to offer in-person tuition.",
     });
     return;
   }
@@ -313,9 +327,8 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
   
-  // ── Police Verification Distinction: Online vs Home Tuition ──
-  // Online Tuition: No Police Verification required.
-  // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
+  // Online tutoring uses standard identity, education and demo verification.
+  // Home tuition additionally requires the market's approved safety verification.
   if (requested.teachingMode === "in-person") {
     if (tutorProfile.policeVerificationStatus !== "approved") {
       res.status(403).json({
@@ -419,6 +432,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     senderUser: req.user?._id,
     senderRole: "tutor",
     amount: bid.amount,
+    currency: bid.currency,
     message: bid.message,
     sequenceNumber: 1,
     expiresAt: bid.expiresAt,
@@ -574,6 +588,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       currency: bid.currency || request.currency,
       countryCode: request.countryCode,
       timezone: request.timezone,
+      scheduleTimezone: request.scheduleTimezone || request.timezone,
+      scheduledStartAt: request.scheduledStartAt,
+      scheduledEndAt: request.scheduledEndAt,
       pricingUnit: bid.pricingUnit || "hour",
       sessionCount: 1,
       ...fees,
@@ -596,6 +613,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
         date: new Date(request.selectedDate),
         startTime: request.selectedStartTime,
         endTime: request.selectedEndTime,
+        timezone: request.scheduleTimezone || request.timezone,
+        startAt: request.scheduledStartAt,
+        endAt: request.scheduledEndAt,
       }]);
     }
 
@@ -755,6 +775,9 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         currency: bid.currency || request.currency,
         countryCode: request.countryCode,
         timezone: request.timezone,
+        scheduleTimezone: request.scheduleTimezone || request.timezone,
+        scheduledStartAt: request.scheduledStartAt,
+        scheduledEndAt: request.scheduledEndAt,
         pricingUnit: bid.pricingUnit || "hour",
         sessionCount: 1,
         ...fees,
@@ -779,8 +802,11 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
           student: request.student,
           booking: booking._id,
           date: new Date(request.selectedDate),
-          startTime: request.selectedStartTime,
-          endTime: request.selectedEndTime,
+        startTime: request.selectedStartTime,
+        endTime: request.selectedEndTime,
+        timezone: request.scheduleTimezone || request.timezone,
+        startAt: request.scheduledStartAt,
+        endAt: request.scheduledEndAt,
         }], { session });
       }
 
@@ -870,11 +896,20 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   // Online Tuition: No Police Verification required.
   // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
   const requestedMode = teachingMode || tutorProfile.teachingMode;
+  const market = await resolveMarket(req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK");
+  if (!market || !market.isActive || !market.studentRegistration) {
+    res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Direct booking is not available in the selected market." });
+    return;
+  }
+  if (requestedMode === "in-person" && !market.homeTuitionEnabled) {
+    res.status(422).json({ success: false, code: "HOME_TUITION_UNAVAILABLE", message: "Home tuition is not available in the selected market." });
+    return;
+  }
   if (requestedMode === "in-person" && !isHomeTuitionEligible(tutorProfile)) {
     res.status(400).json({
       success: false,
       code: "HOME_TUITION_POLICE_REQUIRED",
-      message: "This tutor is currently approved for Online Tuition only. Home Tuition requires an approved Police Verification Report.",
+      message: "This tutor is currently approved for online tuition only. Home tuition requires approved background and safety verification.",
     });
     return;
   }
@@ -893,16 +928,42 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     return;
   }
 
+  const scheduleTimezone = isValidIanaTimezone(req.body.timezone) ? req.body.timezone : market.timezone;
+  let scheduledStartAt: Date | undefined;
+  let scheduledEndAt: Date | undefined;
+  if (selectedDate && selectedStartTime) {
+    try {
+      scheduledStartAt = zonedDateTimeToUtc(selectedDate, selectedStartTime, scheduleTimezone);
+      if (selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(selectedDate, selectedEndTime, scheduleTimezone);
+    } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
+  }
+
+  // A tutor can be discovered across borders for online teaching. The request,
+  // offer and eventual booking still use the student's selected market currency;
+  // keep the tutor's stored rate as an informational source snapshot only.
+  const tutorCurrency = tutorProfile.currency || market.currency;
+  let requestCurrencyRate = tutorProfile.hourlyRate;
+  try {
+    requestCurrencyRate = Math.round(await convertAmount(tutorProfile.hourlyRate, tutorCurrency, market.currency));
+  } catch {
+    if (tutorCurrency !== market.currency) {
+      res.status(422).json({ success: false, code: "CURRENCY_CONVERSION_UNAVAILABLE", message: "This tutor's rate cannot be converted to the request currency right now. Please try again shortly." });
+      return;
+    }
+  }
   const request = await Request.create({
     student: req.user?._id,
     subject,
     level,
     description,
-    budget: tutorProfile.hourlyRate,
-    currency: tutorProfile.currency || "PKR",
-    countryCode: req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK",
-    countryName: req.body.countryName || (req.user as any)?.countryName || tutorProfile.countryName || "Pakistan",
-    timezone: req.body.timezone || (req.user as any)?.timezone || tutorProfile.timezone || "Asia/Karachi",
+    budget: requestCurrencyRate,
+    currency: market.currency,
+    countryCode: market.countryCode,
+    countryName: market.countryName,
+    timezone: scheduleTimezone,
+    scheduleTimezone,
+    scheduledStartAt,
+    scheduledEndAt,
     teachingMode: teachingMode || tutorProfile.teachingMode,
     city: city || tutorProfile.city,
     schedule: selectedDate && selectedStartTime
@@ -918,13 +979,15 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   const bid = await Bid.create({
     request: request._id,
     tutor: tutorId,
-    amount: tutorProfile.hourlyRate,
-    currency: tutorProfile.currency || "PKR",
+    amount: requestCurrencyRate,
+    currency: market.currency,
+    // The request's market currency is authoritative for a direct booking.
+    // The original rate remains an informational snapshot, never a payment amount.
     originalAmount: tutorProfile.hourlyRate,
-    originalCurrency: tutorProfile.currency || "PKR",
-    convertedRequestAmount: tutorProfile.hourlyRate,
-    exchangeRate: 1,
-    initialStudentRate: tutorProfile.hourlyRate,
+    originalCurrency: tutorCurrency,
+    convertedRequestAmount: requestCurrencyRate,
+    exchangeRate: tutorProfile.hourlyRate ? requestCurrencyRate / tutorProfile.hourlyRate : 1,
+    initialStudentRate: requestCurrencyRate,
     pricingUnit: "hour",
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     message: "Direct booking request",

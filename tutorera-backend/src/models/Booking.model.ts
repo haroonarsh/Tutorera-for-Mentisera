@@ -11,6 +11,9 @@ export interface IBooking extends Document {
   currency?: string;
   countryCode?: string;
   timezone?: string;
+  scheduleTimezone?: string;
+  scheduledStartAt?: Date;
+  scheduledEndAt?: Date;
   pricingUnit: "hour" | "session" | "month" | "course";
   sessionCount: number;
   subtotal: number;
@@ -52,6 +55,9 @@ const bookingSchema = new Schema<IBooking>(
     currency: { type: String, uppercase: true, trim: true, index: true },
     countryCode: { type: String, uppercase: true, trim: true, index: true },
     timezone: { type: String, trim: true },
+    scheduleTimezone: { type: String, trim: true },
+    scheduledStartAt: { type: Date, index: true },
+    scheduledEndAt: { type: Date },
     pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },
     sessionCount: { type: Number, default: 1, min: 1 },
     subtotal: { type: Number, required: true },

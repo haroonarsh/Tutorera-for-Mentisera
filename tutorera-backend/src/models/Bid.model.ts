@@ -31,7 +31,10 @@ const bidSchema = new Schema<IBid>(
     request: { type: Schema.Types.ObjectId, ref: "Request", required: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", required: true },
     amount: { type: Number, required: true, min: 0 },
-    currency: { type: String, trim: true, default: "PKR" },
+    // The request currency is authoritative. Controller paths always set this;
+    // it stays optional at schema level so historical records remain readable
+    // until the additive migration has completed.
+    currency: { type: String, uppercase: true, trim: true },
     originalAmount: { type: Number },
     originalCurrency: { type: String, trim: true },
     convertedRequestAmount: { type: Number },

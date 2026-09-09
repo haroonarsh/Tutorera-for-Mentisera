@@ -276,7 +276,7 @@ export function buildChecklist(profile: ITutorProfile): ChecklistItem[] {
     },
     {
       key: "cnic",
-      label: "CNIC verification",
+      label: "Identity document verification",
       status:
         profile.cnicVerificationStatus === "approved" ? "done" :
         profile.cnicVerificationStatus === "rejected" ? "rejected" :
@@ -299,7 +299,7 @@ export function buildChecklist(profile: ITutorProfile): ChecklistItem[] {
   if (policeIsRequired(profile)) {
     items.push({
       key: "police",
-      label: "Police Verification Report (Mandatory for Home Tuition)",
+      label: "Background & safety verification (required for home tuition)",
       status:
         profile.policeVerificationStatus === "approved" ? "done" :
         profile.policeVerificationStatus === "rejected" ? "rejected" :
@@ -311,7 +311,7 @@ export function buildChecklist(profile: ITutorProfile): ChecklistItem[] {
   } else {
     items.push({
       key: "police",
-      label: "Police Verification (Not Required for Online Tuition)",
+      label: "Background & safety verification (not required for online tuition)",
       status: "not_required",
       required: false,
       note: "Online tuition requires standard ID and degree verification. No police character check is required.",
@@ -381,7 +381,7 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
     },
     {
       key: "cnic",
-      label: "CNIC verification",
+      label: "Identity document verification",
       status: profile.cnicVerificationStatus === "approved" ? "done" :
         profile.cnicVerificationStatus === "rejected" ? "rejected" : "pending",
       at: at("CNIC_VERIFIED") || at("CNIC_SUBMITTED"),
@@ -424,9 +424,9 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   if (profile.cnicVerificationStatus === "rejected") {
     reasons.push({
       key: "cnic",
-      title: "CNIC image needs to be re-uploaded",
-      body: profile.cnicRejectionReason || "Your CNIC image could not be verified. Please upload a clearer image.",
-      cta: { label: "Re-upload CNIC", href: RESUBMIT_URL },
+      title: "Identity document image needs to be re-uploaded",
+      body: profile.cnicRejectionReason || "Your identity document image could not be verified. Please upload a clearer image.",
+      cta: { label: "Re-upload identity document", href: RESUBMIT_URL },
     });
   }
   if (profile.degreeVerificationStatus === "rejected") {
@@ -448,7 +448,7 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   if (profile.policeVerificationStatus === "rejected") {
     reasons.push({
       key: "police",
-      title: "Police verification needs to be re-submitted",
+      title: "Background and safety verification needs to be re-submitted",
       body: profile.policeRejectionReason || "Your police verification certificate could not be accepted. Please submit a fresh certificate.",
       cta: { label: "Re-submit police verification", href: RESUBMIT_URL },
     });
@@ -456,8 +456,8 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   if (policeIsRequired(profile) && profile.policeVerificationStatus === "not_submitted") {
     reasons.push({
       key: "policeMissing",
-      title: "Police verification required",
-      body: "Police verification is mandatory before you can provide Home or In-Person Tuition through TUTORERA.",
+      title: "Background and safety verification required",
+      body: "Background and safety verification is mandatory before you can provide home or in-person tuition through TUTORERA.",
       cta: { label: "Submit police verification", href: RESUBMIT_URL },
     });
   }
@@ -508,7 +508,7 @@ export async function buildAuthenticatedTrackingPayload(
     if (profile.suspendedAt) return "Your profile is currently suspended.";
     if (profile.reVerificationRequired) return "Re-verification is required before marketplace access resumes.";
     if (!profile.onboardingComplete) return "Complete onboarding to unlock the marketplace.";
-    if (profile.cnicVerificationStatus !== "approved") return "CNIC verification is required.";
+    if (profile.cnicVerificationStatus !== "approved") return "Identity document verification is required.";
     if (profile.demoVideoStatus !== "approved") return "Demo video approval is required.";
     if (profile.degreeVerificationStatus === "rejected") return "Educational document was rejected.";
     if (profile.verificationStatus !== "approved") return "Profile approval is pending.";
@@ -520,8 +520,8 @@ export async function buildAuthenticatedTrackingPayload(
     if (homeTuitionEligible) return null;
     if (profile.policeVerificationStatus === "approved") return null;
     if (!profile.policeCertificate) return "Submit your police verification certificate.";
-    if (profile.policeVerificationStatus === "pending") return "Police verification is under review.";
-    if (profile.policeVerificationStatus === "rejected") return "Police verification was rejected.";
+    if (profile.policeVerificationStatus === "pending") return "Background and safety verification is under review.";
+    if (profile.policeVerificationStatus === "rejected") return "Background and safety verification was rejected.";
     return "Marketplace requirements must be completed first.";
   })();
 

@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
+import Bid from "../models/Bid.model";
+import OfferNegotiation from "../models/OfferNegotiation.model";
 import { ensureLaunchMarkets } from "../services/market.service";
 
 const apply = process.argv.includes("--apply");
@@ -22,12 +24,16 @@ async function run() {
   const users = await User.find({ $or: [{ countryCode: { $exists: false } }, { countryCode: "PK" }] }).select("phone countryCode").lean();
   const requests = await Request.countDocuments({ countryCode: { $exists: false } });
   const bookings = await Booking.countDocuments({ countryCode: { $exists: false } });
+  const offers = await Bid.countDocuments({ currency: { $exists: false } });
+  const negotiations = await OfferNegotiation.countDocuments({ currency: { $exists: false } });
   if (apply) {
     await Promise.all(users.map((user) => User.updateOne({ _id: user._id }, { $set: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi", phone: normalizePkPhone(user.phone) } })));
     await Request.updateMany({ countryCode: { $exists: false } }, { $set: { countryCode: "PK", countryName: "Pakistan", currency: "PKR", timezone: "Asia/Karachi" } });
     await Booking.updateMany({ countryCode: { $exists: false } }, { $set: { countryCode: "PK", currency: "PKR", timezone: "Asia/Karachi" } });
+    await Bid.updateMany({ currency: { $exists: false } }, { $set: { currency: "PKR", originalCurrency: "PKR", exchangeRate: 1 } });
+    await OfferNegotiation.updateMany({ currency: { $exists: false } }, { $set: { currency: "PKR" } });
   }
-  console.log(JSON.stringify({ mode: apply ? "apply" : "dry-run", users: users.length, requests, bookings }, null, 2));
+  console.log(JSON.stringify({ mode: apply ? "apply" : "dry-run", users: users.length, requests, bookings, offers, negotiations }, null, 2));
   await mongoose.disconnect();
 }
 run().catch(async (error) => { console.error(error); await mongoose.disconnect(); process.exitCode = 1; });

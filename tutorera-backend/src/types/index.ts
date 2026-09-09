@@ -82,4 +82,5 @@ export interface INotificationPreferences {
 // Extend Express Request to include user
 export interface AuthRequest extends Request {
   user?: IUser;
+  countryScopeCode?: string;
 }

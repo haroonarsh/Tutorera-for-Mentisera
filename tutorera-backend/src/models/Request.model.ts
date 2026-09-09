@@ -13,6 +13,7 @@ export interface IRequest extends Document {
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
   learningObjectives?: string;
   countryCode?: string; countryName?: string; city?: string; timezone?: string;
+  scheduleTimezone?: string; scheduledStartAt?: Date; scheduledEndAt?: Date;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   lessonLanguage?: string;
   area?: string; travelRadiusKm?: number;
@@ -80,6 +81,9 @@ const requestSchema = new Schema<IRequest>(
     locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
     timezone: { type: String, trim: true },
+    scheduleTimezone: { type: String, trim: true },
+    scheduledStartAt: { type: Date, index: true },
+    scheduledEndAt: { type: Date },
     lessonLanguage: { type: String, trim: true, default: "English" },
     area: { type: String, trim: true }, 
     travelRadiusKm: { type: Number, min: 0, max: 100 },

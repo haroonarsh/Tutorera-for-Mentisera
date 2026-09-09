@@ -16,7 +16,8 @@ const schema = new Schema<IOfferNegotiation>({
   senderUser: { type: Schema.Types.ObjectId, ref: "User", required: true },
   senderRole: { type: String, enum: ["student", "tutor"], required: true },
   amount: { type: Number, required: true, min: 1 },
-  currency: { type: String, uppercase: true, trim: true, default: "PKR" },
+  // Optional only for legacy history rows. New writes inherit the offer currency.
+  currency: { type: String, uppercase: true, trim: true },
   amountUSD: { type: Number, min: 0 },
   message: { type: String, trim: true, maxlength: 500 },
   sequenceNumber: { type: Number, required: true, min: 1 }, expiresAt: { type: Date, required: true },

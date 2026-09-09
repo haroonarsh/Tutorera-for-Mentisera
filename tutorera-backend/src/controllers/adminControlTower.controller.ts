@@ -506,10 +506,10 @@ export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<
 
 // ─── 8. Global Market Configuration ──────────────────────────────────────────
 
-export const getMarketConfigs = async (_req: AuthRequest, res: Response): Promise<void> => {
+export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise<void> => {
   const { ensureLaunchMarkets } = await import("../services/market.service");
   await ensureLaunchMarkets();
-  let markets = await MarketConfig.find().sort("countryCode").lean();
+  let markets = await MarketConfig.find(req.countryScopeCode ? { countryCode: req.countryScopeCode } : {}).sort("countryCode").lean();
   if (markets.length === 0) {
     // Seed standard initial markets
     await MarketConfig.create([
@@ -583,6 +583,7 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   const { id } = req.params;
   const current = await MarketConfig.findById(id);
   if (!current) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
+  if (req.countryScopeCode && current.countryCode !== req.countryScopeCode) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
   const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
   const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
   // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
