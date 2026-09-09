@@ -10,6 +10,7 @@ import { processOfferExpirations } from "./utils/offerExpiry";
 import { processAbandonedJourneyRecovery } from "./utils/abandonedJourneyRecovery";
 import { processRequestLifecycle } from "./services/requestLifecycle.service";
 import { processPendingPayouts } from "./services/payout.service";
+import { refreshRates } from "./services/exchangeRate.service";
 
 dotenv.config();
 
@@ -45,6 +46,11 @@ setTimeout(() => processOfferExpirations(io).catch(err => logger.error({ err }, 
 setTimeout(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
 setTimeout(() => processRequestLifecycle(io).catch(err => logger.error({ err }, "Initial request lifecycle processing failed")), 15_000).unref();
 setTimeout(() => processPendingPayouts().catch(err => logger.error({ err }, "Initial payout processing failed")), 30_000).unref();
+
+// Exchange rate refresh — runs hourly, warm cache on boot after 5 s
+const exchangeRateTimer = setInterval(() => refreshRates().catch(err => logger.error({ err }, "Exchange rate refresh failed")), 60 * 60 * 1000);
+exchangeRateTimer.unref();
+setTimeout(() => refreshRates().catch(err => logger.error({ err }, "Initial exchange rate refresh failed")), 5_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown

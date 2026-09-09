@@ -7,7 +7,7 @@ import Link from "next/link";
 import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { DashRequest } from "@/types/dashboard";
 import { formatMoney } from "@/lib/site";
-import { COUNTRIES, getCitiesForCountry } from "@/lib/countries";
+import { COUNTRIES, getCitiesForCountry } from "@/lib/location";
 
 const C = UI_COLORS;
 

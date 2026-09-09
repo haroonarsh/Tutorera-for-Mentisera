@@ -13,7 +13,7 @@ import {
   MapPin,
   DollarSign
 } from "lucide-react";
-import { COUNTRIES, getCountryByCode, Country } from "@/lib/countries";
+import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 

@@ -7,12 +7,13 @@ import {
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity, X,
+  KeyRound, Activity, MapPin, X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
+import MuiAdminProvider from "./MuiAdminProvider";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: ["*"],
@@ -26,6 +27,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   growth: ["growth.read","growth.manage","broadcast.send","analytics.read","users.read"],
   content: ["growth.read","analytics.read"],
   analyst: ["analytics.read","request.read","tutor.read","student.read","bookings.read","payment.read","matching.read","growth.read","market.read","audit.read","system.monitor"],
+  country_admin: ["market.read","market.configure","analytics.read","tutor.read","student.read","request.read","bookings.read","payment.read","payout.read","finance.fee_configure","audit.read"],
 };
 
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {
@@ -102,6 +104,10 @@ const navSections: NavSection[] = [
     title: "Global Operations",
     items: [
       { href: "/admin/markets", label: "Market Rules", icon: <Globe size={17} />, permission: "market.read" },
+      { href: "/admin/geography", label: "Geography", icon: <MapPin size={17} />, permission: "market.read" },
+      { href: "/admin/global-analytics", label: "Global Analytics", icon: <BarChart2 size={17} />, permission: "analytics.read" },
+      { href: "/admin/tax-config", label: "Tax Configuration", icon: <Calculator size={17} />, permission: "finance.fee_configure" },
+      { href: "/admin/exchange-rates", label: "Exchange Rates", icon: <Activity size={17} />, permission: "market.read" },
     ],
   },
   {
@@ -402,7 +408,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           )}
 
           {/* Main Content Area */}
-          <main id="main-content" style={{ flex: 1, minWidth: 0 }}>{children}</main>
+          <main id="main-content" style={{ flex: 1, minWidth: 0 }}><MuiAdminProvider>{children}</MuiAdminProvider></main>
         </div>
       </div>
 

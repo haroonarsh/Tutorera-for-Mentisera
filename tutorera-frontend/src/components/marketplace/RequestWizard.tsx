@@ -18,7 +18,7 @@ import { PostRequestPayload } from "@/types/dashboard";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
-import { COUNTRIES, getCountryByCode, Country } from "@/lib/countries";
+import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];

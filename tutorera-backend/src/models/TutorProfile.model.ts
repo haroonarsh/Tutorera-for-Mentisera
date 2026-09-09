@@ -9,6 +9,8 @@ export interface ITutorProfile extends Document {
   countryCode: string;
   countryName: string;
   city: string;
+  cityId?: string;                   // slug from location dataset e.g. "pk-lhe"
+  regionCode?: string;               // ISO 3166-2 region code e.g. "PK-PB"
   timezone: string;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   nationalityCountryCode?: string; residenceCountryCode?: string; onlineCountryReach?: string[];
@@ -36,6 +38,9 @@ export interface ITutorProfile extends Document {
   bio: string;
   hourlyRate: number;
   currency: string;
+  currencySymbol?: string;           // resolved from SUPPORTED_CURRENCIES at save
+  sessionRate?: number;              // rate per session (optional override)
+  monthlyRate?: number;              // rate per month (optional override)
   teachingMode: "online" | "in-person" | "both";
   serviceAreas?: string[];
   travelRadiusKm?: number;
@@ -64,7 +69,7 @@ export interface ITutorProfile extends Document {
   rejectionReason: string;
   isVerified: boolean;
 
-  // ── Per-component verification (Tutor Application Tracking) ──
+  // Per-component verification (Tutor Application Tracking)
   cnicVerificationStatus: "not_submitted" | "pending" | "approved" | "rejected";
   cnicRejectionReason: string;
   degreeVerificationStatus: "not_submitted" | "pending" | "approved" | "rejected";
@@ -82,7 +87,7 @@ export interface ITutorProfile extends Document {
   demoVideoReviewedAt: Date;
   policeReviewedAt: Date;
 
-  // ── Eligibility & lifecycle ──
+  // Eligibility & lifecycle
   marketplaceEligible: boolean;
   marketplaceEligibleAt: Date;
   homeTuitionEligible: boolean;
@@ -113,6 +118,8 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     phone: { type: String, trim: true, default: "" },
     countryCode: { type: String, uppercase: true, trim: true },
     countryName: { type: String, trim: true },
+    cityId: { type: String, trim: true, lowercase: true },
+    regionCode: { type: String, uppercase: true, trim: true },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
     region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
@@ -152,6 +159,9 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     bio: { type: String, trim: true, default: "" },
     hourlyRate: { type: Number, default: 0 },
     currency: { type: String, uppercase: true, trim: true },
+    currencySymbol: { type: String, trim: true, default: "" },
+    sessionRate: { type: Number, min: 0 },
+    monthlyRate: { type: Number, min: 0 },
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
     serviceAreas: [{ type: String, trim: true }],
     travelRadiusKm: { type: Number, default: 10, min: 0, max: 100 },
@@ -219,9 +229,15 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
   { timestamps: true }
 );
 
+// Compound indexes for global marketplace queries
+tutorProfileSchema.index({ countryCode: 1, isVerified: 1, teachingMode: 1 });
+tutorProfileSchema.index({ countryCode: 1, cityId: 1, subjects: 1, isVerified: 1 });
+tutorProfileSchema.index({ onlineCountryReach: 1, isVerified: 1, averageRating: -1 });
+tutorProfileSchema.index({ verificationStatus: 1, onboardingComplete: 1, createdAt: -1 });
+
 function policeIsRequired(profile: ITutorProfile): boolean {
   const inPerson = profile.teachingMode === "in-person" || profile.teachingMode === "both";
-  const homeCountries = ["PK", "SA", "AE"];
+  const homeCountries = ["PK", "SA", "AE", "IN", "GB"];
   const country = profile.countryCode || "PK";
   return inPerson && homeCountries.includes(country);
 }

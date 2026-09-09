@@ -9,6 +9,7 @@ import LazyWidgets from "@/components/LazyWidgets";
 import { Toaster } from "react-hot-toast";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 import SkipLink from "@/components/SkipLink";
+import { I18nProvider } from "@/i18n/I18nProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -211,14 +212,16 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-        <AuthProvider>
-          <SocketProvider>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-            <LazyWidgets />
-          </SocketProvider>
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <SocketProvider>
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+              <LazyWidgets />
+            </SocketProvider>
+          </AuthProvider>
+        </I18nProvider>
         <Toaster
           position="top-center"
           toastOptions={{

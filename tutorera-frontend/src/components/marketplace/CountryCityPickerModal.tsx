@@ -16,7 +16,7 @@ import {
   Country,
   getCountryByCode,
   getCitiesForCountry,
-} from "@/lib/countries";
+} from "@/lib/location";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 

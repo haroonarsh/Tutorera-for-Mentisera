@@ -4,7 +4,7 @@ import Region from "../models/Region.model";
 import City from "../models/City.model";
 import Locality from "../models/Locality.model";
 import MarketConfig from "../models/MarketConfig.model";
-import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS } from "../config/countries";
+import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS } from "../config/geo/location";
 import { ensureLaunchMarkets } from "../services/market.service";
 
 const pageSize = (value: unknown) => Math.min(Math.max(Number(value) || 25, 1), 100);

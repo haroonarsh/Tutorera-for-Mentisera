@@ -7,6 +7,8 @@ export interface IStudentProfile extends Document {
   countryCode: string;
   countryName: string;
   city: string;
+  cityId?: string;              // slug from location dataset e.g. "pk-lhe"
+  regionCode?: string;          // ISO 3166-2 e.g. "PK-PB"
   timezone: string;
   currency: string;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
@@ -17,7 +19,9 @@ export interface IStudentProfile extends Document {
   curriculum?: string;
   institution: string;
   subjectsNeeded: string[];
-  budgetRange: string;
+  budgetRange: string;          // legacy freetext field
+  budgetMin?: number;           // structured min budget (in user's currency)
+  budgetMax?: number;           // structured max budget (in user's currency)
   teachingModePreference: "online" | "in-person" | "both";
   onboardingComplete: boolean;
   favouriteTutors: Types.ObjectId[];
@@ -32,6 +36,8 @@ const studentProfileSchema = new Schema<IStudentProfile>(
     phone: { type: String, trim: true, default: "" },
     countryCode: { type: String, uppercase: true, trim: true },
     countryName: { type: String, trim: true },
+    cityId: { type: String, trim: true, lowercase: true },
+    regionCode: { type: String, uppercase: true, trim: true },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
     region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
@@ -48,6 +54,8 @@ const studentProfileSchema = new Schema<IStudentProfile>(
     institution: { type: String, trim: true, default: "" },
     subjectsNeeded: [{ type: String, trim: true }],
     budgetRange: { type: String, default: "" },
+    budgetMin: { type: Number, min: 0 },
+    budgetMax: { type: Number, min: 0 },
     teachingModePreference: {
       type: String,
       enum: ["online", "in-person", "both"],
@@ -58,5 +66,9 @@ const studentProfileSchema = new Schema<IStudentProfile>(
   },
   { timestamps: true }
 );
+
+// Compound indexes for global marketplace queries
+studentProfileSchema.index({ countryCode: 1, cityId: 1, onboardingComplete: 1 });
+studentProfileSchema.index({ countryCode: 1, currency: 1, teachingModePreference: 1 });
 
 export default mongoose.model<IStudentProfile>("StudentProfile", studentProfileSchema);

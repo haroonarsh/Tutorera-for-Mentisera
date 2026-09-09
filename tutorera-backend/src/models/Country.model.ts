@@ -8,8 +8,14 @@ export interface ICountry extends Document {
   dialCode?: string;
   currencyCode?: string;
   currencySymbol?: string;
+  flag?: string;                   // emoji flag
   timezones: string[];
-  languages: string[];
+  languages: string[];             // ISO 639-1 language codes
+  defaultLanguage?: string;
+  supportedLanguages?: string[];
+  rtlSupported?: boolean;
+  curricula?: string[];            // default curricula for this market
+  launchStatus?: "live" | "beta" | "coming_soon" | "paused";
   enabled: boolean;
 }
 
@@ -21,8 +27,14 @@ const countrySchema = new Schema<ICountry>({
   dialCode: { type: String, trim: true },
   currencyCode: { type: String, uppercase: true, trim: true },
   currencySymbol: { type: String, trim: true },
+  flag: { type: String, trim: true },
   timezones: [{ type: String, trim: true }],
   languages: [{ type: String, trim: true }],
+  defaultLanguage: { type: String, lowercase: true, trim: true, default: "en" },
+  supportedLanguages: [{ type: String, lowercase: true, trim: true }],
+  rtlSupported: { type: Boolean, default: false },
+  curricula: [{ type: String, trim: true }],
+  launchStatus: { type: String, enum: ["live", "beta", "coming_soon", "paused"], default: "coming_soon" },
   enabled: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 

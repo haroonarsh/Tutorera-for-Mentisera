@@ -9,7 +9,7 @@ import {
   MASTER_LEVELS,
   CountryData,
   convertToPKR,
-} from "@/lib/countries";
+} from "@/lib/location";
 
 export interface GeoMasterData {
   countries: CountryData[];

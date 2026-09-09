@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Globe, MapPin, ChevronDown, Sparkles } from "lucide-react";
-import { COUNTRIES, getCountryByCode, getCitiesForCountry, Country } from "@/lib/countries";
+import { COUNTRIES, getCountryByCode, getCitiesForCountry, Country } from "@/lib/location";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 interface CountryCitySelectorProps {

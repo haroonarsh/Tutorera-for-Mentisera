@@ -58,6 +58,9 @@ import {
   getStudent360,
   getTutor360,
 } from "../controllers/adminControlTower.controller";
+import taxConfigRoutes from "./admin/taxConfig.routes";
+import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
+import geographyAdminRoutes from "./admin/geography.routes";
 
 const router = Router();
 
@@ -83,6 +86,11 @@ router.post("/safety/cases/:id/resolve", requirePermission("safety.resolve"), re
 // Global Market Operations
 router.get("/markets", requirePermission("market.read"), getMarketConfigs);
 router.put("/markets/:id", requirePermission("market.configure"), updateMarketConfig);
+
+// Tax Configuration & Exchange Rates
+router.use("/tax-config", taxConfigRoutes);
+router.use("/exchange-rates", exchangeRateAdminRoutes);
+router.use("/geography", geographyAdminRoutes);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);

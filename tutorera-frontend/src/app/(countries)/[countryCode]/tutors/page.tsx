@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors, CITIES } from "@/lib/tutor-directory";
-import { getCountryByCode, COUNTRIES } from "@/lib/countries";
+import { getCountryByCode, COUNTRIES } from "@/lib/location";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
 

@@ -1,5 +1,5 @@
 import { FiltersState, LEVELS, TEACHING_MODES } from "@/types/tutor";
-import { COUNTRIES, getCitiesForCountry } from "@/lib/countries";
+import { COUNTRIES, getCitiesForCountry } from "@/lib/location";
 import StarRating from "./StarRating";
 import styles from "./Filtersidebar.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";

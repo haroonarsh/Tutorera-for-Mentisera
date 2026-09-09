@@ -19,6 +19,7 @@ import { releaseExpiredPaymentHold } from "./request.controller";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable } from "../services/market.service";
+import { convertAmount } from "../services/exchangeRate.service";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
@@ -67,7 +68,9 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     if (last?.senderRole === role) throw { statusCode: 409, message: "Wait for the other party to respond." };
     await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "superseded" }, { session });
     const expiresAt = expiry(); const reasons = moderationReasons(req.body.message, req.body.amount, offer.initialStudentRate);
-    [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
+    let amountUSD: number | undefined;
+    try { amountUSD = await convertAmount(req.body.amount, offer.currency || "PKR", "USD"); } catch { /* non-critical */ }
+    [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, currency: offer.currency || "PKR", amountUSD, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
     offer.amount = req.body.amount; offer.status = "countered"; offer.expiresAt = expiresAt; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save({ session });
     request.status = "negotiating"; await request.save({ session }); savedOffer = offer; recipient = isStudent ? offer.tutor.toString() : request.student.toString(); finalCounterOffer = roleCount === 2;
   }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
@@ -173,7 +176,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       const student = await User.findById(request.student).select("name email phone");
       const checkoutUrl = await createTransaction({
         amount: offer.amount,
-        customerMobileNo: student?.phone || "03000000000",
+        customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
         // Same "BID-" prefix the webhook handler already branches on —
         // Offer and Bid are the same collection, so this is fully

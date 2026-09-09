@@ -1,4 +1,6 @@
-// src/lib/countries.ts
+// Frontend shim for country data – re‑exports from the new location module
+export * from "./location";
+
 // Shared Global Location, Currency, and Curriculum Master Dataset for Frontend
 
 export interface CityData {

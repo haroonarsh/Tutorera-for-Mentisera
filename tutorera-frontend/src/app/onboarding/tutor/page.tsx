@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { BookOpen, CheckCircle, AlertTriangle, FileText, Video, ShieldCheck, RefreshCw } from "lucide-react";
 import api from "@/lib/axios";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
-import { Country } from "@/lib/countries";
+import { Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const C = UI_COLORS;
