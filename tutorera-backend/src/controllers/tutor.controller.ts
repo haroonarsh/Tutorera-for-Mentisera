@@ -17,6 +17,7 @@ import { sendNotification } from "../utils/socket";
 import { normalizeEducationLevels } from "../config/educationLevels";
 import { resolveLocationReferences } from "../services/locationReference.service";
 import { resolveMarket } from "../services/market.service";
+import { syncReviewQueueForProfile } from "../services/verification.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
@@ -647,6 +648,15 @@ export const saveOnboardingStep = async (
   if (!updated) {
     res.status(404).json({ success: false, message: "Tutor profile no longer exists. Please refresh and try again." });
     return;
+  }
+
+  // Sync verification review queue for any newly submitted documents
+  if (stepNum === 5) {
+    try {
+      await syncReviewQueueForProfile(updated._id.toString());
+    } catch (err) {
+      console.error("[VerificationWorkflow] Failed to sync review queue:", err);
+    }
   }
 
   // ── Tutor Application Tracking: ensure applicationId + token exist ──

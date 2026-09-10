@@ -15,6 +15,7 @@ import {
   updateBookingStatus,
   getPayouts,
   getAnalytics,
+  getGlobalAnalytics,
   getAuditLogs,
   getEmailLogs,
   getBroadcasts,
@@ -63,6 +64,7 @@ import {
 import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
 import geographyAdminRoutes from "./admin/geography.routes";
+import verificationRoutes from "./admin/verification.routes";
 
 const router = Router();
 
@@ -72,7 +74,7 @@ router.use(enforceCountryScope);
 // Control Tower & Liquidity
 router.get("/control-tower/pulse", requirePermission("system.monitor"), getControlTowerPulse);
 router.get("/at-risk/requests", requirePermission("request.read"), listAtRiskRequests);
-router.post("/at-risk/requests/:id/action", handleAtRiskAction);
+router.post("/at-risk/requests/:id/action", requirePermission("request.extend"), handleAtRiskAction);
 router.get("/supply-gaps", requirePermission("analytics.read"), getSupplyGapsIntelligence);
 
 // Finance & Reconciliation
@@ -93,6 +95,7 @@ router.put("/markets/:id", requirePermission("market.configure"), updateMarketCo
 router.use("/tax-config", taxConfigRoutes);
 router.use("/exchange-rates", exchangeRateAdminRoutes);
 router.use("/geography", geographyAdminRoutes);
+router.use("/verification", verificationRoutes);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);
@@ -108,6 +111,7 @@ router.get("/onboarding/students", requirePermission("student.read"), listStuden
 // Existing Core Endpoints (Fully Preserved)
 router.get("/stats", requirePermission("analytics.read"), getDashboardStats);
 router.get("/analytics", requirePermission("analytics.read"), getAnalytics);
+router.get("/global-analytics", requirePermission("analytics.read"), getGlobalAnalytics);
 router.get("/marketplace-analytics", requirePermission("matching.read"), getMarketplaceAnalytics);
 router.get("/marketplace/requests", requirePermission("request.read"), listMarketplaceRequests);
 router.get("/marketplace/offers", requirePermission("matching.read"), listMarketplaceOffers);
@@ -126,7 +130,7 @@ router.patch("/verify/:id", requirePermission("tutor.verify"), verifyTutor);
 router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
-router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
+router.patch("/bookings/:id/payment", requirePermission("finance.reconcile"), validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
 router.get("/contacts", requirePermission("student.read"), getAllContacts);
 router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
 router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);
