@@ -316,7 +316,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   if (req.user?.role !== "parent") { res.status(403).json({ success: false, message: "Access denied." }); return; }
   const request = await Request.findOne({ _id: req.params.requestId, status: "awaiting_parent_approval" });
   if (!request || !request.acceptedOffer) { res.status(404).json({ success: false, message: "No pending booking approval was found." }); return; }
-  const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": request.student });
+  const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": request.student, approvalRequiredForBookings: true });
   if (!linked) { res.status(403).json({ success: false, message: "You are not authorized for this learner." }); return; }
   if (req.body?.decision === "decline") {
     await Request.updateOne({ _id: request._id, status: "awaiting_parent_approval" }, { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "" } });

@@ -15,7 +15,7 @@ import { logAudit } from "../utils/logAudit";
 import BookedSlot from "../models/BookedSlot.model";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
-import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
+import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
 import { convertToPKR } from "../config/countries";
 import { paymentProvider } from "../services/paymentProvider.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
@@ -643,127 +643,24 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     }
   }
 
-// ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
+  // A direct request is accepted by its target tutor, so enforce the linked
+  // guardian's approval requirement here rather than only in the student
+  // acceptance branch above.
   if (isDirectTutorAccept) {
-    const existingBookingsCount = await Booking.countDocuments({
-      student: request.student,
-      tutor: bid.tutor,
-    });
-    const fees = calculateMarketplaceFees(bid.amount);
-    const linkedParent = await resolveLinkedBookingParent(request.student as Types.ObjectId);
-    const bookingArr = await Booking.create([{
-      student: request.student,
-      ...(linkedParent && { parent: linkedParent }),
-      tutor: bid.tutor,
-      request: request._id,
-      bid: bid._id,
-      amount: bid.amount,
-      finalAgreedRate: bid.amount,
-      currency: bid.currency || request.currency,
-      countryCode: request.countryCode,
-      timezone: request.timezone,
-      scheduleTimezone: request.scheduleTimezone || request.timezone,
-      scheduledStartAt: request.scheduledStartAt,
-      scheduledEndAt: request.scheduledEndAt,
-      pricingUnit: bid.pricingUnit || "hour",
-      sessionCount: 1,
-      ...fees,
-      platformFee: fees.tutorFee + fees.tax,
-      tutorPayout: fees.tutorNet,
-      schedule: request.schedule,
-      teachingMode: request.teachingMode,
-      isFirstSession: existingBookingsCount === 0,
-      paymentStatus: "pending",
-      paymentNote: "Awaiting student checkout through authorized payment gateway",
-    }]);
-    const booking = bookingArr[0];
-    await syncStudentTutorRelationship(booking as any);
-
-    if (request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
-      await BookedSlot.create([{
-        tutor: bid.tutor,
-        student: request.student,
-        booking: booking._id,
-        date: new Date(request.selectedDate),
-        startTime: request.selectedStartTime,
-        endTime: request.selectedEndTime,
-        timezone: request.scheduleTimezone || request.timezone,
-        startAt: request.scheduledStartAt,
-        endAt: request.scheduledEndAt,
-      }]);
-    }
-
-    bid.status = "accepted";
-    request.status = "awaiting_payment"; // Student needs to pay to confirm
-    request.acceptedOffer = bid._id;
-    request.finalAgreedRate = bid.amount;
-    await Promise.all([bid.save(), request.save()]);
-
-    const io = req.app.get("io");
-    // Notify student to complete payment
-    if (io) {
-      await sendNotification(io, request.student.toString(), {
-        title: "✅ Tutor Accepted Your Booking!",
-        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment to confirm.`,
-        type: "booking",
-        link: "/dashboard",
-      });
-    }
-
-    try {
-      const studentUser = await User.findById(request.student).select("name email");
-      if (studentUser) {
-        const { subject: emailSubject, html } = directBookingAcceptedEmail(
-          studentUser.name,
-          req.user?.name || "Your tutor",
-          request.subject
-        );
-        await sendEmail({ to: studentUser.email, subject: emailSubject, html });
-      }
-    } catch (emailErr) {
-      console.error("[DirectBooking] Failed to send acceptance email to student:", emailErr);
-    }
-
-    // Create checkout for STUDENT (not tutor) to pay for the booking
-    try {
-      const student = await User.findById(request.student).select("name email phone");
-      const checkoutUrl = await paymentProvider.createCheckout({
-        amount: bid.amount,
-        currency: bid.currency || request.currency,
-        customerMobileNo: student?.phone || "03000000000",
-        customerEmail: student?.email || "",
-        basketId: `BID-${bid._id.toString()}`,
-        description: `TUTORERA direct booking ${bid._id.toString()}`,
-        successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
-        failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
-        checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
-      });
-
-      // Send checkout URL to student via notification/email
-      if (io) {
-        await sendNotification(io, request.student.toString(), {
-          title: "💳 Complete Your Booking Payment",
-          message: `Your tutor has accepted! Click to pay and confirm your booking.`,
-          type: "payment",
-          link: checkoutUrl,
-        });
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Direct booking accepted. The student has been notified to complete payment.",
-        bookingId: booking._id,
-        checkoutUrl,
-      });
-      return;
-    } catch (err: any) {
-      console.error("[DirectBooking] Failed to create payment checkout:", err);
-      // Don't fail the acceptance - student can still pay via dashboard
-      res.status(200).json({
-        success: true,
-        message: "Direct booking accepted. The student can complete payment from their dashboard.",
-        bookingId: booking._id,
-      });
+    const approvalProfile = await ParentProfile.findOne({
+      "children.studentUser": request.student,
+      approvalRequiredForBookings: true,
+    }).select("user").lean();
+    if (approvalProfile) {
+      const reserved = await Request.findOneAndUpdate(
+        { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+        { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount },
+        { new: true }
+      );
+      if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
+      await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor booking before payment can begin.`, type: "booking", link: "/dashboard" });
+      await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString(), directBooking: true } });
+      res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "This booking is awaiting parent approval before payment." });
       return;
     }
   }
@@ -1009,6 +906,14 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   // Online Tuition: No Police Verification required.
   // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
   const requestedMode = teachingMode || tutorProfile.teachingMode;
+  if (!['online', 'in-person'].includes(requestedMode)) {
+    res.status(422).json({ success: false, code: "DIRECT_BOOKING_MODE_REQUIRED", message: "Choose either online or in-person tuition for a direct booking." });
+    return;
+  }
+  if (tutorProfile.teachingMode !== "both" && tutorProfile.teachingMode !== requestedMode) {
+    res.status(422).json({ success: false, code: "TUTOR_MODE_UNAVAILABLE", message: "This tutor is not available for the selected teaching mode." });
+    return;
+  }
   const market = await resolveMarket(req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK");
   if (!market || !market.isActive || !market.studentRegistration) {
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Direct booking is not available in the selected market." });
@@ -1039,7 +944,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   const existingPending = await Request.findOne({
     student: req.user?._id,
     targetTutor: tutorId,
-    status: "open",
+    status: { $in: ["open", "published", "receiving_offers", "negotiating", "awaiting_parent_approval", "awaiting_payment"] },
   });
   if (existingPending) {
     res.status(400).json({

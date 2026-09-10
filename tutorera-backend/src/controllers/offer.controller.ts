@@ -6,6 +6,7 @@ import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import TutorProfile from "../models/TutorProfile.model";
+import ParentProfile from "../models/ParentProfile.model";
 import { calculateMarketplaceFees } from "../config/constants";
 import { containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
@@ -153,6 +154,25 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     if (!(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status) || (offer.expiresAt && offer.expiresAt.getTime() <= Date.now())) {
       res.status(410).json({ success: false, message: "This offer is no longer available." });
       return;
+    }
+
+    if (isStudentOwner) {
+      const approvalProfile = await ParentProfile.findOne({
+        "children.studentUser": request.student,
+        approvalRequiredForBookings: true,
+      }).select("user").lean();
+      if (approvalProfile) {
+        const reserved = await Request.findOneAndUpdate(
+          { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
+          { status: "awaiting_parent_approval", acceptedOffer: offer._id, finalAgreedRate: offer.amount },
+          { new: true }
+        );
+        if (!reserved) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
+        await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
+        await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: userId, entity: "Request", targetId: request._id.toString(), metadata: { offerId: offer._id.toString(), parentId: approvalProfile.user.toString() } });
+        res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "Your selected offer is awaiting parent approval before payment." });
+        return;
+      }
     }
 
     // Atomic guard — same purpose as before: only one accept attempt can
