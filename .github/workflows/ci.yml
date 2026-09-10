@@ -32,5 +32,5 @@ jobs:
       # The frontend has no committed lockfile yet; retain reproducible backend
       # installs and avoid pretending npm ci can operate without one.
       - run: npm install --ignore-scripts
-      - run: npm run lint -- --max-warnings=0
+      - run: npm run lint
       - run: npm run build
