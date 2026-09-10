@@ -60,6 +60,7 @@ import {
   getTutor360,
   listTutorOnboarding,
   listStudentOnboarding,
+  listParentOnboarding,
 } from "../controllers/adminControlTower.controller";
 import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
@@ -107,6 +108,7 @@ router.get("/customers/students/:id/360", requirePermission("student.read"), get
 router.get("/customers/tutors/:id/360", requirePermission("tutor.read"), getTutor360);
 router.get("/onboarding/tutors", requirePermission("tutor.read"), listTutorOnboarding);
 router.get("/onboarding/students", requirePermission("student.read"), listStudentOnboarding);
+router.get("/onboarding/parents", requirePermission("student.read"), listParentOnboarding);
 
 // Existing Core Endpoints (Fully Preserved)
 router.get("/stats", requirePermission("analytics.read"), getDashboardStats);
@@ -130,7 +132,8 @@ router.patch("/verify/:id", requirePermission("tutor.verify"), verifyTutor);
 router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
-router.patch("/bookings/:id/payment", requirePermission("finance.reconcile"), validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
+// The controller applies payment.manage or payout.process according to the field being changed.
+router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
 router.get("/contacts", requirePermission("student.read"), getAllContacts);
 router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
 router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);

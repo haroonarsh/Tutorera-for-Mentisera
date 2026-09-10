@@ -333,9 +333,19 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
     return;
   }
   const expiry = new Date(Date.now() + PAYMENT_HOLD_MS);
-  const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { new: true });
-  if (!reserved) { res.status(409).json({ success: false, message: "This approval was already processed." }); return; }
-  await Bid.updateOne({ _id: bid._id }, { status: "payment_pending", paymentPendingExpiresAt: expiry });
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { new: true, session });
+      if (!reserved) throw Object.assign(new Error("This approval was already processed."), { statusCode: 409 });
+      await Bid.updateOne({ _id: bid._id }, { status: "payment_pending", paymentPendingExpiresAt: expiry }, { session });
+    });
+  } catch (txError: any) {
+    if (txError.statusCode === 409) { res.status(409).json({ success: false, message: txError.message }); return; }
+    res.status(500).json({ success: false, message: "Unable to process approval. Please try again." }); return;
+  } finally {
+    await session.endSession();
+  }
   const student = await User.findById(request.student).select("email phone");
   let checkoutUrl: string;
   try {

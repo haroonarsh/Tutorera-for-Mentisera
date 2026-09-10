@@ -167,7 +167,7 @@ export default function MarketsPage() {
           <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "#d97706", marginTop: "0.25rem" }}>{betaCount}</div>
         </div>
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "1.1rem 1.25rem" }}>
-          <div style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Police Checks Enforced</div>
+          <div style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Safety Checks Required</div>
           <div style={{ fontSize: "1.8rem", fontWeight: 700, color: "#0329b2", marginTop: "0.25rem" }}>
             {markets.filter((m) => m.backgroundCheckRequired).length}
           </div>

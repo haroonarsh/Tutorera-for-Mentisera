@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
+import { useAuth } from "@/context/AuthContext";
 
 const C = UI_COLORS;
 
@@ -43,11 +44,13 @@ const statusColors: Record<string, { bg: string; color: string }> = {
 };
 
 export default function PayoutsPage() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterStatus>("pending");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const canProcessPayouts = user?.adminRole === "super_admin" || user?.adminPermissions?.includes("*") || user?.adminPermissions?.includes("payout.process");
 
   const fetchPayouts = async (status: FilterStatus) => {
     setLoading(true);
@@ -81,7 +84,6 @@ export default function PayoutsPage() {
       setBookings(prev =>
         prev.map(b => b._id === booking._id ? { ...b, payoutStatus: action.next, payoutNote: `Manual payout ${action.next} by an administrator.` } : b)
       );
-      fetchPayouts(filter);
       void fetchPayouts(filter);
       showSuccess(`Payout ${action.next}.`);
     } catch {
@@ -268,7 +270,7 @@ export default function PayoutsPage() {
                       <PayoutReportDownload endpoint={`/admin/tutors/${booking.tutor._id}/payout-report/pdf`} label="Statement PDF" compact />
                     )}
                   </div>
-                ) : payoutAction(booking.payoutStatus) ? (
+                ) : payoutAction(booking.payoutStatus) && canProcessPayouts ? (
                   <button
                     onClick={() => handlePayoutAction(booking)}
                     disabled={actionLoading === booking._id}
@@ -318,7 +320,7 @@ export default function PayoutsPage() {
                       </span>
                     </p>
                   </div>
-                  {payoutAction(booking.payoutStatus) && (
+                  {payoutAction(booking.payoutStatus) && canProcessPayouts && (
                     <button
                       onClick={() => handlePayoutAction(booking)}
                       disabled={actionLoading === booking._id}

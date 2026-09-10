@@ -390,15 +390,14 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   
   // Online tutoring uses standard identity, education and demo verification.
   // Home tuition additionally requires the market's approved safety verification.
-  if (requested.teachingMode === "in-person") {
-    if (tutorProfile.policeVerificationStatus !== "approved") {
-      res.status(403).json({
-        success: false,
-        code: "POLICE_VERIFICATION_REQUIRED",
-        message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
-      });
-      return;
-    }
+  const requiresPoliceVerification = requested.teachingMode === "in-person" || (requested.teachingMode === "both" && tutorProfile.policeVerificationStatus !== "approved");
+  if (requiresPoliceVerification && tutorProfile.policeVerificationStatus !== "approved") {
+    res.status(403).json({
+      success: false,
+      code: "POLICE_VERIFICATION_REQUIRED",
+      message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
+    });
+    return;
   }
 
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
@@ -666,21 +665,46 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   }
 
   // Atomic guard — only one accept attempt can win this transition
-  const reservedRequest = await Request.findOneAndUpdate(
-    { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-    { status: "awaiting_payment" },
-    { new: true }
-  );
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const reservedRequest = await Request.findOneAndUpdate(
+        { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+        { status: "awaiting_payment" },
+        { new: true, session }
+      );
 
-  if (!reservedRequest) {
-    res.status(409).json({ success: false, message: "This request was just accepted or is no longer available." });
+      if (!reservedRequest) {
+        throw Object.assign(new Error("This request was just accepted or is no longer available."), { statusCode: 409 });
+      }
+
+      const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
+      await Bid.findOneAndUpdate(
+        { _id: bid._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } },
+        { status: "payment_pending", paymentPendingExpiresAt },
+        { new: true, session }
+      );
+    });
+  } catch (txError: any) {
+    if (txError.statusCode === 409) {
+      res.status(409).json({ success: false, message: txError.message });
+      await session.endSession();
+      return;
+    }
+    console.error("Failed to reserve request/bid for payment:", txError);
+    res.status(500).json({ success: false, message: "Unable to process acceptance. Please try again." });
+    await session.endSession();
     return;
+  } finally {
+    await session.endSession();
   }
 
-  const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-  bid.status = "payment_pending";
-  bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
-  await bid.save();
+  // Reload bid to get updated status
+  const updatedBid = await Bid.findById(bid._id);
+  if (!updatedBid || updatedBid.status !== "payment_pending") {
+    res.status(409).json({ success: false, message: "This offer was already processed." });
+    return;
+  }
 
   try {
     const student = await User.findById(request.student).select("name email phone");

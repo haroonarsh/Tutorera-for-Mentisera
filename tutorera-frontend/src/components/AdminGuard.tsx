@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 const PATH_PERMISSIONS: Record<string, string> = {
-  "/admin/payments": "payment.read",
+  "/admin/payments": "bookings.read",
   "/admin/payouts": "payout.read",
   "/admin/reconciliation": "finance.reconcile",
   "/admin/fee-config": "finance.fee_configure",

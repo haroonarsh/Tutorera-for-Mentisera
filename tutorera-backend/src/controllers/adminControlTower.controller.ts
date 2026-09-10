@@ -9,6 +9,7 @@ import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import TutorProfile from "../models/TutorProfile.model";
 import StudentProfile from "../models/StudentProfile.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import SafetyCase from "../models/SafetyCase.model";
 import FeeConfig from "../models/FeeConfig.model";
@@ -83,6 +84,38 @@ export const listStudentOnboarding = async (req: AuthRequest, res: Response): Pr
       phase, onboardingComplete: Boolean(profile?.onboardingComplete), accountStatus: user.accountStatus || "registered",
       requestCount: requestInfo?.count || 0, lastRequestAt: requestInfo?.lastRequestAt || null,
       lastUpdatedAt: profile?.updatedAt || requestInfo?.lastRequestAt || user.createdAt, createdAt: user.createdAt,
+    };
+  });
+  const phase = String(req.query.phase || "");
+  const search = String(req.query.search || "").trim().toLowerCase();
+  const filteredRows = rows.filter((row: any) =>
+    (!phase || row.phase === phase) &&
+    (!search || [row.name, row.email, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
+  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  const start = (page - 1) * limit;
+  res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
+};
+
+/** Parent/guardian readiness pipeline, including consented learner links. */
+export const listParentOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  const countryCode = String(req.countryScopeCode || req.query.countryCode || "").toUpperCase();
+  const userFilter: Record<string, unknown> = { role: "parent" };
+  if (countryCode) userFilter.countryCode = countryCode;
+  const users = await User.find(userFilter).select("name email countryCode city accountStatus createdAt").lean();
+  const profiles = await ParentProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
+  const rows = users.map((user: any) => {
+    const profile: any = byUser.get(user._id.toString());
+    const linkedLearners = profile?.children?.length || 0;
+    const phase = !profile ? "REGISTERED" : linkedLearners > 0 ? "LEARNER_LINKED" : "PROFILE_STARTED";
+    return {
+      userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
+      countryCode: profile?.countryCode || user.countryCode || null, city: profile?.city || user.city || null,
+      phase, linkedLearners, approvalRequiredForBookings: Boolean(profile?.approvalRequiredForBookings),
+      accountStatus: user.accountStatus || "registered", lastUpdatedAt: profile?.updatedAt || user.createdAt, createdAt: user.createdAt,
     };
   });
   const phase = String(req.query.phase || "");
@@ -587,7 +620,8 @@ export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise
   const { ensureLaunchMarkets } = await import("../services/market.service");
   await ensureLaunchMarkets();
   let markets = await MarketConfig.find(req.countryScopeCode ? { countryCode: req.countryScopeCode } : {}).sort("countryCode").lean();
-  if (markets.length === 0) {
+  // Launch markets are seeded by ensureLaunchMarkets. Never create legacy markets for a scoped administrator.
+  if (markets.length === 0 && !req.countryScopeCode) {
     // Seed standard initial markets
     await MarketConfig.create([
       {
