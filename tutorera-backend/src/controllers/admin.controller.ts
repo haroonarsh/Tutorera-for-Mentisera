@@ -19,6 +19,7 @@ import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
+import MarketConfig from "../models/MarketConfig.model";
 import sendEmail from "../utils/sendEmail";
 import { EMAIL_EVENTS } from "../utils/emailEvents";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail, reviewRequestEmail } from "../utils/emailTemplates";
@@ -613,6 +614,16 @@ export const updatePaymentStatus = async (
       targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
       metadata: { tutorPayout: booking.tutorPayout },
     });
+  } else if (payoutStatus !== undefined) {
+    await logAudit({
+      action: `payout_${payoutStatus}`,
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "Booking",
+      targetId: booking._id.toString(),
+      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      metadata: { tutorPayout: booking.tutorPayout, payoutNote: booking.payoutNote || "" },
+    });
   }
 
   // ── trigger referral credit when admin marks booking completed ──
@@ -793,20 +804,25 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
     .sort("-createdAt");
 
   // ── Summary stats across ALL confirmed bookings (ignore status filter for stats) ──
-  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" });
+  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" }).select("payoutStatus tutorPayout currency");
   const pendingOnes  = allConfirmed.filter(b => b.payoutStatus === "pending");
   const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
 
-  const totalPendingAmount = pendingOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
-  const totalPaidAmount    = paidOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const currencyTotals = Object.values(allConfirmed.reduce((totals, booking) => {
+    const currency = booking.currency || "PKR";
+    const current = totals[currency] || { currency, pendingAmount: 0, paidAmount: 0 };
+    if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.pendingAmount += booking.tutorPayout || 0;
+    if (booking.payoutStatus === "paid") current.paidAmount += booking.tutorPayout || 0;
+    totals[currency] = current;
+    return totals;
+  }, {} as Record<string, { currency: string; pendingAmount: number; paidAmount: number }>));
 
   res.status(200).json({
     success: true,
     stats: {
       pendingCount:        pendingOnes.length,
       paidCount:           paidOnes.length,
-      totalPendingAmount,
-      totalPaidAmount,
+      currencyTotals,
     },
     total: bookings.length,
     bookings,
@@ -1498,6 +1514,17 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   res.status(400).json({ success: false, message: "Invalid format. Use pdf or excel." });
 };
 
+export const getGlobalAnalytics = async (_req: AuthRequest, res: Response): Promise<void> => {
+  const markets = await MarketConfig.find({ isActive: true }).select("countryCode countryName launchStatus").lean();
+  const countries = await Promise.all(markets.map(async (market) => {
+    const [totalTutors, verifiedTutors, totalStudents, totalRequests, activeRequests, totalBookings] = await Promise.all([
+      User.countDocuments({ role: "tutor", countryCode: market.countryCode }), TutorProfile.countDocuments({ countryCode: market.countryCode, verificationStatus: "approved" }), User.countDocuments({ role: "student", countryCode: market.countryCode }), Request.countDocuments({ countryCode: market.countryCode }), Request.countDocuments({ countryCode: market.countryCode, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }), Booking.countDocuments({ countryCode: market.countryCode }),
+    ]);
+    return { countryCode: market.countryCode, countryName: market.countryName, launchStatus: market.launchStatus, totalTutors, verifiedTutors, totalStudents, totalRequests, activeRequests, totalBookings, totalRevenueUSD: 0, avgRating: 0, matchRate: totalRequests ? Math.round((totalBookings / totalRequests) * 100) : 0, avgResponseMin: 0 };
+  }));
+  res.json({ totalCountries: countries.length, liveCountries: countries.filter((item) => item.launchStatus === "live").length, totalTutors: countries.reduce((sum, item) => sum + item.totalTutors, 0), totalStudents: countries.reduce((sum, item) => sum + item.totalStudents, 0), totalBookings: countries.reduce((sum, item) => sum + item.totalBookings, 0), totalRevenueUSD: 0, countries });
+};
+
 // @desc    Get a short-lived signed URL to view a tutor's private verification document
 // @route   GET /api/admin/tutors/:id/document/:field
 // @access  Private (admin)
@@ -1541,7 +1568,7 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
   try {
     const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" });
+    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" }, req.query.currency as string | undefined);
 
     const filename = `tutorera-payout-report-${data.reportReference}.pdf`;
     res.setHeader("Content-Type", "application/pdf");

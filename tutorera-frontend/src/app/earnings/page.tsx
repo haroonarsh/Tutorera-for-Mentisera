@@ -36,17 +36,17 @@ interface RecentSession {
   subject: string;
   amount: number;
   tutorPayout?: number;
+  currency?: string;
   createdAt: string;
 }
 
 interface TutorData {
   role: "tutor";
   stats: {
-    totalEarnings: number;
+    currencyTotals: { currency: string; totalEarnings: number; onHoldAmount: number }[];
     sessionsCount: number;
     hoursTaught: number;
     subjectsCount: number;
-    onHoldAmount: number;
     onHoldCount: number;
   };
   monthlyData: MonthlyPoint[];
@@ -89,7 +89,7 @@ function ChartTooltip({ active, payload, label, isTutor }: any) {
     <div style={{ backgroundColor: '#021550', borderRadius: '0.5rem', padding: '0.6rem 0.875rem', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
       <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ color: 'white', fontSize: '0.875rem', fontWeight: '700', margin: 0 }}>
-        {isTutor ? `Rs. ${(value || 0).toLocaleString()}` : `${value} session${value !== 1 ? "s" : ""}`}
+        {isTutor ? `Earnings ${(value || 0).toLocaleString()}` : `${value} session${value !== 1 ? "s" : ""}`}
       </p>
     </div>
   );
@@ -154,10 +154,13 @@ export default function EarningsPage() {
     : (studentData?.stats.sessionsCount ?? 0) > 0;
 
   const maxSubject = data ? Math.max(...(data.subjectBreakdown.map(s => s.count)), 1) : 1;
+  const payoutTotals = tutorData?.stats.currencyTotals ?? [];
+  const hasMultiplePayoutCurrencies = payoutTotals.length > 1;
+  const formatMoney = (amount: number, currency = "PKR") => `${currency} ${amount.toLocaleString()}`;
 
   // Stat cards
   const statCards = isTutor ? [
-    { label: "Total Earnings",   value: `Rs. ${(tutorData?.stats.totalEarnings ?? 0).toLocaleString()}`, color: '#16a34a', bg: '#f0fdf4', icon: '💰' },
+    { label: "Total Earnings", value: payoutTotals.map(item => formatMoney(item.totalEarnings, item.currency)).join(" · ") || "—", color: '#16a34a', bg: '#f0fdf4', icon: '💰' },
     { label: "Sessions Completed", value: tutorData?.stats.sessionsCount ?? 0,                              color: C.accent,  bg: '#EEF5FF', icon: '✅' },
     { label: "Hours Taught",     value: `${tutorData?.stats.hoursTaught ?? 0} hrs`,                         color: '#7c3aed', bg: '#f5f3ff', icon: '⏱️' },
     { label: "Subjects Taught",  value: tutorData?.stats.subjectsCount ?? 0,                                 color: '#d97706', bg: '#fffbeb', icon: '📖' },
@@ -238,7 +241,7 @@ export default function EarningsPage() {
                   <span style={{ fontSize: '1.75rem' }}>⏳</span>
                   <div>
                     <p style={{ fontWeight: '700', color: '#92400e', fontSize: '0.95rem', margin: '0 0 0.2rem' }}>
-                      Rs. {(tutorData?.stats.onHoldAmount ?? 0).toLocaleString()} On Hold
+                      {payoutTotals.map(item => formatMoney(item.onHoldAmount, item.currency)).join(" · ")} On Hold
                     </p>
                     <p style={{ color: '#92400e', fontSize: '0.8rem', margin: 0, opacity: 0.85 }}>
                       From {tutorData?.stats.onHoldCount} completed session{tutorData?.stats.onHoldCount !== 1 ? "s" : ""} — payment confirmed, payout pending
@@ -264,7 +267,7 @@ export default function EarningsPage() {
               {/* Monthly chart */}
               <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
                 <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
-                  {isTutor ? "Monthly Earnings" : "Monthly Sessions"}
+                  {isTutor && !hasMultiplePayoutCurrencies ? "Monthly Earnings" : "Monthly Sessions"}
                 </h3>
                 <p style={{ color: C.gray500, fontSize: '0.78rem', marginBottom: '1.25rem' }}>Last 6 months</p>
                 <ResponsiveContainer width="100%" height={200}>
@@ -279,12 +282,12 @@ export default function EarningsPage() {
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
-                      content={(props) => <ChartTooltip {...props} isTutor={isTutor} />}
+                      content={(props) => <ChartTooltip {...props} isTutor={isTutor && !hasMultiplePayoutCurrencies} />}
                       cursor={{ stroke: isTutor ? '#16a34a' : C.accent, strokeWidth: 1, strokeDasharray: '4 4' }}
                     />
                     <Area
                       type="monotone"
-                      dataKey={isTutor ? "earnings" : "sessions"}
+                      dataKey={isTutor && !hasMultiplePayoutCurrencies ? "earnings" : "sessions"}
                       stroke={isTutor ? '#16a34a' : C.accent}
                       strokeWidth={2.5}
                       fill="url(#earningsGradient)"
@@ -339,8 +342,8 @@ export default function EarningsPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', padding: '0.875rem 1.5rem', alignItems: 'center', borderBottom: idx < (tutorData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-table-row">
                       <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.studentName}</p>
                       <span style={{ fontSize: '0.8rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '999px', backgroundColor: '#EEF5FF', color: C.accent, width: 'fit-content' }}>{s.subject}</span>
-                      <p style={{ fontSize: '0.875rem', color: C.gray500, margin: 0 }}>Rs. {(s.amount || 0).toLocaleString()}</p>
-                      <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: 0 }}>Rs. {(s.tutorPayout || 0).toLocaleString()}</p>
+                      <p style={{ fontSize: '0.875rem', color: C.gray500, margin: 0 }}>{formatMoney(s.amount || 0, s.currency)}</p>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: 0 }}>{formatMoney(s.tutorPayout || 0, s.currency)}</p>
                     </div>
                     {/* Mobile card */}
                     <div style={{ padding: '0.875rem 1.25rem', borderBottom: idx < (tutorData?.recentSessions.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }} className="earnings-mobile-card">
@@ -349,7 +352,7 @@ export default function EarningsPage() {
                           <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: 0 }}>{s.studentName}</p>
                           <p style={{ fontSize: '0.78rem', color: C.gray500, margin: '0.2rem 0 0' }}>{s.subject}</p>
                         </div>
-                        <p style={{ fontWeight: '700', color: '#16a34a', margin: 0 }}>Rs. {(s.tutorPayout || 0).toLocaleString()}</p>
+                        <p style={{ fontWeight: '700', color: '#16a34a', margin: 0 }}>{formatMoney(s.tutorPayout || 0, s.currency)}</p>
                       </div>
                     </div>
                   </div>

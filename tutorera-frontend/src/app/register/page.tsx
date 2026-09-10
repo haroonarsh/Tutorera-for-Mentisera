@@ -70,7 +70,7 @@ function RegisterForm() {
     if (form.role === "tutor") {
       router.push("/onboarding/tutor");
     } else if (form.role === "parent") {
-      router.push("/dashboard");
+      router.push("/onboarding/parent");
     } else {
       router.push("/onboarding/student");
     }
@@ -93,7 +93,7 @@ function RegisterForm() {
       } else if (user.role === "student") {
         router.push("/onboarding/student");
       } else if (user.role === "parent") {
-        router.push("/dashboard");
+        router.push("/onboarding/parent");
       } else if (user.role === "admin") {
         router.push("/admin");
       } else {

@@ -61,16 +61,8 @@ export default function GlobalAnalyticsPage() {
       const res = await api.get("/admin/global-analytics");
       setData(res.data);
     } catch {
-      setError("Global analytics endpoint not yet available. Showing placeholder data.");
-      setData({
-        totalCountries: 8,
-        liveCountries: 2,
-        totalTutors: 0,
-        totalStudents: 0,
-        totalBookings: 0,
-        totalRevenueUSD: 0,
-        countries: PLACEHOLDER_COUNTRIES,
-      });
+      setError("Global analytics could not be loaded. No placeholder data is shown.");
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -102,7 +94,7 @@ export default function GlobalAnalyticsPage() {
         </select>
       </div>
 
-      {error && <div style={{ background: "#f59e0b22", border: "1px solid #f59e0b", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#fcd34d" }}>{error}</div>}
+      {error && <div role="alert" style={{ background: "#f59e0b22", border: "1px solid #f59e0b", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#fcd34d", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}><span>{error}</span><button type="button" onClick={fetchData} style={{ minHeight: 36, border: "1px solid #fcd34d", borderRadius: 6, background: "transparent", color: "#fcd34d", fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Try again</button></div>}
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "64px 0", color: "#94a3b8" }}>Loading…</div>
@@ -128,8 +120,8 @@ export default function GlobalAnalyticsPage() {
               <div style={{ fontSize: "1.75rem", fontWeight: 700 }}>{data.totalBookings.toLocaleString()}</div>
             </div>
             <div style={cardStyle}>
-              <div style={metricLabel}>Revenue (USD)</div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10b981" }}>${data.totalRevenueUSD.toLocaleString()}</div>
+              <div style={metricLabel}>Revenue</div>
+              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#fcd34d", paddingTop: "0.45rem" }}>Not aggregated across currencies</div>
             </div>
           </div>
 
@@ -172,7 +164,7 @@ export default function GlobalAnalyticsPage() {
                     </div>
                     <div>
                       <div style={metricLabel}>Revenue</div>
-                      <div style={{ fontWeight: 700, color: "#10b981" }}>${c.totalRevenueUSD.toLocaleString()}</div>
+                      <div style={{ fontWeight: 700, color: "#94a3b8" }}>See market finance reports</div>
                     </div>
                     <div>
                       <div style={metricLabel}>Match Rate</div>
@@ -184,7 +176,7 @@ export default function GlobalAnalyticsPage() {
             })}
           </div>
         </>
-      ) : null}
+      ) : <div style={{ textAlign: "center", padding: "48px 0", color: "#94a3b8" }}>No analytics data is available right now.</div>}
     </div>
   );
 }

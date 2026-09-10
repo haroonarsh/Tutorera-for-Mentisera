@@ -5,6 +5,7 @@ import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
 import { calculateMarketplaceFees } from "../config/constants";
@@ -34,6 +35,18 @@ import {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * A booking may be paid for by a linked parent.  Legacy links can contain more
+ * than one guardian, so only attach a parent where the relationship is
+ * unambiguous; otherwise the student remains the checkout owner.
+ */
+async function resolveLinkedBookingParent(studentId: Types.ObjectId, session?: mongoose.ClientSession): Promise<Types.ObjectId | undefined> {
+  const query = ParentProfile.find({ "children.studentUser": studentId }).select("user").limit(2);
+  if (session) query.session(session);
+  const profiles = await query.lean();
+  return profiles.length === 1 ? profiles[0].user as Types.ObjectId : undefined;
 }
 
 // @desc    Create tuition request
@@ -228,8 +241,8 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
   if (teachingMode && teachingMode !== "all") {
     if (teachingMode === "online") {
       filter.teachingMode = { $in: ["online", "both"] };
-    } else if (teachingMode === "in_person" || teachingMode === "home") {
-      filter.teachingMode = { $in: ["in_person", "home", "both"] };
+    } else if (teachingMode === "in-person") {
+      filter.teachingMode = { $in: ["in-person", "both"] };
     } else {
       filter.teachingMode = teachingMode;
     }
@@ -618,15 +631,29 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
+  if (isOwner && !isDirectTutorAccept) {
+    const approvalProfile = await ParentProfile.findOne({ "children.studentUser": request.student, approvalRequiredForBookings: true }).select("user").lean();
+    if (approvalProfile) {
+      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount }, { new: true });
+      if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
+      await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
+      await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString() } });
+      res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "Your selected offer is awaiting parent approval before payment." });
+      return;
+    }
+  }
+
+// ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
   if (isDirectTutorAccept) {
     const existingBookingsCount = await Booking.countDocuments({
       student: request.student,
       tutor: bid.tutor,
     });
     const fees = calculateMarketplaceFees(bid.amount);
+    const linkedParent = await resolveLinkedBookingParent(request.student as Types.ObjectId);
     const bookingArr = await Booking.create([{
       student: request.student,
+      ...(linkedParent && { parent: linkedParent }),
       tutor: bid.tutor,
       request: request._id,
       bid: bid._id,
@@ -667,16 +694,17 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     }
 
     bid.status = "accepted";
-    request.status = "closed";
+    request.status = "awaiting_payment"; // Student needs to pay to confirm
     request.acceptedOffer = bid._id;
     request.finalAgreedRate = bid.amount;
     await Promise.all([bid.save(), request.save()]);
 
     const io = req.app.get("io");
+    // Notify student to complete payment
     if (io) {
       await sendNotification(io, request.student.toString(), {
-        title: "✅ Direct Booking Accepted!",
-        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment on your dashboard to confirm.`,
+        title: "✅ Tutor Accepted Your Booking!",
+        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment to confirm.`,
         type: "booking",
         link: "/dashboard",
       });
@@ -696,12 +724,48 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       console.error("[DirectBooking] Failed to send acceptance email to student:", emailErr);
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Direct booking accepted successfully. The booking has been scheduled and the student notified to pay.",
-      bookingId: booking._id,
-    });
-    return;
+    // Create checkout for STUDENT (not tutor) to pay for the booking
+    try {
+      const student = await User.findById(request.student).select("name email phone");
+      const checkoutUrl = await paymentProvider.createCheckout({
+        amount: bid.amount,
+        currency: bid.currency || request.currency,
+        customerMobileNo: student?.phone || "03000000000",
+        customerEmail: student?.email || "",
+        basketId: `BID-${bid._id.toString()}`,
+        description: `TUTORERA direct booking ${bid._id.toString()}`,
+        successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
+        failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
+        checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
+      });
+
+      // Send checkout URL to student via notification/email
+      if (io) {
+        await sendNotification(io, request.student.toString(), {
+          title: "💳 Complete Your Booking Payment",
+          message: `Your tutor has accepted! Click to pay and confirm your booking.`,
+          type: "payment",
+          link: checkoutUrl,
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Direct booking accepted. The student has been notified to complete payment.",
+        bookingId: booking._id,
+        checkoutUrl,
+      });
+      return;
+    } catch (err: any) {
+      console.error("[DirectBooking] Failed to create payment checkout:", err);
+      // Don't fail the acceptance - student can still pay via dashboard
+      res.status(200).json({
+        success: true,
+        message: "Direct booking accepted. The student can complete payment from their dashboard.",
+        bookingId: booking._id,
+      });
+      return;
+    }
   }
 
   // Atomic guard — only one accept attempt can win this transition
@@ -811,9 +875,11 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
       }).session(session);
 
       const fees = calculateMarketplaceFees(bid.amount);
+      const linkedParent = await resolveLinkedBookingParent(request.student as Types.ObjectId, session);
 
       const bookingArr = await Booking.create([{
         student: request.student,
+        ...(linkedParent && { parent: linkedParent }),
         tutor: bid.tutor,
         request: request._id,
         bid: bid._id,
@@ -948,6 +1014,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Direct booking is not available in the selected market." });
     return;
   }
+
   try { await assertMarketFeature(market.countryCode, "requests"); } catch (error: any) {
     res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
   }
@@ -1229,10 +1296,10 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
   if (subject) filter.subject = new RegExp(`^${escapeRegExp(String(subject).replace(/-/g, " "))}$`, "i");
   if (level) filter.level = String(level);
   if (currency) filter.currency = String(currency).toUpperCase();
-  if (teachingMode && teachingMode !== "all") {
+if (teachingMode && teachingMode !== "all") {
     if (teachingMode === "online") {
       filter.teachingMode = { $in: ["online", "both"] };
-    } else if (teachingMode === "in_person" || teachingMode === "in-person" || teachingMode === "home") {
+    } else if (teachingMode === "in-person") {
       filter.teachingMode = { $in: ["in-person", "both"] };
     } else {
       filter.teachingMode = String(teachingMode);

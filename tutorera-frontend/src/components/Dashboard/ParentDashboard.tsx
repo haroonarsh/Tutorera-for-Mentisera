@@ -5,7 +5,7 @@ import { Link2, Plus, Trash2, Users, BookOpen, CheckCircle, Clock } from "lucide
 import DashboardLayout from "./DashboardLayout";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
-import { formatPKR } from "@/lib/site";
+import { formatMoney } from "@/lib/site";
 import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
 
 const C = UI_COLORS;
@@ -31,6 +31,7 @@ interface RecentBooking {
   tutorName: string;
   subject: string;
   amount: number;
+  currency?: string;
   status: string;
   teachingMode: string;
   createdAt: string;
@@ -45,6 +46,8 @@ interface ParentProfileData {
     notificationsEnabled: boolean;
   };
   recentBookings: RecentBooking[];
+  pendingLinkRequests?: { _id: string; name: string; relationship: string; createdAt: string; expiresAt: string }[];
+  pendingApprovals?: { _id: string; subject: string; studentName: string; currency?: string; offer?: { amount: number; currency?: string; pricingUnit?: string } | null }[];
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -91,6 +94,7 @@ function EmptyState({ onLink }: { onLink: () => void }) {
   );
 }
 
+/* Legacy direct-ID linking UI retired. ConsentLinkChildModal is the only supported flow.
 function LinkChildModal({ onClose, onLinked }: { onClose: () => void; onLinked: () => void }) {
   const [studentUserId, setStudentUserId] = useState("");
   const [name, setName] = useState("");
@@ -179,6 +183,7 @@ function LinkChildModal({ onClose, onLinked }: { onClose: () => void; onLinked: 
   );
 }
 
+*/
 interface ParentDashboardProps {
   userId: string;
   userName: string;
@@ -189,13 +194,12 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
   const [data, setData] = useState<ParentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [parentId, setParentId] = useState<string>("");
+  const [pendingUnlink, setPendingUnlink] = useState<string | null>(null);
 
   const fetchProfile = () => {
     api.get("/parent/profile")
       .then(res => {
         setData(res.data);
-        setParentId(res.data.profile?._id ?? "");
       })
       .catch(() => showError("Failed to load parent profile."))
       .finally(() => setLoading(false));
@@ -204,7 +208,6 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
   useEffect(() => { fetchProfile(); }, []);
 
   const handleUnlink = async (childId: string) => {
-    if (!confirm("Are you sure you want to unlink this child account?")) return;
     try {
       await api.delete(`/parent/children/${childId}`);
       showSuccess("Child account unlinked.");
@@ -212,12 +215,32 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
     } catch {
       showError("Failed to unlink child account.");
     }
+    finally { setPendingUnlink(null); }
   };
 
   const children = data?.profile?.children ?? [];
   const recentBookings = data?.recentBookings ?? [];
+  const pendingLinkRequests = data?.pendingLinkRequests ?? [];
+  const pendingApprovals = data?.pendingApprovals ?? [];
 
-  const parentUserIdDisplay = userId;
+  const cancelLinkRequest = async (requestId: string) => {
+    try {
+      await api.delete(`/parent/children/requests/${requestId}`);
+      showSuccess("Consent request cancelled.");
+      fetchProfile();
+    } catch {
+      showError("Unable to cancel the consent request.");
+    }
+  };
+  const decideApproval = async (requestId: string, decision: "approve" | "decline") => {
+    try {
+      const response = await api.post(`/parent/booking-approvals/${requestId}`, { decision });
+      if (decision === "approve" && response.data?.checkoutUrl) window.location.assign(response.data.checkoutUrl);
+      else { showSuccess(response.data?.message || "Decision recorded."); fetchProfile(); }
+    } catch (caught: unknown) {
+      showError((caught as { response?: { data?: { message?: string } } })?.response?.data?.message || "Unable to record this decision.");
+    }
+  };
 
   return (
     <div style={{ maxWidth: "960px" }}>
@@ -231,22 +254,29 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
         </p>
       </div>
 
-      {/* Parent ID share card */}
+      {/* Consent explainer */}
       <div style={{ backgroundColor: "#EEF5FF", border: "1px solid #bfdbfe", borderRadius: "0.875rem", padding: "1.25rem 1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
         <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 700, color: C.accent, fontSize: "0.85rem", marginBottom: "0.2rem" }}>Your Parent ID</p>
-          <p style={{ fontSize: "0.78rem", color: C.gray500, marginBottom: "0.4rem" }}>Share this with your child so they can link you as guardian</p>
-          <code style={{ backgroundColor: "white", padding: "0.4rem 0.75rem", borderRadius: "0.375rem", fontSize: "0.875rem", fontWeight: 700, color: C.primary, letterSpacing: "0.05em", border: "1px solid #e5e7eb" }}>
-            {parentUserIdDisplay}
-          </code>
+          <p style={{ fontWeight: 700, color: C.accent, fontSize: "0.85rem", marginBottom: "0.2rem" }}>Student consent protects both accounts</p>
+          <p style={{ fontSize: "0.85rem", color: C.gray500, margin: 0 }}>Enter the student&apos;s registered email to send a time-limited consent code. Access starts only after confirmation.</p>
         </div>
-        <button
-          onClick={() => { navigator.clipboard.writeText(parentUserIdDisplay); showSuccess("Parent ID copied!"); }}
-          style={{ padding: "0.6rem 1rem", backgroundColor: C.accent, color: "white", border: "none", borderRadius: "0.5rem", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
-        >
-          Copy ID
-        </button>
       </div>
+
+      {pendingLinkRequests.length > 0 && <section aria-labelledby="pending-consent-title" style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.875rem", padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
+        <h2 id="pending-consent-title" style={{ margin: 0, color: C.primary, fontSize: "1rem" }}>Awaiting student consent</h2>
+        {pendingLinkRequests.map((item) => <div key={item._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", paddingTop: "0.75rem", flexWrap: "wrap" }}>
+          <p style={{ margin: 0, color: "#475569", fontSize: "0.875rem" }}><strong>{item.name}</strong> · {item.relationship} · expires {new Date(item.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+          <button type="button" onClick={() => cancelLinkRequest(item._id)} style={{ minHeight: 36, border: "1px solid #d97706", borderRadius: "0.5rem", background: "white", color: "#92400e", fontWeight: 700, cursor: "pointer", padding: "0.4rem 0.65rem" }}>Cancel request</button>
+        </div>)}
+      </section>}
+
+      {pendingApprovals.length > 0 && <section aria-labelledby="pending-approval-title" style={{ background: "#eef5ff", border: "1px solid #93c5fd", borderRadius: "0.875rem", padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
+        <h2 id="pending-approval-title" style={{ margin: 0, color: C.primary, fontSize: "1rem" }}>Booking approvals needed</h2>
+        {pendingApprovals.map((item) => <div key={item._id} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", paddingTop: "0.8rem", flexWrap: "wrap" }}>
+          <p style={{ margin: 0, color: "#334155", fontSize: "0.9rem" }}><strong>{item.studentName}</strong> selected a tutor offer for <strong>{item.subject}</strong>{item.offer ? ` — ${formatMoney(item.offer.amount, item.offer.currency || item.currency || "PKR", item.offer.pricingUnit)}` : ""}.</p>
+          <div style={{ display: "flex", gap: "0.5rem" }}><button type="button" onClick={() => decideApproval(item._id, "decline")} style={{ minHeight: 38, border: "1px solid #b91c1c", borderRadius: "0.5rem", background: "white", color: "#b91c1c", fontWeight: 700, cursor: "pointer", padding: "0.4rem 0.65rem" }}>Decline</button><button type="button" onClick={() => decideApproval(item._id, "approve")} style={{ minHeight: 38, border: 0, borderRadius: "0.5rem", background: "#0329B2", color: "white", fontWeight: 700, cursor: "pointer", padding: "0.4rem 0.65rem" }}>Approve & pay</button></div>
+        </div>)}
+      </section>}
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
@@ -317,7 +347,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
                       Student ID: <code style={{ backgroundColor: "#f3f4f6", padding: "0.1rem 0.3rem", borderRadius: "0.25rem", fontSize: "0.7rem" }}>{child.studentUser}</code>
                     </p>
                   </div>
-                  <button onClick={() => handleUnlink(child._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: "0.4rem", borderRadius: "0.375rem" }} title="Unlink child">
+                  <button onClick={() => setPendingUnlink(child._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: "0.4rem", borderRadius: "0.375rem" }} title="Unlink child">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -342,7 +372,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
                     <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: 0 }}>{b.studentName}</p>
                     <p style={{ fontSize: "0.875rem", color: C.gray500, margin: 0 }}>{b.tutorName}</p>
                     <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "0.2rem 0.5rem", borderRadius: "999px", backgroundColor: "#EEF5FF", color: C.accent, width: "fit-content" }}>{b.subject}</span>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: C.primary, margin: 0 }}>{formatPKR(b.amount)}</p>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: C.primary, margin: 0 }}>{formatMoney(b.amount, b.currency || "PKR")}</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                       <StatusBadge status={b.status} />
                       <TeachingModeBadge mode={b.teachingMode} />
@@ -357,6 +387,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
 
       {/* Link modal */}
       {showLinkModal && <ConsentLinkChildModal onClose={() => setShowLinkModal(false)} onLinked={fetchProfile} />}
+      {pendingUnlink && <div role="presentation" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: "1rem", background: "rgba(2,21,80,.62)" }}><section role="alertdialog" aria-modal="true" aria-labelledby="unlink-child-title" style={{ maxWidth: 440, background: "white", borderRadius: "1rem", padding: "1.5rem", color: C.primary }}><h2 id="unlink-child-title" style={{ marginTop: 0 }}>Unlink learner?</h2><p style={{ color: "#475569", lineHeight: 1.5 }}>This removes your access to this learner&apos;s tutoring activity. You can send a new consent request later.</p><div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}><button type="button" onClick={() => setPendingUnlink(null)}>Cancel</button><button type="button" onClick={() => handleUnlink(pendingUnlink)} style={{ background: "#b91c1c", color: "white", border: 0, borderRadius: 6, padding: "0.55rem 0.8rem", fontWeight: 700 }}>Unlink</button></div></section></div>}
 
       <style>{`
         @media (max-width: 640px) {

@@ -4,21 +4,14 @@ import { UI_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, GraduationCap, BookOpen, Users } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import GoogleButton from "@/components/GoogleButton";
 import BrandLogo from "@/components/BrandLogo";
 
 const C = UI_COLORS;
 
-const ROLE_TABS = [
-  { value: "student" as const, label: "Student", icon: <BookOpen size={15} /> },
-  { value: "tutor" as const, label: "Tutor", icon: <GraduationCap size={15} /> },
-  { value: "parent" as const, label: "Parent", icon: <Users size={15} /> },
-];
-
 export default function LoginPage() {
-  const [googleRole, setGoogleRole] = useState<"student" | "tutor" | "parent">("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -51,7 +44,7 @@ export default function LoginPage() {
   const handleGoogleToken = async (idToken: string) => {
     setError("");
     try {
-      const { user, needsRole } = await loginWithGoogle(idToken, googleRole);
+      const { user, needsRole } = await loginWithGoogle(idToken);
       if (needsRole) {
         router.replace("/select-role");
       } else if (user.role === "admin") {
@@ -81,41 +74,10 @@ export default function LoginPage() {
 
         {/* Google Sign In — needs role selector for new accounts */}
         <div style={{ marginBottom: "1.25rem" }}>
-          {/* Role selector for Google OAuth */}
-          <div style={{ display: "flex", backgroundColor: "#f1f5f9", borderRadius: "0.625rem", padding: "0.25rem", marginBottom: "0.75rem" }}>
-            {ROLE_TABS.map(tab => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setGoogleRole(tab.value)}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.35rem",
-                  padding: "0.5rem 0.25rem",
-                  borderRadius: "0.5rem",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  transition: "all 0.2s",
-                  backgroundColor: googleRole === tab.value ? "white" : "transparent",
-                  color: googleRole === tab.value ? "#0329b2" : "#64748b",
-                  boxShadow: googleRole === tab.value ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-                }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
           <GoogleButton
             onToken={handleGoogleToken}
             text="signin_with"
-            roleLabel={ROLE_TABS.find(t => t.value === googleRole)?.label ?? "Student"}
+            roleLabel="account"
           />
         </div>
 

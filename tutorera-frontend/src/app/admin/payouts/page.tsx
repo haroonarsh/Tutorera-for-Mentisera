@@ -26,14 +26,15 @@ interface Booking {
 interface Stats {
   pendingCount: number;
   paidCount: number;
-  totalPendingAmount: number;
-  totalPaidAmount: number;
+  currencyTotals: { currency: string; pendingAmount: number; paidAmount: number }[];
 }
 
-type FilterStatus = "all" | "pending" | "paid";
+type FilterStatus = "all" | "pending" | "approved" | "processing" | "paid";
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   pending:   { bg: '#fef3c7', color: '#d97706' },
+  approved:  { bg: '#eff6ff', color: '#2563eb' },
+  processing:{ bg: '#f5f3ff', color: '#7c3aed' },
   paid:      { bg: '#f0fdf4', color: '#16a34a' },
   upcoming:  { bg: '#EEF5FF', color: '#0329B2' },
   completed: { bg: '#f0fdf4', color: '#16a34a' },
@@ -66,21 +67,23 @@ export default function PayoutsPage() {
     fetchPayouts(filter);
   }, [filter]);
 
-  const handleMarkPaid = async (bookingId: string) => {
-    if (!confirm("Mark this payout as paid? This cannot be undone.")) return;
-    setActionLoading(bookingId);
+  const payoutAction = (status: string) => status === "pending" ? { next: "approved", label: "Approve" } : status === "approved" ? { next: "processing", label: "Start processing" } : status === "processing" ? { next: "paid", label: "Mark as paid" } : null;
+
+  const handlePayoutAction = async (booking: Booking) => {
+    const action = payoutAction(booking.payoutStatus);
+    if (!action) return;
+    setActionLoading(booking._id);
     try {
-      await api.patch(`/admin/bookings/${bookingId}/payment`, {
-        payoutStatus: "paid",
-        payoutNote: "Paid via NayaPay by admin",
+      await api.patch(`/admin/bookings/${booking._id}/payment`, {
+        payoutStatus: action.next,
+        payoutNote: `Manual payout ${action.next} by an administrator.`,
       });
-      // Update local state immediately
       setBookings(prev =>
-        prev.map(b => b._id === bookingId ? { ...b, payoutStatus: "paid", payoutNote: "Paid via NayaPay by admin" } : b)
+        prev.map(b => b._id === booking._id ? { ...b, payoutStatus: action.next, payoutNote: `Manual payout ${action.next} by an administrator.` } : b)
       );
-      // Refresh stats
       fetchPayouts(filter);
-      showSuccess("Payout marked as paid.");
+      void fetchPayouts(filter);
+      showSuccess(`Payout ${action.next}.`);
     } catch {
       showError("Failed to update payout status.");
     } finally {
@@ -90,6 +93,8 @@ export default function PayoutsPage() {
 
   const filterTabs: { key: FilterStatus; label: string }[] = [
     { key: "pending", label: `Pending (${stats?.pendingCount ?? 0})` },
+    { key: "approved", label: "Approved" },
+    { key: "processing", label: "Processing" },
     { key: "paid",    label: `Paid (${stats?.paidCount ?? 0})` },
     { key: "all",     label: "All" },
   ];
@@ -101,7 +106,7 @@ export default function PayoutsPage() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payouts</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-          Manage tutor payouts for confirmed bookings. Mark payouts as paid after transferring via NayaPay.
+          Review confirmed-booking payouts through approval, processing, and completed settlement. No external payout provider is implied.
         </p>
       </div>
 
@@ -114,7 +119,7 @@ export default function PayoutsPage() {
             Pending Payouts
           </p>
           <p style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>
-            PKR {(stats?.totalPendingAmount ?? 0).toLocaleString()}
+            {stats?.currencyTotals?.map(item => `${item.currency} ${item.pendingAmount.toLocaleString()}`).join(" · ") || "No pending payouts"}
           </p>
           <p style={{ fontSize: '0.8rem', color: C.gray500, marginTop: '0.25rem' }}>
             {stats?.pendingCount ?? 0} tutors awaiting payment
@@ -127,23 +132,23 @@ export default function PayoutsPage() {
             Total Paid Out
           </p>
           <p style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>
-            PKR {(stats?.totalPaidAmount ?? 0).toLocaleString()}
+            {stats?.currencyTotals?.map(item => `${item.currency} ${item.paidAmount.toLocaleString()}`).join(" · ") || "No paid payouts"}
           </p>
           <p style={{ fontSize: '0.8rem', color: C.gray500, marginTop: '0.25rem' }}>
             {stats?.paidCount ?? 0} payouts completed
           </p>
         </div>
 
-        {/* NayaPay reminder */}
+        {/* Manual settlement disclosure */}
         <div style={{ backgroundColor: '#fffbeb', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: '1px solid #fde68a' }}>
           <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-            NayaPay Account
+            Settlement controls
           </p>
           <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, fontFamily: 'monospace' }}>
-            mentisera@nayapay
+            Manual review
           </p>
           <p style={{ fontSize: '0.75rem', color: '#a16207', marginTop: '0.25rem' }}>
-            Transfer to tutor's account, then mark as paid here
+            Record each approved, processing, and completed state with an audit note.
           </p>
         </div>
       </div>
@@ -263,9 +268,9 @@ export default function PayoutsPage() {
                       <PayoutReportDownload endpoint={`/admin/tutors/${booking.tutor._id}/payout-report/pdf`} label="Statement PDF" compact />
                     )}
                   </div>
-                ) : (
+                ) : payoutAction(booking.payoutStatus) ? (
                   <button
-                    onClick={() => handleMarkPaid(booking._id)}
+                    onClick={() => handlePayoutAction(booking)}
                     disabled={actionLoading === booking._id}
                     style={{
                       padding: '0.45rem 0.875rem', borderRadius: '0.4rem',
@@ -276,9 +281,9 @@ export default function PayoutsPage() {
                       border: '1px solid #bbf7d0',
                       whiteSpace: 'nowrap',
                     }}>
-                    {actionLoading === booking._id ? 'Saving...' : '✓ Mark as Paid'}
+                    {actionLoading === booking._id ? 'Saving...' : payoutAction(booking.payoutStatus)?.label}
                   </button>
-                )}
+                ) : null}
               </div>
 
               {/* Mobile Card */}
@@ -307,22 +312,22 @@ export default function PayoutsPage() {
                   <div>
                     <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>Student: {booking.student?.name}</p>
                     <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: '0.25rem 0 0' }}>
-                      Payout: Rs. {(booking.tutorPayout || 0).toLocaleString()}
+                      Payout: {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
                       <span style={{ fontSize: '0.7rem', color: C.gray500, fontWeight: '500' }}>
-                        {" "}/ Rs. {(booking.amount || 0).toLocaleString()} total
+                        {" "}/ {booking.currency || "PKR"} {(booking.amount || 0).toLocaleString()} total
                       </span>
                     </p>
                   </div>
-                  {booking.payoutStatus !== "paid" && (
+                  {payoutAction(booking.payoutStatus) && (
                     <button
-                      onClick={() => handleMarkPaid(booking._id)}
+                      onClick={() => handlePayoutAction(booking)}
                       disabled={actionLoading === booking._id}
                       style={{
                         padding: '0.45rem 0.875rem', border: '1px solid #bbf7d0', borderRadius: '0.4rem',
                         backgroundColor: '#f0fdf4', color: '#16a34a',
                         fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer',
                       }}>
-                      {actionLoading === booking._id ? 'Saving...' : '✓ Mark as Paid'}
+                      {actionLoading === booking._id ? 'Saving...' : payoutAction(booking.payoutStatus)?.label}
                     </button>
                   )}
                   {booking.payoutStatus === "paid" && booking.tutor?._id && (

@@ -459,6 +459,24 @@ export const payoutProcessedEmail = (tutorName: string, amount: number, bookingI
   return { subject: "TUTORERA® — Payout Processed", html };
 };
 
+export const payoutRequestedEmail = (tutorName: string, amount: number, bookingId: string, currency = "PKR") => {
+  const formattedAmount = `${currency} ${amount.toLocaleString()}`;
+  const html = renderTransactionalEmail({
+    subject: "TUTORERA® — Payout request received",
+    emailCategory: "Payout",
+    emailHeading: "Payout request received",
+    emailSubheading: "Your request is awaiting finance review.",
+    firstName: tutorName,
+    openingMessage: `We received your payout request for ${formattedAmount}.`,
+    mainMessage: "No funds have been released yet. We will update your payout timeline once the request is approved and again when settlement is confirmed.",
+    transaction: { referenceId: bookingId, date: today(), status: "Requested", amount: formattedAmount },
+    cta: { label: "View payout tracking", url: "https://tutorera.ac.pk/earnings" },
+    includeSecurityNotice: true,
+    deliverability: "This transactional notification was sent because you requested a tutor payout.",
+  });
+  return { subject: "TUTORERA® — Payout request received", html };
+};
+
 export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: string, reason: string) => {
   const html = renderTransactionalEmail({
     subject: "TUTORERA® — Payout Update Required",

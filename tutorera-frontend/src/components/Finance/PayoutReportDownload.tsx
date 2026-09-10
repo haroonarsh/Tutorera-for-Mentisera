@@ -25,6 +25,7 @@ export default function PayoutReportDownload({ endpoint, label = "Download payou
   }, []);
   const [from, setFrom] = useState(defaults.from);
   const [to, setTo] = useState(defaults.to);
+  const [currency, setCurrency] = useState("");
   const [downloading, setDownloading] = useState(false);
 
   async function download() {
@@ -34,7 +35,7 @@ export default function PayoutReportDownload({ endpoint, label = "Download payou
     }
     setDownloading(true);
     try {
-      const response = await api.get(endpoint, { params: { from, to }, responseType: "blob" });
+      const response = await api.get(endpoint, { params: { from, to, ...(currency ? { currency: currency.toUpperCase() } : {}) }, responseType: "blob" });
       const disposition = String(response.headers["content-disposition"] || "");
       const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `tutorera-payout-report-${to}.pdf`;
       const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
@@ -68,6 +69,7 @@ export default function PayoutReportDownload({ endpoint, label = "Download payou
       <CalendarDays aria-hidden="true" size={16} />
       <label><span>From</span><input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} /></label>
       <label><span>To</span><input type="date" value={to} min={from} max={dateInputValue(new Date())} onChange={(event) => setTo(event.target.value)} /></label>
+      <label><span>Currency</span><input aria-label="Payout report currency" value={currency} maxLength={3} placeholder="All" onChange={(event) => setCurrency(event.target.value.replace(/[^a-z]/gi, "").toUpperCase())} /></label>
     </div>
     <button type="button" onClick={() => void download()} disabled={downloading} aria-busy={downloading}>
       <Download aria-hidden="true" size={16} /> {downloading ? "Generating PDF…" : label}

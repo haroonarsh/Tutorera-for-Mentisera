@@ -75,7 +75,7 @@ export default function ContactPage() {
                   <div><label style={labelStyle}>Email *</label><input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="you@example.com" style={inputStyle} /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div><label style={labelStyle}>Phone</label><input name="phone" value={form.phone} onChange={handleChange} placeholder="+92..." style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Phone</label><input name="phone" value={form.phone} onChange={handleChange} placeholder="+country code and number" style={inputStyle} /></div>
                   <div><label style={labelStyle}>User Type</label><select name="userType" value={form.userType} onChange={handleChange} style={{ ...inputStyle, color: form.userType ? C.primary : C.gray500, backgroundColor: 'white' }}><option value="">Select user type</option><option value="student">Student</option><option value="parent">Parent</option><option value="tutor">Tutor</option><option value="other">Other</option></select></div>
                 </div>
                 <div><label style={labelStyle}>Subject *</label><select name="subject" value={form.subject} onChange={handleChange} required style={{ ...inputStyle, color: form.subject ? C.primary : C.gray500, backgroundColor: 'white' }}><option value="">Select a subject</option>{subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}</select></div>

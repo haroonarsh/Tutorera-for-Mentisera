@@ -175,7 +175,7 @@ export class MatchingService {
     options: { limit?: number; skip?: number } = {}
   ): Promise<ITutorProfile[]> {
     const isOnline = request.teachingMode === "online";
-    const isHome = request.teachingMode === "in-person" || (request.teachingMode as string) === "home";
+    const isHome = request.teachingMode === "in-person"; // home tuition uses "in-person" enum value
 
     const query: Record<string, any> = {
       isVerified: true,
@@ -195,7 +195,7 @@ export class MatchingService {
         query.countryCode = { $in: request.preferredTutorCountries };
       }
     } else if (isHome) {
-      query.teachingMode = { $in: ["in-person", "both", "home"] };
+      query.teachingMode = { $in: ["in-person", "both"] };
       query.policeVerificationStatus = "approved";
       if (request.countryCode) {
         query.countryCode = request.countryCode;
@@ -211,7 +211,7 @@ export class MatchingService {
           ...(request.preferredTutorCountries ? { countryCode: { $in: request.preferredTutorCountries } } : {}),
         },
         {
-          teachingMode: { $in: ["in-person", "both", "home"] },
+          teachingMode: { $in: ["in-person", "both"] },
           policeVerificationStatus: "approved",
           ...(request.countryCode ? { countryCode: request.countryCode } : {}),
           ...(request.city ? { city: new RegExp(`^${request.city.trim()}$`, "i") } : {}),

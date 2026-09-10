@@ -432,7 +432,7 @@ export default function RequestWizard({
                   type="text"
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
-                  placeholder="e.g. I need Grade 9 Maths tutor in Lahore, willing to pay 3000 per hour"
+                  placeholder="e.g. I need a Grade 9 mathematics tutor, available after school"
                   style={{
                     flex: 1,
                     padding: "0.6rem 0.85rem",

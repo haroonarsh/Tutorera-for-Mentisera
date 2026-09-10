@@ -492,6 +492,7 @@ function RequestCard({
   const [extending, setExtending] = useState(false);
   const [reposting, setReposting] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [selectedBids, setSelectedBids] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
@@ -523,7 +524,6 @@ function RequestCard({
   }
 
   async function handleClose() {
-    if (!confirm("Are you sure you want to close this tuition request? Tutors will no longer be able to send offers.")) return;
     setClosing(true);
     try {
       await axiosInstance.patch(`/requests/${request._id}/close`);
@@ -533,6 +533,7 @@ function RequestCard({
       showError(err, "Failed to close request.");
     } finally {
       setClosing(false);
+      setConfirmClose(false);
     }
   }
 
@@ -736,7 +737,7 @@ function RequestCard({
         {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && (
           <button
             type="button"
-            onClick={handleClose}
+            onClick={() => setConfirmClose(true)}
             disabled={closing}
             style={{
               padding: "0.5rem 0.75rem",
@@ -752,6 +753,7 @@ function RequestCard({
             {closing ? "Closing..." : "Close Request"}
           </button>
         )}
+        {confirmClose && <div role="presentation" style={{position:"fixed",inset:0,zIndex:1000,display:"grid",placeItems:"center",padding:"1rem",background:"rgba(2,21,80,.62)"}}><section role="alertdialog" aria-modal="true" aria-labelledby="close-request-title" style={{maxWidth:440,background:"white",borderRadius:"1rem",padding:"1.5rem",color:"#021550"}}><h2 id="close-request-title" style={{marginTop:0}}>Close tuition request?</h2><p style={{color:"#475569",lineHeight:1.5}}>Tutors will no longer be able to send offers for this request.</p><div style={{display:"flex",justifyContent:"flex-end",gap:"0.6rem"}}><button type="button" onClick={()=>setConfirmClose(false)}>Cancel</button><button type="button" disabled={closing} onClick={handleClose} style={{background:"#b91c1c",color:"white",border:0,borderRadius:6,padding:"0.55rem .8rem",fontWeight:700}}>Close request</button></div></section></div>}
 
         {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
           <button
@@ -889,7 +891,7 @@ function RequestCard({
               )}
             </div>
           )}
-      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
+      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of {formatMoney(countering.amount, countering.currency || "PKR")}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed {formatMoney(countering.initialStudentRate, countering.currency || "PKR", countering.pricingUnit)}. Current tutor offer is {formatMoney(countering.amount, countering.currency || "PKR", countering.pricingUnit)}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder={`Amount in ${countering.currency || "PKR"}`}/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
 
       {/* AI Matched Tutors Drawer Modal */}
       {showMatchedTutors && (

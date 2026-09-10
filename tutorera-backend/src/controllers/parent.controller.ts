@@ -10,9 +10,16 @@ import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { escapeHtml } from "../utils/escapeHtml";
+import { logAudit } from "../utils/logAudit";
+import { resolveMarket } from "../services/market.service";
+import { resolveLocationReferences } from "../services/locationReference.service";
+import Request from "../models/Request.model";
+import Bid from "../models/Bid.model";
+import { paymentProvider } from "../services/paymentProvider.service";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
 const MAX_LINK_ATTEMPTS = 5;
+const PAYMENT_HOLD_MS = 30 * 60 * 1000;
 
 function linkCodeHash(code: string) {
   return crypto.createHmac("sha256", process.env.JWT_SECRET || "parent-link-fallback")
@@ -46,6 +53,10 @@ export const getMyParentProfile = async (req: AuthRequest, res: Response): Promi
   const childProfiles = await StudentProfile.find({ user: { $in: childUserIds } }).lean();
   const childMap: Record<string, any> = {};
   for (const cp of childProfiles) childMap[cp.user.toString()] = cp;
+  const pendingApprovals = childUserIds.length ? await Request.find({ student: { $in: childUserIds }, status: "awaiting_parent_approval" })
+    .populate("acceptedOffer", "amount currency pricingUnit tutor")
+    .populate("student", "name")
+    .sort("-updatedAt").lean() : [];
 
   res.status(200).json({
     success: true,
@@ -62,9 +73,20 @@ export const getMyParentProfile = async (req: AuthRequest, res: Response): Promi
       tutorName: (b.tutor as any)?.name || "Tutor",
       subject: (b.request as any)?.subject || "Tutoring",
       amount: b.amount,
+      currency: b.currency || (b.request as any)?.currency || profile.currency || "PKR",
       status: b.status,
       teachingMode: b.teachingMode,
       createdAt: b.createdAt,
+    })),
+    pendingLinkRequests: await ParentLinkRequest.find({
+      parent: req.user._id,
+      status: "pending",
+      expiresAt: { $gt: new Date() },
+    }).select("student name relationship expiresAt createdAt").sort("-createdAt").lean(),
+    pendingApprovals: pendingApprovals.map((item: any) => ({
+      _id: item._id, subject: item.subject, studentName: item.student?.name || "Student", currency: item.currency,
+      offer: item.acceptedOffer ? { amount: item.acceptedOffer.amount, currency: item.acceptedOffer.currency, pricingUnit: item.acceptedOffer.pricingUnit } : null,
+      updatedAt: item.updatedAt,
     })),
   });
 };
@@ -136,6 +158,16 @@ export const addChildAccount = async (req: AuthRequest, res: Response): Promise<
     throw error;
   }
 
+  await logAudit({
+    action: "parent_student_link_requested",
+    actor: req.user.name,
+    actorId: req.user._id.toString(),
+    entity: "ParentLinkRequest",
+    targetId: linkRequest._id.toString(),
+    targetName: student.name,
+    metadata: { studentId: student._id.toString(), relationship: linkRequest.relationship, expiresAt: linkRequest.expiresAt.toISOString() },
+  });
+
   res.status(202).json({ success: true, message: "A verification code was sent to the student.", requestId: linkRequest._id, expiresInSeconds: LINK_CODE_TTL_MS / 1000 });
 };
 
@@ -183,10 +215,28 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
       linkRequest.status = "confirmed";
       linkRequest.confirmedAt = new Date();
       await linkRequest.save({ session });
+      await User.findByIdAndUpdate(linkRequest.student, {
+        $set: {
+          parentConsentVerified: true,
+          parentGuardianEmail: req.user?.email || "",
+          parentGuardianName: req.user?.name || "",
+        },
+      }, { session });
+      await User.findByIdAndUpdate(req.user?._id, { $addToSet: { children: linkRequest.student } }, { session });
     });
   } finally {
     await session.endSession();
   }
+
+  await logAudit({
+    action: "parent_student_link_confirmed",
+    actor: req.user.name,
+    actorId: req.user._id.toString(),
+    entity: "ParentLinkRequest",
+    targetId: linkRequest._id.toString(),
+    targetName: linkRequest.name,
+    metadata: { studentId: linkRequest.student.toString(), confirmedAt: linkRequest.confirmedAt?.toISOString() },
+  });
 
   res.status(200).json({ success: true, message: "Student consent confirmed. The account is now linked." });
 };
@@ -205,6 +255,7 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
     return;
   }
 
+  const childEntry = profile.children.find((c) => c._id?.toString() === childId);
   const before = profile.children.length;
   profile.children = profile.children.filter(
     (c) => c._id?.toString() !== childId
@@ -217,7 +268,78 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
 
   await profile.save();
 
+  const child = await User.findByIdAndUpdate(
+    childEntry?.studentUser,
+    { $set: { parentConsentVerified: false, parentGuardianEmail: "", parentGuardianName: "" } },
+    { new: true }
+  );
+  await User.findByIdAndUpdate(req.user._id, { $pull: { children: child?._id } });
+  await logAudit({
+    action: "parent_student_link_removed",
+    actor: req.user.name,
+    actorId: req.user._id.toString(),
+    entity: "ParentProfile",
+    targetId: profile._id.toString(),
+    targetName: child?.name,
+    metadata: { studentId: child?._id?.toString() },
+  });
+
   res.status(200).json({ success: true, message: "Child account removed." });
+};
+
+// @desc    Cancel a pending parent/student consent request
+// @route   DELETE /api/parent/children/requests/:requestId
+// @access  Private (parent)
+export const cancelChildLinkRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Access denied." });
+    return;
+  }
+  if (!mongoose.isValidObjectId(req.params.requestId)) {
+    res.status(400).json({ success: false, message: "Invalid consent request." });
+    return;
+  }
+  const linkRequest = await ParentLinkRequest.findOneAndUpdate(
+    { _id: req.params.requestId, parent: req.user._id, status: "pending" },
+    { $set: { status: "cancelled" } },
+    { new: true }
+  );
+  if (!linkRequest) {
+    res.status(404).json({ success: false, message: "No pending consent request was found." });
+    return;
+  }
+  await logAudit({ action: "parent_student_link_cancelled", actor: req.user.name, actorId: req.user._id.toString(), entity: "ParentLinkRequest", targetId: linkRequest._id.toString(), targetName: linkRequest.name, metadata: { studentId: linkRequest.student.toString() } });
+  res.status(200).json({ success: true, message: "Consent request cancelled." });
+};
+
+export const decideBookingApproval = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") { res.status(403).json({ success: false, message: "Access denied." }); return; }
+  const request = await Request.findOne({ _id: req.params.requestId, status: "awaiting_parent_approval" });
+  if (!request || !request.acceptedOffer) { res.status(404).json({ success: false, message: "No pending booking approval was found." }); return; }
+  const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": request.student });
+  if (!linked) { res.status(403).json({ success: false, message: "You are not authorized for this learner." }); return; }
+  if (req.body?.decision === "decline") {
+    await Request.updateOne({ _id: request._id, status: "awaiting_parent_approval" }, { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "" } });
+    await logAudit({ action: "parent_booking_approval_declined", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString() });
+    res.json({ success: true, message: "Approval declined. The request is open for the student to review offers again." }); return;
+  }
+  const bid = await Bid.findOne({ _id: request.acceptedOffer, request: request._id, status: { $in: ["submitted", "viewed", "countered", "pending"] } });
+  if (!bid || (bid.expiresAt && bid.expiresAt <= new Date())) { res.status(410).json({ success: false, message: "The selected offer is no longer available." }); return; }
+  const expiry = new Date(Date.now() + PAYMENT_HOLD_MS);
+  const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { new: true });
+  if (!reserved) { res.status(409).json({ success: false, message: "This approval was already processed." }); return; }
+  await Bid.updateOne({ _id: bid._id }, { status: "payment_pending", paymentPendingExpiresAt: expiry });
+  const student = await User.findById(request.student).select("email phone");
+  let checkoutUrl: string;
+  try {
+    checkoutUrl = await paymentProvider.createCheckout({ amount: bid.amount, currency: bid.currency || request.currency || "PKR", customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}` });
+  } catch {
+    await Promise.all([Request.updateOne({ _id: request._id, status: "awaiting_payment" }, { status: "awaiting_parent_approval" }), Bid.updateOne({ _id: bid._id, status: "payment_pending" }, { status: bid.status, $unset: { paymentPendingExpiresAt: "" } })]);
+    await logAudit({ action: "parent_booking_checkout_failed", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });
+    res.status(502).json({ success: false, message: "Unable to start payment. The approval is still awaiting your action." }); return;
+  }
+  await logAudit({ action: "parent_booking_approval_approved", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });
+  res.json({ success: true, message: "Approved. Continue to secure payment.", checkoutUrl });
 };
 
 export const updateParentSettings = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -252,12 +374,39 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
     return;
   }
 
-  const { name, phone, city, approvalRequiredForBookings, spendingLimitMonthly, notificationsEnabled } = req.body;
+  const {
+    name, phone, city, approvalRequiredForBookings, spendingLimitMonthly, notificationsEnabled,
+    countryCode, country, region, cityRef, locality, timezone, preferredLanguage,
+  } = req.body;
+
+  const market = await resolveMarket(countryCode || req.user?.countryCode || "PK");
+  if (!market || !market.isActive || !market.studentRegistration) {
+    res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Parent onboarding is not available in the selected market." });
+    return;
+  }
+
+  let locationReferences: Record<string, unknown>;
+  try {
+    locationReferences = await resolveLocationReferences({ country, region, cityRef, locality, city }, market.countryCode);
+  } catch (error: any) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    return;
+  }
+  const resolvedCity = (locationReferences.city as string | undefined) || city || req.user?.city || "";
+  const resolvedTimezone = timezone || (locationReferences.timezone as string | undefined) || market.timezone;
+  const resolvedLanguage = typeof preferredLanguage === "string" && preferredLanguage.trim()
+    ? preferredLanguage.trim().toLowerCase().slice(0, 12)
+    : "en";
 
   await User.findByIdAndUpdate(req.user._id, {
     name: name || req.user.name,
     phone: phone || req.user.phone,
-    city: city || req.user.city,
+    city: resolvedCity,
+    countryCode: market.countryCode,
+    countryName: market.countryName,
+    timezone: resolvedTimezone,
+    currency: market.currency,
+    ...locationReferences,
   });
 
   const profile = await ParentProfile.findOneAndUpdate(
@@ -267,6 +416,13 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
         ...(approvalRequiredForBookings !== undefined && { approvalRequiredForBookings }),
         ...(spendingLimitMonthly !== undefined && { spendingLimitMonthly }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
+        countryCode: market.countryCode,
+        countryName: market.countryName,
+        city: resolvedCity,
+        timezone: resolvedTimezone,
+        currency: market.currency,
+        preferredLanguage: resolvedLanguage,
+        ...locationReferences,
       },
     },
     { new: true, upsert: true }

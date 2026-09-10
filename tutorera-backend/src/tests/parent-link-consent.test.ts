@@ -2,6 +2,7 @@ import request from "supertest";
 import app from "../app";
 import User from "../models/User.model";
 import ParentProfile from "../models/ParentProfile.model";
+import AuditLog from "../models/AuditLog.model";
 import sendEmail from "../utils/sendEmail";
 
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
@@ -43,6 +44,8 @@ describe("parent and student account linking", () => {
     const afterConfirmation = await ParentProfile.findOne({ user: parent._id }).lean();
     expect(afterConfirmation?.children).toHaveLength(1);
     expect(afterConfirmation?.children[0].studentUser.toString()).toBe(student._id.toString());
+    expect(await AuditLog.countDocuments({ action: "parent_student_link_requested" })).toBeGreaterThan(0);
+    expect(await AuditLog.countDocuments({ action: "parent_student_link_confirmed" })).toBeGreaterThan(0);
   });
 
   it("rejects an incorrect consent code without linking the account", async () => {

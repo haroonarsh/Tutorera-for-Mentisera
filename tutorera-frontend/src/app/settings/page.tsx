@@ -113,7 +113,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone Number</label>
-                <input value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} placeholder="+92 300 0000000"
+                <input value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} placeholder="+country code and number"
                   style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                   onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                   onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />

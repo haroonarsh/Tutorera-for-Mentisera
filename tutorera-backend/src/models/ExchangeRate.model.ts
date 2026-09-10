@@ -17,7 +17,7 @@ const exchangeRateSchema = new Schema<IExchangeRate>(
     base: { type: String, default: "USD", uppercase: true, trim: true },
     rates: { type: Map, of: Number, required: true },
     source: { type: String, default: "exchangerate.host" },
-    fetchedAt: { type: Date, default: Date.now, index: true },
+    fetchedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

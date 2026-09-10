@@ -65,7 +65,7 @@ export default function TutorOnboardingPage() {
     countryName: "Pakistan",
     country: undefined as string | undefined,
     cityRef: undefined as string | undefined,
-    city: "Lahore",
+    city: "",
     timezone: "Asia/Karachi",
     currency: "PKR",
     gender: "male",
@@ -125,7 +125,7 @@ export default function TutorOnboardingPage() {
               countryName: p.countryName || p.user?.countryName || "Pakistan",
               country: p.country || undefined,
               cityRef: p.cityRef || undefined,
-              city: p.city || p.user?.city || "Lahore",
+              city: p.city || p.user?.city || "",
               timezone: p.timezone || p.user?.timezone || "Asia/Karachi",
               currency: p.currency || "PKR",
               gender: p.gender || "male",
@@ -493,7 +493,7 @@ export default function TutorOnboardingPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone *</label>
-                    <input value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })} placeholder="e.g. +92 300 1234567"
+                    <input value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })} placeholder="e.g. +44 20 1234 5678"
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -671,7 +671,7 @@ export default function TutorOnboardingPage() {
                     )}
                     {pricingInsight && pricingInsight.median && (
                       <p style={{ margin: "0.35rem 0 0", fontSize: "0.72rem", color: "#16a34a", fontWeight: 500 }}>
-                        💡 Similar tutors in {step1.city} charge PKR {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: PKR {pricingInsight.median?.toLocaleString()})
+                        💡 Similar tutors in {step1.city} charge {step1.currency || "PKR"} {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: {step1.currency || "PKR"} {pricingInsight.median?.toLocaleString()})
                       </p>
                     )}
                   </div>

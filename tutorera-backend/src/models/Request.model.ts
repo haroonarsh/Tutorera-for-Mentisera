@@ -25,7 +25,7 @@ export interface IRequest extends Document {
   sessionsPerWeek?: number; expectedStartDate?: Date;
   teachingMode: "online" | "in-person" | "both";
   schedule: string;
-  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
+  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "awaiting_parent_approval" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   publishedAt?: Date;
   expiresAt?: Date;
   expiredAt?: Date;
@@ -100,7 +100,7 @@ const requestSchema = new Schema<IRequest>(
     schedule: { type: String, required: true },
     status: {
       type: String,
-      enum: ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_payment", "booked", "in_progress", "completed", "closed", "cancelled", "expired", "disputed", "archived"],
+      enum: ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_parent_approval", "awaiting_payment", "booked", "in_progress", "completed", "closed", "cancelled", "expired", "disputed", "archived"],
       default: "open",
     },
     publishedAt: { type: Date },

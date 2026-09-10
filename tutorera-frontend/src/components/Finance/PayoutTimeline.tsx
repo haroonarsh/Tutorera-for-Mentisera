@@ -12,9 +12,9 @@ type Payout = {
   payoutProcessingAt?: string; payoutPaidAt?: string; payoutFailedAt?: string;
 };
 
-type Response = { stats: { pendingAmount: number; paidAmount: number }; payouts: Payout[] };
+type Response = { stats: { currencyTotals: { currency: string; pendingAmount: number; paidAmount: number }[] }; payouts: Payout[] };
 const statuses = ["all", "pending", "approved", "processing", "paid", "failed", "held"];
-const money = (value: number) => `Rs. ${Number(value || 0).toLocaleString("en-PK")}`;
+const money = (value: number, currency = "PKR") => `${currency} ${Number(value || 0).toLocaleString("en-PK")}`;
 const date = (value?: string) => value ? new Intl.DateTimeFormat("en-PK", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : null;
 
 export default function PayoutTimeline() {
@@ -45,8 +45,8 @@ export default function PayoutTimeline() {
       <button className={styles.refresh} onClick={() => void load()} disabled={loading}><RefreshCw size={17} aria-hidden="true" /> Refresh</button>
     </div>
     {data && <div className={styles.summary}>
-      <div><Clock3 aria-hidden="true" /><span>Awaiting settlement</span><strong>{money(data.stats.pendingAmount)}</strong></div>
-      <div><CheckCircle2 aria-hidden="true" /><span>Paid</span><strong>{money(data.stats.paidAmount)}</strong></div>
+      <div><Clock3 aria-hidden="true" /><span>Awaiting settlement</span><strong>{data.stats.currencyTotals.map(item => money(item.pendingAmount, item.currency)).join(" · ") || "—"}</strong></div>
+      <div><CheckCircle2 aria-hidden="true" /><span>Paid</span><strong>{data.stats.currencyTotals.map(item => money(item.paidAmount, item.currency)).join(" · ") || "—"}</strong></div>
     </div>}
     <label className={styles.filter}>Payout status<select value={status} onChange={e => setStatus(e.target.value)}>{statuses.map(item => <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>)}</select></label>
     {error && <div className={styles.error} role="alert"><TriangleAlert size={18} aria-hidden="true" /><span>{error}</span><button onClick={() => void load()}>Try again</button></div>}
@@ -61,7 +61,7 @@ export default function PayoutTimeline() {
           { label: payout.payoutStatus === "failed" ? "Failed" : "Paid", value: payout.payoutStatus === "failed" ? payout.payoutFailedAt : payout.payoutPaidAt },
         ];
         return <article className={styles.card} key={payout._id}>
-          <div className={styles.cardTop}><div><h3>{payout.subject}</h3><p>{payout.studentName}</p></div><div className={styles.amount}><strong>{money(payout.tutorPayout)}</strong><span data-status={payout.payoutStatus}>{payout.payoutStatus.replace("_", " ")}</span></div></div>
+          <div className={styles.cardTop}><div><h3>{payout.subject}</h3><p>{payout.studentName}</p></div><div className={styles.amount}><strong>{money(payout.tutorPayout, payout.currency)}</strong><span data-status={payout.payoutStatus}>{payout.payoutStatus.replace("_", " ")}</span></div></div>
           <ol className={styles.timeline} aria-label={`Payout timeline for ${payout.subject}`}>{steps.map(step => <li className={step.value ? styles.complete : ""} key={step.label}><i aria-hidden="true" /><b>{step.label}</b><small>{date(step.value) || "Not reached"}</small></li>)}</ol>
           {payout.payoutNote && <p className={styles.note}>{payout.payoutNote}</p>}
           {payout.payoutStatus === "pending" && <button className={styles.request} onClick={() => void request(payout._id)} disabled={requesting === payout._id}>{requesting === payout._id ? "Submitting…" : "Request payout"}</button>}

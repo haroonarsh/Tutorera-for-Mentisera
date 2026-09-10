@@ -158,6 +158,12 @@ export const getFavouriteIds = async (req: AuthRequest, res: Response): Promise<
 // @route   POST /api/students/guardians
 // @access  Private (student)
 export const linkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  res.status(410).json({
+    success: false,
+    message: "Direct guardian linking is no longer available. Ask the parent to send a consent request from their dashboard.",
+  });
+  return;
+  /* Legacy implementation retained below temporarily for source-history reference.
   const { parentProfileId, parentUserId, name, email } = req.body;
 
   if (!parentProfileId && !parentUserId && !email) {
@@ -213,6 +219,7 @@ export const linkParentGuardian = async (req: AuthRequest, res: Response): Promi
   });
 
   res.status(200).json({ success: true, message: "Parent guardian linked successfully.", parentProfile });
+  */
 };
 
 // @desc    Remove a parent guardian from my account

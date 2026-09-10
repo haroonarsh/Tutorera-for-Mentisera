@@ -4,11 +4,12 @@ import Booking from "../models/Booking.model";
 import PDFDocument from "pdfkit";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
-import { payoutProcessedEmail } from "../utils/emailTemplates";
+import { payoutRequestedEmail } from "../utils/emailTemplates";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
 import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
+import { logAudit } from "../utils/logAudit";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -33,13 +34,19 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       .populate("request", "subject level")
       .sort("-createdAt");
 
-    const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+    const currencyTotals = Object.values(completedBookings.reduce((totals, booking) => {
+      const currency = booking.currency || "PKR";
+      const current = totals[currency] || { currency, totalEarnings: 0, onHoldAmount: 0 };
+      current.totalEarnings += booking.tutorPayout || 0;
+      if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.onHoldAmount += booking.tutorPayout || 0;
+      totals[currency] = current;
+      return totals;
+    }, {} as Record<string, { currency: string; totalEarnings: number; onHoldAmount: number }>));
     const sessionsCount = completedBookings.length;
     const hoursTaught   = sessionsCount; // 1 hr per session
 
     // ── On-hold payments: completed + payment confirmed, but not yet paid out ──
     const onHoldBookings = completedBookings.filter(b => b.payoutStatus === "pending");
-    const onHoldAmount = onHoldBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
     const onHoldCount = onHoldBookings.length;
 
     // Subjects taught breakdown
@@ -77,6 +84,7 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       subject:     (b.request as unknown as { subject?: string } | null)?.subject || "General",
       amount:      b.amount,
       tutorPayout: b.tutorPayout,
+      currency: b.currency || "PKR",
       createdAt:   b.createdAt,
     }));
 
@@ -98,11 +106,10 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       success: true,
       role: "tutor",
       stats: {
-        totalEarnings,
+        currencyTotals,
         sessionsCount,
         hoursTaught,
         subjectsCount: Object.keys(subjectMap).length,
-        onHoldAmount,
         onHoldCount,
       },
       monthlyData,
@@ -230,7 +237,7 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
   try {
     const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { data: reportData, pdfBuffer } = await generateTutorPayoutReport(userId.toString(), periodStart, periodEnd, { userId: userId.toString(), role: "tutor" });
+    const { data: reportData, pdfBuffer } = await generateTutorPayoutReport(userId.toString(), periodStart, periodEnd, { userId: userId.toString(), role: "tutor" }, req.query.currency as string | undefined);
 
     const filename = `tutorera-payout-report-${reportData.reportId}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
@@ -252,30 +259,46 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
   const { bookingId } = req.params;
   const tutorId = req.user?._id;
 
-  const booking = await Booking.findOne({
+  if (req.user?.role !== "tutor") {
+    res.status(403).json({ success: false, message: "Only tutors can request a payout." });
+    return;
+  }
+
+  const requestedAt = new Date();
+  // Keep the payout pending until finance approves it. This conditional update also
+  // makes duplicate clicks and concurrent requests harmless.
+  const booking = await Booking.findOneAndUpdate({
     _id: bookingId,
     tutor: tutorId,
     status: "completed",
     paymentStatus: "confirmed",
     payoutStatus: "pending",
-  });
+    payoutRequestedAt: { $exists: false },
+  }, {
+    $set: {
+      payoutNote: "Payout requested by tutor",
+      payoutRequestedAt: requestedAt,
+    },
+  }, { new: true });
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Eligible booking not found for payout request." });
     return;
   }
 
-  booking.payoutStatus = "processing";
-  booking.payoutNote = "Payout requested by tutor";
-  const requestedAt = new Date();
-  booking.payoutRequestedAt = requestedAt;
-  booking.payoutProcessingAt = requestedAt;
-  await booking.save();
+  await logAudit({
+    action: "payout_requested",
+    actor: req.user?.name || "Tutor",
+    actorId: tutorId?.toString(),
+    entity: "Booking",
+    targetId: booking._id.toString(),
+    metadata: { tutorPayout: booking.tutorPayout || booking.tutorNet || 0, currency: booking.currency || "PKR" },
+  });
 
   const tutorUser = await User.findById(tutorId).select("name email");
   if (tutorUser) {
     try {
-      const mail = payoutProcessedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString());
+      const mail = payoutRequestedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString(), booking.currency || "PKR");
       await sendEmail({ to: tutorUser.email, subject: mail.subject, html: mail.html, eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
     } catch (err) {
       logger.error({ err, bookingId: booking._id }, "Failed to send payout request email");
@@ -293,6 +316,7 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
     res.status(403).json({ success: false, message: "Only tutors can view payout history." });
     return;
   }
+
   const tutorId = req.user?._id;
   const { page = "1", limit = "20", status } = req.query;
   const allowedStatuses = new Set(["all", "pending", "approved", "processing", "paid", "failed", "held"]);
@@ -324,20 +348,25 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
     .skip(skip)
     .limit(limitNum)
     .lean(),
-    Booking.find(filter).select("payoutStatus tutorPayout").lean(),
+    Booking.find(filter).select("payoutStatus tutorPayout currency").lean(),
   ]);
 
-  const totalPayoutAmount = summaryRows.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
-  const pendingAmount = summaryRows.filter(b => ["pending", "approved", "processing", "held"].includes(b.payoutStatus)).reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
-  const paidAmount = summaryRows.filter(b => b.payoutStatus === "paid").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const currencyTotals = Object.values(summaryRows.reduce((totals, b) => {
+    const currency = b.currency || "PKR";
+    const current = totals[currency] || { currency, totalPayoutAmount: 0, pendingAmount: 0, paidAmount: 0 };
+    current.totalPayoutAmount += b.tutorPayout || 0;
+    if (["pending", "approved", "processing", "held"].includes(b.payoutStatus)) current.pendingAmount += b.tutorPayout || 0;
+    if (b.payoutStatus === "paid") current.paidAmount += b.tutorPayout || 0;
+    totals[currency] = current;
+    return totals;
+  }, {} as Record<string, { currency: string; totalPayoutAmount: number; pendingAmount: number; paidAmount: number }>));
 
   res.status(200).json({
     success: true,
     stats: {
       totalPayouts: total,
-      totalPayoutAmount,
-      pendingAmount,
-      paidAmount,
+      // Never add unlike currencies. Consumers must use currencyTotals.
+      currencyTotals,
     },
     pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum), limit: limitNum },
     payouts: payouts.map(p => ({
