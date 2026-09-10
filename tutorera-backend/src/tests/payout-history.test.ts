@@ -1,6 +1,9 @@
 import User from "../models/User.model";
 import Booking from "../models/Booking.model";
+import PaymentLedger from "../models/PaymentLedger.model";
 import { getMyPayouts, requestPayout } from "../controllers/earnings.controller";
+
+jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 
 const response = () => {
   const res: any = {};
@@ -31,10 +34,12 @@ describe("tutor payout history", () => {
     await getMyPayouts({ user: { _id: tutor._id, role: "tutor" }, query: { limit: "1" } } as any, res);
     const body = res.json.mock.calls[0][0];
     expect(body.payouts).toHaveLength(1);
-    expect(body.stats).toMatchObject({ totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 });
+    expect(body.stats.currencyTotals).toEqual([
+      expect.objectContaining({ currency: "PKR", totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 }),
+    ]);
   });
 
-  it("records request and processing timestamps", async () => {
+  it("records an immutable pending payout request without skipping finance approval", async () => {
     const [student, tutor] = await User.create([
       { name: "Student Two", email: "request-student@test.com", password: "password123", role: "student" },
       { name: "Tutor Two", email: "request-tutor@test.com", password: "password123", role: "tutor" },
@@ -43,8 +48,19 @@ describe("tutor payout history", () => {
     const res = response();
     await requestPayout({ user: { _id: tutor._id, role: "tutor" }, params: { bookingId: booking._id.toString() } } as any, res);
     const updated = await Booking.findById(booking._id).lean();
-    expect(updated?.payoutStatus).toBe("processing");
+    expect(updated?.payoutStatus).toBe("pending");
     expect(updated?.payoutRequestedAt).toBeInstanceOf(Date);
-    expect(updated?.payoutProcessingAt).toBeInstanceOf(Date);
+    expect(updated?.payoutProcessingAt).toBeUndefined();
+    const ledger = await PaymentLedger.findOne({
+      provider: "manual",
+      providerEventId: `payout-requested-${booking._id.toString()}`,
+    }).lean();
+    expect(ledger).toMatchObject({
+      eventType: "payout.requested",
+      status: "pending",
+      settlementStatus: "unsettled",
+      tutorPayable: 770,
+      currency: "PKR",
+    });
   });
 });

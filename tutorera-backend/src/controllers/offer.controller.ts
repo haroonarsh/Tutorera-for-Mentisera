@@ -15,7 +15,7 @@ import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
 import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
-import { createTransaction } from "../utils/rapidGateway";
+import { paymentProvider } from "../services/paymentProvider.service";
 import { releaseExpiredPaymentHold } from "./request.controller";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
@@ -195,14 +195,20 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     try {
       const student = await User.findById(request.student).select("name email phone");
-      const checkoutUrl = await createTransaction({
-        amount: offer.amount,
+      const fees = calculateMarketplaceFees(offer.amount);
+      const checkoutUrl = await paymentProvider.createCheckout({
+        amount: fees.studentTotal,
+        currency: offer.currency || request.currency || "PKR",
         customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
         // Same "BID-" prefix the webhook handler already branches on —
         // Offer and Bid are the same collection, so this is fully
         // compatible with the existing payment.controller.ts webhook logic.
         basketId: `BID-${offer._id.toString()}`,
+        bidId: offer._id.toString(),
+        studentId: request.student.toString(),
+        tutorId: offer.tutor.toString(),
+        feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
         description: `TUTORERA offer acceptance ${offer._id.toString()}`,
         successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
         failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
@@ -253,6 +259,18 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
   const request = await Request.findById(offer.request);
   if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
 
+  try {
+    await assertAcceptanceAvailable(request.countryCode);
+  } catch (marketError: any) {
+    res.status(marketError.statusCode || 409).json({
+      success: false,
+      code: marketError.code || "MARKET_DISCOVERY_ONLY",
+      message: marketError.message,
+      market: request.countryCode,
+    });
+    return;
+  }
+
   const userId = req.user?._id?.toString();
   if (request.student.toString() !== userId) {
     res.status(403).json({ success: false, message: "Only the student who accepted this offer can retry payment." });
@@ -266,11 +284,17 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const checkoutUrl = await createTransaction({
-      amount: offer.amount,
+    const fees = calculateMarketplaceFees(offer.amount);
+    const checkoutUrl = await paymentProvider.createCheckout({
+      amount: fees.studentTotal,
+      currency: offer.currency || request.currency || "PKR",
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${offer._id.toString()}`,
+      bidId: offer._id.toString(),
+      studentId: request.student.toString(),
+      tutorId: offer.tutor.toString(),
+      feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
       description: `TUTORERA offer acceptance ${offer._id.toString()} (retry)`,
       successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
       failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,

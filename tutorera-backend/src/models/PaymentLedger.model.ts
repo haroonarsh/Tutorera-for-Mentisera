@@ -21,6 +21,7 @@ export interface IPaymentLedger extends Document {
   tutorPayable: number;
   platformNet: number;
   settlementStatus: "unsettled" | "expected" | "settled" | "reconciled" | "exception";
+  feeSnapshot?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -48,6 +49,7 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     tutorPayable: { type: Number, default: 0, min: 0 },
     platformNet: { type: Number, default: 0 },
     settlementStatus: { type: String, enum: ["unsettled", "expected", "settled", "reconciled", "exception"], default: "unsettled", index: true },
+    feeSnapshot: { type: Schema.Types.Mixed, default: {} },
     metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }

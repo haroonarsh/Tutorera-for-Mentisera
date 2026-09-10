@@ -684,8 +684,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
+    const fees = calculateMarketplaceFees(bid.amount);
     const checkoutUrl = await paymentProvider.createCheckout({
-      amount: bid.amount,
+      amount: fees.studentTotal,
       currency: bid.currency || "PKR",
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
@@ -693,6 +694,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       bidId: bid._id.toString(),
       studentId: request.student.toString(),
       tutorId: bid.tutor.toString(),
+      feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
       description: `TUTORERA offer acceptance ${bid._id.toString()}`,
       successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
       failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,

@@ -12,6 +12,8 @@ import sendEmail from "../utils/sendEmail";
 import { paymentConfirmedEmail, paymentFailedEmail, paymentFailedNotifyTutorEmail } from "../utils/emailTemplates";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
+import { calculateMarketplaceFees } from "../config/constants";
+import { assertAcceptanceAvailable } from "../services/market.service";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
@@ -37,6 +39,18 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     return;
   }
 
+  try {
+    await assertAcceptanceAvailable(booking.countryCode);
+  } catch (marketError: any) {
+    res.status(marketError.statusCode || 409).json({
+      success: false,
+      code: marketError.code || "MARKET_DISCOVERY_ONLY",
+      message: marketError.message,
+      market: booking.countryCode,
+    });
+    return;
+  }
+
   const student = await User.findById(isParent ? booking.student : req.user?._id).select("name email phone");
   if (!student) {
     res.status(404).json({ success: false, message: "Student not found" });
@@ -49,14 +63,24 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
 
   try {
     const checkoutUrl = await paymentProvider.createCheckout({
-      amount: booking.amount,
-      currency: "PKR",
+      amount: booking.studentTotal || booking.amount,
+      currency: booking.currency || "PKR",
       customerMobileNo: payer?.phone || "03000000000",
       customerEmail: payer?.email || student.email,
       basketId,
       bookingId: booking._id.toString(),
       studentId: booking.student.toString(),
       tutorId: booking.tutor.toString(),
+      feeSnapshot: {
+        subtotal: booking.subtotal,
+        studentFee: booking.studentFee,
+        tutorFee: booking.tutorFee,
+        tax: booking.tax,
+        studentTotal: booking.studentTotal,
+        tutorNet: booking.tutorNet,
+        platformFee: booking.platformFee,
+        feeConfig: booking.feeConfig,
+      },
       description: `TUTORERA booking ${basketId}`,
       successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
       failureUrl: `${FRONTEND_URL}/dashboard?payment=failed&booking=${basketId}`,
@@ -106,14 +130,23 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
     if (event.eventType === "transaction.completed") {
       if (event.merchantTransactionId.startsWith("BID-")) {
         const bidId = event.merchantTransactionId.slice("BID-".length);
+        const bid = await Bid.findById(bidId);
+        const request = bid ? await RequestModel.findById(bid.request).select("student currency") : null;
+        const expectedAmount = bid ? calculateMarketplaceFees(bid.amount).studentTotal : undefined;
+        const expectedCurrency = (bid?.currency || request?.currency || "PKR").toUpperCase();
+        if (!bid || !request || event.amount !== expectedAmount || event.currency.toUpperCase() !== expectedCurrency) {
+          logger.error({ requestId: (req as any).id, bidId, expectedAmount, receivedAmount: event.amount, expectedCurrency, receivedCurrency: event.currency }, "Payment webhook amount or currency did not match the accepted offer");
+          res.status(422).json({ success: false, message: "Payment amount or currency mismatch" });
+          return;
+        }
         const io = req.app.get("io");
         await finalizeBidAcceptance(bidId, io);
 
-        const bid = await Bid.findById(bidId);
-        if (bid) {
-          const request = await RequestModel.findById(bid.request).select("student");
+        const finalizedBid = await Bid.findById(bidId);
+        if (finalizedBid) {
           const student = request ? await User.findById(request.student).select("name email") : null;
-          const tutor = await User.findById(bid.tutor).select("name email");
+          const tutor = await User.findById(finalizedBid.tutor).select("name email");
+          const finalizedBooking = await Booking.findOne({ bid: finalizedBid._id });
           await recordPaymentLedger({
             providerTransactionId: event.merchantTransactionId,
             providerEventId: event.eventId,
@@ -123,7 +156,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
             currency: event.currency,
             bidId,
             studentId: request?.student?.toString(),
-            tutorId: bid.tutor.toString(),
+            tutorId: finalizedBid.tutor.toString(),
+            bookingId: finalizedBooking?._id?.toString(),
+            feeSnapshot: finalizedBooking ? {
+              subtotal: finalizedBooking.subtotal, studentFee: finalizedBooking.studentFee,
+              tutorFee: finalizedBooking.tutorFee, tax: finalizedBooking.tax,
+              studentTotal: finalizedBooking.studentTotal, tutorNet: finalizedBooking.tutorNet,
+              platformFee: finalizedBooking.platformFee, feeConfig: finalizedBooking.feeConfig,
+            } : undefined,
             metadata: { gatewayStatus: event.status },
           });
           try {
@@ -151,6 +191,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           return;
         }
 
+        const expectedAmount = booking.studentTotal || booking.amount;
+        const expectedCurrency = (booking.currency || "PKR").toUpperCase();
+        if (event.amount !== expectedAmount || event.currency.toUpperCase() !== expectedCurrency) {
+          logger.error({ requestId: (req as any).id, bookingId: booking._id, expectedAmount, receivedAmount: event.amount, expectedCurrency, receivedCurrency: event.currency }, "Payment webhook amount or currency did not match the booking");
+          res.status(422).json({ success: false, message: "Payment amount or currency mismatch" });
+          return;
+        }
+
         if (booking.paymentStatus !== "confirmed") {
           booking.paymentStatus = "confirmed";
           booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
@@ -166,6 +214,11 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           bookingId: booking._id.toString(),
           studentId: booking.student.toString(),
           tutorId: booking.tutor.toString(),
+          feeSnapshot: {
+            subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
+            tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet,
+            platformFee: booking.platformFee, feeConfig: booking.feeConfig,
+          },
           metadata: { gatewayStatus: event.status },
         });
 
@@ -193,7 +246,10 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
       if (event.merchantTransactionId.startsWith("BID-")) {
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const bid = await Bid.findById(bidId);
-        if (bid) {
+        // Gate failure side effects on the pending state. Gateways can deliver
+        // a delayed failure after a successful event; that must never produce
+        // a contradictory failure notification or ledger entry.
+        if (bid?.status === "payment_pending") {
         const request = await RequestModel.findById(bid.request).select("student subject");
           const student = request ? await User.findById(request.student).select("name email") : null;
           const tutor = await User.findById(bid.tutor).select("name email");
@@ -234,7 +290,8 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         }
       } else {
         const booking = await Booking.findById(event.merchantTransactionId);
-        if (booking) {
+        // A delayed failure must not contradict an already confirmed booking.
+        if (booking && booking.paymentStatus !== "confirmed") {
           await recordPaymentLedger({
             providerTransactionId: event.merchantTransactionId,
             providerEventId: event.eventId,

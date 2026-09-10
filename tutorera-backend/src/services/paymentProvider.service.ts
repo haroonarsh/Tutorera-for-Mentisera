@@ -4,6 +4,12 @@ import PaymentLedger from "../models/PaymentLedger.model";
 import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
 
 export type PaymentProviderName = "rapid_gateway";
+export type LedgerProviderName = PaymentProviderName | "manual";
+export type FeeSnapshot = {
+  subtotal: number; studentFee: number; tutorFee: number; tax: number;
+  studentTotal: number; tutorNet: number; platformFee: number;
+  feeConfig?: Record<string, unknown>;
+};
 
 export interface CheckoutParams {
   amount: number;
@@ -19,6 +25,7 @@ export interface CheckoutParams {
   bidId?: string;
   studentId?: string;
   tutorId?: string;
+  feeSnapshot?: FeeSnapshot;
   metadata?: Record<string, unknown>;
 }
 
@@ -36,6 +43,14 @@ export const paymentProvider = {
   name: "rapid_gateway" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
+    const currency = (params.currency || "PKR").toUpperCase();
+    if (currency !== "PKR") {
+      throw {
+        statusCode: 409,
+        message: "Checkout is not available in this market yet. Rapid Gateway currently supports PKR only.",
+      };
+    }
+
     const checkoutUrl = await createTransaction({
       amount: params.amount,
       customerMobileNo: params.customerMobileNo,
@@ -57,6 +72,7 @@ export const paymentProvider = {
       bidId: params.bidId,
       studentId: params.studentId,
       tutorId: params.tutorId,
+      feeSnapshot: params.feeSnapshot,
       metadata: { checkoutUrl, ...(params.metadata || {}) },
     });
 
@@ -86,6 +102,7 @@ export const paymentProvider = {
 };
 
 export async function recordPaymentLedger(args: {
+  provider?: LedgerProviderName;
   providerTransactionId: string;
   providerEventId?: string;
   eventType: "checkout.created" | "payment.succeeded" | "payment.failed" | "payment.refunded" | "payout.requested" | "payout.completed" | "manual.adjustment";
@@ -96,28 +113,41 @@ export async function recordPaymentLedger(args: {
   bidId?: string;
   studentId?: string;
   tutorId?: string;
+  feeSnapshot?: FeeSnapshot;
+  settlementStatus?: "unsettled" | "expected" | "settled" | "reconciled" | "exception";
   metadata?: Record<string, unknown>;
 }) {
   const fees = calculateMarketplaceFees(args.amount);
-  const platformNet = fees.tutorFee + fees.tax;
-  const settlementStatus: "expected" | "unsettled" = args.status === "succeeded" ? "expected" : "unsettled";
+  const snapshot = args.feeSnapshot;
+  const accounting = snapshot || {
+    subtotal: args.amount,
+    studentFee: fees.studentFee,
+    tutorFee: fees.tutorFee,
+    tax: fees.tax,
+    studentTotal: fees.studentTotal,
+    tutorNet: fees.tutorNet,
+    platformFee: fees.tutorFee + fees.tax,
+  };
+  const provider = args.provider || paymentProvider.name;
+  const settlementStatus = args.settlementStatus || (args.status === "succeeded" ? "expected" : "unsettled");
   const doc = {
-    provider: paymentProvider.name,
+    provider,
     providerEventId: args.providerEventId,
     providerTransactionId: args.providerTransactionId,
     eventType: args.eventType,
     status: args.status,
     grossAmount: args.amount,
     currency: args.currency || "PKR",
-    studentPayment: fees.studentTotal,
-    studentFee: fees.studentFee,
-    tutorFee: fees.tutorFee,
-    tax: fees.tax,
+    studentPayment: accounting.studentTotal,
+    studentFee: accounting.studentFee,
+    tutorFee: accounting.tutorFee,
+    tax: accounting.tax,
     gatewayFee: 0,
     refundAmount: args.eventType === "payment.refunded" ? args.amount : 0,
-    tutorPayable: fees.tutorNet,
-    platformNet,
+    tutorPayable: accounting.tutorNet,
+    platformNet: accounting.platformFee,
     settlementStatus,
+    feeSnapshot: snapshot || {},
     booking: args.bookingId ? new Types.ObjectId(args.bookingId) : undefined,
     bid: args.bidId ? new Types.ObjectId(args.bidId) : undefined,
     student: args.studentId ? new Types.ObjectId(args.studentId) : undefined,
@@ -127,7 +157,7 @@ export async function recordPaymentLedger(args: {
 
   if (args.providerEventId) {
     return PaymentLedger.findOneAndUpdate(
-      { provider: paymentProvider.name, providerEventId: args.providerEventId },
+      { provider, providerEventId: args.providerEventId },
       { $setOnInsert: doc },
       { upsert: true, new: true }
     );

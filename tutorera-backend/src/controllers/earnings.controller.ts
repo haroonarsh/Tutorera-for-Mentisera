@@ -10,6 +10,7 @@ import logger from "../config/logger";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
 import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
 import { logAudit } from "../utils/logAudit";
+import { recordPaymentLedger } from "../services/paymentProvider.service";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -293,6 +294,31 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
     entity: "Booking",
     targetId: booking._id.toString(),
     metadata: { tutorPayout: booking.tutorPayout || booking.tutorNet || 0, currency: booking.currency || "PKR" },
+  });
+
+  await recordPaymentLedger({
+    provider: "manual",
+    providerTransactionId: `booking-${booking._id.toString()}`,
+    providerEventId: `payout-requested-${booking._id.toString()}`,
+    eventType: "payout.requested",
+    status: "pending",
+    amount: booking.subtotal || booking.amount,
+    currency: booking.currency || "PKR",
+    bookingId: booking._id.toString(),
+    bidId: booking.bid?.toString(),
+    studentId: booking.student.toString(),
+    tutorId: booking.tutor.toString(),
+    feeSnapshot: {
+      subtotal: booking.subtotal,
+      studentFee: booking.studentFee,
+      tutorFee: booking.tutorFee,
+      tax: booking.tax,
+      studentTotal: booking.studentTotal,
+      tutorNet: booking.tutorNet,
+      platformFee: booking.platformFee,
+      feeConfig: booking.feeConfig,
+    },
+    metadata: { payoutStatus: "pending", requestedAt: requestedAt.toISOString() },
   });
 
   const tutorUser = await User.findById(tutorId).select("name email");

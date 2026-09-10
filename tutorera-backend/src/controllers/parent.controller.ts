@@ -11,8 +11,9 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { escapeHtml } from "../utils/escapeHtml";
 import { logAudit } from "../utils/logAudit";
-import { resolveMarket } from "../services/market.service";
+import { assertAcceptanceAvailable, resolveMarket } from "../services/market.service";
 import { resolveLocationReferences } from "../services/locationReference.service";
+import { calculateMarketplaceFees } from "../config/constants";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import { paymentProvider } from "../services/paymentProvider.service";
@@ -325,6 +326,12 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   }
   const bid = await Bid.findOne({ _id: request.acceptedOffer, request: request._id, status: { $in: ["submitted", "viewed", "countered", "pending"] } });
   if (!bid || (bid.expiresAt && bid.expiresAt <= new Date())) { res.status(410).json({ success: false, message: "The selected offer is no longer available." }); return; }
+  try {
+    await assertAcceptanceAvailable(request.countryCode);
+  } catch (marketError: any) {
+    res.status(marketError.statusCode || 409).json({ success: false, code: marketError.code || "MARKET_DISCOVERY_ONLY", message: marketError.message, market: request.countryCode });
+    return;
+  }
   const expiry = new Date(Date.now() + PAYMENT_HOLD_MS);
   const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { new: true });
   if (!reserved) { res.status(409).json({ success: false, message: "This approval was already processed." }); return; }
@@ -332,7 +339,8 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   const student = await User.findById(request.student).select("email phone");
   let checkoutUrl: string;
   try {
-    checkoutUrl = await paymentProvider.createCheckout({ amount: bid.amount, currency: bid.currency || request.currency || "PKR", customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}` });
+    const fees = calculateMarketplaceFees(bid.amount);
+    checkoutUrl = await paymentProvider.createCheckout({ amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax }, description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}` });
   } catch {
     await Promise.all([Request.updateOne({ _id: request._id, status: "awaiting_payment" }, { status: "awaiting_parent_approval" }), Bid.updateOne({ _id: bid._id, status: "payment_pending" }, { status: bid.status, $unset: { paymentPendingExpiresAt: "" } })]);
     await logAudit({ action: "parent_booking_checkout_failed", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });

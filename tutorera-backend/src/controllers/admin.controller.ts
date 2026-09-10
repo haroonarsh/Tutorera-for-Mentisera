@@ -36,6 +36,7 @@ import {
   homeTuitionDeactivatedEmail,
 } from "../utils/trackingEmails";
 import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
+import { recordPaymentLedger } from "../services/paymentProvider.service";
 
 
 // @desc    Get dashboard stats
@@ -604,7 +605,60 @@ export const updatePaymentStatus = async (
       console.error("Failed to send payment confirmation email:", err);
     }
   }
+  if (payoutStatus !== undefined && payoutStatus !== "paid") {
+    await recordPaymentLedger({
+      provider: "manual",
+      providerTransactionId: `booking-${booking._id.toString()}`,
+      providerEventId: `payout-${payoutStatus}-${booking._id.toString()}`,
+      eventType: "manual.adjustment",
+      status: payoutStatus === "processing" ? "processing" : payoutStatus === "failed" ? "failed" : "pending",
+      amount: booking.subtotal || booking.amount,
+      currency: booking.currency || "PKR",
+      bookingId: booking._id.toString(),
+      bidId: booking.bid?.toString(),
+      studentId: booking.student._id?.toString() || booking.student.toString(),
+      tutorId: booking.tutor._id?.toString() || booking.tutor.toString(),
+      feeSnapshot: {
+        subtotal: booking.subtotal,
+        studentFee: booking.studentFee,
+        tutorFee: booking.tutorFee,
+        tax: booking.tax,
+        studentTotal: booking.studentTotal,
+        tutorNet: booking.tutorNet,
+        platformFee: booking.platformFee,
+        feeConfig: booking.feeConfig,
+      },
+      settlementStatus: ["failed", "held"].includes(payoutStatus) ? "exception" : "expected",
+      metadata: { payoutStatus, payoutNote: booking.payoutNote || "" },
+    });
+  }
+
   if (payoutStatus === "paid") {
+    await recordPaymentLedger({
+      provider: "manual",
+      providerTransactionId: `booking-${booking._id.toString()}`,
+      providerEventId: `payout-completed-${booking._id.toString()}`,
+      eventType: "payout.completed",
+      status: "succeeded",
+      amount: booking.subtotal || booking.amount,
+      currency: booking.currency || "PKR",
+      bookingId: booking._id.toString(),
+      bidId: booking.bid?.toString(),
+      studentId: booking.student._id?.toString() || booking.student.toString(),
+      tutorId: booking.tutor._id?.toString() || booking.tutor.toString(),
+      feeSnapshot: {
+        subtotal: booking.subtotal,
+        studentFee: booking.studentFee,
+        tutorFee: booking.tutorFee,
+        tax: booking.tax,
+        studentTotal: booking.studentTotal,
+        tutorNet: booking.tutorNet,
+        platformFee: booking.platformFee,
+        feeConfig: booking.feeConfig,
+      },
+      settlementStatus: "settled",
+      metadata: { payoutStatus: "paid", paidAt: booking.payoutPaidAt?.toISOString(), payoutNote: booking.payoutNote || "" },
+    });
     await logAudit({
       action: "payout_marked_paid",
       actor: req.user?.name || "Admin",
