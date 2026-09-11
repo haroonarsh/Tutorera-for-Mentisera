@@ -3,20 +3,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  Sparkles,
-  Sliders,
-  TrendingUp,
-  Award,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  Save,
-  Layers,
-  Zap,
-  Play,
-  Send,
-  ExternalLink,
-  Clock,
+  Sparkles, Sliders, TrendingUp, Award, ShieldCheck, CheckCircle2,
+  AlertCircle, Save, Layers, Zap, Play, Send, ExternalLink, Clock,
+  BarChart2, RefreshCw, Check, X, Shield, ArrowRight, BookOpen,
+  Users, Search, Filter, History, RotateCcw, ChevronRight
 } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -24,7 +14,7 @@ import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import { useAuth } from "@/context/AuthContext";
 import AvatarImage from "@/components/Common/AvatarImage";
-import { AdminDialog, AdminEmptyState, AdminErrorState, AdminMetricCard } from "@/components/admin/AdminUI";
+import { AdminDialog } from "@/components/admin/AdminUI";
 
 interface MatchAnalytics {
   totalMatches: number;
@@ -36,6 +26,9 @@ interface MatchAnalytics {
   avgStudentResponseMinutes: number | null;
   generatedAt: string;
   hasData: boolean;
+  activeRequestsCount?: number;
+  verifiedTutorsCount?: number;
+  engineStatus?: string;
   tierDistribution: {
     excellent: number;
     great: number;
@@ -55,17 +48,26 @@ interface AnalyticsFilters {
 }
 
 const EMPTY_ANALYTICS_FILTERS: AnalyticsFilters = {
-  dateFrom: "", dateTo: "", mode: "", algorithmVersion: "", countryCode: "", city: "", subject: "",
+  dateFrom: "",
+  dateTo: "",
+  mode: "",
+  algorithmVersion: "",
+  countryCode: "",
+  city: "",
+  subject: "",
 };
 
 export default function AdminMatchingPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"analytics" | "weights" | "simulator">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "simulator" | "weights">("analytics");
   const [analytics, setAnalytics] = useState<MatchAnalytics | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [analyticsError, setAnalyticsError] = useState("");
   const [analyticsFilters, setAnalyticsFilters] = useState<AnalyticsFilters>(EMPTY_ANALYTICS_FILTERS);
   const [appliedAnalyticsFilters, setAppliedAnalyticsFilters] = useState<AnalyticsFilters>(EMPTY_ANALYTICS_FILTERS);
+  const [quickDatePreset, setQuickDatePreset] = useState<string>("all");
+
+  // Config states
   const [config, setConfig] = useState<any>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [configError, setConfigError] = useState("");
@@ -97,405 +99,660 @@ export default function AdminMatchingPage() {
   });
   const [simulating, setSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
-  const [dispatchingWave, setDispatchingWave] = useState(false);
   const [dispatchTarget, setDispatchTarget] = useState<string | null>(null);
+  const [dispatchingWave, setDispatchingWave] = useState(false);
 
+  // Fetch Analytics
   const fetchAnalytics = useCallback(async () => {
     setLoadingAnalytics(true);
     setAnalyticsError("");
     try {
-      const params = Object.fromEntries(Object.entries(appliedAnalyticsFilters).filter(([, value]) => value.trim()));
-      const res = await api.get("/matching/admin/analytics", { params });
-      setAnalytics(res.data.analytics);
-    } catch (err) {
+      const params = new URLSearchParams();
+      if (appliedAnalyticsFilters.dateFrom) params.set("dateFrom", appliedAnalyticsFilters.dateFrom);
+      if (appliedAnalyticsFilters.dateTo) params.set("dateTo", appliedAnalyticsFilters.dateTo);
+      if (appliedAnalyticsFilters.mode) params.set("mode", appliedAnalyticsFilters.mode);
+      if (appliedAnalyticsFilters.algorithmVersion) params.set("algorithmVersion", appliedAnalyticsFilters.algorithmVersion);
+      if (appliedAnalyticsFilters.countryCode) params.set("countryCode", appliedAnalyticsFilters.countryCode);
+      if (appliedAnalyticsFilters.city) params.set("city", appliedAnalyticsFilters.city);
+      if (appliedAnalyticsFilters.subject) params.set("subject", appliedAnalyticsFilters.subject);
+
+      const res = await api.get(`/matching/admin/analytics?${params.toString()}`);
+      if (res.data?.success) {
+        setAnalytics(res.data.analytics);
+      }
+    } catch (err: any) {
       console.error("Failed to load matching analytics:", err);
-      setAnalyticsError("Matching analytics could not be loaded. Values are unavailable, not zero.");
+      setAnalyticsError(err.response?.data?.message || "Failed to load matching analytics.");
     } finally {
       setLoadingAnalytics(false);
     }
   }, [appliedAnalyticsFilters]);
 
+  // Fetch Config
   const fetchConfig = useCallback(async () => {
     setLoadingConfig(true);
     setConfigError("");
     try {
-      const res = await api.get("/matching/admin/config");
-      setConfig(res.data.config);
-    } catch (err) {
+      const [cfgRes, histRes] = await Promise.all([
+        api.get("/matching/admin/config"),
+        api.get("/matching/admin/config/history").catch(() => ({ data: { history: [] } })),
+      ]);
+      if (cfgRes.data?.success) {
+        setConfig(cfgRes.data.config);
+      }
+      if (histRes.data?.success) {
+        setConfigHistory(histRes.data.history || []);
+      }
+    } catch (err: any) {
       console.error("Failed to load matching config:", err);
-      setConfigError("The active matching configuration could not be loaded.");
+      setConfigError(err.response?.data?.message || "Failed to load matching configuration.");
     } finally {
       setLoadingConfig(false);
     }
   }, []);
 
+  // Fetch Live Requests for Simulator
   const fetchLiveRequests = useCallback(async () => {
     setLoadingRequests(true);
     try {
-      const res = await api.get("/requests?status=open,published,receiving_offers&limit=30");
-      const list = res.data?.requests || res.data?.data || [];
-      setLiveRequests(list);
-      setSelectedRequestId((current) => current || list[0]?._id || "");
-    } catch (err) {
-      console.error("Failed to load live requests:", err);
+      const res = await api.get("/admin/at-risk/requests");
+      const items = res.data?.items || [];
+      const requests = items.map((i: any) => i.request).filter(Boolean);
+      setLiveRequests(requests);
+      if (requests.length > 0 && !selectedRequestId) {
+        setSelectedRequestId(requests[0]._id);
+      }
+    } catch {
+      // Fallback
     } finally {
       setLoadingRequests(false);
     }
-  }, []);
-
-  const fetchConfigHistory = useCallback(async () => {
-    try {
-      const res = await api.get("/matching/admin/config/history");
-      setConfigHistory(res.data.history || []);
-    } catch {
-      setConfigHistory([]);
-    }
-  }, []);
+  }, [selectedRequestId]);
 
   useEffect(() => {
     fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  useEffect(() => {
     fetchConfig();
-    fetchLiveRequests();
-    fetchConfigHistory();
-  }, [fetchAnalytics, fetchConfig, fetchConfigHistory, fetchLiveRequests]);
+  }, [fetchConfig]);
 
-  const handleWeightChange = (mode: "online" | "home", key: string, value: number) => {
-    if (!config) return;
-    const modeKey = mode === "online" ? "onlineWeights" : "homeWeights";
-    setConfig({
-      ...config,
-      [modeKey]: {
-        ...config[modeKey],
-        [key]: value,
-      },
-    });
-  };
-
-  const handleSaveConfig = async () => {
-    if (!config) return;
-    setSavingConfig(true);
-    try {
-      const payload = {
-        algorithmVersion: config.algorithmVersion,
-        onlineWeights: config.onlineWeights,
-        homeWeights: config.homeWeights,
-        thresholds: config.thresholds,
-        bayesian: config.bayesian,
-        coldStart: config.coldStart,
-        expectedUpdatedAt: config.updatedAt || undefined,
-        changeReason,
-      };
-      await api.put("/matching/admin/config", payload);
-      showSuccess("Matching weights successfully saved and activated in memory!");
-      setConfirmingConfig(false);
-      setChangeReason("");
-      fetchConfig();
-      fetchConfigHistory();
-    } catch {
-      showError("Failed to update matching configuration.");
-    } finally {
-      setSavingConfig(false);
+  useEffect(() => {
+    if (activeTab === "simulator") {
+      fetchLiveRequests();
     }
-  };
+  }, [activeTab, fetchLiveRequests]);
 
-  const handleRollbackConfig = async (historyId: string, revision: number) => {
-    setRollingBack(true);
-    try {
-      await api.post(`/matching/admin/config/history/${historyId}/rollback`, { reason: rollbackReason });
-      showSuccess(`Matching configuration rolled back to revision ${revision}.`);
-      setRollbackTarget(null);
-      setRollbackReason("");
-      await Promise.all([fetchConfig(), fetchConfigHistory()]);
-    } catch (err) {
-      showError(err, "Failed to roll back matching configuration.");
-    } finally {
-      setRollingBack(false);
+  // Quick Date Filter Handler
+  const handleQuickDate = (preset: string) => {
+    setQuickDatePreset(preset);
+    const now = new Date();
+    let from = "";
+    let to = now.toISOString().split("T")[0];
+
+    if (preset === "today") {
+      from = to;
+    } else if (preset === "7d") {
+      const d = new Date(now.getTime() - 7 * 86400000);
+      from = d.toISOString().split("T")[0];
+    } else if (preset === "30d") {
+      const d = new Date(now.getTime() - 30 * 86400000);
+      from = d.toISOString().split("T")[0];
+    } else {
+      from = "";
+      to = "";
     }
+
+    const updated = { ...analyticsFilters, dateFrom: from, dateTo: to };
+    setAnalyticsFilters(updated);
+    setAppliedAnalyticsFilters(updated);
   };
 
+  // Run Simulation
   const handleRunSimulation = async () => {
     setSimulating(true);
+    setSimulationResult(null);
     try {
-      const payload =
-        simMode === "live"
-          ? { requestId: selectedRequestId, limit: 25 }
-          : { customRequest, limit: 25 };
+      const payload: any = { limit: 25 };
+      if (simMode === "live") {
+        if (!selectedRequestId) {
+          showError("Please select an active student request.");
+          return;
+        }
+        payload.requestId = selectedRequestId;
+      } else {
+        payload.customRequest = customRequest;
+      }
 
       const res = await api.post("/matching/admin/simulate", payload);
-      setSimulationResult(res.data);
-      showSuccess(`Smart matching evaluated: found ${res.data.totalRanked} candidate tutors.`);
+      if (res.data?.success) {
+        setSimulationResult(res.data);
+        showSuccess(`Evaluated ${res.data.totalRanked} compatible candidates.`);
+      }
     } catch (err: any) {
-      showError(err?.response?.data?.message || "Failed to execute matching simulation.");
+      showError(err.response?.data?.message || "Simulation failed.");
     } finally {
       setSimulating(false);
     }
   };
 
-  const handleDispatchNotificationWave = async (requestId: string) => {
-    if (!requestId) return;
-    setDispatchingWave(true);
+  // Save Config
+  const handleSaveConfig = async () => {
+    if (!config || changeReason.trim().length < 8) return;
+    setSavingConfig(true);
     try {
-      await api.post(`/admin/at-risk/requests/${requestId}/action`, { action: "rematch" });
-      showSuccess("Tutor notification wave dispatched.");
-      setDispatchTarget(null);
-    } catch {
-      showError("Failed to trigger match dispatch wave.");
+      const res = await api.put("/matching/admin/config", {
+        ...config,
+        changeReason: changeReason.trim(),
+      });
+      if (res.data?.success) {
+        showSuccess("Matching configuration calibrated and activated successfully.");
+        setConfig(res.data.config);
+        setConfirmingConfig(false);
+        setChangeReason("");
+        fetchConfig();
+      }
+    } catch (err: any) {
+      showError(err.response?.data?.message || "Failed to update configuration.");
     } finally {
-      setDispatchingWave(false);
+      setSavingConfig(false);
     }
   };
 
-  const currentWeights = config ? (selectedMode === "online" ? config.onlineWeights : config.homeWeights) : null;
-  const currentWeightTotal = currentWeights
-    ? Object.values(currentWeights).reduce((sum: number, value) => sum + Number(value || 0), 0)
-    : 0;
+  // Rollback Config
+  const handleRollbackConfig = async (historyId: string, revision: number) => {
+    if (rollbackReason.trim().length < 8) return;
+    setRollingBack(true);
+    try {
+      const res = await api.post(`/matching/admin/config/history/${historyId}/rollback`, {
+        reason: rollbackReason.trim(),
+      });
+      if (res.data?.success) {
+        showSuccess(`Restored configuration revision ${revision}.`);
+        setConfig(res.data.config);
+        setRollbackTarget(null);
+        setRollbackReason("");
+        fetchConfig();
+      }
+    } catch (err: any) {
+      showError(err.response?.data?.message || "Failed to rollback configuration.");
+    } finally {
+      setRollingBack(false);
+    }
+  };
+
+  // Weight Slider Change
+  const handleWeightChange = (mode: "online" | "home", key: string, value: number) => {
+    if (!config) return;
+    const targetKey = mode === "online" ? "onlineWeights" : "homeWeights";
+    setConfig((prev: any) => ({
+      ...prev,
+      [targetKey]: {
+        ...prev[targetKey],
+        [key]: value,
+      },
+    }));
+  };
+
   const isSuperAdmin = user?.adminRole === "super_admin" || user?.adminPermissions?.includes("*");
   const canConfigure = Boolean(isSuperAdmin || user?.adminRole === "marketplace_operations" || user?.adminPermissions?.includes("matching.configure"));
   const canSimulate = Boolean(isSuperAdmin || user?.adminRole === "marketplace_operations" || user?.adminPermissions?.includes("matching.simulate"));
+
+  const currentWeights = selectedMode === "online" ? config?.onlineWeights : config?.homeWeights;
+  const currentWeightTotal = currentWeights
+    ? Object.values(currentWeights).reduce((sum: number, val) => sum + Number(val || 0), 0)
+    : 0;
+
   const tierDist = analytics?.tierDistribution || { excellent: 0, great: 0, good: 0, fair: 0 };
   const totalMatchesCount = analytics?.totalMatches || 0;
-  const hasAnalyticsFilters = Object.values(appliedAnalyticsFilters).some(Boolean);
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Page Header */}
-      <header className="rounded-2xl border border-blue-800/50 bg-gradient-to-r from-[#021550] via-blue-950 to-slate-950 p-5 text-white shadow-lg sm:p-6">
-        <div className="flex items-start gap-3.5">
-          <div className="rounded-xl border border-cyan-400/30 bg-cyan-400/15 p-2.5 text-cyan-300">
-            <Sparkles className="h-6 w-6" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Smart Tutor Matching</h1>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-bold border border-cyan-400/30">
-                {config?.algorithmVersion || "Version unavailable"}
-              </span>
-            </div>
-            <p className="mt-1 max-w-3xl text-sm leading-5 text-blue-100/85">
-              Monitor compatibility, conversion, safeguards, and explainable tutor rankings.
-            </p>
-          </div>
-        </div>
-      </header>
-
+    <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
+      {/* Executive Command Header */}
       <div
-        className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-        role="tablist"
-        aria-label="Matching administration views"
-        onKeyDown={(event) => {
-          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home" && event.key !== "End") return;
-          const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-          const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
-          if (currentIndex < 0 || tabs.length === 0) return;
-          event.preventDefault();
-          const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (currentIndex + 1) % tabs.length : (currentIndex - 1 + tabs.length) % tabs.length;
-          tabs[nextIndex].focus();
-          tabs[nextIndex].click();
+        style={{
+          background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)",
+          borderRadius: "1rem",
+          padding: "1.5rem 1.75rem",
+          color: "#ffffff",
+          marginBottom: "1.5rem",
+          boxShadow: "0 10px 25px -5px rgba(2,21,80,0.25)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
         }}
       >
-        <div className="flex min-w-max gap-1">
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
+            <span style={{ display: "inline-block", width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 10px #10b981" }} />
+            <span style={{ fontSize: "0.74rem", fontWeight: 800, letterSpacing: "0.08em", color: "#93c5fd", textTransform: "uppercase" }}>
+              ALGORITHM ARCHITECTURE · MULTI-FACTOR ENGINE
+            </span>
+            <span style={{ fontSize: "0.72rem", background: "rgba(255,255,255,0.15)", padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 800 }}>
+              {config?.algorithmVersion || "RULE_V1"}
+            </span>
+          </div>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
+            Smart Tutor Matching Engine
+          </h1>
+          <p style={{ margin: "0.25rem 0 0", color: "#cbd5e1", fontSize: "0.85rem" }}>
+            Multi-objective student compatibility, progressive notification waves, and explainable tutor ranking.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "0.5rem", padding: "0.4rem 0.75rem", fontSize: "0.78rem" }}>
+            <span style={{ color: "#bfdbfe" }}>Live Requests: </span>
+            <strong style={{ color: "#ffffff" }}>{analytics?.activeRequestsCount ?? "—"}</strong>
+            <span style={{ color: "#bfdbfe", margin: "0 0.4rem" }}>•</span>
+            <span style={{ color: "#bfdbfe" }}>Verified Tutors: </span>
+            <strong style={{ color: "#ffffff" }}>{analytics?.verifiedTutorsCount ?? "—"}</strong>
+          </div>
+
           <button
-            type="button" role="tab" id="matching-tab-analytics"
-            aria-selected={activeTab === "analytics"} aria-controls="matching-panel-analytics"
-            tabIndex={activeTab === "analytics" ? 0 : -1}
-            onClick={() => setActiveTab("analytics")}
-            className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-150 ${
-              activeTab === "analytics"
-                ? "bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950 dark:text-blue-100"
-                : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-            }`}
-          >
-            Analytics & Conversion
-          </button>
-          {canSimulate && <button
-            type="button" role="tab" id="matching-tab-simulator"
-            aria-selected={activeTab === "simulator"} aria-controls="matching-panel-simulator"
-            tabIndex={activeTab === "simulator" ? 0 : -1}
+            type="button"
             onClick={() => setActiveTab("simulator")}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-150 ${
-              activeTab === "simulator"
-                ? "bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950 dark:text-blue-100"
-                : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-            }`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              background: "#ffffff",
+              color: "#021550",
+              border: "none",
+              padding: "0.55rem 1rem",
+              borderRadius: "0.5rem",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+            }}
           >
-            <Play className="h-4 w-4" aria-hidden="true" />
-            Match Simulator
-          </button>}
-          <button
-            type="button" role="tab" id="matching-tab-weights"
-            aria-selected={activeTab === "weights"} aria-controls="matching-panel-weights"
-            tabIndex={activeTab === "weights" ? 0 : -1}
-            onClick={() => setActiveTab("weights")}
-            className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-150 ${
-              activeTab === "weights"
-                ? "bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950 dark:text-blue-100"
-                : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-            }`}
-          >
-            Algorithm Weights
+            <Play size={14} fill="#021550" />
+            Launch Match Simulator
           </button>
         </div>
       </div>
 
-      {/* TAB 1: ANALYTICS */}
+      {/* Segmented Control Navigation Tab Bar */}
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          borderRadius: "0.75rem",
+          padding: "0.35rem",
+          marginBottom: "1.5rem",
+          display: "inline-flex",
+          gap: "0.35rem",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+        }}
+      >
+        {[
+          { id: "analytics", label: "Telemetry & Conversion", icon: <BarChart2 size={16} /> },
+          { id: "simulator", label: "Interactive Match Simulator", icon: <Play size={16} fill={activeTab === "simulator" ? "#ffffff" : "#0329b2"} /> },
+          { id: "weights", label: "Algorithm Weights & Calibration", icon: <Sliders size={16} /> },
+        ].map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.55rem 1.15rem",
+                borderRadius: "0.5rem",
+                border: active ? "1px solid #0329b2" : "1px solid transparent",
+                background: active ? "#0329b2" : "transparent",
+                color: active ? "#ffffff" : "#475569",
+                fontSize: "0.84rem",
+                fontWeight: active ? 800 : 600,
+                cursor: "pointer",
+                transition: "all 150ms ease",
+              }}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: TELEMETRY & CONVERSION ANALYTICS                                   */}
+      {/* ========================================================================= */}
       {activeTab === "analytics" && (
-        <div id="matching-panel-analytics" role="tabpanel" aria-labelledby="matching-tab-analytics" className="space-y-6">
-          <form
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            onSubmit={(event) => { event.preventDefault(); setAppliedAnalyticsFilters(analyticsFilters); }}
-            aria-label="Filter matching analytics"
-          >
-            <div className="flex flex-wrap items-end gap-3">
-              {([
-                ["dateFrom", "From", "date", ""], ["dateTo", "To", "date", ""],
-                ["algorithmVersion", "Algorithm", "text", "e.g. RULE_V1"], ["countryCode", "Country", "text", "e.g. PK"],
-                ["city", "City", "text", "e.g. Lahore"], ["subject", "Subject", "text", "e.g. Mathematics"],
-              ] as const).map(([key, label, type, placeholder]) => (
-                <label key={key} className="min-w-36 flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  {label}
-                  <input type={type} value={analyticsFilters[key]} placeholder={placeholder} onChange={(event) => setAnalyticsFilters((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-                </label>
-              ))}
-              <label className="min-w-36 flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Mode
-                <select value={analyticsFilters.mode} onChange={(event) => setAnalyticsFilters((current) => ({ ...current, mode: event.target.value }))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                  <option value="">All modes</option><option value="online">Online</option><option value="in-person">Home tuition</option><option value="both">Both</option>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {/* Organized Filter Console */}
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Filter size={15} color="#0329b2" />
+                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a" }}>Filter Telemetry Scope</span>
+              </div>
+
+              {/* Quick Date Presets */}
+              <div style={{ display: "flex", gap: "0.3rem" }}>
+                {[
+                  { id: "all", label: "All Time" },
+                  { id: "30d", label: "30 Days" },
+                  { id: "7d", label: "7 Days" },
+                  { id: "today", label: "Today" },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleQuickDate(p.id)}
+                    style={{
+                      padding: "0.25rem 0.6rem",
+                      borderRadius: "999px",
+                      fontSize: "0.72rem",
+                      fontWeight: quickDatePreset === p.id ? 800 : 600,
+                      border: quickDatePreset === p.id ? "1px solid #0329b2" : "1px solid #e2e8f0",
+                      background: quickDatePreset === p.id ? "#eff6ff" : "#f8fafc",
+                      color: quickDatePreset === p.id ? "#0329b2" : "#64748b",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setAppliedAnalyticsFilters(analyticsFilters);
+              }}
+              style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "0.75rem", alignItems: "end" }}
+            >
+              <div>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Market Scope</label>
+                <select
+                  value={analyticsFilters.countryCode}
+                  onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, countryCode: e.target.value })}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                >
+                  <option value="">All Markets</option>
+                  <option value="PK">Pakistan (PK)</option>
+                  <option value="AE">United Arab Emirates (AE)</option>
+                  <option value="GB">United Kingdom (GB)</option>
                 </select>
-              </label>
-              <div className="flex gap-2">
-                <button type="submit" className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">Apply</button>
-                <button type="button" disabled={!hasAnalyticsFilters && !Object.values(analyticsFilters).some(Boolean)} onClick={() => { setAnalyticsFilters(EMPTY_ANALYTICS_FILTERS); setAppliedAnalyticsFilters(EMPTY_ANALYTICS_FILTERS); }} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200">Clear</button>
               </div>
-            </div>
-          </form>
-          {analyticsError && <AdminErrorState message={analyticsError} onRetry={fetchAnalytics} />}
-          {analytics?.generatedAt && <p className="text-right text-xs text-slate-500">Data refreshed {new Date(analytics.generatedAt).toLocaleString()}</p>}
-          {/* Key KPI Metrics Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Total Match Evaluations</span>
-                <Layers className="w-4 h-4 text-blue-500" />
-              </div>
-              <p className="text-2xl font-black text-slate-900 dark:text-white">
-                {loadingAnalytics ? "…" : analytics?.totalMatches !== undefined ? analytics.totalMatches.toLocaleString() : "—"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">Across student requests & offers</p>
-            </div>
 
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Average Match Score</span>
-                <Award className="w-4 h-4 text-emerald-500" />
+              <div>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Teaching Mode</label>
+                <select
+                  value={analyticsFilters.mode}
+                  onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, mode: e.target.value })}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                >
+                  <option value="">All Modes</option>
+                  <option value="online">Online Worldwide</option>
+                  <option value="in-person">In-Person Home Tuition</option>
+                </select>
               </div>
-              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {loadingAnalytics ? "…" : analytics?.avgMatchScore != null ? `${analytics.avgMatchScore}%` : "—"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">Target compatibility threshold: &ge; 70%</p>
-            </div>
 
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Offer Conversion</span>
-                <TrendingUp className="w-4 h-4 text-indigo-500" />
+              <div>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>City Focus</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lahore, Islamabad..."
+                  value={analyticsFilters.city}
+                  onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, city: e.target.value })}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                />
               </div>
-              <p className="text-2xl font-black text-slate-900 dark:text-white">
-                {analytics?.offerConversionRate !== undefined ? `${analytics.offerConversionRate}%` : "—"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">Matches converting to formal tutor offers</p>
-            </div>
 
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Booking Conversion</span>
-                <CheckCircle2 className="w-4 h-4 text-cyan-500" />
+              <div>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Subject Filter</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Mathematics, Physics..."
+                  value={analyticsFilters.subject}
+                  onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, subject: e.target.value })}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                />
               </div>
-              <p className="text-2xl font-black text-slate-900 dark:text-white">
-                {analytics?.bookingConversionRate !== undefined ? `${analytics.bookingConversionRate}%` : "—"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">Matches leading to paid student bookings</p>
-            </div>
-            <AdminMetricCard
-              loading={loadingAnalytics}
-              label="Response time"
-              value={analytics?.avgStudentResponseMinutes != null ? `${analytics.avgStudentResponseMinutes} min` : "—"}
-              detail="Notification to tutor offer"
-              icon={<Clock className="h-4 w-4 text-amber-600" />}
-            />
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem 0.9rem",
+                    borderRadius: "0.5rem",
+                    border: "none",
+                    background: "#0329b2",
+                    color: "#ffffff",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Apply Filter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnalyticsFilters(EMPTY_ANALYTICS_FILTERS);
+                    setAppliedAnalyticsFilters(EMPTY_ANALYTICS_FILTERS);
+                    setQuickDatePreset("all");
+                  }}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#475569",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
           </div>
 
-          {!loadingAnalytics && !analyticsError && analytics && !analytics.hasData && (
-            <AdminEmptyState title="No matching evaluations yet" description="Analytics will appear after eligible tutors are evaluated against live student requests." />
+          {analyticsError && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.6rem", padding: "0.85rem 1rem", color: "#991b1b", fontSize: "0.82rem" }}>
+              {analyticsError}
+            </div>
           )}
 
-          {/* Tier Breakdown & Marketplace Fairness */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Score Tier Distribution */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500" />
-                  Match Score Tier Distribution
-                </h3>
-                <span className="text-xs text-slate-400">All-Time Live Data</span>
+          {/* 5 High-Impact Metric KPI Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "1rem" }}>
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Match Evaluations</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#eff6ff", color: "#0329b2" }}><Layers size={16} /></span>
+              </div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#0f172a" }}>
+                {loadingAnalytics ? "..." : (analytics?.totalMatches ?? 0).toLocaleString()}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Across all live student requests</div>
+            </div>
+
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Avg Match Score</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#ecfdf5", color: "#059669" }}><Award size={16} /></span>
+              </div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#059669" }}>
+                {loadingAnalytics ? "..." : analytics?.avgMatchScore != null ? `${analytics.avgMatchScore}%` : "—"}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Target compatibility: &ge; 70%</div>
+            </div>
+
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Offer Conversion</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#f5f3ff", color: "#7c3aed" }}><TrendingUp size={16} /></span>
+              </div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#7c3aed" }}>
+                {loadingAnalytics ? "..." : `${analytics?.offerConversionRate ?? 0}%`}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Evaluations leading to formal bids</div>
+            </div>
+
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Booking Conversion</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#f0fdf4", color: "#16a34a" }}><CheckCircle2 size={16} /></span>
+              </div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#16a34a" }}>
+                {loadingAnalytics ? "..." : `${analytics?.bookingConversionRate ?? 0}%`}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Matches confirmed & scheduled</div>
+            </div>
+
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Response Time</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#fffbeb", color: "#d97706" }}><Clock size={16} /></span>
+              </div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#d97706" }}>
+                {loadingAnalytics ? "..." : analytics?.avgStudentResponseMinutes != null ? `${analytics.avgStudentResponseMinutes}m` : "—"}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Notification to tutor offer</div>
+            </div>
+          </div>
+
+          {/* If No Historical MatchLogs Yet: Show Engine Benchmark Banner */}
+          {!loadingAnalytics && !analyticsError && analytics && !analytics.hasData && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)",
+                border: "1px solid #bfdbfe",
+                borderRadius: "0.85rem",
+                padding: "1.5rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }} />
+                  <strong style={{ color: "#021550", fontSize: "0.95rem" }}>
+                    Algorithm Engine Ready · Real-Time Calculation Active
+                  </strong>
+                </div>
+                <p style={{ margin: 0, fontSize: "0.82rem", color: "#475569", maxWidth: "700px" }}>
+                  Historical logs record after progressive notifications are dispatched. You can immediately evaluate any live student request or custom requirement in the <strong>Interactive Match Simulator</strong>.
+                </p>
               </div>
 
-              <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab("simulator")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.55rem 1rem",
+                  borderRadius: "0.5rem",
+                  background: "#0329b2",
+                  color: "#ffffff",
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Run Match Simulation Now <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Tier Distribution & Algorithmic Trust Safeguards (Side-by-Side) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
+            {/* Score Tier Distribution */}
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Zap size={16} color="#d97706" />
+                  <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>Match Score Tier Distribution</strong>
+                </div>
+                <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Compatibility Bands</span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
                 <div>
-                  <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-emerald-600 dark:text-emerald-400">Excellent Match (&ge; 90%)</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
+                    <span style={{ color: "#059669" }}>Excellent Match (&ge; 90%)</span>
                     <span>{tierDist.excellent}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
                     <div
-                      className="h-full rounded-full bg-emerald-500 transition-[width] duration-200"
                       style={{
+                        height: "100%",
+                        borderRadius: "999px",
+                        background: "#059669",
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.excellent / totalMatchesCount) * 100) : 0}%`,
+                        transition: "width 250ms ease",
                       }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-blue-600 dark:text-blue-400">Great Match (80 - 89%)</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
+                    <span style={{ color: "#0284c7" }}>Great Match (80 - 89%)</span>
                     <span>{tierDist.great}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
                     <div
-                      className="h-full rounded-full bg-blue-500 transition-[width] duration-200"
                       style={{
+                        height: "100%",
+                        borderRadius: "999px",
+                        background: "#0284c7",
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.great / totalMatchesCount) * 100) : 0}%`,
+                        transition: "width 250ms ease",
                       }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-purple-600 dark:text-purple-400">Good Match (70 - 79%)</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
+                    <span style={{ color: "#7c3aed" }}>Good Match (70 - 79%)</span>
                     <span>{tierDist.good}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
                     <div
-                      className="h-full rounded-full bg-purple-500 transition-[width] duration-200"
                       style={{
+                        height: "100%",
+                        borderRadius: "999px",
+                        background: "#7c3aed",
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.good / totalMatchesCount) * 100) : 0}%`,
+                        transition: "width 250ms ease",
                       }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-amber-600 dark:text-amber-400">Fair Match (60 - 69%)</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
+                    <span style={{ color: "#d97706" }}>Fair Match (60 - 69%)</span>
                     <span>{tierDist.fair}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
                     <div
-                      className="h-full rounded-full bg-amber-500 transition-[width] duration-200"
                       style={{
+                        height: "100%",
+                        borderRadius: "999px",
+                        background: "#d97706",
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.fair / totalMatchesCount) * 100) : 0}%`,
+                        transition: "width 250ms ease",
                       }}
                     />
                   </div>
@@ -503,40 +760,40 @@ export default function AdminMatchingPage() {
               </div>
             </div>
 
-            {/* Principles & Safety Checks */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-blue-600" />
-                  Algorithm Fairness & Trust Rules
-                </h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold">
-                  Configured safeguards
+            {/* Algorithm Fairness & Trust Rules */}
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <ShieldCheck size={16} color="#0329b2" />
+                  <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>Algorithm Fairness & Trust Rules</strong>
+                </div>
+                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "#059669", background: "#ecfdf5", padding: "0.15rem 0.5rem", borderRadius: "999px" }}>
+                  Enforced
                 </span>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300">
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.78rem" }}>
+                <div style={{ display: "flex", gap: "0.6rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
+                  <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
-                    <strong className="text-slate-900 dark:text-white block">Zero Platform Revenue Bias</strong>
-                    Matches are scored strictly on student-tutor compatibility and quality, never to maximize platform fees.
+                    <strong style={{ color: "#0f172a", display: "block" }}>Zero Platform Revenue Bias</strong>
+                    <span style={{ color: "#64748b" }}>Matches are ranked purely on student-tutor capability and subject match, never to maximize platform fees.</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div style={{ display: "flex", gap: "0.6rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
+                  <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
-                    <strong className="text-slate-900 dark:text-white block">Home Tuition Police Verification Gate</strong>
-                    Tutors cannot receive home tuition match notifications or rank for home requests without verified police clearance.
+                    <strong style={{ color: "#0f172a", display: "block" }}>Home Tuition Police Verification Gate</strong>
+                    <span style={{ color: "#64748b" }}>Tutors cannot receive home tuition match waves without verified background checks.</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div style={{ display: "flex", gap: "0.6rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
+                  <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
-                    <strong className="text-slate-900 dark:text-white block">Bayesian Cold-Start Protection</strong>
-                    Prior rating (C = {config?.bayesian?.priorMean ?? "configured"}, m = {config?.bayesian?.minimumReviews ?? "configured"}) protects new tutors from sparse-data distortion while preserving student trust.
+                    <strong style={{ color: "#0f172a", display: "block" }}>Bayesian Cold-Start Protection</strong>
+                    <span style={{ color: "#64748b" }}>Prior rating shrinkage protects new tutors from sparse review distortions while maintaining student quality standards.</span>
                   </div>
                 </div>
               </div>
@@ -545,73 +802,85 @@ export default function AdminMatchingPage() {
         </div>
       )}
 
-      {/* TAB 2: MATCH SIMULATOR & DIAGNOSTICS */}
+      {/* ========================================================================= */}
+      {/* TAB 2: INTERACTIVE MATCH SIMULATOR & DIAGNOSTICS                         */}
+      {/* ========================================================================= */}
       {activeTab === "simulator" && (
-        <div id="matching-panel-simulator" role="tabpanel" aria-labelledby="matching-tab-simulator" className="space-y-6">
-          {/* Simulator Control Console */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {/* Simulation Control Console */}
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Play className="w-5 h-5 text-cyan-600 fill-cyan-600" />
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Play size={16} fill="#0329b2" color="#0329b2" />
                   Live Match Simulation & Diagnostics
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Evaluate smart matching against live requests or test custom parameters to verify eligibility, scoring breakdown, and explainability reasons.
+                </h3>
+                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                  Test compatibility algorithms against live requests or custom sandbox criteria.
                 </p>
               </div>
 
-              <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="tablist" aria-label="Simulation source">
+              {/* Mode Toggle */}
+              <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "0.5rem", padding: "0.25rem" }}>
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={simMode === "live"}
-                  aria-controls="simulation-live-panel"
                   onClick={() => setSimMode("live")}
-                  className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition-[background-color,color,box-shadow] duration-150 ${
-                    simMode === "live"
-                      ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "text-slate-600 dark:text-slate-400"
-                  }`}
+                  style={{
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "0.35rem",
+                    border: "none",
+                    background: simMode === "live" ? "#ffffff" : "transparent",
+                    color: simMode === "live" ? "#0329b2" : "#64748b",
+                    fontSize: "0.78rem",
+                    fontWeight: simMode === "live" ? 800 : 600,
+                    cursor: "pointer",
+                  }}
                 >
                   Live Student Request
                 </button>
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={simMode === "custom"}
-                  aria-controls="simulation-custom-panel"
                   onClick={() => setSimMode("custom")}
-                  className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition-[background-color,color,box-shadow] duration-150 ${
-                    simMode === "custom"
-                      ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "text-slate-600 dark:text-slate-400"
-                  }`}
+                  style={{
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "0.35rem",
+                    border: "none",
+                    background: simMode === "custom" ? "#ffffff" : "transparent",
+                    color: simMode === "custom" ? "#0329b2" : "#64748b",
+                    fontSize: "0.78rem",
+                    fontWeight: simMode === "custom" ? 800 : 600,
+                    cursor: "pointer",
+                  }}
                 >
                   Custom Test Sandbox
                 </button>
               </div>
             </div>
 
-            {/* Input Selection */}
             {simMode === "live" ? (
-              <div id="simulation-live-panel" role="tabpanel" className="space-y-3">
-                <label htmlFor="live-request" className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                  Select Active Student Request:
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
+                  Select Live Demand Request:
                 </label>
                 {loadingRequests ? (
-                  <div className="text-xs text-slate-500 py-3">Loading active requests...</div>
+                  <div style={{ fontSize: "0.8rem", color: "#64748b" }}>Scanning open requests...</div>
                 ) : liveRequests.length === 0 ? (
-                  <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 text-xs border border-amber-200 dark:border-amber-900">
-                    No active student requests found currently. Switch to <strong>Custom Test Sandbox</strong> to simulate arbitrary requirements.
+                  <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.5rem", padding: "0.85rem", fontSize: "0.8rem", color: "#92400e" }}>
+                    No active student requests currently awaiting matching. Switch to <strong>Custom Test Sandbox</strong> to simulate arbitrary requirements.
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
                     <select
-                      id="live-request"
                       value={selectedRequestId}
                       onChange={(e) => setSelectedRequestId(e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                      style={{
+                        flex: "1 1 320px",
+                        padding: "0.55rem 0.75rem",
+                        borderRadius: "0.5rem",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "0.82rem",
+                        background: "#ffffff",
+                      }}
                     >
                       {liveRequests.map((req) => (
                         <option key={req._id} value={req._id}>
@@ -624,181 +893,153 @@ export default function AdminMatchingPage() {
                       type="button"
                       onClick={handleRunSimulation}
                       disabled={simulating || !selectedRequestId}
-                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow transition-[background-color,box-shadow,transform] duration-150 disabled:opacity-50"
+                      style={{
+                        padding: "0.55rem 1.25rem",
+                        borderRadius: "0.5rem",
+                        background: "#0329b2",
+                        color: "#ffffff",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        fontWeight: 800,
+                        cursor: simulating ? "not-allowed" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                      }}
                     >
-                      <Zap className="w-4 h-4" />
+                      <Zap size={15} />
                       {simulating ? "Evaluating..." : "Run Match Evaluation"}
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div id="simulation-custom-panel" role="tabpanel" className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <label htmlFor="simulation-subject" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Subject</label>
-                    <input
-                      id="simulation-subject"
-                      type="text"
-                      value={customRequest.subject}
-                      onChange={(e) => setCustomRequest({ ...customRequest, subject: e.target.value })}
-                      placeholder="e.g. Mathematics, Physics..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    />
-                  </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", alignItems: "end" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Subject</label>
+                  <input
+                    type="text"
+                    value={customRequest.subject}
+                    onChange={(e) => setCustomRequest({ ...customRequest, subject: e.target.value })}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                  />
+                </div>
 
-                  <div>
-                    <label htmlFor="simulation-level" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Level</label>
-                    <select
-                      id="simulation-level"
-                      value={customRequest.level}
-                      onChange={(e) => setCustomRequest({ ...customRequest, level: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    >
-                      <option value="Primary">Primary (1-5)</option>
-                      <option value="Middle">Middle (6-8)</option>
-                      <option value="Matric">Matric</option>
-                      <option value="Intermediate">Intermediate / FSc</option>
-                      <option value="O-Level">O-Level (Cambridge)</option>
-                      <option value="A-Level">A-Level (Cambridge)</option>
-                      <option value="University">University</option>
-                    </select>
-                  </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Academic Level</label>
+                  <select
+                    value={customRequest.level}
+                    onChange={(e) => setCustomRequest({ ...customRequest, level: e.target.value })}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                  >
+                    <option value="Primary">Primary (1-5)</option>
+                    <option value="Middle">Middle (6-8)</option>
+                    <option value="Matric">Matric</option>
+                    <option value="Intermediate">Intermediate / FSc</option>
+                    <option value="O-Level">O-Level (Cambridge)</option>
+                    <option value="A-Level">A-Level (Cambridge)</option>
+                    <option value="University">University</option>
+                  </select>
+                </div>
 
-                  <div>
-                    <label htmlFor="simulation-mode" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Teaching Mode</label>
-                    <select
-                      id="simulation-mode"
-                      value={customRequest.teachingMode}
-                      onChange={(e) => setCustomRequest({ ...customRequest, teachingMode: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    >
-                      <option value="online">Online Worldwide</option>
-                      <option value="in-person">In-Person Home Tuition</option>
-                    </select>
-                  </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Teaching Mode</label>
+                  <select
+                    value={customRequest.teachingMode}
+                    onChange={(e) => setCustomRequest({ ...customRequest, teachingMode: e.target.value })}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                  >
+                    <option value="online">Online Worldwide</option>
+                    <option value="in-person">In-Person Home Tuition</option>
+                  </select>
+                </div>
 
-                  <div>
-                    <label htmlFor="simulation-city" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">City (for Home Mode)</label>
-                    <input
-                      id="simulation-city"
-                      type="text"
-                      value={customRequest.city}
-                      onChange={(e) => setCustomRequest({ ...customRequest, city: e.target.value })}
-                      placeholder="e.g. Lahore, Karachi"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    />
-                  </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>City (for Home)</label>
+                  <input
+                    type="text"
+                    value={customRequest.city}
+                    onChange={(e) => setCustomRequest({ ...customRequest, city: e.target.value })}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                  />
+                </div>
 
-                  <div>
-                    <label htmlFor="simulation-budget" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Student Budget</label>
-                    <input
-                      id="simulation-budget"
-                      type="number"
-                      value={customRequest.budget}
-                      onChange={(e) => setCustomRequest({ ...customRequest, budget: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    />
-                  </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Student Budget</label>
+                  <input
+                    type="number"
+                    value={customRequest.budget}
+                    onChange={(e) => setCustomRequest({ ...customRequest, budget: Number(e.target.value) })}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                  />
+                </div>
 
-                  <div>
-                    <label htmlFor="simulation-pricing-unit" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Pricing Unit</label>
-                    <select
-                      id="simulation-pricing-unit"
-                      value={customRequest.pricingUnit}
-                      onChange={(e) => setCustomRequest({ ...customRequest, pricingUnit: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    >
-                      <option value="hour">Per Hour</option>
-                      <option value="month">Per Month (12 sessions)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="simulation-currency" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Currency</label>
-                    <select
-                      id="simulation-currency"
-                      value={customRequest.currency}
-                      onChange={(e) => setCustomRequest({ ...customRequest, currency: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
-                    >
-                      <option value="PKR">PKR (Rs.)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="AED">AED</option>
-                      <option value="SAR">SAR</option>
-                      <option value="GBP">GBP (£)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={handleRunSimulation}
-                      disabled={simulating}
-                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow transition-[background-color,box-shadow,transform] duration-150 disabled:opacity-50"
-                    >
-                      <Zap className="w-4 h-4" />
-                      {simulating ? "Evaluating..." : "Run Evaluation"}
-                    </button>
-                  </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleRunSimulation}
+                    disabled={simulating}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      background: "#0329b2",
+                      color: "#ffffff",
+                      border: "none",
+                      fontSize: "0.8rem",
+                      fontWeight: 800,
+                      cursor: simulating ? "not-allowed" : "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+                    }}
+                  >
+                    <Zap size={14} />
+                    {simulating ? "Evaluating..." : "Run Evaluation"}
+                  </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Simulation Output */}
+          {/* Simulation Result Candidate Display */}
           {simulationResult && (
-            <div className="space-y-6">
-              {/* Summary Stats Header */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Eligible Pool</span>
-                  <span className="text-xl font-black text-slate-900 dark:text-white">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {/* Telemetry Bar */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
+                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Eligible Candidates</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a", marginTop: "0.2rem" }}>
                     {simulationResult.totalEligible} tutors
-                  </span>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Ranked Matches</span>
-                  <span className="text-xl font-black text-blue-600 dark:text-blue-400">
-                    {simulationResult.totalRanked} tutors
-                  </span>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">High Compatibility (&ge;80%)</span>
-                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                    {(simulationResult.tierSummary?.excellent || 0) + (simulationResult.tierSummary?.great || 0)} tutors
-                  </span>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Operations Action</span>
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Dispatch Notification Wave</span>
                   </div>
-                  {simMode === "live" && (
-                    <button
-                      type="button"
-                      onClick={() => setDispatchTarget(selectedRequestId)}
-                      disabled={dispatchingWave}
-                      className="min-h-11 min-w-11 rounded-xl bg-indigo-600 p-2 text-white shadow transition-[background-color,box-shadow,transform] duration-150 hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
-                      aria-label="Dispatch tutor notification wave"
-                      title="Review tutor notification wave"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  )}
+                </div>
+
+                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Ranked Matches</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0329b2", marginTop: "0.2rem" }}>
+                    {simulationResult.totalRanked} tutors
+                  </div>
+                </div>
+
+                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>High Compatibility (&ge;80%)</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#059669", marginTop: "0.2rem" }}>
+                    {(simulationResult.tierSummary?.excellent || 0) + (simulationResult.tierSummary?.great || 0)} tutors
+                  </div>
                 </div>
               </div>
 
-              {/* Match Cards List */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Award className="w-4 h-4 text-emerald-600" />
+              {/* Candidate Cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Award size={18} color="#059669" />
                   Ranked Tutor Candidates ({simulationResult.matches?.length || 0})
                 </h3>
 
                 {simulationResult.matches?.length === 0 ? (
-                  <div className="py-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 text-xs">
-                    No tutors met the hard eligibility criteria (check subject, city for home mode, or police verification requirements).
+                  <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "2.5rem", textAlign: "center", color: "#64748b", fontSize: "0.82rem" }}>
+                    No tutors met the hard eligibility criteria (check subject match, city scope, or police clearance requirements).
                   </div>
                 ) : (
                   simulationResult.matches.map((match: any, index: number) => {
@@ -809,101 +1050,78 @@ export default function AdminMatchingPage() {
                     return (
                       <div
                         key={tutor._id || index}
-                        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:border-blue-300 dark:hover:border-blue-800 transition-[border-color,box-shadow] duration-150"
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.75rem",
+                          padding: "1.25rem",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          flexWrap: "wrap",
+                          gap: "1.25rem",
+                        }}
                       >
-                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                          {/* Tutor Identity */}
-                          <div className="flex items-start gap-3.5 flex-1">
-                            <span className="font-black text-slate-300 dark:text-slate-700 text-lg w-6 shrink-0 mt-1">
-                              #{index + 1}
-                            </span>
-
-                            <AvatarImage src={tutor.avatar} alt={`${tutor.name || "Tutor"} profile`} name={tutor.name || "Tutor"} size={48} />
-
-                            <div className="space-y-1 flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Link
-                                  href={tutorProfileHref(tutor)}
-                                  target="_blank"
-                                  className="font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors flex items-center gap-1 text-sm"
-                                >
-                                  {tutor.name}
-                                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                                </Link>
-
-                                {tutor.policeCertificateVerified && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
-                                    <ShieldCheck className="w-3 h-3" /> Police Verified
-                                  </span>
-                                )}
-
-                                {match.isColdStartExploration && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-xs font-bold">
-                                    🌟 Rising Explorer
-                                  </span>
-                                )}
-
-                                <MatchScoreBadge
-                                  score={score}
-                                  tier={tier}
-                                  reasons={match.reasons}
-                                  breakdown={match.scoreBreakdown}
-                                  showBreakdown={true}
-                                />
-                              </div>
-
-                              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-                                <span>📍 {tutor.city || "Pakistan"}</span>
-                                <span>•</span>
-                                <span>💼 {tutor.experience ? `${tutor.experience} yrs exp` : "1 yr exp"}</span>
-                                <span>•</span>
-                                <span>★ {tutor.averageRating ? tutor.averageRating.toFixed(1) : "New (4.85)"}</span>
-                                <span>•</span>
-                                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                  {tutor.currency || "PKR"} {tutor.hourlyRate ? tutor.hourlyRate.toLocaleString() : "2,500"}/hr
+                        {/* Tutor Info */}
+                        <div style={{ display: "flex", gap: "1rem", flex: "1 1 340px" }}>
+                          <span style={{ fontSize: "1.2rem", fontWeight: 900, color: "#cbd5e1", width: "28px" }}>
+                            #{index + 1}
+                          </span>
+                          <AvatarImage src={tutor.avatar} alt={tutor.name || "Tutor"} name={tutor.name || "Tutor"} size={48} />
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                              <Link
+                                href={tutorProfileHref(tutor)}
+                                target="_blank"
+                                style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem", textDecoration: "none" }}
+                              >
+                                {tutor.name}
+                              </Link>
+                              {tutor.policeCertificateVerified && (
+                                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "#059669", background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "0.1rem 0.4rem", borderRadius: "0.3rem" }}>
+                                  ✓ Police Verified
                                 </span>
-                              </div>
-
-                              {tutor.education && tutor.education.length > 0 && (
-                                <p className="text-xs text-slate-600 dark:text-slate-400">
-                                  🎓 {tutor.education[0].degree} {tutor.education[0].field ? `in ${tutor.education[0].field}` : ""} ({tutor.education[0].institution || "University"})
-                                </p>
                               )}
-
-                              {/* Explainability Reasons */}
-                              {match.reasons && match.reasons.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                                  {match.reasons.map((r: string, i: number) => (
-                                    <span
-                                      key={i}
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300"
-                                    >
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                                      {r}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
+                              <MatchScoreBadge score={score} tier={tier} />
                             </div>
-                          </div>
 
-                          {/* Score Breakdown Radar/Pills */}
-                          {match.scoreBreakdown && (
-                            <div className="w-full md:w-64 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1.5 shrink-0 text-xs">
-                              <span className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                                Point Breakdown:
-                              </span>
-                              {Object.entries(match.scoreBreakdown).map(([k, v]) => (
-                                <div key={k} className="flex justify-between items-center text-slate-500">
-                                  <span className="capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
-                                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                                    {Number(v)} pts
+                            <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
+                              <span>📍 {tutor.city || "Pakistan"}</span>
+                              <span style={{ margin: "0 0.4rem" }}>•</span>
+                              <span>💼 {tutor.experience ? `${tutor.experience} yrs exp` : "1 yr exp"}</span>
+                              <span style={{ margin: "0 0.4rem" }}>•</span>
+                              <span>★ {tutor.averageRating ? tutor.averageRating.toFixed(1) : "New (4.85)"}</span>
+                              <span style={{ margin: "0 0.4rem" }}>•</span>
+                              <strong style={{ color: "#0f172a" }}>{tutor.currency || "PKR"} {tutor.hourlyRate ? tutor.hourlyRate.toLocaleString() : "2,500"}/hr</strong>
+                            </div>
+
+                            {/* Reasons */}
+                            {match.reasons && match.reasons.length > 0 && (
+                              <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                                {match.reasons.map((r: string, i: number) => (
+                                  <span key={i} style={{ fontSize: "0.7rem", color: "#334155", background: "#f1f5f9", padding: "0.15rem 0.5rem", borderRadius: "0.3rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                                    <CheckCircle2 size={12} color="#059669" />
+                                    {r}
                                   </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Breakdown Box */}
+                        {match.scoreBreakdown && (
+                          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "0.5rem", padding: "0.75rem", fontSize: "0.74rem", minWidth: "220px" }}>
+                            <strong style={{ display: "block", marginBottom: "0.35rem", color: "#0f172a" }}>Score Breakdown</strong>
+                            {Object.entries(match.scoreBreakdown).map(([k, v]) => (
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", color: "#64748b", margin: "0.15rem 0" }}>
+                                <span style={{ textTransform: "capitalize" }}>{k.replace(/([A-Z])/g, " $1")}</span>
+                                <strong style={{ color: "#0f172a" }}>{Number(v)} pts</strong>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })
@@ -914,43 +1132,60 @@ export default function AdminMatchingPage() {
         </div>
       )}
 
-      {/* TAB 3: ALGORITHM WEIGHTS */}
+      {/* ========================================================================= */}
+      {/* TAB 3: ALGORITHM WEIGHTS & CALIBRATION                                    */}
+      {/* ========================================================================= */}
       {activeTab === "weights" && (
-        <div id="matching-panel-weights" role="tabpanel" aria-labelledby="matching-tab-weights" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          {configError && <AdminErrorState message={configError} onRetry={fetchConfig} />}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {configError && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", padding: "0.85rem", color: "#991b1b", fontSize: "0.82rem" }}>
+              {configError}
+            </div>
+          )}
+
+          {/* Top Control */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", paddingBottom: "1rem", borderBottom: "1px solid #e2e8f0" }}>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-blue-600" />
-                Live Weight Configuration
+              <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Sliders size={18} color="#0329b2" />
+                Live Algorithm Weight Calibration
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Review scoring parameters for Online and Home Tuition. Each mode must total exactly 100 points.
+              <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                Each matching mode must sum to exactly 100 points across factors.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Mode Toggle */}
-              <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "0.5rem", padding: "0.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setSelectedMode("online")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
-                    selectedMode === "online"
-                      ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "text-slate-600 dark:text-slate-400"
-                  }`}
+                  style={{
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "0.35rem",
+                    border: "none",
+                    background: selectedMode === "online" ? "#ffffff" : "transparent",
+                    color: selectedMode === "online" ? "#0329b2" : "#64748b",
+                    fontSize: "0.78rem",
+                    fontWeight: selectedMode === "online" ? 800 : 600,
+                    cursor: "pointer",
+                  }}
                 >
                   Online Mode
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedMode("home")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[background-color,color,box-shadow] duration-150 ${
-                    selectedMode === "home"
-                      ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "text-slate-600 dark:text-slate-400"
-                  }`}
+                  style={{
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "0.35rem",
+                    border: "none",
+                    background: selectedMode === "home" ? "#ffffff" : "transparent",
+                    color: selectedMode === "home" ? "#0329b2" : "#64748b",
+                    fontSize: "0.78rem",
+                    fontWeight: selectedMode === "home" ? 800 : 600,
+                    cursor: "pointer",
+                  }}
                 >
                   Home Tuition Mode
                 </button>
@@ -960,25 +1195,50 @@ export default function AdminMatchingPage() {
                 type="button"
                 onClick={() => setConfirmingConfig(true)}
                 disabled={savingConfig || !canConfigure || currentWeightTotal !== 100}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-[background-color,box-shadow,transform] duration-150 disabled:opacity-50"
-                title={!canConfigure ? "You do not have permission to change matching weights" : currentWeightTotal !== 100 ? "Weights must total exactly 100 points" : undefined}
+                style={{
+                  padding: "0.5rem 1.1rem",
+                  borderRadius: "0.5rem",
+                  background: currentWeightTotal === 100 ? "#0329b2" : "#94a3b8",
+                  color: "#ffffff",
+                  border: "none",
+                  fontSize: "0.8rem",
+                  fontWeight: 800,
+                  cursor: currentWeightTotal === 100 ? "pointer" : "not-allowed",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                }}
               >
-                <Save className="w-4 h-4" />
-                {savingConfig ? "Saving..." : canConfigure ? "Save Changes" : "Read only"}
+                <Save size={14} />
+                Save Weights
               </button>
             </div>
           </div>
 
-          <div className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold ${currentWeightTotal === 100 ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`} aria-live="polite">
-            <span>{selectedMode === "online" ? "Online" : "Home tuition"} weight total</span>
-            <span>{currentWeightTotal} / 100 points</span>
+          {/* Point Counter Meter */}
+          <div
+            style={{
+              padding: "0.75rem 1rem",
+              borderRadius: "0.5rem",
+              background: currentWeightTotal === 100 ? "#ecfdf5" : "#fffbeb",
+              border: `1px solid ${currentWeightTotal === 100 ? "#a7f3d0" : "#fde68a"}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: "0.85rem",
+              fontWeight: 800,
+              color: currentWeightTotal === 100 ? "#065f46" : "#92400e",
+            }}
+          >
+            <span>{selectedMode === "online" ? "Online Tutoring" : "Home Tuition"} Weight Sum</span>
+            <span>{currentWeightTotal} / 100 Points {currentWeightTotal === 100 ? "✓ Calibrated" : "⚠️ Must Total 100"}</span>
           </div>
 
-          {/* Weight Sliders */}
+          {/* Sliders Grid */}
           {loadingConfig ? (
-            <div className="py-12 text-center text-slate-500" role="status">Loading configuration…</div>
+            <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>Loading algorithm configuration...</div>
           ) : currentWeights ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
               {Object.entries(currentWeights).map(([key, val]) => {
                 const numericVal = Number(val) || 0;
                 const readableLabel = key
@@ -988,29 +1248,31 @@ export default function AdminMatchingPage() {
                 return (
                   <div
                     key={key}
-                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-2"
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.6rem",
+                      padding: "1rem",
+                    }}
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{readableLabel}</span>
-                      <span className="font-black px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#0f172a" }}>{readableLabel}</span>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 900, color: "#0329b2", background: "#eff6ff", padding: "0.15rem 0.5rem", borderRadius: "0.3rem" }}>
                         {numericVal} pts
                       </span>
                     </div>
 
                     <input
-                      aria-label={`${readableLabel} matching weight`}
                       type="range"
                       min="0"
                       max="40"
                       step="1"
                       value={numericVal}
-                      onChange={(e) =>
-                        handleWeightChange(selectedMode, key, Number(e.target.value))
-                      }
-                      className="w-full accent-blue-600 cursor-pointer"
+                      onChange={(e) => handleWeightChange(selectedMode, key, Number(e.target.value))}
+                      style={{ width: "100%", accentColor: "#0329b2", cursor: "pointer" }}
                     />
 
-                    <div className="flex justify-between text-xs text-slate-500">
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#94a3b8", marginTop: "0.25rem" }}>
                       <span>0 pts (Disabled)</span>
                       <span>40 pts (Dominant)</span>
                     </div>
@@ -1020,51 +1282,152 @@ export default function AdminMatchingPage() {
             </div>
           ) : null}
 
-          {/* Footer information */}
-          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex items-start gap-3 text-xs text-blue-900 dark:text-blue-200">
-            <AlertCircle className="w-4 h-4 shrink-0 text-blue-600 mt-0.5" />
-            <div>
-              <strong>Instant Cache Invalidation:</strong> Updates immediately flush the memory cache and take effect on all new student requests, offer rankings, and progressive tutor notification waves without requiring server restarts.
-            </div>
-          </div>
-
-          <section aria-labelledby="configuration-history-title" className="space-y-3 border-t border-slate-200 pt-6 dark:border-slate-800">
-            <div>
-              <h2 id="configuration-history-title" className="text-base font-bold text-slate-950 dark:text-white">Configuration history</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Recent audited revisions can be restored without deleting newer history.</p>
-            </div>
+          {/* Revision History */}
+          <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "1.25rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <History size={16} color="#0329b2" />
+              Algorithm Calibration History & Audit
+            </h3>
             {configHistory.length === 0 ? (
-              <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">No configuration changes have been recorded yet.</p>
+              <p style={{ fontSize: "0.8rem", color: "#64748b" }}>No changes recorded yet.</p>
             ) : (
-              <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-                {configHistory.slice(0, 8).map((entry) => (
-                  <div key={entry._id} className="flex flex-col gap-3 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-900">
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {configHistory.slice(0, 6).map((entry) => (
+                  <div
+                    key={entry._id}
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.5rem",
+                      padding: "0.75rem 1rem",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "0.8rem",
+                    }}
+                  >
                     <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">Revision {entry.revision}: {entry.changeReason}</p>
-                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{entry.changedBy?.name || "Administrator"} · {new Date(entry.createdAt).toLocaleString()}</p>
+                      <strong style={{ color: "#0f172a" }}>Revision {entry.revision}: {entry.changeReason}</strong>
+                      <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.15rem" }}>
+                        {entry.changedBy?.name || "Admin"} · {new Date(entry.createdAt).toLocaleString()}
+                      </div>
                     </div>
-                    {canConfigure && <button type="button" onClick={() => setRollbackTarget({ id: entry._id, revision: entry.revision })} className="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Restore this revision</button>}
+
+                    {canConfigure && (
+                      <button
+                        type="button"
+                        onClick={() => setRollbackTarget({ id: entry._id, revision: entry.revision })}
+                        style={{
+                          padding: "0.35rem 0.75rem",
+                          borderRadius: "0.4rem",
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#0329b2",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Restore Revision
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-          </section>
+          </div>
 
-          <AdminDialog open={confirmingConfig} onClose={() => !savingConfig && setConfirmingConfig(false)} title="Confirm matching configuration" description="This immediately changes ranking for new requests. The current version remains available in history for rollback." footer={<><button type="button" onClick={() => setConfirmingConfig(false)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button><button type="button" onClick={handleSaveConfig} disabled={savingConfig || changeReason.trim().length < 8} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{savingConfig ? "Saving…" : "Confirm and activate"}</button></>}>
-            <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800"><div><dt className="text-slate-500">Mode reviewed</dt><dd className="font-semibold">{selectedMode === "online" ? "Online" : "Home tuition"}</dd></div><div><dt className="text-slate-500">Weight total</dt><dd className="font-semibold">{currentWeightTotal} / 100</dd></div></dl>
-            <label htmlFor="matching-change-reason" className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-200">Reason for change</label>
-            <textarea id="matching-change-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Describe why these weights are changing" />
+          {/* Confirm Save Modal */}
+          <AdminDialog
+            open={confirmingConfig}
+            onClose={() => !savingConfig && setConfirmingConfig(false)}
+            title="Confirm Algorithm Calibration"
+            description="Changes take effect immediately across all live request matching and offer ranking."
+            footer={
+              <>
+                <button type="button" onClick={() => setConfirmingConfig(false)} style={{ padding: "0.5rem 0.9rem", borderRadius: "0.4rem", border: "1px solid #cbd5e1", background: "#ffffff", fontSize: "0.8rem", fontWeight: 700 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  disabled={savingConfig || changeReason.trim().length < 8}
+                  style={{
+                    padding: "0.5rem 1.1rem",
+                    borderRadius: "0.5rem",
+                    background: "#0329b2",
+                    color: "#ffffff",
+                    border: "none",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    cursor: savingConfig || changeReason.trim().length < 8 ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {savingConfig ? "Saving..." : "Confirm and Activate"}
+                </button>
+              </>
+            }
+          >
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: "0.3rem" }}>
+                Reason for Calibration (Required for Audit Trail, min 8 chars):
+              </label>
+              <textarea
+                value={changeReason}
+                onChange={(e) => setChangeReason(e.target.value)}
+                rows={3}
+                placeholder="Explain the operational rationale (e.g. increase Bayesian review weighting for Lahore home tutors)..."
+                style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+              />
+            </div>
           </AdminDialog>
 
-          <AdminDialog open={Boolean(rollbackTarget)} onClose={() => !rollingBack && setRollbackTarget(null)} title={`Restore revision ${rollbackTarget?.revision || ""}`} description="This creates a new audited revision from the selected snapshot; newer history will not be deleted." footer={<><button type="button" onClick={() => setRollbackTarget(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button><button type="button" onClick={() => rollbackTarget && handleRollbackConfig(rollbackTarget.id, rollbackTarget.revision)} disabled={rollingBack || rollbackReason.trim().length < 8} className="min-h-11 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{rollingBack ? "Restoring…" : "Confirm rollback"}</button></>}>
-            <label htmlFor="matching-rollback-reason" className="block text-sm font-semibold text-slate-800 dark:text-slate-200">Reason for rollback</label>
-            <textarea id="matching-rollback-reason" value={rollbackReason} onChange={(event) => setRollbackReason(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Explain why this revision should be restored" />
+          {/* Rollback Modal */}
+          <AdminDialog
+            open={Boolean(rollbackTarget)}
+            onClose={() => !rollingBack && setRollbackTarget(null)}
+            title={`Restore Algorithm Revision ${rollbackTarget?.revision || ""}`}
+            description="Creates a new audited revision from the snapshot."
+            footer={
+              <>
+                <button type="button" onClick={() => setRollbackTarget(null)} style={{ padding: "0.5rem 0.9rem", borderRadius: "0.4rem", border: "1px solid #cbd5e1", background: "#ffffff", fontSize: "0.8rem", fontWeight: 700 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => rollbackTarget && handleRollbackConfig(rollbackTarget.id, rollbackTarget.revision)}
+                  disabled={rollingBack || rollbackReason.trim().length < 8}
+                  style={{
+                    padding: "0.5rem 1.1rem",
+                    borderRadius: "0.5rem",
+                    background: "#0329b2",
+                    color: "#ffffff",
+                    border: "none",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    cursor: rollingBack || rollbackReason.trim().length < 8 ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {rollingBack ? "Restoring..." : "Confirm Rollback"}
+                </button>
+              </>
+            }
+          >
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: "0.3rem" }}>
+                Reason for Rollback (Required for Audit Trail):
+              </label>
+              <textarea
+                value={rollbackReason}
+                onChange={(e) => setRollbackReason(e.target.value)}
+                rows={3}
+                placeholder="Describe why previous calibration is being restored..."
+                style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+              />
+            </div>
           </AdminDialog>
         </div>
       )}
-      <AdminDialog open={Boolean(dispatchTarget)} onClose={() => !dispatchingWave && setDispatchTarget(null)} title="Dispatch tutor notifications?" description="This operational action immediately sends a new matching notification wave for the selected live request. It does not change the request or accept any offer." footer={<><button type="button" onClick={() => setDispatchTarget(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold">Cancel</button><button type="button" onClick={() => dispatchTarget && handleDispatchNotificationWave(dispatchTarget)} disabled={dispatchingWave} className="min-h-11 rounded-xl bg-indigo-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{dispatchingWave ? "Dispatching…" : "Dispatch wave"}</button></>}>
-        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Only eligible tutors are notified. This action is recorded in the administrative audit trail.</p>
-      </AdminDialog>
     </div>
   );
 }

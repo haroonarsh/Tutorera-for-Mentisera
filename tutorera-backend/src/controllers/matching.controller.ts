@@ -190,7 +190,18 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
       matchFilter.request = { $in: requestIds };
     }
 
-    const [totalMatches, notificationTier1, offersReceived, offersAccepted, bookingsCompleted, tierCounts, avgScoreAgg, responseTimeAgg] = await Promise.all([
+    const [
+      totalMatches,
+      notificationTier1,
+      offersReceived,
+      offersAccepted,
+      bookingsCompleted,
+      tierCounts,
+      avgScoreAgg,
+      responseTimeAgg,
+      activeRequestsCount,
+      verifiedTutorsCount,
+    ] = await Promise.all([
       MatchLog.countDocuments(matchFilter),
       MatchLog.countDocuments({ ...matchFilter, notificationTier: 1 }),
       MatchLog.countDocuments({ ...matchFilter, offerReceivedAt: { $exists: true } }),
@@ -199,6 +210,8 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
       MatchLog.aggregate([{ $match: matchFilter }, { $group: { _id: "$tier", count: { $sum: 1 }, avgScore: { $avg: "$score" } } }]),
       MatchLog.aggregate([{ $match: matchFilter }, { $group: { _id: null, avgScore: { $avg: "$score" } } }]),
       MatchLog.aggregate([{ $match: { ...matchFilter, notificationSentAt: { $type: "date" }, offerReceivedAt: { $type: "date" } } }, { $project: { minutes: { $divide: [{ $subtract: ["$offerReceivedAt", "$notificationSentAt"] }, 60000] } } }, { $match: { minutes: { $gte: 0 } } }, { $group: { _id: null, average: { $avg: "$minutes" } } }]),
+      Request.countDocuments({ status: { $in: ["open", "published", "receiving_offers"] } }),
+      TutorProfile.countDocuments({ isApproved: true }),
     ]);
 
 
@@ -237,6 +250,9 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
         avgStudentResponseMinutes,
         generatedAt: new Date().toISOString(),
         hasData: totalMatches > 0,
+        activeRequestsCount,
+        verifiedTutorsCount,
+        engineStatus: "ONLINE_CALIBRATED",
         filters: { dateFrom, dateTo, mode, algorithmVersion, countryCode, city, subject },
         tierDistribution,
 
