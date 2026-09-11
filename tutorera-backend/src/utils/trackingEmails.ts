@@ -23,7 +23,7 @@ export const applicationSubmittedEmail = (
   tutorName: string,
   args: CtaArgs
 ) => {
-  const subject = `TUTORERA® — Your application ${args.applicationId} has been received`;
+  const subject = `Your application ${args.applicationId} has been received - TUTORERA`;
   const innerHtml = `
     <h2 style="color:#1a1a2e;margin:0 0 12px;">We've received your application ✅</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -35,7 +35,7 @@ export const applicationSubmittedEmail = (
 };
 
 export const educationalDocumentsVerifiedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Educational documents verified";
+  const subject = "Educational documents verified - TUTORERA";
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">Educational documents verified ✅</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -46,7 +46,7 @@ export const educationalDocumentsVerifiedEmail = (tutorName: string, args: CtaAr
 };
 
 export const educationalDocumentsRejectedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Educational documents need attention";
+  const subject = "Educational documents need attention - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">Educational documents need attention</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -61,7 +61,7 @@ export const educationalDocumentsRejectedEmail = (tutorName: string, reason: str
 };
 
 export const cnicVerifiedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — ID verification complete";
+  const subject = "ID verification complete - TUTORERA";
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">CNIC verification complete 🛡️</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -72,7 +72,7 @@ export const cnicVerifiedEmail = (tutorName: string, args: CtaArgs) => {
 };
 
 export const cnicRejectedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — ID verification needs attention";
+  const subject = "ID verification needs attention - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">CNIC verification needs attention</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -87,7 +87,7 @@ export const cnicRejectedEmail = (tutorName: string, reason: string, args: CtaAr
 };
 
 export const demoVideoApprovedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Your demo video has been approved";
+  const subject = "Your demo video has been approved - TUTORERA";
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">Demo video approved 🎬</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -98,7 +98,7 @@ export const demoVideoApprovedEmail = (tutorName: string, args: CtaArgs) => {
 };
 
 export const demoVideoRejectedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Demo video needs to be re-recorded";
+  const subject = "Demo video needs to be re-recorded - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">Demo video needs to be re-recorded</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -113,7 +113,7 @@ export const demoVideoRejectedEmail = (tutorName: string, reason: string, args: 
 };
 
 export const policeVerifiedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Police verification complete";
+  const subject = "Police verification complete - TUTORERA";
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">Police verification approved 🛡️</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -124,7 +124,7 @@ export const policeVerifiedEmail = (tutorName: string, args: CtaArgs) => {
 };
 
 export const policeRejectedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Police verification needs attention";
+  const subject = "Police verification needs attention - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">Police verification needs attention</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -139,7 +139,7 @@ export const policeRejectedEmail = (tutorName: string, reason: string, args: Cta
 };
 
 export const marketplaceActivatedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "🎉 You're live on the TUTORERA® marketplace";
+  const subject = "You're live on the marketplace - TUTORERA";
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">You're live on the TUTORERA® marketplace 🚀</h2>
     <p style="color:#374151;">Congratulations, ${escapeHtml(tutorName)}! Your tutor profile is now active on the TUTORERA® marketplace. You may now receive tutoring opportunities and submit offers.</p>
@@ -149,7 +149,7 @@ export const marketplaceActivatedEmail = (tutorName: string, args: CtaArgs) => {
 };
 
 export const marketplaceDeactivatedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Marketplace visibility paused";
+  const subject = "Marketplace visibility paused - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">Marketplace visibility paused</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -161,7 +161,7 @@ export const marketplaceDeactivatedEmail = (tutorName: string, reason: string, a
 };
 
 export const homeTuitionActivatedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Home tuition cleared";
+  const subject = "Home tuition cleared - TUTORERA";
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">Home tuition approved 🏠</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -172,7 +172,7 @@ export const homeTuitionActivatedEmail = (tutorName: string, args: CtaArgs) => {
 };
 
 export const homeTuitionDeactivatedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Home tuition paused";
+  const subject = "Home tuition paused - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">Home tuition paused</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -184,7 +184,7 @@ export const homeTuitionDeactivatedEmail = (tutorName: string, reason: string, a
 };
 
 export const profileSuspendedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Your profile has been suspended";
+  const subject = "Your profile has been suspended - TUTORERA";
   const innerHtml = `
     <h2 style="color:#dc2626;margin:0 0 12px;">Your profile has been suspended</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -196,7 +196,7 @@ export const profileSuspendedEmail = (tutorName: string, reason: string, args: C
 };
 
 export const reVerificationRequiredEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "TUTORERA® — Re-verification required";
+  const subject = "Re-verification required - TUTORERA";
   const innerHtml = `
     <h2 style="color:#d97706;margin:0 0 12px;">Re-verification required</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -211,7 +211,7 @@ export const trackingWelcomeEmail = (
   tutorName: string,
   args: CtaArgs & { trackingUrl: string }
 ) => {
-  const subject = `TUTORERA® — Your tutor application ${args.applicationId} is being tracked`;
+  const subject = `Your tutor application ${args.applicationId} is being tracked - TUTORERA`;
   const innerHtml = `
     <h2 style="color:#1a1a2e;margin:0 0 12px;">Application received ✅</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
@@ -231,7 +231,7 @@ export const trackingWelcomeEmail = (
 };
 
 export const documentResubmittedEmail = (tutorName: string, documentType: string, args: CtaArgs) => {
-  const subject = `TUTORERA® — ${documentType} re-submitted for review`;
+  const subject = `${documentType} re-submitted for review - TUTORERA`;
   const innerHtml = `
     <h2 style="color:#1a1a2e;margin:0 0 12px;">${documentType} re-submitted ✅</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>

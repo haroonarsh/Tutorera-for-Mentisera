@@ -6,10 +6,10 @@ export const tutorApplicationAbandonedEmail = (name: string, stage: number, step
   const isSecond = stage === 3 || stage === 2;
 
   const subject = isFinal
-    ? "Continue Your TUTORERA Tutor Application When Ready"
+    ? "Continue Your Tutor Application When Ready - TUTORERA"
     : isSecond
-      ? "Your TUTORERA Tutor Application Is Waiting"
-      : "Finish Your TUTORERA Tutor Application";
+      ? "Your Tutor Application Is Waiting  - TUTORERA"
+      : "Finish Your Tutor Application - TUTORERA";
 
   const html = renderTransactionalEmail({
     subject,
@@ -43,15 +43,15 @@ export const studentRequestAbandonedEmail = (name: string, stage: number, subjec
   const isSecond = stage === 2 || stage === 3;
 
   const subject = isFinal
-    ? "Your Tutor Search Is Waiting — Continue When Ready"
+    ? "Your Tutor Search Is Waiting — Continue When Ready - TUTORERA"
     : isSecond
-      ? `Still Looking for a ${subjectName || "Qualified"} Tutor?`
-      : `Finish Your ${subjectName || "Tuition"} Request`;
+      ? `Still Looking for a ${subjectName || "Qualified"} Tutor?  - TUTORERA`
+      : `Finish Your ${subjectName || "Tuition"} Request - TUTORERA`;
 
   const html = renderTransactionalEmail({
     subject,
     emailCategory: "Tuition Requirement",
-    emailHeading: isFinal ? "Your Tutor Search Is Waiting" : "Complete Your Tuition Request",
+    emailHeading: isFinal ? "Your Tutor Search Is Waiting - TUTORERA" : "Complete Your Tuition Request",
     emailSubheading: "Verified tutors can only send offers after your request is live.",
     firstName: name,
     openingMessage: `You started a tuition request ${subjectDisplay}, but it has not been published to the marketplace yet.`,

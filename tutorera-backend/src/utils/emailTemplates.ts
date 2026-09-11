@@ -19,35 +19,33 @@ export function formatMoney(amount: number, currency = "PKR"): string {
 // ── 1. User Onboarding & Authentication ──────────────────────────────────────
 
 export const studentWelcomeEmail = (name: string) => {
-  const html = renderTransactionalEmail({
-    subject: "Welcome to TUTORERA — Find Your Ideal Tutor",
+  const html = renderTransactionalEmail({ subject: "Welcome to Find Your Ideal Tutor ",
     emailCategory: "Welcome",
-    emailHeading: `Welcome to TUTORERA, ${name}!`,
+    emailHeading: `Welcome to, ${name}!`,
     emailSubheading: "Your journey to academic excellence starts here.",
     firstName: name,
-    openingMessage: "Thank you for joining TUTORERA. Whether you need personalized support mastering complex subjects, preparing for Cambridge/board exams, or building new skills, our network of vetted educators is here to help.",
+    openingMessage: "Thank you for joining. Whether you need personalized support mastering complex subjects, preparing for Cambridge/board exams, or building new skills, our network of vetted educators is here to help.",
     mainMessage: `Here is how to get started in 3 simple steps:
 
 1. Post a Tuition Request — Tell us your subject, level, learning mode (online or home), and budget in 2 minutes. It is completely free.
 2. Compare Verified Tutors — Receive custom offers from qualified tutors with transparent credentials, student reviews, and verified badges.
-3. Learn with Confidence — Book your session backed by TUTORERA's 100% Satisfaction First-Session Guarantee.`,
+3. Learn with Confidence — Book your session backed by's 100% Satisfaction First-Session Guarantee.`,
     cta: { label: "Browse Qualified Tutors", url: "https://tutorera.ac.pk/tutors" },
     additionalInformation: "Need help right away? You can also post a tuition requirement at https://tutorera.ac.pk/post-request.",
     includeSecurityNotice: true,
-    deliverability: "This email was sent because you registered for an account on TUTORERA.",
+    deliverability: "This email was sent because you registered for an account on.",
   });
-  return { subject: "Welcome to TUTORERA — Find Your Ideal Tutor", html };
+  return { subject: "Welcome to Find Your Ideal Tutor  - TUTORERA", html };
 };
 
 export const parentWelcomeEmail = (name: string) => {
-  const html = renderTransactionalEmail({
-    subject: "Welcome to TUTORERA — Trusted Tutoring for Your Child",
+  const html = renderTransactionalEmail({ subject: "Welcome to Trusted Tutoring for Your Child ",
     emailCategory: "Welcome",
-    emailHeading: `Welcome to TUTORERA, ${name}!`,
+    emailHeading: `Welcome to, ${name}!`,
     emailSubheading: "Connecting families with verified, high-caliber educators.",
     firstName: name,
-    openingMessage: "Thank you for choosing TUTORERA to support your child's education. We understand that safety, quality, and proven results are paramount for parents.",
-    mainMessage: `Why thousands of parents trust TUTORERA:
+    openingMessage: "Thank you for choosing to support your child's education. We understand that safety, quality, and proven results are paramount for parents.",
+    mainMessage: `Why thousands of parents trust:
 
 • Rigorous Verification: Every tutor undergoes multi-stage verification including government identity checks (CNIC/Passport) and educational credential verification.
 • Home & In-Person Safety: Tutors offering in-home lessons must clear mandatory character & police verification.
@@ -55,19 +53,18 @@ export const parentWelcomeEmail = (name: string) => {
     cta: { label: "Find a Tutor for Your Child", url: "https://tutorera.ac.pk/tutors" },
     additionalInformation: "Have questions or specific curriculum needs? Our academic advisory team is available at hello@mentisera.pk.",
     includeSecurityNotice: true,
-    deliverability: "This email was sent because you registered as a parent on TUTORERA.",
+    deliverability: "This email was sent because you registered as a parent on.",
   });
-  return { subject: "Welcome to TUTORERA — Trusted Tutoring for Your Child", html };
+  return { subject: "Welcome to Trusted Tutoring for Your Child  - TUTORERA", html };
 };
 
 export const tutorWelcomeApplicationEmail = (name: string, applicationId: string, trackingUrl?: string) => {
-  const html = renderTransactionalEmail({
-    subject: `Tutor Application Received — ID: ${applicationId}`,
+  const html = renderTransactionalEmail({ subject: `Tutor Application Received — ID: ${applicationId} `,
     emailCategory: "Tutor Application",
     emailHeading: `Thanks for applying, ${name}!`,
     emailSubheading: `Your tutor application ${applicationId} has been received.`,
     firstName: name,
-    openingMessage: "We have received your application to become an educator on TUTORERA. Our verification team is currently reviewing your profile and credentials.",
+    openingMessage: "We have received your application to become an educator on. Our verification team is currently reviewing your profile and credentials.",
     mainMessage: "Once verified, your profile will become visible to thousands of students and parents across the marketplace. You will be able to receive direct booking requests and submit offers on student tuition posts.",
     detailsCard: {
       title: "Application Summary",
@@ -80,17 +77,16 @@ export const tutorWelcomeApplicationEmail = (name: string, applicationId: string
     cta: { label: "Track Application Status", url: trackingUrl || "https://tutorera.ac.pk/tutor/application-status" },
     additionalInformation: "Tip: To unlock Home and In-Person tuition opportunities, make sure to submit your police character certificate.",
     includeSecurityNotice: true,
-    deliverability: "This notification was sent because you submitted a tutor application on TUTORERA.",
+    deliverability: "This notification was sent because you submitted a tutor application on.",
   });
-  return { subject: `Tutor Application Received — ID: ${applicationId}`, html };
+  return { subject: `Tutor Application Received — ID: ${applicationId}  - TUTORERA`, html };
 };
 
 // Legacy alias for student welcome
 export const welcomeEmail = (name: string) => studentWelcomeEmail(name);
 
 export const tutorPendingEmail = (name: string) => {
-  const html = renderTransactionalEmail({
-    subject: "TUTORERA — Your Application is Under Review",
+  const html = renderTransactionalEmail({ subject: "Your Application is Under Review ",
     emailCategory: "Tutor Application",
     emailHeading: "Thanks for applying, " + name + "!",
     emailSubheading: "Your tutor profile is currently pending verification.",
@@ -100,17 +96,16 @@ export const tutorPendingEmail = (name: string) => {
     cta: { label: "Track Application", url: "https://tutorera.ac.pk/tutor/application-status" },
     includeSecurityNotice: true,
   });
-  return { subject: "TUTORERA — Your Application is Under Review", html };
+  return { subject: "Your Application is Under Review  - TUTORERA", html };
 };
 
 export const passwordResetOtpEmail = (name: string, otp: string) => {
-  const html = renderTransactionalEmail({
-    subject: "TUTORERA — Password Reset Code",
+  const html = renderTransactionalEmail({ subject: "Password Reset Code ",
     emailCategory: "Account Security",
     emailHeading: "Reset Your Password",
-    emailSubheading: "Use the 6-digit code below to reset your TUTORERA password.",
+    emailSubheading: "Use the 6-digit code below to reset your password.",
     firstName: name,
-    openingMessage: "We received a request to reset the password associated with your TUTORERA account.",
+    openingMessage: "We received a request to reset the password associated with your account.",
     mainMessage: "Please enter the verification code below on the password reset page. This code expires in 10 minutes. If you did not request a password reset, you can safely ignore this email; your account remains completely secure.",
     highlightCode: {
       code: otp,
@@ -118,9 +113,9 @@ export const passwordResetOtpEmail = (name: string, otp: string) => {
       expiresIn: "10 minutes",
     },
     includeSecurityNotice: true,
-    deliverability: "This security notification was sent in response to a password reset request on TUTORERA.",
+    deliverability: "This security notification was sent in response to a password reset request on.",
   });
-  return { subject: "TUTORERA — Password Reset Code", html };
+  return { subject: "Password Reset Code  - TUTORERA", html };
 };
 
 // ── 2. Admin Operational Notifications ───────────────────────────────────────
@@ -152,13 +147,12 @@ export const adminNewUserSignupEmail = (data: {
     rows.push({ label: "Tutor Application ID", value: data.applicationId, highlight: true });
   }
 
-  const html = renderTransactionalEmail({
-    subject: `[TUTORERA Admin] New ${roleLabel} Registered: ${data.name}`,
+  const html = renderTransactionalEmail({ subject: `New ${roleLabel} Registered: ${data.name} `,
     emailCategory: "Admin Alert",
     emailHeading: `New ${roleLabel} Registered`,
     emailSubheading: `A new ${data.role} has joined the platform.`,
     firstName: "Admin Team",
-    openingMessage: "A new user registration event occurred on TUTORERA.",
+    openingMessage: "A new user registration event occurred on.",
     mainMessage: "The user has completed account creation and is ready for onboarding or application review.",
     detailsCard: {
       title: "Registration Overview",
@@ -172,7 +166,7 @@ export const adminNewUserSignupEmail = (data: {
     includeSecurityNotice: false, // Internal admin email: no consumer security box
   });
 
-  return { subject: `[TUTORERA Admin] New ${roleLabel} Registered: ${data.name}`, html };
+  return { subject: `New ${roleLabel} Registered: ${data.name}  - TUTORERA`, html };
 };
 
 export const adminNewTuitionRequestEmail = (data: {
@@ -203,13 +197,12 @@ export const adminNewTuitionRequestEmail = (data: {
   const currency = data.currency || "PKR";
   const formattedBudget = `${formatMoney(data.budget, currency)} / ${data.pricingUnit || "hour"}`;
 
-  const html = renderTransactionalEmail({
-    subject: `[TUTORERA Admin] New Tuition Request: ${data.subject} (${data.city || data.countryName || "Global"})`,
+  const html = renderTransactionalEmail({ subject: `New Tuition Request: ${data.subject} (${data.city || data.countryName || "Global"}) `,
     emailCategory: "Admin Alert",
     emailHeading: `New Tuition Requirement Posted`,
     emailSubheading: `${data.subject} · ${data.level} · ${modeLabel}`,
     firstName: "Admin Team",
-    openingMessage: "A student has just posted a new tuition requirement on the TUTORERA marketplace.",
+    openingMessage: "A student has just posted a new tuition requirement on the marketplace.",
     mainMessage: data.description ? `Student Notes: "${data.description}"` : "The request is now live and awaiting tutor offers.",
     detailsCard: {
       title: "Tuition Requirement Details",
@@ -228,19 +221,18 @@ export const adminNewTuitionRequestEmail = (data: {
     includeSecurityNotice: false,
   });
 
-  return { subject: `[TUTORERA Admin] New Tuition Request: ${data.subject} (${data.city || data.countryName || "Global"})`, html };
+  return { subject: `New Tuition Request: ${data.subject} (${data.city || data.countryName || "Global"})  - TUTORERA`, html };
 };
 
 // ── 3. Verification & Tutor Lifecycle ────────────────────────────────────────
 
 export const tutorApprovedEmail = (name: string) => {
-  const html = renderTransactionalEmail({
-    subject: "🎉 Your TUTORERA Profile is Approved!",
+  const html = renderTransactionalEmail({ subject: "Your Profile is Approved! ",
     emailCategory: "Tutor Application",
     emailHeading: "Your Tutor Profile is Approved!",
     emailSubheading: "You are now active and visible to students on the marketplace.",
     firstName: name,
-    openingMessage: "Congratulations! Your tutor profile has been fully approved by the TUTORERA verification team.",
+    openingMessage: "Congratulations! Your tutor profile has been fully approved by the verification team.",
     mainMessage: "Your profile is now live. You can respond to tuition requests, send offers, and receive direct booking inquiries. To unlock Home & In-Person tuition, ensure your police verification certificate is submitted.",
     detailsCard: {
       title: "Marketplace Status",
@@ -252,14 +244,13 @@ export const tutorApprovedEmail = (name: string) => {
     },
     cta: { label: "Open Tutor Dashboard", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: true,
-    deliverability: "This transactional email was sent because your TUTORERA tutor application was approved.",
+    deliverability: "This transactional email was sent because your tutor application was approved.",
   });
-  return { subject: "🎉 Your TUTORERA Profile is Approved!", html };
+  return { subject: "Your Profile is Approved!  - TUTORERA", html };
 };
 
 export const tutorRejectedEmail = (name: string, reason?: string) => {
-  const html = renderTransactionalEmail({
-    subject: "TUTORERA — Update on Your Tutor Application",
+  const html = renderTransactionalEmail({ subject: "Update on Your Tutor Application ",
     emailCategory: "Tutor Application",
     emailHeading: "Update on Your Application",
     emailSubheading: "Action is required to complete your verification.",
@@ -279,15 +270,14 @@ export const tutorRejectedEmail = (name: string, reason?: string) => {
     additionalInformation: "Need help? Reply directly to this email or contact support at hello@mentisera.pk.",
     includeSecurityNotice: true,
   });
-  return { subject: "TUTORERA — Update on Your Tutor Application", html };
+  return { subject: "Update on Your Tutor Application  - TUTORERA", html };
 };
 
 // ── 4. Offers & Structured Negotiation ───────────────────────────────────────
 
 export const newBidEmail = (studentName: string, amount: number, currency = "PKR") => {
   const formatted = formatMoney(amount, currency);
-  const html = renderTransactionalEmail({
-    subject: `New Tutor Offer for Your Tuition Request`,
+  const html = renderTransactionalEmail({ subject: `New Tutor Offer for Your Tuition Request `,
     emailCategory: "Offer Update",
     emailHeading: "New Tutor Offer Received",
     emailSubheading: `A verified tutor sent an offer of ${formatted}.`,
@@ -305,19 +295,18 @@ export const newBidEmail = (studentName: string, amount: number, currency = "PKR
     cta: { label: "Review Offer", url: "https://tutorera.ac.pk/offers" },
     includeSecurityNotice: true,
   });
-  return { subject: `New Tutor Offer for Your Tuition Request`, html };
+  return { subject: `New Tutor Offer for Your Tuition Request  - TUTORERA`, html };
 };
 
 export const bidAcceptedEmail = (tutorName: string, studentName: string, amount: number, currency = "PKR") => {
   const formatted = formatMoney(amount, currency);
-  const html = renderTransactionalEmail({
-    subject: "Your Tutor Offer Was Accepted",
+  const html = renderTransactionalEmail({ subject: "Your Tutor Offer Was Accepted ",
     emailCategory: "Offer Update",
     emailHeading: "Your Offer Was Accepted!",
     emailSubheading: "Great news — the student confirmed your proposed rate.",
     firstName: tutorName,
     openingMessage: `${studentName} has accepted your tutor offer. A booking has been initialized.`,
-    mainMessage: "The student will now complete payment. Once payment is verified by TUTORERA, the session will be fully confirmed on your calendar.",
+    mainMessage: "The student will now complete payment. Once payment is verified by, the session will be fully confirmed on your calendar.",
     detailsCard: {
       title: "Offer Details",
       rows: [
@@ -328,9 +317,9 @@ export const bidAcceptedEmail = (tutorName: string, studentName: string, amount:
     },
     cta: { label: "View My Offers", url: "https://tutorera.ac.pk/offers" },
     includeSecurityNotice: true,
-    deliverability: "This transactional notification was sent because a student accepted your offer on TUTORERA.",
+    deliverability: "This transactional notification was sent because a student accepted your offer on.",
   });
-  return { subject: "Your Tutor Offer Was Accepted", html };
+  return { subject: "Your Tutor Offer Was Accepted  - TUTORERA", html };
 };
 
 export const offerCounterReceivedEmail = (data: {
@@ -383,14 +372,13 @@ interface BookingSessionDetails {
 
 export const bookingConfirmedEmail = (studentName: string, tutorName: string, amount: number, currency = "PKR") => {
   const formatted = formatMoney(amount, currency);
-  const html = renderTransactionalEmail({
-    subject: "Your TUTORERA Booking Is Confirmed",
+  const html = renderTransactionalEmail({ subject: "Your Booking Is Confirmed ",
     emailCategory: "Booking Confirmation",
     emailHeading: "Booking Confirmed",
     emailSubheading: `Your session with ${tutorName} is confirmed.`,
     firstName: studentName,
     openingMessage: `Your booking with ${tutorName} has been confirmed on the calendar.`,
-    mainMessage: "Please ensure payment is completed through our secure gateway so your session slot is locked in. TUTORERA verifies payment server-side before treating a session as confirmed.",
+    mainMessage: "Please ensure payment is completed through our secure gateway so your session slot is locked in. verifies payment server-side before treating a session as confirmed.",
     detailsCard: {
       title: "Booking Summary",
       rows: [
@@ -403,14 +391,13 @@ export const bookingConfirmedEmail = (studentName: string, tutorName: string, am
     },
     cta: { label: "View Booking Details", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: true,
-    deliverability: "This transactional notification was sent because of activity associated with your TUTORERA booking.",
+    deliverability: "This transactional notification was sent because of activity associated with your booking.",
   });
-  return { subject: "Your TUTORERA Booking Is Confirmed", html };
+  return { subject: "Your Booking Is Confirmed  - TUTORERA", html };
 };
 
 export const directBookingRequestEmail = (tutorName: string, studentName: string, subject: string) => {
-  const html = renderTransactionalEmail({
-    subject: `New Direct Booking Request from ${studentName}`,
+  const html = renderTransactionalEmail({ subject: `New Direct Booking Request from ${studentName} `,
     emailCategory: "Booking Request",
     emailHeading: "New Booking Request",
     emailSubheading: `${studentName} wants to book a session for ${subject}.`,
@@ -428,7 +415,7 @@ export const directBookingRequestEmail = (tutorName: string, studentName: string
     cta: { label: "Review Booking Request", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: true,
   });
-  return { subject: `New Direct Booking Request from ${studentName}`, html };
+  return { subject: `New Direct Booking Request from ${studentName}  - TUTORERA`, html };
 };
 
 export const directBookingAcceptedEmail = (
@@ -454,8 +441,7 @@ export const directBookingAcceptedEmail = (
     rows.push({ label: "Payment Status", value: "Awaiting Payment", isStatus: true, statusVariant: "warning" as const });
   }
 
-  const html = renderTransactionalEmail({
-    subject: `Booking Confirmed: ${subject} with ${otherPartyName}`,
+  const html = renderTransactionalEmail({ subject: `Booking Confirmed: ${subject} with ${otherPartyName} `,
     emailCategory: "Booking Confirmation",
     emailHeading: "Booking Confirmed",
     emailSubheading: `Your session for ${subject} is on the calendar.`,
@@ -469,12 +455,11 @@ export const directBookingAcceptedEmail = (
     cta: { label: "View Booking", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: true,
   });
-  return { subject: `Booking Confirmed: ${subject} with ${otherPartyName}`, html };
+  return { subject: `Booking Confirmed: ${subject} with ${otherPartyName}  - TUTORERA`, html };
 };
 
 export const directBookingDeclinedEmail = (studentName: string, subject: string) => {
-  const html = renderTransactionalEmail({
-    subject: `Update on Your Booking Request for ${subject}`,
+  const html = renderTransactionalEmail({ subject: `Update on Your Booking Request for ${subject} `,
     emailCategory: "Booking Update",
     emailHeading: "Booking Request Update",
     emailSubheading: `The tutor was unavailable for ${subject}.`,
@@ -484,12 +469,11 @@ export const directBookingDeclinedEmail = (studentName: string, subject: string)
     cta: { label: "Browse Other Tutors", url: "https://tutorera.ac.pk/tutors" },
     includeSecurityNotice: true,
   });
-  return { subject: `Update on Your Booking Request for ${subject}`, html };
+  return { subject: `Update on Your Booking Request for ${subject}  - TUTORERA`, html };
 };
 
 export const bookingCancelledEmail = (name: string, otherPartyName: string, subject?: string) => {
-  const html = renderTransactionalEmail({
-    subject: "Your Tutoring Session Was Cancelled",
+  const html = renderTransactionalEmail({ subject: "Your Tutoring Session Was Cancelled ",
     emailCategory: "Booking Update",
     emailHeading: "Booking Cancelled",
     emailSubheading: subject ? `Session: ${subject}` : "Tutoring session cancelled.",
@@ -499,23 +483,22 @@ export const bookingCancelledEmail = (name: string, otherPartyName: string, subj
     cta: { label: "Contact Support", url: "mailto:hello@mentisera.pk" },
     includeSecurityNotice: true,
   });
-  return { subject: "Your Tutoring Session Was Cancelled", html };
+  return { subject: "Your Tutoring Session Was Cancelled  - TUTORERA", html };
 };
 
 export const reviewRequestEmail = (studentName: string, tutorName: string, subject: string, bookingId: string) => {
-  const html = renderTransactionalEmail({
-    subject: `How Was Your ${subject} Session with ${tutorName}?`,
+  const html = renderTransactionalEmail({ subject: `How Was Your ${subject} Session with ${tutorName}? `,
     emailCategory: "Review Request",
     emailHeading: "How Was Your Session?",
     emailSubheading: `Your session with ${tutorName} is completed.`,
     firstName: studentName,
     openingMessage: `Your ${subject} session with ${tutorName} has concluded. We hope it was an engaging and productive learning experience!`,
-    mainMessage: "Your feedback helps maintain exceptional teaching standards on TUTORERA and guides other students finding the right mentor. It takes less than 2 minutes to leave a review.",
+    mainMessage: "Your feedback helps maintain exceptional teaching standards on and guides other students finding the right mentor. It takes less than 2 minutes to leave a review.",
     cta: { label: "Leave a Review", url: `https://tutorera.ac.pk/reviews/${bookingId}` },
     includeSecurityNotice: true,
-    deliverability: "This notification was sent because you completed a tutoring lesson on TUTORERA.",
+    deliverability: "This notification was sent because you completed a tutoring lesson on.",
   });
-  return { subject: `How Was Your ${subject} Session with ${tutorName}?`, html };
+  return { subject: `How Was Your ${subject} Session with ${tutorName}?  - TUTORERA`, html };
 };
 
 // ── 6. Payments & Financial Transactions ─────────────────────────────────────
@@ -542,8 +525,7 @@ export const paymentConfirmedEmail = (
   if (details?.schedule) rows.push({ label: "Schedule", value: details.schedule });
   if (details?.teachingMode) rows.push({ label: "Mode", value: details.teachingMode });
 
-  const html = renderTransactionalEmail({
-    subject: `Payment Confirmed — Booking ${bookingId}`,
+  const html = renderTransactionalEmail({ subject: `Payment Confirmed — Booking ${bookingId} `,
     emailCategory: "Payment Receipt",
     emailHeading: "Payment Confirmed",
     emailSubheading: `Your session with ${tutorName} is fully booked.`,
@@ -556,9 +538,9 @@ export const paymentConfirmedEmail = (
     },
     cta: { label: "View Booking & Lesson Link", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: true,
-    deliverability: "This transactional notification was sent because of payment activity on your TUTORERA account.",
+    deliverability: "This transactional notification was sent because of payment activity on your account.",
   });
-  return { subject: `Payment Confirmed — Booking ${bookingId}`, html };
+  return { subject: `Payment Confirmed — Booking ${bookingId}  - TUTORERA`, html };
 };
 
 export const paymentFailedEmail = (
@@ -571,8 +553,7 @@ export const paymentFailedEmail = (
   const formatted = formatMoney(amount, currency);
   const bookingId = details?.bookingId || `PAY-${Date.now()}`;
 
-  const html = renderTransactionalEmail({
-    subject: "Payment Failed — Please Try Again",
+  const html = renderTransactionalEmail({ subject: "Payment Failed — Please Try Again ",
     emailCategory: "Payment Alert",
     emailHeading: "Payment Unsuccessful",
     emailSubheading: "We couldn't process your payment for this session.",
@@ -592,7 +573,7 @@ export const paymentFailedEmail = (
     additionalInformation: "If the issue persists, try an alternative card or contact hello@mentisera.pk.",
     includeSecurityNotice: true,
   });
-  return { subject: "Payment Failed — Please Try Again", html };
+  return { subject: "Payment Failed — Please Try Again  - TUTORERA", html };
 };
 
 export const paymentFailedNotifyTutorEmail = (
@@ -604,8 +585,7 @@ export const paymentFailedNotifyTutorEmail = (
   const currency = details?.currency || "PKR";
   const formatted = formatMoney(amount, currency);
 
-  const html = renderTransactionalEmail({
-    subject: `Student Payment Delayed for Booking with ${studentName}`,
+  const html = renderTransactionalEmail({ subject: `Student Payment Delayed for Booking with ${studentName} `,
     emailCategory: "Booking Update",
     emailHeading: "Student Payment Delayed",
     emailSubheading: `A payment attempt from ${studentName} was unsuccessful.`,
@@ -623,15 +603,14 @@ export const paymentFailedNotifyTutorEmail = (
     cta: { label: "View Booking", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: false,
   });
-  return { subject: `Student Payment Delayed for Booking with ${studentName}`, html };
+  return { subject: `Student Payment Delayed for Booking with ${studentName}  - TUTORERA`, html };
 };
 
 // ── 7. Tutor Payouts ─────────────────────────────────────────────────────────
 
 export const payoutRequestedEmail = (tutorName: string, amount: number, bookingId: string, currency = "PKR") => {
   const formatted = formatMoney(amount, currency);
-  const html = renderTransactionalEmail({
-    subject: "Payout Request Received",
+  const html = renderTransactionalEmail({ subject: "Payout Request Received ",
     emailCategory: "Payout Update",
     emailHeading: "Payout Request Received",
     emailSubheading: "Your earnings withdrawal request is under review.",
@@ -650,13 +629,12 @@ export const payoutRequestedEmail = (tutorName: string, amount: number, bookingI
     cta: { label: "Track Payout Status", url: "https://tutorera.ac.pk/earnings" },
     includeSecurityNotice: true,
   });
-  return { subject: "Payout Request Received", html };
+  return { subject: "Payout Request Received  - TUTORERA", html };
 };
 
 export const payoutProcessedEmail = (tutorName: string, amount: number, bookingId: string, currency = "PKR") => {
   const formatted = formatMoney(amount, currency);
-  const html = renderTransactionalEmail({
-    subject: "Your TUTORERA Payout Has Been Sent",
+  const html = renderTransactionalEmail({ subject: "Your Payout Has Been Sent ",
     emailCategory: "Payout Update",
     emailHeading: "Payout Processed",
     emailSubheading: "Your earnings have been dispatched.",
@@ -675,13 +653,12 @@ export const payoutProcessedEmail = (tutorName: string, amount: number, bookingI
     cta: { label: "View Earnings Statement", url: "https://tutorera.ac.pk/earnings" },
     includeSecurityNotice: true,
   });
-  return { subject: "Your TUTORERA Payout Has Been Sent", html };
+  return { subject: "Your Payout Has Been Sent  - TUTORERA", html };
 };
 
 export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: string, reason: string, currency = "PKR") => {
   const formatted = formatMoney(amount, currency);
-  const html = renderTransactionalEmail({
-    subject: "Action Required: We Couldn’t Complete Your Payout",
+  const html = renderTransactionalEmail({ subject: "Action Required: We Couldn’t Complete Your Payout ",
     emailCategory: "Payout Alert",
     emailHeading: "Payout Update Required",
     emailSubheading: "We encountered an issue processing your earnings transfer.",
@@ -701,14 +678,13 @@ export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: 
     additionalInformation: "Need assistance? Reply to this email or reach us at hello@mentisera.pk.",
     includeSecurityNotice: true,
   });
-  return { subject: "Action Required: We Couldn’t Complete Your Payout", html };
+  return { subject: "Action Required: We Couldn’t Complete Your Payout  - TUTORERA", html };
 };
 
 // ── 8. Marketplace Search & Lifecycle Alerts ────────────────────────────────
 
 export const requestZeroOfferEmail = (studentName: string, subject: string) => {
-  const html = renderTransactionalEmail({
-    subject: `We’re Expanding the Search for Your ${subject} Tutor`,
+  const html = renderTransactionalEmail({ subject: `We’re Expanding the Search for Your ${subject} Tutor `,
     emailCategory: "Marketplace Update",
     emailHeading: `Expanding Search for ${subject}`,
     emailSubheading: "We're reaching out to top educators for your requirement.",
@@ -718,12 +694,11 @@ export const requestZeroOfferEmail = (studentName: string, subject: string) => {
     cta: { label: "Review & Adjust Request", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: false,
   });
-  return { subject: `We’re Expanding the Search for Your ${subject} Tutor`, html };
+  return { subject: `We’re Expanding the Search for Your ${subject} Tutor  - TUTORERA`, html };
 };
 
 export const requestExpiringEmail = (studentName: string, subject: string) => {
-  const html = renderTransactionalEmail({
-    subject: `Your ${subject} Tuition Request Expires Soon`,
+  const html = renderTransactionalEmail({ subject: `Your ${subject} Tuition Request Expires Soon `,
     emailCategory: "Request Alert",
     emailHeading: "Tuition Request Expiring",
     emailSubheading: `Your request for ${subject} will expire in 48 hours.`,
@@ -733,5 +708,5 @@ export const requestExpiringEmail = (studentName: string, subject: string) => {
     cta: { label: "Keep Request Active", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: false,
   });
-  return { subject: `Your ${subject} Tuition Request Expires Soon`, html };
+  return { subject: `Your ${subject} Tuition Request Expires Soon  - TUTORERA`, html };
 };
