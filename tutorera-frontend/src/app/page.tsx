@@ -7,6 +7,7 @@ import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import TopRequestsSection from "@/components/TopRequestsSection";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
 import AdBanner from "@/components/AdBanner";
+import GlobalTutoringIndex from "@/components/SEO/GlobalTutoringIndex";
 import { ArrowRight, Star, MapPin } from "lucide-react";
 import s from "./page.module.css";
 
@@ -258,6 +259,9 @@ export default function Home() {
       <section style={{ padding: "3rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
         <AdBanner slot="7346189519" format="auto" label="Advertisement" />
       </section>
+
+      {/* 10.5 Global Tutoring Index (SEO First-Party Data) */}
+      <GlobalTutoringIndex />
 
       {/* 11. Final High-Impact Marketplace CTA */}
       <section style={{ padding: "4rem 1.5rem 5rem", background: "#021550", color: "white" }}>
