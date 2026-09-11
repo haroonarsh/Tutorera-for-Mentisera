@@ -3,9 +3,9 @@ import TutorCard from "@/components/Tutors/TutorCard";
 import { fetchTutors, type DirectoryKind, type TutorSearchFilters, tutorProfileHref } from "@/lib/tutor-directory";
 import styles from "@/app/tutors/page.module.css";
 
-interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; }
+interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; relatedLinks?: { label: string, href: string }[]; }
 
-export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency }: Props) {
+export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency, relatedLinks }: Props) {
   const result = await fetchTutors(filters ?? { [kind]: value });
   const rates = result.tutors.map((tutor) => tutor.hourlyRate).filter(Boolean);
   const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
@@ -83,6 +83,32 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
         <p style={{ marginTop: ".75rem" }}>For the best match, identify the exact curriculum or examination, topics requiring support, preferred lesson schedule, and whether online or in-person teaching is suitable. Shortlist tutors whose documented experience and teaching levels align with those needs.</p>
         <h2 style={{ color: "#021550", margin: "2rem 0 .75rem" }}>Frequently asked questions</h2>
         {faq.map((item) => <div key={item.q} style={{ marginBottom: "1.25rem" }}><h3 style={{ color: "#021550", fontSize: "1rem" }}>{item.q}</h3><p>{item.a}</p></div>)}
+        
+        {relatedLinks && relatedLinks.length > 0 && (
+          <>
+            <h2 style={{ color: "#021550", margin: "2rem 0 .75rem" }}>Related Searches</h2>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {relatedLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "999px",
+                    padding: "0.45rem 1rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    color: "#0329b2",
+                    textDecoration: "none",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
