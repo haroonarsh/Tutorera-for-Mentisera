@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
+import TwoSidedEntryCards from "@/components/marketplace/TwoSidedEntryCards";
 import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
 import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import TopRequestsSection from "@/components/TopRequestsSection";
@@ -9,19 +10,19 @@ import { ArrowRight, Star, MapPin } from "lucide-react";
 import s from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "TUTORERA | A Global Student-Led Tutoring Marketplace",
+  title: "TUTORERA | Online & Home Tuition Marketplace",
   description:
-    "Post your tutoring requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide. Choose online or home tuition, negotiate transparently, and book with verified confidence.",
+    "TUTORERA connects students and parents with tutors for online tuition, online tutoring and locally available home tuition or tutoring. Post learning requirements, receive tutor offers, discover teaching opportunities, compare matches and connect transparently.",
   alternates: { canonical: "/" },
 };
 
 const popularSubjects = [
-  { name: "Mathematics", levels: "Primary, GCSE, A-Level, IB, university", href: "/tutors/subject/mathematics" },
+  { name: "Mathematics", levels: "Primary, GCSE, A-Level, IB, AP, SAT, university", href: "/tutors/subject/mathematics" },
   { name: "Sciences", levels: "Biology, chemistry, physics, AP, IB", href: "/tutors/subject/physics" },
   { name: "English & Languages", levels: "Academic English, IELTS, spoken language", href: "/tutors/subject/english" },
   { name: "Computer Science", levels: "Coding, data, web development, school curricula", href: "/tutors/subject/computer-science" },
   { name: "Business & Economics", levels: "IGCSE, A-Level, AP, university", href: "/tutors/subject/economics" },
-  { name: "Test Preparation", levels: "SAT, IELTS, admissions and professional exams", href: "/subjects" },
+  { name: "Test Preparation", levels: "SAT, ACT, IELTS, admissions and professional exams", href: "/subjects" },
   { name: "Early Learning", levels: "Foundational skills and primary education", href: "/levels" },
   { name: "Local Curricula", levels: "Country-specific boards and learning pathways", href: "/subjects" },
 ];
@@ -56,6 +57,9 @@ export default function Home() {
     <div className={s.page}>
       {/* 1. Marketplace Hero & 2. Quick Request Composer */}
       <HeroMarketplace />
+
+      {/* NEW: Student and Tutor Two-Sided Value Proposition */}
+      <TwoSidedEntryCards />
 
       {/* 3. Dedicated Home Tuition & Online Tuition Direct Action Cards */}
       <HomeOnlineTuitionCards />

@@ -52,10 +52,11 @@ export default function HomeOnlineTuitionCards() {
           </div>
 
           <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
-            Need a Home Tutor?
+            Local Home Tuition
           </h3>
           <p style={{ color: "#475569", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-            Post your subject, level, city or locality, and proposed budget. Eligible local tutors can accept your rate or send a tailored offer.
+            <strong>Students:</strong> Post your home tuition requirement and budget.<br/>
+            <strong>Tutors:</strong> Discover local in-person tutoring opportunities in your city.
           </p>
 
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "grid", gap: "0.5rem", fontSize: "0.825rem", color: "#334155" }}>
@@ -128,10 +129,11 @@ export default function HomeOnlineTuitionCards() {
           </div>
 
           <h3 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
-            Need an Online Tutor?
+            Global Online Tuition
           </h3>
           <p style={{ color: "#475569", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-            Post your requirement and receive competitive offers from top verified online tutors worldwide and locally.
+            <strong>Students:</strong> Receive competitive offers from top online tutors globally.<br/>
+            <strong>Tutors:</strong> Teach students worldwide flexibly via Zoom/Meet.
           </p>
 
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "grid", gap: "0.5rem", fontSize: "0.825rem", color: "#334155" }}>

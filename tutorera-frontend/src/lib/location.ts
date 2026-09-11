@@ -71,6 +71,30 @@ export const COUNTRIES: CountryData[] = [
       { id: "pk-hyd", name: "Hyderabad", region: "Sindh", areas: ["Latifabad", "Qasimabad", "Saddar", "Auto Bahn"] },
     ],
   },
+  {
+    code: "US",
+    name: "United States",
+    currency: "USD",
+    currencySymbol: "$",
+    phoneCode: "+1",
+    defaultTimezone: "America/New_York",
+    flag: "🇺🇸",
+    curricula: ["AP", "Common Core", "SAT/ACT", "IB", "University", "Elementary", "Middle School", "High School"],
+    homeTuitionEnabled: true,
+    onlineEnabled: true,
+    cities: [
+      { id: "us-nyc", name: "New York City", region: "New York", areas: ["Manhattan", "Brooklyn", "Queens"] },
+      { id: "us-la", name: "Los Angeles", region: "California", areas: ["Downtown", "Hollywood", "Santa Monica"] },
+      { id: "us-chi", name: "Chicago", region: "Illinois", areas: ["Loop", "Lincoln Park", "Hyde Park"] },
+      { id: "us-hou", name: "Houston", region: "Texas", areas: ["Downtown", "Midtown", "Katy"] },
+      { id: "us-dal", name: "Dallas", region: "Texas", areas: ["Uptown", "Downtown", "Plano"] },
+      { id: "us-sfo", name: "San Francisco", region: "California", areas: ["SoMa", "Mission", "Marina"] },
+      { id: "us-mia", name: "Miami", region: "Florida", areas: ["Brickell", "South Beach", "Coral Gables"] },
+      { id: "us-atl", name: "Atlanta", region: "Georgia", areas: ["Midtown", "Buckhead", "Downtown"] },
+      { id: "us-sea", name: "Seattle", region: "Washington", areas: ["Capitol Hill", "Downtown", "Bellevue"] },
+      { id: "us-bos", name: "Boston", region: "Massachusetts", areas: ["Cambridge", "Downtown", "Back Bay"] },
+    ],
+  },
   // Additional countries will be added by the GeoNames import script
 ];
 

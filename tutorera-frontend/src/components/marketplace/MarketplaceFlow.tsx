@@ -4,32 +4,32 @@ const steps = [
   {
     icon: FileEdit,
     number: "01",
-    title: "Post Your Requirement",
-    desc: "Specify subject, curriculum or level, learning mode, location, schedule, and your proposed budget in the market currency."
+    title: "Student Posts Requirement",
+    desc: "Specify subject, curriculum, schedule, location, and proposed budget in your local currency."
   },
   {
     icon: HandCoins,
     number: "02",
-    title: "Receive Tutor Offers",
-    desc: "Matched verified tutors review your request and either accept your proposed rate or submit a counter-offer."
+    title: "Tutors Find Opportunities",
+    desc: "Verified tutors discover open tuition requests matching their subject expertise, service area, and rate."
   },
   {
     icon: SlidersHorizontal,
     number: "03",
-    title: "Compare & Negotiate",
-    desc: "Compare ratings, qualifications, experience, match score, and rates. Negotiate transparently if needed."
+    title: "Offers & Negotiation",
+    desc: "Tutors accept the proposed rate or submit a counter-offer. Students compare profiles and rates."
   },
   {
     icon: UserCheck,
     number: "04",
-    title: "Choose Your Tutor",
-    desc: "Accept the tutor offer that best fits your goals. The agreed rate is securely locked for the booking."
+    title: "Choose the Best Match",
+    desc: "Students select their preferred tutor based on ratings, qualifications, and budget."
   },
   {
     icon: GraduationCap,
     number: "05",
     title: "Book & Learn",
-    desc: "Start your lessons with peace of mind backed by TUTORERA's verified review and First-Session Guarantee."
+    desc: "Start lessons securely, backed by TUTORERA's quality checks and First-Session Guarantee."
   }
 ];
 
@@ -39,13 +39,13 @@ export default function MarketplaceFlow() {
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 3rem" }}>
           <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#016ef8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            The Student-Led Demand Marketplace
+            The Global Connection Marketplace
           </span>
           <h2 id="marketplace-flow-title" style={{ fontSize: "2rem", fontWeight: 800, color: "#021550", margin: "0.5rem 0 0.75rem" }}>
-            How TUTORERA Works
+            How TUTORERA Connects You
           </h2>
           <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: 1.6 }}>
-            State what you need, let eligible tutors send offers to you, and choose with clear information across online and locally available markets.
+            Whether you need a tutor or want to teach, our transparent matching engine connects student demand with verified tutor expertise globally and locally.
           </p>
         </div>
 

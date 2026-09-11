@@ -10,6 +10,8 @@ export interface ITutorProfile extends Document {
   countryCode: string;
   countryName: string;
   city: string;
+  state?: string;
+  zipCode?: string;
   cityId?: string;                   // slug from location dataset e.g. "pk-lhe"
   regionCode?: string;               // ISO 3166-2 region code e.g. "PK-PB"
   timezone: string;
@@ -129,6 +131,8 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     residenceCountryCode: { type: String, uppercase: true, trim: true },
     onlineCountryReach: [{ type: String, uppercase: true, trim: true }],
     city: { type: String, trim: true, default: "" },
+    state: { type: String, trim: true, default: "" },
+    zipCode: { type: String, trim: true, default: "" },
     timezone: { type: String, trim: true },
     gender: { type: String, enum: ["male", "female", "other"], default: "male" },
     dateOfBirth: { type: String, default: "" },

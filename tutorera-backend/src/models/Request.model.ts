@@ -12,7 +12,7 @@ export interface IRequest extends Document {
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
   learningObjectives?: string;
-  countryCode?: string; countryName?: string; city?: string; timezone?: string;
+  countryCode?: string; countryName?: string; state?: string; city?: string; zipCode?: string; timezone?: string;
   scheduleTimezone?: string; scheduledStartAt?: Date; scheduledEndAt?: Date;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   lessonLanguage?: string;
@@ -80,6 +80,8 @@ const requestSchema = new Schema<IRequest>(
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
     locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    zipCode: { type: String, trim: true },
     timezone: { type: String, trim: true },
     scheduleTimezone: { type: String, trim: true },
     scheduledStartAt: { type: Date, index: true },

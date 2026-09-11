@@ -81,6 +81,7 @@ export default function QuickRequestComposer() {
   };
 
   return (
+    <>
     <div
       style={{
         background: "white",
@@ -347,6 +348,14 @@ export default function QuickRequestComposer() {
         countries={geo.countries}
       />
     </div>
+
+    {/* NEW: Complementary Tutor CTA */}
+    <div style={{ marginTop: "1.25rem", textAlign: "center" }}>
+      <p style={{ fontSize: "0.9rem", color: "#475569" }}>
+        Are you a tutor? <a href="/opportunities" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "underline" }}>Find students who need what you teach</a>
+      </p>
+    </div>
+    </>
   );
 }
 

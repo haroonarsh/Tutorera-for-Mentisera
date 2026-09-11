@@ -16,7 +16,12 @@ export type MarketplaceEvent =
   | "offer_counter_sent"
   | "tutor_offer_accepted"
   | "checkout_started"
-  | "payment_completed";
+  | "payment_completed"
+  // New tutor side events
+  | "tutor_signup_started"
+  | "tutor_opportunity_viewed"
+  | "tutor_onboarding_completed"
+  | "tutor_offer_submitted";
 
 export function trackMarketplaceEvent(
   event: MarketplaceEvent,

@@ -13,6 +13,7 @@ import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
+import { renderTransactionalEmail } from "../utils/emailBrand";
 import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
 import { paymentProvider } from "../services/paymentProvider.service";
@@ -35,7 +36,27 @@ function moderationReasons(message = "", amount?: number, baseline?: number) {
   if (amount && baseline && (amount < baseline * 0.35 || amount > baseline * 3)) reasons.push("unusual_price");
   return reasons;
 }
-async function offerEmail(userId: string, subject: string, message: string) { try { const user = await User.findById(userId).select("name email").lean(); if (user?.email) await sendEmail({ to: user.email, subject, html: `<h2>${escapeHtml(subject)}</h2><p>Hello ${escapeHtml(user.name)},</p><p>${escapeHtml(message)}</p><p><a href="https://tutorera.ac.pk/offers">Review your offers</a></p>` }); } catch (error) { console.error("Offer email failed:", error); } }
+async function offerEmail(userId: string, subject: string, message: string) {
+  try {
+    const user = await User.findById(userId).select("name email").lean();
+    if (user?.email) {
+      const html = renderTransactionalEmail({
+        subject,
+        emailCategory: "Offer Update",
+        emailHeading: subject,
+        emailSubheading: "An update is available on your tuition offer.",
+        firstName: user.name,
+        openingMessage: message,
+        mainMessage: "Log in to your TUTORERA dashboard to review offer details, message the other party, or complete your booking.",
+        cta: { label: "Review Offers", url: "https://tutorera.ac.pk/offers" },
+        includeSecurityNotice: true,
+      });
+      await sendEmail({ to: user.email, subject, html, eventType: "offer.updated" });
+    }
+  } catch (error) {
+    console.error("Offer email failed:", error);
+  }
+}
 
 async function context(offerId: string) {
   const offer = await Bid.findById(offerId);

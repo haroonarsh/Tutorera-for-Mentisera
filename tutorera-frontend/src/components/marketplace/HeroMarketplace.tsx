@@ -56,8 +56,8 @@ export default function HeroMarketplace() {
                 marginBottom: "1rem",
               }}
             >
-              You Set the Requirement. <br />
-              <span style={{ color: "#016ef8" }}>Tutors Make Offers. You Choose.</span>
+              Students Need Tutors. <br />
+              <span style={{ color: "#016ef8" }}>Tutors Need Students. <br />TUTORERA Connects Both.</span>
             </h1>
 
             <p
@@ -69,7 +69,7 @@ export default function HeroMarketplace() {
                 maxWidth: 540,
               }}
             >
-              Post your subject, learning mode, schedule, and preferred budget. TUTORERA matches your requirement with suitable tutors who can accept your rate or send an offer. Compare, negotiate, and choose with confidence.
+              The global marketplace where you control the match. Students post requirements and budgets. Tutors apply or send offers. Compare, negotiate, and start learning or teaching today.
             </p>
 
             <div style={{ marginBottom: "1.25rem" }}>
@@ -92,7 +92,7 @@ export default function HeroMarketplace() {
               >
                 <ShieldCheck size={16} color="#10b981" />
                 <span>
-                  <strong>First-session protection:</strong> replacement, credit, or refund review where eligible
+                  <strong>Quality assurance:</strong> First-session protection for students and guaranteed payouts for verified tutors
                 </span>
                 <ArrowRight size={13} color="#059669" />
               </Link>
@@ -129,12 +129,12 @@ export default function HeroMarketplace() {
                   transition: "transform 0.15s ease, background 0.15s ease",
                 }}
               >
-                <span>Post My Tuition Request</span>
+                <span>I Need a Tutor</span>
                 <ArrowRight size={18} />
               </Link>
 
               <Link
-                href="/tutors"
+                href="/opportunities"
                 style={{
                   background: "white",
                   color: "#021550",
@@ -150,9 +150,11 @@ export default function HeroMarketplace() {
                   minHeight: "50px",
                   flex: "1 1 auto",
                   maxWidth: "240px",
+                  gap: "0.4rem"
                 }}
               >
-                Browse Tutors
+                <span>I Want to Teach</span>
+                <ArrowRight size={16} color="#021550" />
               </Link>
             </div>
 

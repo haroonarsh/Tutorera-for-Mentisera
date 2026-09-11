@@ -32,6 +32,7 @@ export const metadata: Metadata = {
     "private tutors",
     "tutors in UAE",
     "tutors in UK",
+    "tutors in USA",
     "tutors in Pakistan",
     "TUTORERA",
   ],
@@ -45,6 +46,18 @@ export const metadata: Metadata = {
   },
   publisher: "TUTORERA",
   metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+    languages: {
+      "en-GB": "/gb",
+      "en-AE": "/ae",
+      "en-SA": "/sa",
+      "en-PK": "/pk",
+      "en-IN": "/in",
+      "en-US": "/usa",
+      "x-default": "/",
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
