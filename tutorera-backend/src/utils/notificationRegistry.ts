@@ -607,6 +607,15 @@ export const NOTIFICATION_EVENT_REGISTRY: Record<string, EventRegistryEntry> = {
     isTransactional: true,
     description: "Document requires attention / resubmission",
   },
+  "verification.pending": {
+    event: "verification.pending",
+    category: "verification",
+    audience: ["tutor", "admin"],
+    channels: { inApp: true, push: false, email: false, sms: false },
+    priority: "normal",
+    isTransactional: false,
+    description: "Document marked as pending manually by admin",
+  },
   "home_tuition.eligibility_granted": {
     event: "home_tuition.eligibility_granted",
     category: "verification",

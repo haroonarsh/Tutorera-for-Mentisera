@@ -7,13 +7,9 @@ import { RefreshCw, Users, BookOpen, ArrowRight, Search, HeartHandshake, ArrowLe
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
 
-type TutorRow = { userId: string; profileId: string | null; name: string; email: string; countryCode?: string; city?: string; applicationId?: string; phase: string; onboardingStep: number; onboardingComplete: boolean; marketplaceEligible: boolean; homeTuitionEligible: boolean; lastUpdatedAt: string };
 type StudentRow = { userId: string; name: string; email: string; countryCode?: string; city?: string; phase: string; onboardingComplete: boolean; requestCount: number; lastRequestAt?: string; lastUpdatedAt: string };
 type ParentRow = { userId: string; name: string; email: string; countryCode?: string; city?: string; phase: string; linkedLearners: number; approvalRequiredForBookings: boolean; lastUpdatedAt: string };
 
-const tutorLabels: Record<string, string> = {
-  APPLICATION_STARTED: "Started", DOCUMENTS_REQUIRED: "Documents required", APPLICATION_SUBMITTED: "Submitted", UNDER_REVIEW: "Under review", ACTION_REQUIRED: "Action required", VERIFICATION_IN_PROGRESS: "Verification in progress", APPROVED_FOR_MARKETPLACE: "Marketplace active", HOME_TUITION_VERIFICATION_REQUIRED: "Home verification pending", HOME_TUITION_ELIGIBLE: "Home tuition eligible", REJECTED: "Rejected", SUSPENDED: "Suspended", RE_VERIFICATION_REQUIRED: "Re-verification required",
-};
 const studentLabels: Record<string, string> = { REGISTERED: "Registered", PROFILE_STARTED: "Profile started", READY_TO_POST: "Ready to post", ACTIVE_REQUESTER: "Active requester" };
 const parentLabels: Record<string, string> = { REGISTERED: "Registered", PROFILE_STARTED: "Profile started", LEARNER_LINKED: "Learner linked" };
 const date = (value?: string) => value ? new Date(value).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -22,14 +18,13 @@ function AdminOnboardingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialTab = (searchParams.get("tab") as "tutors" | "students" | "parents") || "tutors";
+  const initialTab = (searchParams.get("tab") as "students" | "parents") || "students";
   const initialPhase = searchParams.get("phase") || "";
   const initialSearch = searchParams.get("search") || "";
 
-  const [tab, setTab] = useState<"tutors" | "students" | "parents">(
-    initialTab === "students" || initialTab === "parents" ? initialTab : "tutors"
+  const [tab, setTab] = useState<"students" | "parents">(
+    initialTab === "parents" ? "parents" : "students"
   );
-  const [tutors, setTutors] = useState<TutorRow[]>([]);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [parents, setParents] = useState<ParentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,15 +33,14 @@ function AdminOnboardingContent() {
   const [countryCode, setCountryCode] = useState("");
   const [summary, setSummary] = useState<Record<string, number>>({});
 
-  // Sync tab if URL changes
   useEffect(() => {
     const urlTab = searchParams.get("tab");
-    if (urlTab && (urlTab === "tutors" || urlTab === "students" || urlTab === "parents")) {
-      setTab(urlTab);
+    if (urlTab && (urlTab === "students" || urlTab === "parents")) {
+      setTab(urlTab as "students" | "parents");
     }
   }, [searchParams]);
 
-  const handleTabChange = (newTab: "tutors" | "students" | "parents") => {
+  const handleTabChange = (newTab: "students" | "parents") => {
     setTab(newTab);
     setPhase("");
     setSearch("");
@@ -63,8 +57,7 @@ function AdminOnboardingContent() {
       const endpoint = `/admin/onboarding/${tab}?${params.toString()}`;
       const response = await api.get(endpoint);
       setSummary(response.data.summary || {});
-      if (tab === "tutors") setTutors(response.data.rows || []);
-      else if (tab === "students") setStudents(response.data.rows || []);
+      if (tab === "students") setStudents(response.data.rows || []);
       else setParents(response.data.rows || []);
     } catch (error) {
       showError(error, "Unable to load onboarding operations");
@@ -107,7 +100,7 @@ function AdminOnboardingContent() {
             Application & Readiness Pipelines
           </h1>
           <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
-            Monitor and expedite onboarding progression across Tutors, Students, and Parents/Guardians.
+            Monitor and expedite onboarding progression across Students and Parents/Guardians.
           </p>
         </div>
 
@@ -118,9 +111,6 @@ function AdminOnboardingContent() {
 
       <section style={card}>
         <div style={{ borderBottom: "1px solid #e2e8f0", display: "flex", flexWrap: "wrap", background: "#f8fafc" }}>
-          <button type="button" onClick={() => handleTabChange("tutors")} style={tabStyle(tab === "tutors")}>
-            <BookOpen size={17} /> Tutor Onboarding
-          </button>
           <button type="button" onClick={() => handleTabChange("students")} style={tabStyle(tab === "students")}>
             <Users size={17} /> Student Onboarding
           </button>
@@ -148,7 +138,7 @@ function AdminOnboardingContent() {
                 }}
               >
                 <span style={{ display: "block", color: "#52627e", fontSize: 11, fontWeight: 800 }}>
-                  {(tab === "tutors" ? tutorLabels : tab === "students" ? studentLabels : parentLabels)[key] || key}
+                  {(tab === "students" ? studentLabels : parentLabels)[key] || key}
                 </span>
                 <strong style={{ fontSize: 20, color: "#021550" }}>{count}</strong>
               </button>
@@ -189,8 +179,6 @@ function AdminOnboardingContent() {
 
         {loading ? (
           <p style={empty}>Loading application pipeline records…</p>
-        ) : tab === "tutors" ? (
-          <TutorTable rows={tutors} />
         ) : tab === "students" ? (
           <StudentTable rows={students} />
         ) : (
@@ -209,61 +197,6 @@ export default function AdminOnboardingPage() {
   );
 }
 
-function TutorTable({ rows }: { rows: TutorRow[] }) {
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={table}>
-        <thead>
-          <tr>
-            {["Tutor", "Phase", "Step", "Location", "Visibility", "Updated", "Actions"].map((x) => (
-              <th key={x} style={th}>{x}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length ? (
-            rows.map((row) => (
-              <tr key={row.userId}>
-                <td style={td}>
-                  <strong>{row.name}</strong>
-                  <small style={small}>{row.email} · {row.applicationId || "No application ID"}</small>
-                </td>
-                <td style={td}>
-                  <Pill value={tutorLabels[row.phase] || row.phase} />
-                </td>
-                <td style={td}>
-                  Step {row.onboardingStep}/5 {row.onboardingComplete ? "· complete" : ""}
-                </td>
-                <td style={td}>
-                  {row.city || "—"}{row.countryCode ? `, ${row.countryCode}` : ""}
-                </td>
-                <td style={td}>
-                  {row.marketplaceEligible ? "Marketplace active" : row.homeTuitionEligible ? "Home active" : "Not visible"}
-                </td>
-                <td style={td}>{date(row.lastUpdatedAt)}</td>
-                <td style={td}>
-                  {row.profileId ? (
-                    <Link href={`/admin/applications/${row.profileId}`} style={link}>
-                      Review <ArrowRight size={14} />
-                    </Link>
-                  ) : (
-                    <Link href={`/admin/applications?search=${encodeURIComponent(row.name)}`} style={link}>
-                      Find Application <ArrowRight size={14} />
-                    </Link>
-                  )}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td style={empty} colSpan={7}>No tutor onboarding records found.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 function StudentTable({ rows }: { rows: StudentRow[] }) {
   return (

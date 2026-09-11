@@ -361,7 +361,7 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
       message: `CNIC marked as pending for review`,
       statusAfter: "pending",
     });
-    await NotificationService.publishEvent(user._id.toString(), "verification.rejected", { // Using verification.rejected template fallback without an email template mapped for pending specifically yet, but maybe we shouldn't send email. We can just use the in-app notification properties.
+    await NotificationService.publishEvent(user._id.toString(), "verification.pending", { 
       title: "📄 Document Pending", message: "Your CNIC has been reset to pending review.", link: "/tutor/application-status", type: "verification"
     });
   }
@@ -411,7 +411,7 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     await setAccountStatus(user._id.toString(), "submitted");
   } else if (status === "pending") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "EDUCATIONAL_DOCUMENTS_PENDING", message: `Educational documents marked as pending for review`, statusAfter: "pending" });
-    await NotificationService.publishEvent(user._id.toString(), "verification.rejected", { 
+    await NotificationService.publishEvent(user._id.toString(), "verification.pending", { 
       title: "📄 Document Pending", message: "Your educational documents have been reset to pending review.", link: "/tutor/application-status", type: "verification"
     });
   }
@@ -453,8 +453,8 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
     await setAccountStatus(user._id.toString(), "submitted");
   } else if (status === "pending") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "DEMO_VIDEO_PENDING", message: `Demo video marked as pending for review`, statusAfter: "pending" });
-    await NotificationService.publishEvent(user._id.toString(), "verification.rejected", { 
-      title: "🎬 Video Pending", message: "Your demo video has been reset to pending review.", link: "/tutor/application-status", type: "verification"
+    await NotificationService.publishEvent(user._id.toString(), "verification.pending", { 
+      title: "🎥 Video Pending", message: "Your demo video has been reset to pending review.", link: "/tutor/application-status", type: "verification"
     });
   }
   await logAudit({ action: `demo_video_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
@@ -495,8 +495,8 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
     await setAccountStatus(user._id.toString(), "submitted");
   } else if (status === "pending") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_PENDING", message: `Police verification marked as pending for review`, statusAfter: "pending" });
-    await NotificationService.publishEvent(user._id.toString(), "verification.rejected", { 
-      title: "🛡️ Verification Pending", message: "Your police certificate has been reset to pending review.", link: "/tutor/application-status", type: "verification"
+    await NotificationService.publishEvent(user._id.toString(), "verification.pending", { 
+      title: "👮 Verification Pending", message: "Your police certificate has been reset to pending review.", link: "/tutor/application-status", type: "verification"
     });
   }
   await logAudit({ action: `police_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });

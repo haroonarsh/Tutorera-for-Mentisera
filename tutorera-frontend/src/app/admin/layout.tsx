@@ -73,7 +73,6 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/tutors", label: "Tutors Directory", icon: <BookOpen size={17} />, permission: "tutor.read" },
       { href: "/admin/applications", label: "Applications", icon: <ClipboardList size={17} />, permission: "tutor.read" },
-      { href: "/admin/onboarding?tab=tutors", label: "Tutor Pipeline", icon: <ClipboardList size={17} />, permission: "tutor.read" },
       { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={17} />, permission: "tutor.verify" },
       { href: "/admin/supply-gaps", label: "Supply Gaps", icon: <TrendingDown size={17} />, permission: "analytics.read" },
       { href: "/admin/liquidity", label: "Liquidity Scores", icon: <ActivitySquare size={17} />, permission: "analytics.read" },

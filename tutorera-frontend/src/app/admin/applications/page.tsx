@@ -44,6 +44,7 @@ function ApplicationsContent() {
   const [rows, setRows] = useState<AdminApplicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [summary, setSummary] = useState<Record<string, number>>({});
   const [filters, setFilters] = useState({
     status: initialStatus,
     marketplace: "all",
@@ -63,6 +64,7 @@ function ApplicationsContent() {
       params.set("page", String(pageToLoad));
       const res = await api.get(`/tracking/admin/applications?${params.toString()}`);
       setRows(res.data.applications);
+      setSummary(res.data.summary || {});
       setPagination({ page: res.data.page, pages: res.data.pages, total: res.data.total });
     } catch (err) {
       showError(err, "Failed to load applications");
@@ -89,6 +91,34 @@ function ApplicationsContent() {
           <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#0329B2", margin: "0 0 6px" }}>Admin</p>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#021550", margin: "0 0 6px" }}>Tutor Applications</h1>
           <p style={{ color: "#64748b", fontSize: 14, margin: 0 }}>Review verification, manage eligibility, and act on every tutor application.</p>
+        </div>
+
+        {/* Phase Filter Chips */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
+          {Object.entries(summary).map(([key, count]) => (
+            <button
+              type="button"
+              key={key}
+              onClick={() => {
+                setFilters(f => ({ ...f, status: f.status === key ? "all" : key }));
+                setPage(1);
+              }}
+              style={{
+                textAlign: "left",
+                border: filters.status === key ? "2px solid #016EF8" : "1px solid #dbe5f3",
+                background: filters.status === key ? "#eff6ff" : "#fff",
+                padding: "10px 12px",
+                borderRadius: 10,
+                cursor: "pointer",
+                transition: "all 120ms ease",
+              }}
+            >
+              <span style={{ display: "block", color: "#52627e", fontSize: 11, fontWeight: 800 }}>
+                {STATUS_LABELS[key as CanonicalStatus] || key}
+              </span>
+              <strong style={{ fontSize: 20, color: "#021550" }}>{count}</strong>
+            </button>
+          ))}
         </div>
 
         <div className={s.card} style={{ marginBottom: 16 }}>
