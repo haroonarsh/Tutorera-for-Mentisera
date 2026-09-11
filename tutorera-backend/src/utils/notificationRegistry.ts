@@ -119,6 +119,16 @@ export const NOTIFICATION_EVENT_REGISTRY: Record<string, EventRegistryEntry> = {
     isTransactional: true,
     description: "Notice of account restoration",
   },
+  "admin.user_registered": {
+    event: "admin.user_registered",
+    category: "admin",
+    audience: ["admin", "system"],
+    channels: { inApp: false, push: false, email: true, sms: false },
+    priority: "normal",
+    templateId: "admin_new_user",
+    isTransactional: true,
+    description: "Platform admin notification of new signup",
+  },
 
   // ── 2. Student Tuition Requests ──────────────────────────────────────────
   "request.created": {
@@ -242,6 +252,16 @@ export const NOTIFICATION_EVENT_REGISTRY: Record<string, EventRegistryEntry> = {
     isTransactional: false,
     description: "Your tutor search is waiting — continue when ready (72h)",
   },
+  "request.abandoned_168h": {
+    event: "request.abandoned_168h",
+    category: "growth",
+    audience: ["student", "parent"],
+    channels: { inApp: true, push: false, email: true, sms: false },
+    priority: "low",
+    templateId: "request_abandoned_168h",
+    isTransactional: false,
+    description: "Your tutor search is waiting — continue when ready (168h)",
+  },
   "booking.payment_abandoned_1h": {
     event: "booking.payment_abandoned_1h",
     category: "payment",
@@ -272,6 +292,26 @@ export const NOTIFICATION_EVENT_REGISTRY: Record<string, EventRegistryEntry> = {
     isTransactional: false,
     description: "Your booking will expire soon (48h)",
   },
+  "booking.payment_abandoned_72h": {
+    event: "booking.payment_abandoned_72h",
+    category: "payment",
+    audience: ["student", "parent"],
+    channels: { inApp: true, push: false, email: true, sms: false },
+    priority: "normal",
+    templateId: "payment_abandoned_72h",
+    isTransactional: false,
+    description: "Your booking is waiting for payment (72h)",
+  },
+  "booking.payment_abandoned_168h": {
+    event: "booking.payment_abandoned_168h",
+    category: "payment",
+    audience: ["student", "parent"],
+    channels: { inApp: true, push: false, email: true, sms: false },
+    priority: "low",
+    templateId: "payment_abandoned_168h",
+    isTransactional: false,
+    description: "Your booking is waiting for payment (168h)",
+  },
   "tutor.application_abandoned_24h": {
     event: "tutor.application_abandoned_24h",
     category: "growth",
@@ -291,6 +331,16 @@ export const NOTIFICATION_EVENT_REGISTRY: Record<string, EventRegistryEntry> = {
     templateId: "tutor_app_abandoned_72h",
     isTransactional: false,
     description: "Your tutor application is still waiting (72h)",
+  },
+  "tutor.application_abandoned_168h": {
+    event: "tutor.application_abandoned_168h",
+    category: "growth",
+    audience: ["tutor"],
+    channels: { inApp: true, push: false, email: true, sms: false },
+    priority: "low",
+    templateId: "tutor_app_abandoned_168h",
+    isTransactional: false,
+    description: "Your tutor application is still waiting (168h)",
   },
 
   // ── 4. Offers & Structured Negotiation ───────────────────────────────────

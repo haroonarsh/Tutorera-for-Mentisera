@@ -5,7 +5,7 @@ import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 import crypto from "crypto";
-import sendEmail from "../utils/sendEmail";
+import { NotificationService } from "../services/notification.service";
 import {
   studentWelcomeEmail,
   parentWelcomeEmail,
@@ -94,21 +94,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    const payload: any = { role: user.role };
     if (user.role === "tutor") {
       const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
-      const { subject, html } = tutorWelcomeApplicationEmail(user.name, user.applicationId || "TUT-PENDING", trackingUrl);
-      await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-    } else if (user.role === "parent") {
-      const { subject, html } = parentWelcomeEmail(user.name);
-      await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-    } else {
-      const { subject, html } = studentWelcomeEmail(user.name);
-      await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
+      payload.applicationId = user.applicationId;
+      payload.trackingUrl = trackingUrl;
     }
+    await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
 
     try {
       // Platform admin notification to mentiserapk@gmail.com
-      const adminEmail = adminNewUserSignupEmail({
+      await NotificationService.publishEvent("system_admin", "admin.user_registered", {
         name: user.name,
         email: user.email,
         role: user.role,
@@ -118,7 +114,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         authProvider: "local",
         applicationId: user.applicationId,
       });
-      await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html, eventType: "admin.user_registered" });
     } catch (adminErr) {
       console.error("Failed to send admin signup alert email:", adminErr);
     }
@@ -252,28 +247,29 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     }
 
     try {
+      const payload: any = { role: user.role };
       if (user.role === "tutor") {
         const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
-        const { subject, html } = tutorWelcomeApplicationEmail(user.name, user.applicationId || "TUT-PENDING", trackingUrl);
-        await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-      } else if (user.role === "parent") {
-        const { subject, html } = parentWelcomeEmail(user.name);
-        await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-      } else if (user.role === "student") {
-        const { subject, html } = studentWelcomeEmail(user.name);
-        await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
+        payload.applicationId = user.applicationId;
+        payload.trackingUrl = trackingUrl;
       }
+      await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
 
-      // Platform admin notification to mentiserapk@gmail.com
-      const adminEmail = adminNewUserSignupEmail({
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        country: user.countryName,
-        authProvider: "google",
-        applicationId: user.applicationId,
-      });
-      await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html, eventType: "admin.user_registered" });
+      try {
+        // Platform admin notification to mentiserapk@gmail.com
+        await NotificationService.publishEvent("system_admin", "admin.user_registered", {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone || "N/A",
+          city: user.city || "Unknown",
+          country: user.countryName || "Unknown",
+          authProvider: "google",
+          applicationId: user.applicationId,
+        });
+      } catch (adminErr) {
+        console.error("Failed to send admin signup alert email:", adminErr);
+      }
     } catch (err) {
       console.error("Failed to send Google signup email:", err);
     }
@@ -356,43 +352,33 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
       message: "Tutor application created",
       isPublic: true,
     });
-    try {
-      const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
-      const { subject, html } = tutorWelcomeApplicationEmail(user.name, user.applicationId || "TUT-PENDING", trackingUrl);
-      await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-    } catch (err) {
-      console.error("Failed to send tutor welcome email:", err);
-    }
-  } else if (role === "parent") {
-    try {
-      const { subject, html } = parentWelcomeEmail(user.name);
-      await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-    } catch (err) {
-      console.error("Failed to send parent welcome email:", err);
-    }
-  } else if (role === "student") {
-    try {
-      const { subject, html } = studentWelcomeEmail(user.name);
-      await sendEmail({ to: user.email, subject, html, eventType: "auth.registered" });
-    } catch (err) {
-      console.error("Failed to send student welcome email:", err);
-    }
   }
 
   try {
-    const adminEmail = adminNewUserSignupEmail({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      city: user.city,
-      country: user.countryName,
-      authProvider: user.authProvider || "google",
-      applicationId: user.applicationId,
-    });
-    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html, eventType: "admin.user_registered" });
-  } catch (adminErr) {
-    console.error("Failed to send admin role selection alert email:", adminErr);
+    const payload: any = { role: user.role };
+    if (user.role === "tutor") {
+      const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
+      payload.applicationId = user.applicationId;
+      payload.trackingUrl = trackingUrl;
+    }
+    await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
+
+    try {
+      await NotificationService.publishEvent("system_admin", "admin.user_registered", {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone || "N/A",
+        city: user.city || "Unknown",
+        country: user.countryName || "Unknown",
+        authProvider: "google",
+        applicationId: user.applicationId,
+      });
+    } catch (adminErr) {
+      console.error("Failed to send admin role selection alert email:", adminErr);
+    }
+  } catch (err) {
+    console.error("Failed to send registration email:", err);
   }
 
   sendTokenResponse(user, 200, res);
@@ -518,15 +504,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   await user.save();
 
   try {
-    const { subject, html } = passwordResetOtpEmail(user.name, otp);
-    await sendEmail({
-      to: user.email,
-      subject,
-      html,
-      eventType: "auth.password.reset_requested",
-      templateId: "password_reset_code",
-      userId: user._id.toString(),
-    });
+    await NotificationService.publishEvent(user._id.toString(), "auth.password.reset_requested", { otp });
   } catch (err) {
     // Roll back the OTP if email fails, so a stale unusable OTP doesn't linger
     user.resetPasswordToken = undefined;

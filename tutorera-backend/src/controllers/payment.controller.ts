@@ -8,9 +8,7 @@ import RequestModel from "../models/Request.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
 import { finalizeBidAcceptance } from "./request.controller";
-import sendEmail from "../utils/sendEmail";
-import { paymentConfirmedEmail, paymentFailedEmail, paymentFailedNotifyTutorEmail } from "../utils/emailTemplates";
-import { sendNotification } from "../utils/socket";
+import { NotificationService } from "../services/notification.service";
 import logger from "../config/logger";
 import { calculateMarketplaceFees } from "../config/constants";
 import { assertAcceptanceAvailable } from "../services/market.service";
@@ -169,14 +167,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           try {
             if (student && tutor) {
               const booking = await Booking.findOne({ bid: bid._id }).populate("request");
-              const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount, {
+              await NotificationService.publishEvent(student._id.toString(), "payment.succeeded", {
+                amount: event.amount,
                 bookingId: booking?._id?.toString() || `BID-${bidId}`,
                 subject: (booking?.request as any)?.subject,
                 schedule: booking?.schedule,
                 teachingMode: booking?.teachingMode,
                 sessionCount: booking?.sessionCount,
               });
-              await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
             }
           } catch (err) {
             logger.error({ err, bidId }, "Failed to send payment receipt email");
@@ -227,14 +225,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           const tutor = await User.findById(booking.tutor).select("name email");
           const populatedBooking = await Booking.findById(booking._id).populate("request");
           if (student && tutor) {
-            const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount, {
+            await NotificationService.publishEvent(student._id.toString(), "payment.succeeded", {
+              amount: event.amount,
               bookingId: booking._id.toString(),
               subject: (populatedBooking?.request as any)?.subject,
               schedule: booking.schedule,
               teachingMode: booking.teachingMode,
               sessionCount: booking.sessionCount,
             });
-            await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
           }
         } catch (err) {
           logger.error({ err, bookingId: booking._id }, "Failed to send payment receipt email");
@@ -268,21 +266,20 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           const bookingDetails = { bookingId: `BID-${bidId}`, subject: request?.subject };
           try {
             if (student) {
-              const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount, bookingDetails);
-              await sendEmail({ to: student.email, subject: failEmail.subject, html: failEmail.html, eventType: "payment_failed" });
-              const io = req.app.get("io");
-              if (io) {
-                await sendNotification(io, student._id.toString(), {
-                  title: "Payment Failed",
-                  message: "Your payment could not be processed. Please try again or contact support.",
-                  type: "general",
-                  link: "/dashboard",
-                });
-              }
+              await NotificationService.publishEvent(student._id.toString(), "payment.failed", {
+                amount: event.amount,
+                bookingId: `BID-${bidId}`,
+                subject: request?.subject,
+                tutorName: tutor?.name || "the tutor"
+              });
             }
             if (tutor) {
-              const tutorEmail = paymentFailedNotifyTutorEmail(tutor.name, student?.name || "the student", event.amount, bookingDetails);
-              await sendEmail({ to: tutor.email, subject: tutorEmail.subject, html: tutorEmail.html, eventType: "payment_failed_tutor" });
+              await NotificationService.publishEvent(tutor._id.toString(), "payment.failed", { // Maybe we need a payment.failed.tutor event
+                amount: event.amount,
+                bookingId: `BID-${bidId}`,
+                subject: request?.subject,
+                studentName: student?.name || "the student"
+              });
             }
           } catch (err) {
             logger.error({ err, bidId }, "Failed to send payment failure notification");
@@ -310,21 +307,26 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           const tutor = await User.findById(booking.tutor).select("name email");
           try {
             if (student) {
-              const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount, bookingDetails);
-              await sendEmail({ to: student.email, subject: failEmail.subject, html: failEmail.html, eventType: "payment_failed" });
-              const io = req.app.get("io");
-              if (io) {
-                await sendNotification(io, student._id.toString(), {
-                  title: "Payment Failed",
-                  message: "Your payment could not be processed. Please try again or contact support.",
-                  type: "general",
-                  link: "/dashboard",
-                });
-              }
+              await NotificationService.publishEvent(student._id.toString(), "payment.failed", {
+                amount: event.amount,
+                bookingId: booking._id.toString(),
+                subject: requestDoc?.subject,
+                schedule: booking.schedule,
+                teachingMode: booking.teachingMode,
+                sessionCount: booking.sessionCount,
+                tutorName: tutor?.name || "the tutor"
+              });
             }
             if (tutor) {
-              const tutorEmail = paymentFailedNotifyTutorEmail(tutor.name, student?.name || "the student", event.amount, bookingDetails);
-              await sendEmail({ to: tutor.email, subject: tutorEmail.subject, html: tutorEmail.html, eventType: "payment_failed_tutor" });
+              await NotificationService.publishEvent(tutor._id.toString(), "payment.failed", {
+                amount: event.amount,
+                bookingId: booking._id.toString(),
+                subject: requestDoc?.subject,
+                schedule: booking.schedule,
+                teachingMode: booking.teachingMode,
+                sessionCount: booking.sessionCount,
+                studentName: student?.name || "the student"
+              });
             }
           } catch (err) {
             logger.error({ err, bookingId: booking._id }, "Failed to send payment failure notification");

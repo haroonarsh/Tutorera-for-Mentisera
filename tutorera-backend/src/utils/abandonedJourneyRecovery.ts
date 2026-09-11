@@ -3,13 +3,9 @@ import Booking from "../models/Booking.model";
 import EmailLog from "../models/EmailLog.model";
 import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
-import sendEmail from "./sendEmail";
+import { NotificationService } from "../services/notification.service";
 import { logAudit } from "./logAudit";
-import {
-  studentPaymentAbandonedEmail,
-  studentRequestAbandonedEmail,
-  tutorApplicationAbandonedEmail,
-} from "./recoveryEmailTemplates";
+
 
 const MILESTONES = [7, 3, 1] as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -55,16 +51,14 @@ export async function processAbandonedJourneyRecovery() {
     const eventType = `profile_abandoned_${day}d`;
     if (await alreadyLogged(eventType, "TutorProfile", profile._id.toString())) continue;
 
-    const { subject, html } = tutorApplicationAbandonedEmail(user.name, day, profile.onboardingStep as number);
-    await sendEmail({
-      to: user.email,
-      subject,
-      html,
-      userId: user._id.toString(),
-      eventType,
-      templateId: `tutor_application_abandoned_${day}d`,
-      relatedEntityType: "TutorProfile",
-      relatedEntityId: profile._id.toString(),
+    const hours = day * 24;
+    const eventName = `tutor.application_abandoned_${hours}h`;
+    
+    await NotificationService.publishEvent(user._id.toString(), eventName, {
+      day,
+      onboardingStep: profile.onboardingStep,
+      subject: `Finish your tutor application`,
+      html: `You left your application at step ${profile.onboardingStep}. Please finish it.` // This will be overriden by the template mapped in NotificationService
     });
     await logAudit({ action: eventType, actor: "system", entity: "TutorProfile", targetId: profile._id.toString() });
     tutorApplicationReminders++;
@@ -88,16 +82,15 @@ export async function processAbandonedJourneyRecovery() {
     if (await alreadyLogged(eventType, "AbandonedJourney", journey._id.toString())) continue;
 
     const data = journey.data || {};
-    const { subject, html } = studentRequestAbandonedEmail(user.name, day, typeof data.subject === "string" ? data.subject : undefined);
-    await sendEmail({
-      to: user.email,
-      subject,
-      html,
-      userId: user._id.toString(),
-      eventType,
-      templateId: `${isDirectBooking ? "student_direct_booking" : "student_request"}_abandoned_${day}d`,
-      relatedEntityType: "AbandonedJourney",
-      relatedEntityId: journey._id.toString(),
+    const hours = day * 24;
+    const eventName = `request.abandoned_${hours}h`;
+
+    await NotificationService.publishEvent(user._id.toString(), eventName, {
+      day,
+      subjectName: typeof data.subject === "string" ? data.subject : undefined,
+      isDirectBooking,
+      subject: "Finish your tuition request draft",
+      html: "Please finish your request." // Handled by NotificationService
     });
     journey.remindersSent = Array.from(new Set([...(journey.remindersSent || []), day])).sort((a, b) => a - b);
     journey.lastReminderSentAt = now;
@@ -129,16 +122,15 @@ export async function processAbandonedJourneyRecovery() {
     if (await alreadyLogged(eventType, "Booking", booking._id.toString())) continue;
 
     const tutor = booking.tutor as any;
-    const { subject, html } = studentPaymentAbandonedEmail(student.name || "Student", day, tutor?.name, booking.studentTotal || booking.amount);
-    await sendEmail({
-      to: student.email,
-      subject,
-      html,
-      userId: student._id?.toString(),
-      eventType,
-      templateId: `booking_payment_abandoned_${day}d`,
-      relatedEntityType: "Booking",
-      relatedEntityId: booking._id.toString(),
+    const hours = day * 24;
+    const eventName = `booking.payment_abandoned_${hours}h`;
+
+    await NotificationService.publishEvent(student._id?.toString(), eventName, {
+      day,
+      tutorName: tutor?.name,
+      amount: booking.studentTotal || booking.amount,
+      subject: "Complete your payment",
+      html: "Your booking is waiting for payment."
     });
     await logAudit({ action: eventType, actor: "system", entity: "Booking", targetId: booking._id.toString() });
     paymentReminders++;

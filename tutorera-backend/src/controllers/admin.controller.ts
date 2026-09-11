@@ -20,7 +20,7 @@ import EmailLog from "../models/EmailLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import MarketConfig from "../models/MarketConfig.model";
-import sendEmail from "../utils/sendEmail";
+import { NotificationService } from "../services/notification.service";
 import { EMAIL_EVENTS } from "../utils/emailEvents";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail, reviewRequestEmail } from "../utils/emailTemplates";
 import { getSignedViewUrl } from "../utils/uploadToCloudinary";
@@ -190,10 +190,11 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   });
 
   try {
-    const { subject, html } = status === "approved"
-      ? tutorApprovedEmail(tutorUser.name)
-      : tutorRejectedEmail(tutorUser.name, reason);
-    await sendEmail({ to: tutorUser.email, subject, html });
+    if (status === "approved") {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    } else {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    }
   } catch (err) {
     console.error("Failed to send tutor verification email:", err);
   }
@@ -229,8 +230,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
     try {
-      const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
     } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/tutor/application-status" });
   } else if (!mpEligible && profile.marketplaceEligible) {
@@ -239,8 +239,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
     try {
-      const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: cta });
     } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
@@ -250,8 +249,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
     try {
-      const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "home_tuition_approved", { ctaArgs: cta });
     } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
   } else if (!htEligible && profile.homeTuitionEligible) {
@@ -260,8 +258,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
     try {
-      const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "HomeTuition", reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: cta });
     } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
@@ -348,10 +345,11 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       });
 
       try {
-        const { subject, html } = status === "approved"
-          ? tutorApprovedEmail(tutorUser.name)
-          : tutorRejectedEmail(tutorUser.name, reason);
-        await sendEmail({ to: tutorUser.email, subject, html });
+        if (status === "approved") {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    } else {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    }
       } catch (err) {
         console.error(`Failed to send verification email to ${tutorUser.email}:`, err);
       }
@@ -385,8 +383,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
         try {
-          const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
         } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/tutor/application-status" });
       } else if (!mpEligible && profile.marketplaceEligible) {
@@ -395,8 +392,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
         try {
-          const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: cta });
         } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
       }
@@ -406,8 +402,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
         try {
-          const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "home_tuition_approved", { ctaArgs: cta });
         } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
       } else if (!htEligible && profile.homeTuitionEligible) {
@@ -416,8 +411,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
         try {
-          const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "HomeTuition", reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: cta });
         } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
       }
@@ -745,12 +739,11 @@ export const updatePaymentStatus = async (
     try {
       const studentUser = await User.findById(booking.student).select("email");
       if (studentUser) {
-        const { subject, html } = paymentConfirmedEmail(
-          (booking.student as any)?.name || "Student",
-          (booking.tutor as any)?.name || "Tutor",
-          booking.amount
-        );
-        await sendEmail({ to: studentUser.email, subject, html });
+        await NotificationService.publishEvent(studentUser._id.toString(), "payment_receipt", {
+          tutorName: (booking.tutor as any)?.name || "Tutor",
+          amount: booking.amount,
+          bookingId: booking._id.toString()
+        });
       }
     } catch (err) {
       console.error("Failed to send payment confirmation email:", err);
@@ -949,8 +942,11 @@ export const updateBookingStatus = async (
        const tutorUser = await User.findById(booking.tutor).select("name email");
        const requestSubject = (booking.request as any)?.subject || "your session";
        if (studentUser && tutorUser) {
-         const reviewMail = reviewRequestEmail(studentUser.name, tutorUser.name, requestSubject, booking._id.toString());
-         await sendEmail({ to: studentUser.email, subject: reviewMail.subject, html: reviewMail.html, eventType: "review_requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
+         await NotificationService.publishEvent(studentUser._id.toString(), "review.requested", {
+           tutorName: tutorUser.name,
+           subject: requestSubject,
+           bookingId: booking._id.toString()
+         });
        }
      } catch (err) {
        console.error("Failed to send review request email:", err);
