@@ -162,9 +162,9 @@ function RejectedScreen({ reason }: { reason?: string }) {
            )}
 
            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-             <button
-               onClick={() => router.push("/onboarding/tutor")}
-               style={{ padding: "0.75rem 1.5rem", backgroundColor: "#0329b2", color: "white", border: "none", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
+              <button
+                onClick={() => router.push("/tutor/resubmit-docs")}
+                style={{ padding: "0.75rem 1.5rem", backgroundColor: "#0329b2", color: "white", border: "none", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}>
                Fix & Re-submit Documents
              </button>
              <button
@@ -252,9 +252,13 @@ export default function DashboardPage() {
         const payload = res.data?.payload;
         const eligible = payload?.marketplaceEligibility?.eligible;
         const canonicalStatus = payload?.canonicalStatus;
-        setVerificationStatus(eligible ? "approved" : (canonicalStatus === "REJECTED" || canonicalStatus === "SUSPENDED" ? "rejected" : "pending"));
+        setVerificationStatus(eligible ? "approved" : (canonicalStatus === "REJECTED" || canonicalStatus === "SUSPENDED" || canonicalStatus === "ACTION_REQUIRED" ? "rejected" : "pending"));
         setRejectionReason(payload?.marketplaceEligibility?.reasonIfBlocked || payload?.actionRequired?.body || "");
-      } catch {
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          router.replace("/onboarding/tutor");
+          return;
+        }
         setVerificationStatus("error");
         setRejectionReason("Unable to load verification status. Please try again later or contact support.");
       } finally {

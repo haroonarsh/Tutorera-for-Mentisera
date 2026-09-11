@@ -41,6 +41,10 @@ export default function TutorApplicationStatusPage() {
         const res = await api.get("/tracking/application-status");
         if (!cancelled) setPayload(res.data.payload);
       } catch (err: any) {
+        if (err.response?.status === 404) {
+          router.replace("/onboarding/tutor");
+          return;
+        }
         if (!cancelled) setError(err?.response?.data?.message || "Unable to load your application status right now.");
       }
     })();
