@@ -28,6 +28,7 @@ export default function CookieBanner() {
     localStorage.setItem("tutorera_cookie_consent", JSON.stringify(consentData));
     localStorage.setItem("cookie_consent", "accepted");
     setShow(false);
+    window.dispatchEvent(new CustomEvent("tutorera-consent-updated"));
   };
 
   const handleEssentialOnly = () => {
@@ -40,6 +41,7 @@ export default function CookieBanner() {
     localStorage.setItem("tutorera_cookie_consent", JSON.stringify(consentData));
     localStorage.setItem("cookie_consent", "essential_only");
     setShow(false);
+    window.dispatchEvent(new CustomEvent("tutorera-consent-updated"));
   };
 
   if (!show) return null;
@@ -93,7 +95,8 @@ export default function CookieBanner() {
           </h3>
           <p style={{ color: "#4b5563", fontSize: "0.82rem", lineHeight: "1.55", margin: 0 }}>
             TUTORERA uses cookies and secure local storage to maintain authenticated sessions,
-            prevent CSRF fraud, and analyze marketplace traffic in accordance with our{" "}
+            prevent CSRF fraud, analyze marketplace traffic, and serve relevant ads through
+            Google AdSense. Review our{" "}
             <Link
               href="/cookies"
               style={{ color: C.accent, textDecoration: "underline", fontWeight: "600" }}

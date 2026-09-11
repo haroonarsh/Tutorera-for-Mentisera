@@ -126,7 +126,7 @@ To exercise rights not available self-serve, contact ${PRIVACY_CONTACT_EMAIL}.`
   {
     id: "10-cookies",
     title: "10. Cookies, Tracking & Local Storage",
-    content: `We use cookies and local storage to keep you authenticated, remember your preferred currency/timezone, and analyze site traffic. Non-essential analytics and marketing cookies require prior consent in jurisdictions where legally mandated. Learn more in our Cookie Policy.`
+    content: `We use cookies and local storage to keep you authenticated, remember your preferred currency/timezone, and analyze site traffic. Non-essential analytics and marketing cookies require prior consent in jurisdictions where legally mandated.\n\nWe also participate in Google AdSense (publisher ID ca-pub-2559940686225219), which uses cookies such as __gads to serve relevant contextual and interest-based advertisements and to measure ad performance. These cookies are only set after you have given advertising consent through our Cookie Banner. We do NOT sell your personal data to advertisers and never share identifiable information with advertising partners beyond what is necessary for ad delivery. Learn more in our Cookie Policy.`
   },
   {
     id: "11-mobile-privacy",

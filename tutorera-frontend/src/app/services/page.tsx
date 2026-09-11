@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import s from "../compliance-pages.module.css";
+import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
   title: "Tutoring Services & Curricula | TUTORERA",
@@ -37,6 +38,9 @@ export default function ServicesPage() {
       <section className={s.hero}>
         <h1>TUTORERA Tutoring Services & Curricula</h1>
         <p>Tutoring categories span international and national curricula. Rates are student-proposed or tutor-offered, tailored to subject difficulty, academic level, and learning mode (online worldwide or home tuition locally). Final rates are agreed in your preferred currency before authorized platform checkout.</p>
+      </section>
+      <section style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
+        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
       </section>
       <section className={s.narrow}>
         <p className={s.lead}><strong>Pricing Transparency:</strong> Student-led demand marketplace model. Students propose their preferred budget or receive custom tutor counter-offers. All checkout totals are displayed with full currency transparency, documented payment status, and published support/dispute routes.</p>

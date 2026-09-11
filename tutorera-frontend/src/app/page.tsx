@@ -6,6 +6,7 @@ import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCa
 import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import TopRequestsSection from "@/components/TopRequestsSection";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
+import AdBanner from "@/components/AdBanner";
 import { ArrowRight, Star, MapPin } from "lucide-react";
 import s from "./page.module.css";
 
@@ -69,6 +70,11 @@ export default function Home() {
 
       {/* 5. How TUTORERA Works (5-Step Visual Marketplace Loop) */}
       <MarketplaceFlow />
+
+      {/* Ad: Responsive leaderboard between flow and comparison */}
+      <section style={{ padding: "3rem 1.5rem", background: "white", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
+        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
+      </section>
 
       {/* 6. Side-by-Side Offer Comparison Showcase */}
       <OfferComparisonDemo />
@@ -184,6 +190,11 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Ad: Responsive ad between local coverage and expert guides */}
+      <section style={{ padding: "3rem 1.5rem", background: "white", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
+        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
+      </section>
+
       {/* 8. Educational Guidance & Reading */}
       <section style={{ padding: "4rem 1.5rem", background: "white" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
@@ -241,6 +252,11 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Ad: Responsive ad before final CTA */}
+      <section style={{ padding: "3rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
+        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
       </section>
 
       {/* 11. Final High-Impact Marketplace CTA */}

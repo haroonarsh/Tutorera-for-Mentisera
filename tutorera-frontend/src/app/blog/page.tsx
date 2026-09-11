@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import { getEditorialArticles } from "@/lib/editorial-content";
+import AdBanner from "@/components/AdBanner";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Tutoring Guides & Research | TUTORERA Blog",
+  description:
+    "Evidence-conscious, operationally reviewed guides for students, parents, and tutors covering tutor selection, tutor vs home tuition, rates, safety, and learning strategies.",
+  alternates: { canonical: "/blog" },
+};
 
 export default async function BlogPage() {
   const blogs = await getEditorialArticles();
@@ -9,6 +18,7 @@ export default async function BlogPage() {
       <h1 style={{ fontSize: "2.5rem", fontWeight: 800, color: "white", marginBottom: ".75rem" }}>Tutoring Insights & Guides</h1>
       <p style={{ color: "#cbd5e1", maxWidth: 650, margin: "auto" }}>Evidence-conscious, operationally reviewed guidance for students, parents, and tutors. Location-specific guides are clearly labelled.</p>
     </header>
+    <AdBanner slot="7346189519" format="auto" label="Advertisement" style={{ maxWidth: 1100, margin: "0 auto" }} />
     <section style={{ maxWidth: 1100, margin: "auto", padding: "3rem 1.5rem" }} aria-label="Published guides">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: "1.75rem" }}>
         {blogs.map(blog => <article key={blog._id} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, padding: "1.5rem", display: "flex", flexDirection: "column" }}>
@@ -22,6 +32,7 @@ export default async function BlogPage() {
           <Link href={`/blog/${blog.slug}`} style={{ color: "#0329B2", fontWeight: 700, textDecoration: "none", display: "flex", gap: 5, alignItems: "center", marginTop: 15 }}>Read guide <ArrowRight size={15}/></Link>
         </article>)}
       </div>
+      <AdBanner slot="7346189519" format="auto" label="Advertisement" style={{ maxWidth: 1100, margin: "2rem auto 0" }} />
     </section>
   </main>;
 }

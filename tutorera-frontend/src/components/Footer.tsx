@@ -52,6 +52,7 @@ const footerColumns = [
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Cookie Policy", href: "/cookies" },
+      { label: "Disclaimer & Ad Disclosure", href: "/disclaimer" },
       { label: "Subprocessors Directory", href: "/legal/subprocessors" },
       { label: "AI & Algorithm Transparency", href: "/legal/ai-transparency" },
       { label: "Privacy Rights & Data Export", href: "/privacy-center" },

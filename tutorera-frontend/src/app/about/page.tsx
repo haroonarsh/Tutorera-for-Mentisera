@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BookOpen, Users, Shield, Target, Heart, Globe2 } from "lucide-react";
 import type { Metadata } from "next";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
   title: "About TUTORERA® | Global Student-Led Tutoring Marketplace",
@@ -93,6 +94,11 @@ export default function AboutPage() {
             TUTORERA is not affiliated with, endorsed by, or certified by any ride-hailing or third-party marketplace brand. The model similarity is limited to the general demand-marketplace model where students post demand and verified providers respond with offers.
           </p>
         </div>
+      </section>
+
+      {/* Ad Banner */}
+      <section style={{ padding: "4rem 1.5rem", textAlign: "center", backgroundColor: "#f8faff" }}>
+        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
       </section>
 
       {/* Story */}

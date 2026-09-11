@@ -44,6 +44,9 @@ export const metadata: Metadata = {
       ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
       : undefined,
   },
+  other: {
+    "google-adsense-account": "ca-pub-2559940686225219",
+  },
   publisher: "TUTORERA",
   metadataBase: new URL(SITE_URL),
   alternates: {
@@ -184,8 +187,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
+     <html lang="en">
       <head>
+        <meta name="google-adsense-account" content="ca-pub-2559940686225219" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -210,9 +214,20 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-7NF2DR8MG6');
+            gtag('config', 'G-7NF2DR8MG6', {
+              'cookie_domain': 'tutorera.ac.pk',
+              'cookie_expires': 43200,
+              'cookie_flags': 'SameSite=None;Secure'
+            });
           `}
         </Script>
+        {/* Google AdSense */}
+        <Script
+          id="google-adsense"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2559940686225219"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={inter.className}>
         <SkipLink />
