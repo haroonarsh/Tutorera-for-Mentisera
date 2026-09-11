@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
-import { EDUCATION_LEVELS, normalizeEducationLevels } from "../config/educationLevels";
+import { EDUCATION_LEVELS, normalizeEducationLevels, normalizeEducationLevel } from "../config/educationLevels";
 
 export interface ITutorProfile extends Document {
   user: Types.ObjectId;
@@ -152,7 +152,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     subjects: [{ type: String, trim: true }],
     levels: [{
       type: String,
-      enum: EDUCATION_LEVELS,
+      trim: true,
     }],
     curricula: [{ type: String, trim: true }],
 
@@ -243,19 +243,33 @@ function policeIsRequired(profile: ITutorProfile): boolean {
   return inPerson && homeCountries.includes(country);
 }
 
+tutorProfileSchema.pre("validate", function () {
+  const p = this as any;
+  if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
+    p.levels = normalizeEducationLevels(p.levels) as any;
+  }
+});
+
 tutorProfileSchema.pre("save", function () {
-  const p = this as ITutorProfile;
-  // Historic profiles used short labels such as "O-Level" and "University".
-  // Normalize before validation so a document-review action cannot be blocked by
-  // unrelated legacy profile data.
-  p.levels = normalizeEducationLevels(p.levels) as any;
+  const p = this as any;
+  if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
+    p.levels = normalizeEducationLevels(p.levels) as any;
+  }
   const allApproved =
     p.cnicVerificationStatus === "approved" &&
     p.degreeVerificationStatus === "approved" &&
     p.demoVideoStatus === "approved" &&
     (!policeIsRequired(p) || p.policeVerificationStatus === "approved");
-  p.verificationStatus = allApproved ? "approved" : "pending";
-  p.isVerified = allApproved;
+
+  if (allApproved) {
+    p.verificationStatus = "approved";
+    p.isVerified = true;
+  } else if (p.verificationStatus !== "rejected") {
+    p.verificationStatus = "pending";
+    p.isVerified = false;
+  } else {
+    p.isVerified = false;
+  }
 });
 
 export default mongoose.model<ITutorProfile>("TutorProfile", tutorProfileSchema);

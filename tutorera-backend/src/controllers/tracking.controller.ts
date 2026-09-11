@@ -35,7 +35,8 @@ import {
   reVerificationRequiredEmail,
   trackingWelcomeEmail,
 } from "../utils/trackingEmails";
-
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import { verifyFileSignature } from "../middlewares/upload.middleware";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 const APPLICATION_STATUS_URL = `${TRACKING_BASE_URL}/tutor/application-status`;
@@ -62,7 +63,6 @@ async function sendEmailSafely(build: () => { subject: string; html: string }, t
     console.error("[Tracking] Failed to send email:", err);
   }
 }
-
 async function notifyTutor(
   req: AuthRequest,
   userId: string,
@@ -342,7 +342,7 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
   profile.cnicRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.cnicReviewedAt = new Date();
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (status === "approved") {
@@ -399,7 +399,7 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
   profile.degreeRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.degreeReviewedAt = new Date();
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (status === "approved") {
@@ -434,7 +434,7 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
   profile.demoVideoRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.demoVideoReviewedAt = new Date();
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (status === "approved") {
@@ -469,7 +469,7 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
   profile.policeRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.policeReviewedAt = new Date();
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (status === "approved") {
@@ -508,7 +508,7 @@ export const setMarketplaceEligibility = async (req: AuthRequest, res: Response)
     profile.marketplaceEligibleAt = undefined as any;
   }
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (eligible && !wasEligible) {
@@ -542,7 +542,7 @@ export const setHomeTuitionEligibility = async (req: AuthRequest, res: Response)
     profile.homeTuitionEligibleAt = undefined as any;
   }
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (eligible && !wasEligible) {
@@ -579,7 +579,7 @@ export const setSuspended = async (req: AuthRequest, res: Response): Promise<voi
     profile.suspendedReason = "";
   }
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (suspended && !wasSuspended) {
@@ -606,7 +606,7 @@ export const setReverification = async (req: AuthRequest, res: Response): Promis
   profile.reVerificationRequired = required;
   profile.reVerificationReason = required ? (reason || "") : "";
   profile.lastStatusChangeAt = new Date();
-  await profile.save();
+  await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
   if (required) {
@@ -635,7 +635,7 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.marketplaceEligible = true;
     profile.marketplaceEligibleAt = now;
     profile.lastStatusChangeAt = now;
-    await profile.save();
+    await profile.save({ validateModifiedOnly: true });
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile auto-activated after verification requirements were met" });
     await setAccountStatus(user._id.toString(), "verified");
     await sendEmailSafely(() => marketplaceActivatedEmail(user.name, ctaArgs(user)), user.email);
@@ -644,7 +644,7 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.marketplaceEligible = false;
     profile.marketplaceEligibleAt = undefined as any;
     profile.lastStatusChangeAt = now;
-    await profile.save();
+    await profile.save({ validateModifiedOnly: true });
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile auto-deactivated after a verification requirement lapsed" });
     await setAccountStatus(user._id.toString(), "submitted");
     await sendEmailSafely(() => marketplaceDeactivatedEmail(user.name, "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs(user)), user.email);
@@ -654,7 +654,7 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.homeTuitionEligible = true;
     profile.homeTuitionEligibleAt = now;
     profile.lastStatusChangeAt = now;
-    await profile.save();
+    await profile.save({ validateModifiedOnly: true });
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility auto-activated" });
     await sendEmailSafely(() => homeTuitionActivatedEmail(user.name, ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", link: "/tutor/application-status", type: "verification" });
@@ -662,9 +662,185 @@ async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profil
     profile.homeTuitionEligible = false;
     profile.homeTuitionEligibleAt = undefined as any;
     profile.lastStatusChangeAt = now;
-    await profile.save();
+    await profile.save({ validateModifiedOnly: true });
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility auto-deactivated after a verification requirement lapsed" });
     await sendEmailSafely(() => homeTuitionDeactivatedEmail(user.name, "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs(user)), user.email);
     await notifyTutor(req, user._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification" });
   }
 }
+
+// ─── Admin document upload on tutor's behalf ──────────────────────────────────
+export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const { user, profile } = data;
+  const actor = actorFromReq(req);
+
+  const documentType = String(req.body.documentType || "").trim();
+  const autoApprove = req.body.autoApprove === true || req.body.autoApprove === "true";
+  const videoUrl = String(req.body.videoUrl || "").trim();
+
+  const validTypes = ["cnicFront", "cnicBack", "degree", "policeCertificate", "videoIntro"];
+  if (!validTypes.includes(documentType)) {
+    res.status(400).json({
+      success: false,
+      message: `Invalid documentType. Must be one of: ${validTypes.join(", ")}`,
+    });
+    return;
+  }
+
+  const files = (req.files as Record<string, Express.Multer.File[]>) || {};
+  const uploadedFile =
+    files.file?.[0] ||
+    files[documentType]?.[0] ||
+    (files.cnicFront?.[0] && documentType === "cnicFront" ? files.cnicFront[0] : undefined) ||
+    (files.cnicBack?.[0] && documentType === "cnicBack" ? files.cnicBack[0] : undefined) ||
+    (files.degree?.[0] && documentType === "degree" ? files.degree[0] : undefined) ||
+    (files.policeCertificate?.[0] && documentType === "policeCertificate" ? files.policeCertificate[0] : undefined) ||
+    (files.videoIntro?.[0] && documentType === "videoIntro" ? files.videoIntro[0] : undefined);
+
+  if (!uploadedFile && documentType !== "videoIntro") {
+    res.status(400).json({ success: false, message: "Please select a document file to upload." });
+    return;
+  }
+
+  if (!uploadedFile && documentType === "videoIntro" && !videoUrl) {
+    res.status(400).json({ success: false, message: "Please select an MP4 video or provide a video URL." });
+    return;
+  }
+
+  try {
+    let secureUrl = "";
+    let publicId = "";
+
+    if (uploadedFile) {
+      const isVideo = documentType === "videoIntro";
+      const allowedMimes = isVideo
+        ? ["video/mp4"]
+        : ["application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"];
+      const { valid, detectedType } = await verifyFileSignature(uploadedFile.buffer, allowedMimes);
+      if (!valid) {
+        res.status(400).json({
+          success: false,
+          message: `File is invalid (detected: ${detectedType || "unknown"}). Allowed formats: ${allowedMimes.join(", ")}`,
+        });
+        return;
+      }
+
+      const folder =
+        documentType === "cnicFront" || documentType === "cnicBack"
+          ? "tutorera/verification/cnic"
+          : documentType === "degree"
+          ? "tutorera/verification/degrees"
+          : documentType === "policeCertificate"
+          ? "tutorera/verification/police"
+          : "tutorera/verification/videos";
+
+      const result = await uploadToCloudinary(
+        uploadedFile.buffer,
+        folder,
+        isVideo ? "video" : "auto",
+        !isVideo
+      );
+      secureUrl = result.secure_url;
+      publicId = result.public_id;
+    } else if (documentType === "videoIntro" && videoUrl) {
+      secureUrl = videoUrl;
+      publicId = "";
+    }
+
+    const now = new Date();
+    profile.lastStatusChangeAt = now;
+
+    if (documentType === "cnicFront") {
+      profile.cnicFront = secureUrl;
+      profile.cnicFrontPublicId = publicId;
+      profile.cnicSubmittedAt = now;
+      profile.cnicVerificationStatus = autoApprove ? "approved" : "pending";
+      profile.cnicRejectionReason = "";
+      if (autoApprove) profile.cnicReviewedAt = now;
+    } else if (documentType === "cnicBack") {
+      profile.cnicBack = secureUrl;
+      profile.cnicBackPublicId = publicId;
+      profile.cnicSubmittedAt = now;
+      profile.cnicVerificationStatus = autoApprove ? "approved" : "pending";
+      profile.cnicRejectionReason = "";
+      if (autoApprove) profile.cnicReviewedAt = now;
+    } else if (documentType === "degree") {
+      const education = Array.isArray(profile.education) ? [...profile.education] : [];
+      if (education.length === 0) {
+        education.push({ degree: "Degree Document", institution: "", year: new Date().getFullYear(), degreeDoc: secureUrl, degreeDocPublicId: publicId });
+      } else {
+        education[0].degreeDoc = secureUrl;
+        education[0].degreeDocPublicId = publicId;
+      }
+      profile.education = education;
+      profile.degreeSubmittedAt = now;
+      profile.degreeVerificationStatus = autoApprove ? "approved" : "pending";
+      profile.degreeRejectionReason = "";
+      if (autoApprove) profile.degreeReviewedAt = now;
+    } else if (documentType === "policeCertificate") {
+      profile.policeCertificate = secureUrl;
+      profile.policeCertificatePublicId = publicId;
+      profile.policeSubmittedAt = now;
+      profile.policeVerificationStatus = autoApprove ? "approved" : "pending";
+      profile.policeRejectionReason = "";
+      if (autoApprove) profile.policeReviewedAt = now;
+    } else if (documentType === "videoIntro") {
+      profile.videoIntro = secureUrl;
+      profile.videoIntroPublicId = publicId;
+      profile.demoVideoSubmittedAt = now;
+      profile.demoVideoStatus = autoApprove ? "approved" : "pending";
+      profile.demoVideoRejectionReason = "";
+      if (autoApprove) profile.demoVideoReviewedAt = now;
+    }
+
+    await profile.save({ validateModifiedOnly: true });
+
+    const eventName: any =
+      documentType === "cnicFront" || documentType === "cnicBack"
+        ? (autoApprove ? "CNIC_VERIFIED" : "CNIC_SUBMITTED")
+        : documentType === "degree"
+        ? (autoApprove ? "EDUCATIONAL_DOCUMENTS_VERIFIED" : "EDUCATIONAL_DOCUMENTS_SUBMITTED")
+        : documentType === "policeCertificate"
+        ? (autoApprove ? "POLICE_VERIFICATION_APPROVED" : "POLICE_VERIFICATION_SUBMITTED")
+        : (autoApprove ? "DEMO_VIDEO_APPROVED" : "DEMO_VIDEO_SUBMITTED");
+
+    await recordStatusEvent({
+      tutorId: user._id.toString(),
+      tutorProfileId: profile._id.toString(),
+      actor,
+      event: eventName,
+      message: `Document '${documentType}' uploaded on tutor's behalf by Admin ${actor.name}${autoApprove ? " (Approved immediately)" : " (Marked for review)"}`,
+    });
+
+    await logAudit({
+      action: `admin_uploaded_${documentType}`,
+      actor: actor.name,
+      actorId: actor.id,
+      entity: "TutorProfile",
+      targetId: profile._id.toString(),
+      targetName: user.name,
+      metadata: { documentType, autoApprove, secureUrl },
+    });
+
+    await syncMarketplaceAndHomeTuition(req, user, profile);
+
+    await notifyTutor(req, user._id.toString(), {
+      title: "Document updated by Administration",
+      message: `Your ${documentType} document was updated by platform support.`,
+      link: "/tutor/application-status",
+      type: "verification",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Document uploaded successfully${autoApprove ? " and approved" : ""}.`,
+      profile,
+      document: { type: documentType, url: secureUrl },
+    });
+  } catch (err: any) {
+    console.error("[Tracking] uploadApplicationDocumentOnBehalf error:", err);
+    res.status(500).json({ success: false, message: err.message || "Failed to upload document." });
+  }
+};
