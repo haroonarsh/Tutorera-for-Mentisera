@@ -4,6 +4,7 @@ import { getCountryByCode } from "@/lib/location";
 import { SITE_URL } from "@/lib/site";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors } from "@/lib/tutor-directory";
+import { SeoEligibilityService } from "@/lib/seo-eligibility";
 
 interface Props {
   params: Promise<{ countryCode: string; state: string; city: string }>;
@@ -28,10 +29,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `Top Tutors in ${cityName}, ${stateName} | ${country.name} | TUTORERA`;
   const description = `Find verified online and local home tutors in ${cityName}, ${stateName}. Post your tuition requirements or find teaching opportunities today.`;
   const canonical = `/${countryCode.toLowerCase()}/${state.toLowerCase()}/${city.toLowerCase()}`;
+  const { total } = await fetchTutors({ city: cityName, countryCode: country.code }, 1);
+  const eligibility = SeoEligibilityService.evaluatePage({ activeApprovedTutors: total, homeTuitionEnabled: true });
+  
+  const robots = eligibility === "INDEX" ? "index, follow" : "noindex, follow";
 
   return {
     title,
     description,
+    robots,
     alternates: { canonical },
     openGraph: {
       title,

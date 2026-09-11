@@ -10,7 +10,7 @@ import { Toaster } from "react-hot-toast";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 import SkipLink from "@/components/SkipLink";
 import LocaleBridge from "@/components/LocaleBridge";
-
+import OrganizationSchema from "@/components/SEO/OrganizationSchema";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -228,6 +228,7 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2559940686225219"
           crossOrigin="anonymous"
         />
+        <OrganizationSchema />
       </head>
       <body className={inter.className}>
         <SkipLink />
