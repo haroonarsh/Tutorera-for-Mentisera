@@ -3,7 +3,7 @@ import { calculateMarketplaceFees } from "../config/constants";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
 
-export type PaymentProviderName = "rapid_gateway";
+export type PaymentProviderName = "rapid_gateway" | "stripe";
 export type LedgerProviderName = PaymentProviderName | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
@@ -45,10 +45,8 @@ export const paymentProvider = {
   async createCheckout(params: CheckoutParams): Promise<string> {
     const currency = (params.currency || "PKR").toUpperCase();
     if (currency !== "PKR") {
-      throw {
-        statusCode: 409,
-        message: "Checkout is not available in this market yet. Rapid Gateway currently supports PKR only.",
-      };
+      const { stripeProvider } = await import("./stripeProvider.service");
+      return stripeProvider.createCheckout({ ...params, currency });
     }
 
     const checkoutUrl = await createTransaction({
