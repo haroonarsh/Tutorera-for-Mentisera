@@ -9,5 +9,14 @@ Disallow: /profile/
 Disallow: /earnings/
 Disallow: /settings/
 Disallow: /tracking/
+Disallow: /messages/
+Disallow: /checkout/
+Disallow: /auth/
+Disallow: /notifications/
+Disallow: /*?*sort=
+Disallow: /*?*minRate=
+Disallow: /*?*rating=
+Disallow: /*?*availability=
+Disallow: /*?*currency=
 
 Sitemap: https://tutorera.ac.pk/sitemap.xml
