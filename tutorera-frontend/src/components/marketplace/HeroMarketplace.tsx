@@ -174,7 +174,7 @@ export default function HeroMarketplace() {
             </div>
 
             <p style={{ margin: "0 0 1.25rem", color: "#021550", fontSize: "0.9rem", fontWeight: 800 }}>
-              Budget bhi aap ka. Time bhi aap ka. Tutor bhi aap ki choice.
+              Your budget. Your schedule. Your choice of tutor.
             </p>
 
             <div
