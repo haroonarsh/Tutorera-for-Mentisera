@@ -13,7 +13,7 @@ import s from "./page.module.css";
 export const metadata: Metadata = {
   title: "TUTORERA | Online & Home Tuition Marketplace",
   description:
-    "TUTORERA connects students and parents with tutors for online tuition, online tutoring and locally available home tuition or tutoring. Post learning requirements, receive tutor offers, discover teaching opportunities, compare matches and connect transparently.",
+    "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
   alternates: { canonical: "/" },
 };
 

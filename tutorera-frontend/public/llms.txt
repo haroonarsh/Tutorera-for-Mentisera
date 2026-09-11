@@ -1,6 +1,6 @@
 # TUTORERA Platform Description
 
-TUTORERA is a global student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. The platform connects students and parents with verified tutors for online tutoring worldwide and local in-person home tuition where verified tutor inventory and local safeguards are available.
+TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
 
 ## Core Purpose
 TUTORERA enables students to post tuition requirements and receive transparent offers from qualified tutors. The platform uses an 8-layer smart matching engine with Bayesian ratings to recommend compatible tutors. All tutor verifications—including CNIC, education credentials, demo video, and police clearance—are tracked per-component with canonical status computation.

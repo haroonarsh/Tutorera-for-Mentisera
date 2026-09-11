@@ -3,13 +3,13 @@ import { BRAND_NAME, LEGAL_OPERATOR } from "@/lib/site";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "TUTORERA Business Model | Global Student-Led Tutoring Marketplace",
-  description: "How TUTORERA by MENTISERA operates as a global student-led demand tutoring marketplace with multi-currency transparency, authorized checkout, and server-side payment verification.",
+  title: "TUTORERA Business Model",
+  description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
   alternates: { canonical: "/business-model" },
 };
 
 const explanation =
-  "TUTORERA by MENTISERA is a global student-led digital tutoring marketplace operated by MENTISERA (SMC-Private) Limited. Students or parents post tutoring requirements with their preferred budget in their selected currency (such as AED, USD, GBP, SAR, or PKR). Eligible verified independent tutors can respond with customized offers based on the student's subject, academic curriculum, timezone, schedule, learning mode (online worldwide or home tuition locally), and proposed budget. The student compares available tutors and independently selects the tutor they prefer. Once the tutor's offer is accepted, the final tutoring rate is locked and a booking is created. Payment is then collected against that specific booking and processed securely under platform satisfaction guarantees before the tutoring session is delivered.";
+  "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA. Once the tutor's offer is accepted, the final tutoring rate is locked and a booking is created. Payment is then collected against that specific booking and processed securely under platform satisfaction guarantees before the tutoring session is delivered.";
 
 const flow = [
   "Student posts tutoring requirement specifying subject, curriculum, and mode",
@@ -69,7 +69,7 @@ export default function BusinessModelPage() {
     <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works – Our Business Model</h1>
-        <p>{BRAND_NAME} is operated by {LEGAL_OPERATOR} as a global education technology marketplace.</p>
+        <p>TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.</p>
       </section>
       <section className={s.narrow}>
         <div className={s.content}>

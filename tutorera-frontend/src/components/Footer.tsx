@@ -76,7 +76,7 @@ export default function Footer() {
           <div className={s.brand}>
             <BrandLogo className={s.logo} imageClassName={s.logoImage} variant="light" size="lg" />
             <p>
-              TUTORERA® by MENTISERA is a global student-led tutoring marketplace connecting students and parents with qualified tutors for online sessions worldwide and verified in-person home tuition locally.
+              TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
             </p>
             <div className={s.contactList} aria-label="Contact information">
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
@@ -112,7 +112,7 @@ export default function Footer() {
         </div>
 
         <div className={s.bottom}>
-          <p>TUTORERA® is a global digital tutoring marketplace for online learning worldwide and locally enabled home tuition.</p>
+          <p>TUTORERA is a global two-sided tutoring marketplace.</p>
           <p>© 2026 TUTORERA®. All rights reserved.</p>
         </div>
       </div>

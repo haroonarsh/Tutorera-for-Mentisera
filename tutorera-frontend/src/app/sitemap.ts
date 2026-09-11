@@ -126,7 +126,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
     const { tutors } = await fetchTutors({}, 500);
     const profiles: MetadataRoute.Sitemap = tutors.map((tutor) => ({
       url: `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`,
-      lastModified: tutor.updatedAt ? new Date(tutor.updatedAt) : lastModified,
+      lastModified: tutor.lastActiveAt ? new Date(tutor.lastActiveAt) : lastModified,
       changeFrequency: "weekly",
       priority: 0.7,
     }));
