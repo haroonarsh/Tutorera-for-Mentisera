@@ -16,6 +16,8 @@ const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/users": "users.read",
   "/admin/markets": "market.read",
   "/admin/control-tower": "system.monitor",
+  "/admin/parents": "student.read",
+  "/admin/refund-requests": "claims.read",
 };
 
 const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
@@ -25,6 +27,8 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/supply-gaps": "analytics.read",
   "/admin/liquidity": "analytics.read",
   "/admin/students": "student.read",
+  "/admin/parents": "student.read",
+  "/admin/onboarding": "student.read",
   "/admin/tutors": "tutor.read",
   "/admin/applications": "tutor.read",
   "/admin/verifications": "tutor.verify",
@@ -34,6 +38,7 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/broadcasts": "broadcast.send",
   "/admin/student-ratings": "student.read",
   "/admin/referrals": "growth.read",
+  "/admin/refund-requests": "claims.read",
 };
 
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {
@@ -81,7 +86,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     if (loading) return;
 
     if (!user) {
-      router.replace("/login");
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 

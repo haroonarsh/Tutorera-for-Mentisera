@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ShieldAlert, ArrowLeft, RefreshCw, AlertCircle, CheckCircle,
   Search, PlusCircle, ShieldCheck, UserX, UserCheck, Eye,
@@ -23,14 +24,22 @@ interface SafetyCaseItem {
   createdAt: string;
 }
 
-export default function SafetyCasesPage() {
+function SafetyCasesContent() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status") || "all";
+
   const [cases, setCases] = useState<SafetyCaseItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState(initialStatus);
   const [selectedCase, setSelectedCase] = useState<SafetyCaseItem | null>(null);
   const [resolutionAction, setResolutionAction] = useState("warning_issued");
   const [resolutionSummary, setResolutionSummary] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    if (s) setFilterStatus(s);
+  }, [searchParams]);
 
   const fetchCases = async () => {
     setLoading(true);
@@ -294,5 +303,13 @@ export default function SafetyCasesPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function SafetyCasesPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading Safety Cases...</div>}>
+      <SafetyCasesContent />
+    </Suspense>
   );
 }

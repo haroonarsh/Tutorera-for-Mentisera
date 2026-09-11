@@ -7,7 +7,7 @@ import {
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity, MapPin, X,
+  KeyRound, Activity, MapPin, X, HeartHandshake, RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AdminGuard from "@/components/AdminGuard";
@@ -55,10 +55,17 @@ const navSections: NavSection[] = [
   {
     title: "Students",
     items: [
-      { href: "/admin/students", label: "Students", icon: <Users size={17} />, permission: "student.read" },
-      { href: "/admin/onboarding", label: "Onboarding", icon: <ClipboardList size={17} />, permission: "student.read" },
+      { href: "/admin/students", label: "Students Directory", icon: <Users size={17} />, permission: "student.read" },
+      { href: "/admin/onboarding?tab=students", label: "Student Pipeline", icon: <ClipboardList size={17} />, permission: "student.read" },
       { href: "/admin/at-risk-requests", label: "At-Risk Requests", icon: <AlertTriangle size={17} />, badge: "Action", permission: "request.extend" },
       { href: "/admin/student-ratings", label: "Student Ratings", icon: <Star size={17} />, permission: "student.read" },
+    ],
+  },
+  {
+    title: "Parents & Guardians",
+    items: [
+      { href: "/admin/parents", label: "Parents Directory", icon: <HeartHandshake size={17} />, permission: "student.read" },
+      { href: "/admin/onboarding?tab=parents", label: "Parent Pipeline", icon: <ClipboardList size={17} />, permission: "student.read" },
     ],
   },
   {
@@ -66,6 +73,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/tutors", label: "Tutors Directory", icon: <BookOpen size={17} />, permission: "tutor.read" },
       { href: "/admin/applications", label: "Applications", icon: <ClipboardList size={17} />, permission: "tutor.read" },
+      { href: "/admin/onboarding?tab=tutors", label: "Tutor Pipeline", icon: <ClipboardList size={17} />, permission: "tutor.read" },
       { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={17} />, permission: "tutor.verify" },
       { href: "/admin/supply-gaps", label: "Supply Gaps", icon: <TrendingDown size={17} />, permission: "analytics.read" },
       { href: "/admin/liquidity", label: "Liquidity Scores", icon: <ActivitySquare size={17} />, permission: "analytics.read" },
@@ -92,6 +100,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/safety-cases", label: "Safety Cases", icon: <ShieldAlert size={17} />, badge: "Cases", permission: "safety.read" },
       { href: "/admin/guarantee-claims", label: "Guarantee Claims", icon: <Shield size={17} />, permission: "claims.read" },
+      { href: "/admin/refund-requests", label: "Refund Requests", icon: <RotateCcw size={17} />, permission: "claims.read" },
     ],
   },
   {

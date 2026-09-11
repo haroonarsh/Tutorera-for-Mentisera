@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import { AdminApplicationRow, CanonicalStatus } from "@/types/tracking";
 import { showError } from "@/lib/toast";
@@ -35,15 +36,19 @@ function statusPillVariant(status: CanonicalStatus): string {
   return "";
 }
 
-export default function AdminApplicationsPage() {
+function ApplicationsContent() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status") || "all";
+  const initialSearch = searchParams.get("search") || "";
+
   const [rows, setRows] = useState<AdminApplicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [filters, setFilters] = useState({
-    status: "all",
+    status: initialStatus,
     marketplace: "all",
     homeTuition: "all",
-    search: "",
+    search: initialSearch,
   });
   const [page, setPage] = useState(1);
 
@@ -205,6 +210,14 @@ export default function AdminApplicationsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminApplicationsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading Applications...</div>}>
+      <ApplicationsContent />
+    </Suspense>
   );
 }
 

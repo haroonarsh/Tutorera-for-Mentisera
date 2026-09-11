@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle, RefreshCw, ArrowLeft, Search, Filter,
   Clock, CheckCircle, Sparkles, AlertCircle,
@@ -31,12 +32,24 @@ interface AtRiskItem {
   recommendedAction: "rematch" | "extend" | "suggest_online" | "escalate";
 }
 
-export default function AtRiskRequestsPage() {
+function AtRiskRequestsContent() {
+  const searchParams = useSearchParams();
+  const urlFilter = searchParams.get("filter") as "all" | "zero_offers" | "expiring" | "low_liquidity" | null;
+
   const [items, setItems] = useState<AtRiskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "zero_offers" | "expiring" | "low_liquidity">("all");
+  const [filter, setFilter] = useState<"all" | "zero_offers" | "expiring" | "low_liquidity">(
+    urlFilter === "zero_offers" || urlFilter === "expiring" || urlFilter === "low_liquidity" ? urlFilter : "all"
+  );
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    const f = searchParams.get("filter") as "all" | "zero_offers" | "expiring" | "low_liquidity" | null;
+    if (f && (f === "zero_offers" || f === "expiring" || f === "low_liquidity")) {
+      setFilter(f);
+    }
+  }, [searchParams]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -347,5 +360,13 @@ export default function AtRiskRequestsPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function AtRiskRequestsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading At-Risk Requests...</div>}>
+      <AtRiskRequestsContent />
+    </Suspense>
   );
 }

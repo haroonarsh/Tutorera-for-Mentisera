@@ -1,7 +1,8 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle, Clock, AlertCircle, XCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
@@ -32,15 +33,24 @@ interface Booking {
   createdAt: string;
 }
 
-export default function PaymentsPage() {
+function PaymentsContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status") || "all";
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"payments" | "payouts">("payments");
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [updating, setUpdating] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
   const [selectedStatus, setSelectedStatus] = useState<Record<string, string>>({});
   const canManagePayments = user?.adminRole === "super_admin" || user?.adminPermissions?.includes("*") || user?.adminPermissions?.includes("payment.manage");
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    if (s) setStatusFilter(s);
+  }, [searchParams]);
 
   useEffect(() => {
     api.get("/admin/bookings")
@@ -109,13 +119,43 @@ export default function PaymentsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', marginBottom: '1.5rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
-        {(["payments", "payouts"] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500 }}>
-            {tab === "payments" ? "💳 Student Payments" : "💸 Tutor Payouts"}
-          </button>
-        ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '0', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
+          {(["payments", "payouts"] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500 }}>
+              {tab === "payments" ? "💳 Student Payments" : "💸 Tutor Payouts"}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "payments" && (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {["all", "pending", "failed", "confirmed", "disputed", "refunded"].map(status => {
+              const active = statusFilter === status;
+              const count = status === "all" ? bookings.length : bookings.filter(b => b.paymentStatus === status).length;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '999px',
+                    fontSize: '0.75rem',
+                    fontWeight: active ? 800 : 600,
+                    border: active ? '1px solid #0329b2' : '1px solid #e2e8f0',
+                    background: active ? '#0329b2' : '#ffffff',
+                    color: active ? '#ffffff' : '#475569',
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {status} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -130,7 +170,7 @@ export default function PaymentsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {bookings.map(booking => {
+          {bookings.filter(b => activeTab !== "payments" || statusFilter === "all" || b.paymentStatus === statusFilter).map(booking => {
             const platformFee = booking.platformFee || 0;
             const tutorPayout = booking.tutorPayout || 0;
             const curr = booking.currency || "PKR";
@@ -250,5 +290,13 @@ export default function PaymentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading Payments...</div>}>
+      <PaymentsContent />
+    </Suspense>
   );
 }
