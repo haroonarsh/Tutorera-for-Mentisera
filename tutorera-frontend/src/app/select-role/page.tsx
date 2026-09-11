@@ -138,6 +138,25 @@ export default function SelectRolePage() {
               {success}
             </div>
           )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ 
+              backgroundColor: "#0329b2", 
+              color: "white", 
+              padding: "0.75rem 1.5rem", 
+              borderRadius: "0.5rem", 
+              border: "none", 
+              fontWeight: "600", 
+              fontSize: "0.95rem", 
+              cursor: loading ? "not-allowed" : "pointer", 
+              transition: "background 0.2s",
+              opacity: loading ? 0.7 : 1
+            }}
+          >
+            {loading ? "Saving..." : "Continue"}
+          </button>
         </form>
         
         <button
