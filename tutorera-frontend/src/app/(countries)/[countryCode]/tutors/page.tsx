@@ -107,6 +107,16 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+      <div style={{ background: "#f8fafc", padding: "2rem 1.5rem", textAlign: "center", borderBottom: "1px solid #e2e8f0" }}>
+        <h1 style={{ fontSize: "2.5rem", fontWeight: 900, color: "#021550", margin: 0 }}>
+          Tutors in {country.name}
+        </h1>
+        <p style={{ maxWidth: 800, margin: "1rem auto 0", color: "#475569", fontSize: "1.1rem", lineHeight: 1.6 }}>
+          Connect with top-rated educators offering online tutoring and in-person home tuition across {country.name}. 
+          Explore verified profiles, compare subjects, and find the perfect match for your academic goals.
+        </p>
+      </div>
+
       <TutorsExplorer
         initialTutors={result.tutors}
         initialPagination={{
@@ -116,7 +126,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           limit: 12,
         }}
         initialFilters={initialFilters}
-        title={`Find Verified Tutors in ${country.name}`}
+        title={`Verified Tutors in ${country.name}`}
         subtitle={
           result.total
             ? `${result.total} verified educators available in ${country.name} (${country.currency})`
@@ -161,6 +171,68 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           </div>
         </section>
       )}
+
+      {/* Top Subjects List */}
+      <section style={{ maxWidth: 1120, margin: "2rem auto", padding: "0 1.5rem" }}>
+        <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>
+          Popular Subjects in {country.name}
+        </h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+          {["Mathematics", "Physics", "Chemistry", "Biology", "English", "Computer Science", "Economics", "Accounting", "Business Studies", "Urdu"].map((subject) => {
+            const slug = subject.toLowerCase().replace(/\s+/g, "-");
+            return (
+              <Link
+                key={subject}
+                href={`/tutors/subject/${slug}`}
+                style={{
+                  background: "white",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "999px",
+                  padding: "0.45rem 1rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#475569",
+                  textDecoration: "none",
+                }}
+              >
+                {subject}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Demand Hub Link */}
+      <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>
+        <div style={{
+          background: "linear-gradient(135deg, #021550, #0329b2)",
+          color: "white",
+          borderRadius: "1rem",
+          padding: "2rem",
+          textAlign: "center"
+        }}>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginBottom: "1rem" }}>
+            Are you a tutor in {country.name}?
+          </h2>
+          <p style={{ opacity: 0.9, marginBottom: "1.5rem", maxWidth: 600, margin: "0 auto 1.5rem" }}>
+            Browse active tuition requirements posted by students and parents in {country.name}. Submit your offers and start teaching today.
+          </p>
+          <Link
+            href={`/tuition-requests/${countryCode.toLowerCase()}`}
+            style={{
+              display: "inline-block",
+              background: "white",
+              color: "#0329b2",
+              padding: "0.75rem 2rem",
+              borderRadius: "999px",
+              fontWeight: 700,
+              textDecoration: "none"
+            }}
+          >
+            View Open Tuition Requests in {country.name} →
+          </Link>
+        </div>
+      </section>
     </>
   );
 }
