@@ -123,6 +123,15 @@ router.get("/payouts", requirePermission("payout.read"), getPayouts);
 router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
 router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
 router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
+router.get("/marketplace-analytics", requirePermission("matching.read"), getMarketplaceAnalytics);
+router.get("/marketplace/requests", requirePermission("request.read"), listMarketplaceRequests);
+router.get("/marketplace/offers", requirePermission("matching.read"), listMarketplaceOffers);
+router.get("/marketplace/offers/:id", requirePermission("matching.read"), getMarketplaceOfferDetail);
+router.get("/verifications", requirePermission("tutor.read"), getPendingVerifications);
+router.get("/payouts", requirePermission("payout.read"), getPayouts);
+router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
+router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
+router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
 router.get("/broadcasts",  requirePermission("broadcast.send"), getBroadcasts);
 router.get("/tutors/:id/document/:field", requirePermission("tutor.read"), getTutorDocumentUrl);
 router.get("/tutors/:tutorId/payout-report/pdf", requirePermission("payout.read"), downloadTutorPayoutReport);
@@ -131,12 +140,19 @@ router.patch("/verify/bulk", requirePermission("tutor.verify"), bulkVerifyTutors
 router.patch("/verify/:id", requirePermission("tutor.verify"), verifyTutor);
 router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
+import { uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
+const verificationFields = uploadVerificationMulter.fields([
+  { name: "cnicFront", maxCount: 1 },
+  { name: "cnicBack", maxCount: 1 },
+  { name: "degree", maxCount: 1 },
+  { name: "policeCertificate", maxCount: 1 },
+  { name: "videoIntro", maxCount: 1 },
+]);
+import { uploadTutorDocsAdmin } from "../controllers/admin.controller";
+router.post("/tutors/:id/upload-docs", requirePermission("tutor.verify"), verificationFields, uploadTutorDocsAdmin);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
 // The controller applies payment.manage or payout.process according to the field being changed.
 router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
-router.get("/contacts", requirePermission("student.read"), getAllContacts);
-router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
-router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);
 router.get("/reports", requirePermission("analytics.read"), generateReport);
 router.get("/guarantee-claims", requirePermission("claims.read"), getAllClaims);
 router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), validateGuarantee(updateClaimStatusSchema), updateClaimStatus);

@@ -441,6 +441,157 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
   });
 };
 
+// @desc    Admin forceful upload of tutor docs
+// @route   POST /api/admin/tutors/:id/upload-docs
+// @access  Private (admin)
+export const uploadTutorDocsAdmin = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  const tutorId = req.params.id; // This is the user _id, not profile _id
+
+  if (!files || Object.keys(files).length === 0) {
+    res.status(400).json({ success: false, message: "No files uploaded" });
+    return;
+  }
+
+  const existingProfile = await TutorProfile.findOne({ user: tutorId });
+  if (!existingProfile) {
+    res.status(404).json({ success: false, message: "Tutor profile not found." });
+    return;
+  }
+
+  const tutorUser = await User.findById(tutorId);
+  if (!tutorUser) {
+    res.status(404).json({ success: false, message: "User not found." });
+    return;
+  }
+
+  const { verifyFileSignature } = await import("../middlewares/upload.middleware");
+  const { uploadToCloudinary, deleteFromCloudinary } = await import("../utils/uploadToCloudinary");
+  
+  const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+  const VIDEO_TYPES = ["video/mp4"];
+
+  const updateData: Record<string, any> = {};
+  const replacedAssets: { publicId: string; resourceType?: "video" }[] = [];
+
+  // CNIC Front
+  if (files.cnicFront?.[0]) {
+    const { valid } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid CNIC front file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
+    updateData.cnicFront = result.secure_url;
+    updateData.cnicFrontPublicId = result.public_id;
+    updateData.cnicVerificationStatus = "approved";
+    updateData.cnicRejectionReason = "";
+    if (existingProfile.cnicFrontPublicId) replacedAssets.push({ publicId: existingProfile.cnicFrontPublicId });
+  }
+
+  // CNIC Back
+  if (files.cnicBack?.[0]) {
+    const { valid } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid CNIC back file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
+    updateData.cnicBack = result.secure_url;
+    updateData.cnicBackPublicId = result.public_id;
+    updateData.cnicVerificationStatus = "approved";
+    updateData.cnicRejectionReason = "";
+    if (existingProfile.cnicBackPublicId) replacedAssets.push({ publicId: existingProfile.cnicBackPublicId });
+  }
+
+  // Degree
+  if (files.degree?.[0]) {
+    const { valid } = await verifyFileSignature(files.degree[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid degree file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
+    const rawEducation = Array.isArray(existingProfile.education) ? existingProfile.education : [];
+    const education: Array<Record<string, unknown>> = rawEducation.map((entry) =>
+      typeof (entry as any).toObject === "function" ? (entry as any).toObject() : { ...entry }
+    );
+    if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
+    const previousPublicId = String(education[0].degreeDocPublicId || "");
+    education[0].degreeDoc = result.secure_url;
+    education[0].degreeDocPublicId = result.public_id;
+    updateData.education = education;
+    updateData.degreeVerificationStatus = "approved";
+    updateData.degreeRejectionReason = "";
+    if (previousPublicId) replacedAssets.push({ publicId: previousPublicId });
+  }
+
+  // Police Certificate
+  if (files.policeCertificate?.[0]) {
+    const { valid } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid police certificate file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
+    updateData.policeCertificate = result.secure_url;
+    updateData.policeCertificatePublicId = result.public_id;
+    updateData.policeVerificationStatus = "approved";
+    updateData.policeRejectionReason = "";
+    if (existingProfile.policeCertificatePublicId) replacedAssets.push({ publicId: existingProfile.policeCertificatePublicId });
+  }
+
+  // Video Intro
+  if (files.videoIntro?.[0]) {
+    const { valid } = await verifyFileSignature(files.videoIntro[0].buffer, VIDEO_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid video file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/verification/videos", "video", false);
+    updateData.videoIntro = result.secure_url;
+    updateData.videoIntroPublicId = result.public_id;
+    updateData.demoVideoStatus = "approved";
+    updateData.demoVideoRejectionReason = "";
+    if (existingProfile.videoIntroPublicId) replacedAssets.push({ publicId: existingProfile.videoIntroPublicId, resourceType: "video" });
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ success: false, message: "No valid files were uploaded." });
+    return;
+  }
+
+  // Automatically approve the profile if admin uploads it
+  updateData.verificationStatus = "approved";
+  updateData.isVerified = true;
+  updateData.lastStatusChangeAt = new Date();
+
+  const updated = await TutorProfile.findByIdAndUpdate(existingProfile._id, updateData, { new: true });
+
+  await Promise.all(replacedAssets.map(({ publicId, resourceType }) =>
+    deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
+  ));
+
+  await logAudit({
+    action: "admin_override_documents",
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "TutorProfile",
+    targetId: existingProfile._id.toString(),
+    targetName: tutorUser.name,
+    metadata: { uploadedFields: Object.keys(updateData) },
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Documents forcibly uploaded and approved.",
+    profile: updated,
+  });
+};
+
 // @desc    Get all users
 // @route   GET /api/admin/users
 // @access  Private (admin)

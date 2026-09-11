@@ -131,7 +131,8 @@ export const uploadVerificationDocs = async (
       return;
     }
     const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
-    const education: Array<Record<string, unknown>> = existingProfile.education.map((entry) =>
+    const rawEducation = Array.isArray(existingProfile.education) ? existingProfile.education : [];
+    const education: Array<Record<string, unknown>> = rawEducation.map((entry) =>
       typeof (entry as any).toObject === "function" ? (entry as any).toObject() : { ...entry }
     );
     if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
@@ -225,55 +226,61 @@ export const uploadVerificationDocs = async (
         applicationId: tutorUser.applicationId || "TUT-PENDING",
         statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
       };
-      await Promise.allSettled(resubmittedDocs.map(async (docType) => {
-        const { subject, html } = documentResubmittedEmail(tutorUser.name, docType, cta);
-        await sendEmail({ to: tutorUser.email, subject, html });
-      }));
+      try {
+        await Promise.allSettled(resubmittedDocs.map(async (docType) => {
+          const { subject, html } = documentResubmittedEmail(tutorUser.name, docType, cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
+        }));
 
-      const priorStatusFor: Record<string, string> = {
-        "CNIC": existingProfile.cnicVerificationStatus,
-        "Educational document": existingProfile.degreeVerificationStatus,
-        "Demo video": existingProfile.demoVideoStatus,
-        "Police verification": existingProfile.policeVerificationStatus,
-      };
-      const eventFor: Record<string, { submitted: any; resubmitted: any }> = {
-        "CNIC": { submitted: "CNIC_SUBMITTED", resubmitted: "CNIC_RESUBMITTED" },
-        "Educational document": { submitted: "EDUCATIONAL_DOCUMENTS_SUBMITTED", resubmitted: "EDUCATIONAL_DOCUMENTS_RESUBMITTED" },
-        "Demo video": { submitted: "DEMO_VIDEO_SUBMITTED", resubmitted: "DEMO_VIDEO_RESUBMITTED" },
-        "Police verification": { submitted: "POLICE_VERIFICATION_SUBMITTED", resubmitted: "POLICE_VERIFICATION_RESUBMITTED" },
-      };
-      await Promise.all(resubmittedDocs.map((docType) => recordStatusEvent({
-        tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
-        actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
-        event: eventFor[docType][priorStatusFor[docType] === "rejected" ? "resubmitted" : "submitted"],
-        message: `${docType} ${priorStatusFor[docType] === "rejected" ? "resubmitted" : "submitted"} for review`,
-        statusBefore: priorStatusFor[docType], statusAfter: "pending",
-      })));
-      if (existingProfile.marketplaceEligible) {
-        await recordStatusEvent({
+        const priorStatusFor: Record<string, string> = {
+          "CNIC": existingProfile.cnicVerificationStatus || "not_submitted",
+          "Educational document": existingProfile.degreeVerificationStatus || "not_submitted",
+          "Demo video": existingProfile.demoVideoStatus || "not_submitted",
+          "Police verification": existingProfile.policeVerificationStatus || "not_submitted",
+        };
+        const eventFor: Record<string, { submitted: any; resubmitted: any }> = {
+          "CNIC": { submitted: "CNIC_SUBMITTED", resubmitted: "CNIC_RESUBMITTED" },
+          "Educational document": { submitted: "EDUCATIONAL_DOCUMENTS_SUBMITTED", resubmitted: "EDUCATIONAL_DOCUMENTS_RESUBMITTED" },
+          "Demo video": { submitted: "DEMO_VIDEO_SUBMITTED", resubmitted: "DEMO_VIDEO_RESUBMITTED" },
+          "Police verification": { submitted: "POLICE_VERIFICATION_SUBMITTED", resubmitted: "POLICE_VERIFICATION_RESUBMITTED" },
+        };
+        await Promise.all(resubmittedDocs.map((docType) => recordStatusEvent({
           tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
-          actor: { name: "System", role: "system" }, event: "MARKETPLACE_DEACTIVATED",
-          message: "Marketplace visibility paused while replacement documents are reviewed",
+          actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+          event: eventFor[docType][priorStatusFor[docType] === "rejected" ? "resubmitted" : "submitted"],
+          message: `${docType} ${priorStatusFor[docType] === "rejected" ? "resubmitted" : "submitted"} for review`,
+          statusBefore: priorStatusFor[docType], statusAfter: "pending",
+        })));
+        if (existingProfile.marketplaceEligible) {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
+            actor: { name: "System", role: "system" }, event: "MARKETPLACE_DEACTIVATED",
+            message: "Marketplace visibility paused while replacement documents are reviewed",
+          });
+        }
+        if (existingProfile.homeTuitionEligible) {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
+            actor: { name: "System", role: "system" }, event: "HOME_TUITION_DEACTIVATED",
+            message: "Home tuition eligibility paused while replacement documents are reviewed",
+          });
+        }
+        await logAudit({
+          action: "verification_documents_resubmitted", actor: tutorUser.name,
+          actorId: tutorUser._id.toString(), entity: "TutorProfile", targetId: updated._id.toString(),
+          targetName: tutorUser.name, metadata: { documents: resubmittedDocs },
         });
+        await setAccountStatus(tutorUser._id.toString(), "submitted");
+        const io = req.app.get("io");
+        if (io) {
+          await sendNotification(io, tutorUser._id.toString(), {
+            title: "Documents resubmitted", message: "Your replacement documents are now under review.",
+            type: "verification", link: "/tutor/application-status",
+          });
+        }
+      } catch (postUploadErr) {
+        console.error("Failed to execute post-upload operations (emails/logs/notifications):", postUploadErr);
       }
-      if (existingProfile.homeTuitionEligible) {
-        await recordStatusEvent({
-          tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),
-          actor: { name: "System", role: "system" }, event: "HOME_TUITION_DEACTIVATED",
-          message: "Home tuition eligibility paused while replacement documents are reviewed",
-        });
-      }
-      await logAudit({
-        action: "verification_documents_resubmitted", actor: tutorUser.name,
-        actorId: tutorUser._id.toString(), entity: "TutorProfile", targetId: updated._id.toString(),
-        targetName: tutorUser.name, metadata: { documents: resubmittedDocs },
-      });
-      await setAccountStatus(tutorUser._id.toString(), "submitted");
-      const io = req.app.get("io");
-      await sendNotification(io, tutorUser._id.toString(), {
-        title: "Documents resubmitted", message: "Your replacement documents are now under review.",
-        type: "verification", link: "/tutor/application-status",
-      });
     }
   }
 

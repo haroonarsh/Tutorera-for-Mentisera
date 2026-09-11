@@ -53,6 +53,14 @@ export default function TutorsDirectoryPage() {
   const [selectedTutorId, setSelectedTutorId] = useState<string | null>(null);
   const [tutor360, setTutor360] = useState<Tutor360Data | null>(null);
   const [loading360, setLoading360] = useState(false);
+  
+  // Document Upload Override State
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<string>("cnicFront");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadVideoUrl, setUploadVideoUrl] = useState<string>("");
+  const [uploadSubmitting, setUploadSubmitting] = useState<boolean>(false);
+
 
   const fetchTutors = async () => {
     setLoading(true);
@@ -82,6 +90,44 @@ export default function TutorsDirectoryPage() {
       setLoading360(false);
     }
   };
+
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile && uploadDocType !== "videoIntro") {
+      alert("Please select a file to upload.");
+      return;
+    }
+    if (!uploadFile && uploadDocType === "videoIntro" && !uploadVideoUrl.trim()) {
+      alert("Please select a video file or provide a video URL.");
+      return;
+    }
+
+    setUploadSubmitting(true);
+    try {
+      const formData = new FormData();
+      if (uploadFile) {
+        formData.append(uploadDocType, uploadFile);
+      }
+      if (uploadDocType === "videoIntro" && uploadVideoUrl.trim()) {
+        formData.append("videoUrl", uploadVideoUrl.trim());
+      }
+
+      await api.post(`/admin/tutors/${selectedTutorId}/upload-docs`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      alert("Document uploaded and approved successfully");
+      setUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadVideoUrl("");
+      if (selectedTutorId) await openTutor360(selectedTutorId);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to upload document");
+    } finally {
+      setUploadSubmitting(false);
+    }
+  };
+
 
   const filtered = tutors.filter((t) => {
     if (!search) return true;
@@ -242,6 +288,21 @@ export default function TutorsDirectoryPage() {
                     </span>
                    </div>
 
+                   <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "white", border: "1px dashed #cbd5e1", borderRadius: "0.5rem" }}>
+                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                       <div>
+                         <h4 style={{ margin: "0 0 0.2rem", fontSize: "0.95rem", fontWeight: 800 }}>Admin Document Override</h4>
+                         <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>Force upload a missing or rejected document for this tutor.</p>
+                       </div>
+                       <button
+                         onClick={() => setUploadModalOpen(true)}
+                         style={{ padding: "0.4rem 0.8rem", backgroundColor: "#1d4ed8", color: "white", border: "none", borderRadius: "0.4rem", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                       >
+                         Override Document
+                       </button>
+                     </div>
+                   </div>
+
                    {canReadPayouts && (
                      <PayoutReportDownload endpoint={`/admin/tutors/${tutor360._id}/payout-report/pdf`} label="Download payout PDF" compact />
                    )}
@@ -297,6 +358,105 @@ export default function TutorsDirectoryPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Admin Override Upload Modal */}
+      {uploadModalOpen && tutor360 && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => !uploadSubmitting && setUploadModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              maxWidth: 480,
+              width: "100%",
+              padding: 24,
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                Upload on Behalf of {tutor360.user?.name || tutor360.fullName}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setUploadModalOpen(false)}
+                disabled={uploadSubmitting}
+                style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Document Type
+                </label>
+                <select
+                  value={uploadDocType}
+                  onChange={(e) => {
+                    setUploadDocType(e.target.value);
+                    setUploadFile(null);
+                    setUploadVideoUrl("");
+                  }}
+                  style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13 }}
+                >
+                  <option value="cnicFront">CNIC (Front) — JPG, PNG, WEBP, PDF</option>
+                  <option value="cnicBack">CNIC (Back) — JPG, PNG, WEBP, PDF</option>
+                  <option value="degree">Educational Degree / Transcript — JPG, PNG, PDF</option>
+                  <option value="videoIntro">Demo Video — MP4 or URL</option>
+                  <option value="policeCertificate">Police Verification Certificate — JPG, PNG, PDF</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Select File {uploadDocType === "videoIntro" ? "(MP4 format, max 50MB)" : "(PDF, JPG, PNG, WEBP, max 10MB)"}
+                </label>
+                <input
+                  type="file"
+                  accept={uploadDocType === "videoIntro" ? "video/mp4" : "application/pdf,image/jpeg,image/png,image/webp"}
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  style={{ width: "100%", fontSize: 13 }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 24 }}>
+                <button
+                  type="button"
+                  onClick={() => setUploadModalOpen(false)}
+                  disabled={uploadSubmitting}
+                  style={{ padding: "0.5rem 1rem", backgroundColor: "#f1f5f9", color: "#475569", border: "none", borderRadius: "0.4rem", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadSubmitting}
+                  style={{ padding: "0.5rem 1rem", backgroundColor: "#16a34a", color: "white", border: "none", borderRadius: "0.4rem", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", opacity: uploadSubmitting ? 0.7 : 1 }}
+                >
+                  {uploadSubmitting ? "Uploading..." : "Upload & Approve"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
