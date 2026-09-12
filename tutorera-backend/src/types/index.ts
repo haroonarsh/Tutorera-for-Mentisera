@@ -18,6 +18,7 @@ export interface IUser extends Document {
   allowedCountryCodes?: string[];
   phone?: string;
   city?: string;
+  address?: string;
   avatar?: string;
   isVerified: boolean;
   isApproved: boolean;

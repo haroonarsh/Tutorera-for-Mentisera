@@ -34,10 +34,18 @@ export const createOrUpdateProfile = async (
   let profile = await TutorProfile.findOne({ user: userId });
 
   if (profile) {
+    const updateData = { ...req.body };
+    if (updateData.cnicFront || updateData.cnicBack) {
+      updateData.cnicVerificationStatus = "pending";
+    }
+    if (updateData.videoIntro) {
+      updateData.demoVideoStatus = "pending";
+    }
+
     // Update existing profile
     profile = await TutorProfile.findOneAndUpdate(
       { user: userId },
-      { ...req.body },
+      updateData,
       { new: true, runValidators: true }
     ).populate("user", "name email avatar phone city countryCode countryName timezone currency");
 

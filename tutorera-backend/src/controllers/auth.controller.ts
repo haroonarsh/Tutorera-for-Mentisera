@@ -402,10 +402,10 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 // @route   PATCH /api/auth/update-profile
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { name, phone, city, preferredLanguage } = req.body;
+  const { name, phone, city, address, countryCode, countryName, preferredLanguage } = req.body;
   const updates: Record<string, string> = {};
 
-  for (const [key, value] of Object.entries({ name, phone, city })) {
+  for (const [key, value] of Object.entries({ name, phone, city, address, countryCode, countryName })) {
     if (typeof value === "string") updates[key] = value.trim();
   }
 

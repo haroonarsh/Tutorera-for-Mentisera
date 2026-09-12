@@ -16,8 +16,6 @@ export default function ProfilePage() {
   const guardStatus = useAppGuard();
   const router = useRouter();
 
-  const userCountryCode = user?.countryCode || "PK";
-  const cities = (geo.countries?.find(c => c.code === userCountryCode)?.cities?.map(ct => ct.name)) || ["Other"];
   const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
@@ -28,8 +26,11 @@ export default function ProfilePage() {
 
   // Personal info form
   const [personalForm, setPersonalForm] = useState({
-    name: "", phone: "", city: "",
+    name: "", phone: "", city: "", address: "", countryCode: "PK", countryName: "Pakistan"
   });
+
+  const userCountryCode = personalForm.countryCode || user?.countryCode || "PK";
+  const cities = (geo.countries?.find(c => c.code === userCountryCode)?.cities?.map(ct => ct.name)) || ["Other"];
 
   // Tutor profile form
   const [tutorForm, setTutorForm] = useState({
@@ -41,6 +42,9 @@ export default function ProfilePage() {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
+  const [cnicBackFile, setCnicBackFile] = useState<File | null>(null);
+  const [videoIntroFile, setVideoIntroFile] = useState<File | null>(null);
   const [tutorProfile, setTutorProfile] = useState<{
     verificationStatus?: string;
     isVerified?: boolean;
@@ -58,12 +62,18 @@ export default function ProfilePage() {
               name: u.name || "",
               phone: u.phone || "",
               city: u.city || "",
+              address: u.address || "",
+              countryCode: u.countryCode || "PK",
+              countryName: u.countryName || "Pakistan",
             });
         }).catch(() => {
       setPersonalForm({
         name: user.name || "",
         phone: "",
         city: "",
+        address: "",
+        countryCode: user.countryCode || "PK",
+        countryName: user.countryName || "Pakistan",
       });
     });
 
@@ -107,11 +117,14 @@ export default function ProfilePage() {
         formData.append("avatar", avatarFile);
         await api.post("/upload/avatar", formData);
       }
-      // 2. Update personal info (name, phone, city)
+      // 2. Update personal info (name, phone, city, address, country)
       await api.patch("/auth/update-profile", {
         name: personalForm.name,
         phone: personalForm.phone,
         city: personalForm.city,
+        address: personalForm.address,
+        countryCode: personalForm.countryCode,
+        countryName: personalForm.countryName,
       });
 
       setSuccess("Profile updated successfully!");
@@ -126,6 +139,14 @@ export default function ProfilePage() {
   const handleTutorSave = async () => {
     setSaving(true); setError(""); setSuccess("");
     try {
+      if (cnicFrontFile || cnicBackFile || videoIntroFile) {
+        const formData = new FormData();
+        if (cnicFrontFile) formData.append("cnicFront", cnicFrontFile);
+        if (cnicBackFile) formData.append("cnicBack", cnicBackFile);
+        if (videoIntroFile) formData.append("videoIntro", videoIntroFile);
+        await api.post("/upload/verification", formData);
+      }
+
       await api.post("/tutors/profile", {
         ...tutorForm,
         hourlyRate: Number(tutorForm.hourlyRate),
@@ -240,17 +261,30 @@ export default function ProfilePage() {
                 <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.3rem' }}>Email cannot be changed</p>
               </div>
 
-              {/* Phone + City */}
+              {/* Phone */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  <Phone size={15} /> Phone
+                </label>
+                <input value={personalForm.phone} onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                  placeholder="03001234567"
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              </div>
+
+              {/* Country + City */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                    <Phone size={15} /> Phone
+                    <MapPin size={15} /> Country
                   </label>
-                  <input value={personalForm.phone} onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
-                    placeholder="03001234567"
-                    style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                  <select title="Country" value={personalForm.countryCode} onChange={e => setPersonalForm({ ...personalForm, countryCode: e.target.value, countryName: e.target.options[e.target.selectedIndex].text, city: "" })}
+                    style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+                    {geo.countries?.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
@@ -264,6 +298,18 @@ export default function ProfilePage() {
                     {cities.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  <MapPin size={15} /> Address / Locality
+                </label>
+                <input value={personalForm.address} onChange={e => setPersonalForm({ ...personalForm, address: e.target.value })}
+                  placeholder="e.g. DHA Phase 1"
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
               </div>
 
               {/* Role badge */}
@@ -413,6 +459,31 @@ export default function ProfilePage() {
                     <option value="">Select city</option>
                     {cities.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+
+                {/* Verification Documents */}
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>Verification Documents</h3>
+                  <p style={{ fontSize: '0.8rem', color: C.gray500, marginBottom: '1rem' }}>Updating these documents will temporarily pause your visibility until approved by our team.</p>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Front Image</label>
+                      <input type="file" accept="image/*" onChange={e => setCnicFrontFile(e.target.files?.[0] || null)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Back Image</label>
+                      <input type="file" accept="image/*" onChange={e => setCnicBackFile(e.target.files?.[0] || null)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Demo Video (Optional)</label>
+                    <input type="file" accept="video/*" onChange={e => setVideoIntroFile(e.target.files?.[0] || null)}
+                      style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
+                  </div>
                 </div>
 
                 <button onClick={handleTutorSave} disabled={saving}

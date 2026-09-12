@@ -18,6 +18,8 @@ interface User {
   preferredLanguage?: string;
   adminRole?: string;
   adminPermissions?: string[];
+  address?: string;
+  countryName?: string;
 }
 
 interface GoogleAuthResult {

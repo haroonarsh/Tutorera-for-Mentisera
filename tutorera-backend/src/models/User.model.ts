@@ -60,6 +60,7 @@ const userSchema = new Schema<IUser>(
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
     locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
+    address: { type: String, trim: true },
     timezone: { type: String, trim: true },
     currency: { type: String, uppercase: true, trim: true },
     preferredLanguage: { type: String, lowercase: true, trim: true, default: "en" },
