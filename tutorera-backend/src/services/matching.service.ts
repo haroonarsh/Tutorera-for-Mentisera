@@ -200,22 +200,40 @@ export class MatchingService {
       if (request.countryCode) {
         query.countryCode = request.countryCode;
       }
-      if (request.city) {
+      if (request.location && request.location.coordinates && request.location.coordinates.length === 2) {
+        query.location = {
+          $near: {
+            $geometry: request.location,
+            $maxDistance: (request.travelRadiusKm || 20) * 1000,
+          }
+        };
+      } else if (request.city) {
         query.city = new RegExp(`^${request.city.trim()}$`, "i");
       }
     } else {
       // "both" mode: show online-capable tutors everywhere, and in-person tutors only where police + location match
+      const homeSubQuery: any = {
+        teachingMode: { $in: ["in-person", "both"] },
+        policeVerificationStatus: "approved",
+      };
+      if (request.countryCode) homeSubQuery.countryCode = request.countryCode;
+      if (request.location && request.location.coordinates && request.location.coordinates.length === 2) {
+        homeSubQuery.location = {
+          $near: {
+            $geometry: request.location,
+            $maxDistance: (request.travelRadiusKm || 20) * 1000,
+          }
+        };
+      } else if (request.city) {
+        homeSubQuery.city = new RegExp(`^${request.city.trim()}$`, "i");
+      }
+
       query.$or = [
         {
           teachingMode: { $in: ["online", "both"] },
           ...(request.preferredTutorCountries ? { countryCode: { $in: request.preferredTutorCountries } } : {}),
         },
-        {
-          teachingMode: { $in: ["in-person", "both"] },
-          policeVerificationStatus: "approved",
-          ...(request.countryCode ? { countryCode: request.countryCode } : {}),
-          ...(request.city ? { city: new RegExp(`^${request.city.trim()}$`, "i") } : {}),
-        },
+        homeSubQuery,
       ];
     }
 

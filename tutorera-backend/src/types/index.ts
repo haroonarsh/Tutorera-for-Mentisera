@@ -19,6 +19,11 @@ export interface IUser extends Document {
   phone?: string;
   city?: string;
   address?: string;
+  postalCode?: string;
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
   avatar?: string;
   isVerified: boolean;
   isApproved: boolean;

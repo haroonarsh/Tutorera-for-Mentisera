@@ -105,9 +105,13 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(422).json({ success: false, code: "INVALID_SCHEDULE_WINDOW", message: "Lesson end time must be after the start time." });
     return;
   }
+  const createData = { ...req.body };
+  if (typeof createData.lat === "number" && typeof createData.lng === "number") {
+    createData.location = { type: "Point", coordinates: [createData.lng, createData.lat] };
+  }
   const request = await Request.create({
     student: req.user?._id,
-    ...req.body,
+    ...createData,
     ...locationReferences,
     countryCode: market.countryCode,
     countryName: market.countryName,

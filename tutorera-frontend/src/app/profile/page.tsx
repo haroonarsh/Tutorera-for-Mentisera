@@ -26,7 +26,7 @@ export default function ProfilePage() {
 
   // Personal info form
   const [personalForm, setPersonalForm] = useState({
-    name: "", phone: "", city: "", address: "", countryCode: "PK", countryName: "Pakistan"
+    name: "", phone: "", city: "", address: "", countryCode: "PK", countryName: "Pakistan", postalCode: "", lat: null as number | null, lng: null as number | null
   });
 
   const userCountryCode = personalForm.countryCode || user?.countryCode || "PK";
@@ -65,6 +65,9 @@ export default function ProfilePage() {
               address: u.address || "",
               countryCode: u.countryCode || "PK",
               countryName: u.countryName || "Pakistan",
+              postalCode: u.postalCode || "",
+              lat: u.location?.coordinates?.[1] || null,
+              lng: u.location?.coordinates?.[0] || null,
             });
         }).catch(() => {
       setPersonalForm({
@@ -74,6 +77,9 @@ export default function ProfilePage() {
         address: "",
         countryCode: user.countryCode || "PK",
         countryName: user.countryName || "Pakistan",
+        postalCode: "",
+        lat: null,
+        lng: null,
       });
     });
 
@@ -125,6 +131,9 @@ export default function ProfilePage() {
         address: personalForm.address,
         countryCode: personalForm.countryCode,
         countryName: personalForm.countryName,
+        postalCode: personalForm.postalCode,
+        lat: personalForm.lat,
+        lng: personalForm.lng,
       });
 
       setSuccess("Profile updated successfully!");
@@ -310,6 +319,40 @@ export default function ProfilePage() {
                   style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                   onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                   onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              </div>
+
+              {/* Postal Code & Auto Location */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  <MapPin size={15} /> Postal / Zip Code (Used for nearby matches)
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input value={personalForm.postalCode} onChange={e => setPersonalForm({ ...personalForm, postalCode: e.target.value })}
+                    placeholder="Enter postal code"
+                    style={{ flex: 1, padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', color: C.primary }}
+                    onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                  <button type="button" onClick={async () => {
+                    if (!personalForm.postalCode) return;
+                    try {
+                      const res = await api.get(`/geo/postal-lookup?q=${personalForm.postalCode}&country=${personalForm.countryCode}`);
+                      if (res.data.results && res.data.results.length > 0) {
+                        const loc = res.data.results[0];
+                        setPersonalForm({ ...personalForm, lat: loc.lat, lng: loc.lng, city: loc.placeName || personalForm.city });
+                        alert(`Location found: ${loc.placeName}`);
+                      } else {
+                        alert("Could not find location for this postal code.");
+                      }
+                    } catch (e) {
+                      alert("Error fetching location data.");
+                    }
+                  }} style={{ padding: '0 1rem', backgroundColor: C.accentLight, color: C.accent, border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>
+                    Find Location
+                  </button>
+                </div>
+                {personalForm.lat && personalForm.lng && (
+                  <p style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.4rem' }}>✅ Geospatial coordinates captured.</p>
+                )}
               </div>
 
               {/* Role badge */}

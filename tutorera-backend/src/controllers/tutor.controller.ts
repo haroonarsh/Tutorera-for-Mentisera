@@ -41,6 +41,9 @@ export const createOrUpdateProfile = async (
     if (updateData.videoIntro) {
       updateData.demoVideoStatus = "pending";
     }
+    if (typeof updateData.lat === "number" && typeof updateData.lng === "number") {
+      updateData.location = { type: "Point", coordinates: [updateData.lng, updateData.lat] };
+    }
 
     // Update existing profile
     profile = await TutorProfile.findOneAndUpdate(
@@ -57,10 +60,15 @@ export const createOrUpdateProfile = async (
     return;
   }
 
+  const createData = { ...req.body };
+  if (typeof createData.lat === "number" && typeof createData.lng === "number") {
+    createData.location = { type: "Point", coordinates: [createData.lng, createData.lat] };
+  }
+
   // Create new profile
   profile = await TutorProfile.create({
     user: userId,
-    ...req.body,
+    ...createData,
   });
 
   await profile.populate("user", "name email avatar phone city countryCode countryName timezone currency");

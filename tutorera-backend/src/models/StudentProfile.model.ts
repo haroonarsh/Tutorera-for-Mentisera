@@ -9,6 +9,11 @@ export interface IStudentProfile extends Document {
   city: string;
   cityId?: string;              // slug from location dataset e.g. "pk-lhe"
   regionCode?: string;          // ISO 3166-2 e.g. "PK-PB"
+  postalCode?: string;
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
   timezone: string;
   currency: string;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
@@ -38,6 +43,11 @@ const studentProfileSchema = new Schema<IStudentProfile>(
     countryName: { type: String, trim: true },
     cityId: { type: String, trim: true, lowercase: true },
     regionCode: { type: String, uppercase: true, trim: true },
+    postalCode: { type: String, trim: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number] },
+    },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
     region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
@@ -70,5 +80,7 @@ const studentProfileSchema = new Schema<IStudentProfile>(
 // Compound indexes for global marketplace queries
 studentProfileSchema.index({ countryCode: 1, cityId: 1, onboardingComplete: 1 });
 studentProfileSchema.index({ countryCode: 1, currency: 1, teachingModePreference: 1 });
+studentProfileSchema.index({ user: 1 });
+studentProfileSchema.index({ location: "2dsphere" });
 
 export default mongoose.model<IStudentProfile>("StudentProfile", studentProfileSchema);

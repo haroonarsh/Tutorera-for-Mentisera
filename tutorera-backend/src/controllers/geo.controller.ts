@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import axios from "axios";
 import Country from "../models/Country.model";
 import Region from "../models/Region.model";
 import City from "../models/City.model";
@@ -126,4 +127,34 @@ export const getCountryCities = async (req: Request, res: Response): Promise<voi
 
 export const getCurrencies = async (_req: Request, res: Response): Promise<void> => {
   res.json({ success: true, currencies: Object.values(SUPPORTED_CURRENCIES) });
+};
+
+export const postalLookup = async (req: Request, res: Response): Promise<void> => {
+  const query = String(req.query.q || "").trim();
+  const country = String(req.query.country || "").toUpperCase();
+  
+  if (query.length < 2) {
+    res.status(400).json({ success: false, message: "Enter at least two characters to search." });
+    return;
+  }
+  
+  const username = process.env.GEONAMES_USERNAME || "demo";
+  
+  try {
+    const isNumeric = /^\d+$/.test(query) || /^[A-Z0-9- ]+$/i.test(query);
+    const param = isNumeric ? "postalcode_startsWith" : "placename_startsWith";
+    const countryParam = country ? `&country=${country}` : "";
+    
+    const url = `http://api.geonames.org/postalCodeSearchJSON?${param}=${encodeURIComponent(query)}${countryParam}&maxRows=10&username=${username}`;
+    
+    const response = await axios.get(url);
+    if (response.data && response.data.postalCodes) {
+      res.json({ success: true, results: response.data.postalCodes });
+    } else {
+      res.json({ success: true, results: [] });
+    }
+  } catch (error) {
+    console.error("GeoNames API Error:", error);
+    res.status(500).json({ success: false, message: "Error fetching location data." });
+  }
 };

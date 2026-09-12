@@ -14,6 +14,11 @@ export interface ITutorProfile extends Document {
   zipCode?: string;
   cityId?: string;                   // slug from location dataset e.g. "pk-lhe"
   regionCode?: string;               // ISO 3166-2 region code e.g. "PK-PB"
+  postalCode?: string;
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
   timezone: string;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   nationalityCountryCode?: string; residenceCountryCode?: string; onlineCountryReach?: string[];
@@ -123,6 +128,11 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     countryName: { type: String, trim: true },
     cityId: { type: String, trim: true, lowercase: true },
     regionCode: { type: String, uppercase: true, trim: true },
+    postalCode: { type: String, trim: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number] },
+    },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
     region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
@@ -235,6 +245,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
 );
 
 // Compound indexes for global marketplace queries
+tutorProfileSchema.index({ location: "2dsphere" });
 tutorProfileSchema.index({ countryCode: 1, isVerified: 1, teachingMode: 1 });
 tutorProfileSchema.index({ countryCode: 1, cityId: 1, subjects: 1, isVerified: 1 });
 tutorProfileSchema.index({ onlineCountryReach: 1, isVerified: 1, averageRating: -1 });

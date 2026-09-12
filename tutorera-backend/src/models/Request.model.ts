@@ -17,6 +17,7 @@ export interface IRequest extends Document {
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   lessonLanguage?: string;
   area?: string; travelRadiusKm?: number;
+  location?: { type: string; coordinates: number[] };
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];
   tutorGenderPreference?: "male" | "female" | "none";
@@ -89,6 +90,10 @@ const requestSchema = new Schema<IRequest>(
     lessonLanguage: { type: String, trim: true, default: "English" },
     area: { type: String, trim: true }, 
     travelRadiusKm: { type: Number, min: 0, max: 100 },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number] },
+    },
     isWorldwideEligible: { type: Boolean, default: true },
     preferredTutorCountries: [{ type: String, trim: true }],
     tutorGenderPreference: { type: String, enum: ["male", "female", "none"], default: "none" },
@@ -140,5 +145,6 @@ requestSchema.index({ student: 1, status: 1, createdAt: -1 });
 requestSchema.index({ teachingMode: 1, countryCode: 1, status: 1, expiresAt: 1 });
 requestSchema.index({ countryCode: 1, cityRef: 1, currency: 1, status: 1, createdAt: -1 });
 requestSchema.index({ lossReason: 1, lossClassifiedAt: -1 });
+requestSchema.index({ location: "2dsphere" });
 
 export default mongoose.model<IRequest>("Request", requestSchema);

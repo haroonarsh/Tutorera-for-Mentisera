@@ -59,6 +59,8 @@ export const saveStudentOnboarding = async (
       ...locationReferences,
       currentLevel, institution, subjectsNeeded,
       budgetRange, teachingModePreference,
+      postalCode: req.body.postalCode,
+      location: (typeof req.body.lat === "number" && typeof req.body.lng === "number") ? { type: "Point", coordinates: [req.body.lng, req.body.lat] } : undefined,
       onboardingComplete: true,
     },
     { upsert: true, new: true }

@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import TutorProfile from "../models/TutorProfile.model";
+import StudentProfile from "../models/StudentProfile.model";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";
@@ -402,11 +404,15 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 // @route   PATCH /api/auth/update-profile
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { name, phone, city, address, countryCode, countryName, preferredLanguage } = req.body;
-  const updates: Record<string, string> = {};
+  const { name, phone, city, address, countryCode, countryName, preferredLanguage, postalCode, lat, lng } = req.body;
+  const updates: any = {};
 
-  for (const [key, value] of Object.entries({ name, phone, city, address, countryCode, countryName })) {
+  for (const [key, value] of Object.entries({ name, phone, city, address, countryCode, countryName, postalCode })) {
     if (typeof value === "string") updates[key] = value.trim();
+  }
+
+  if (typeof lat === "number" && typeof lng === "number") {
+    updates.location = { type: "Point", coordinates: [lng, lat] };
   }
 
   // English is the sole reviewed UI locale at launch.  Persisting an
@@ -430,6 +436,21 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
   if (!user) {
     res.status(404).json({ success: false, message: "User not found" });
     return;
+  }
+
+  // Sync spatial and location fields to TutorProfile and StudentProfile
+  const profileUpdates: any = {};
+  if (updates.city) profileUpdates.city = updates.city;
+  if (updates.countryCode) profileUpdates.countryCode = updates.countryCode;
+  if (updates.countryName) profileUpdates.countryName = updates.countryName;
+  if (updates.postalCode) profileUpdates.postalCode = updates.postalCode;
+  if (updates.location) profileUpdates.location = updates.location;
+
+  if (Object.keys(profileUpdates).length > 0) {
+    await Promise.all([
+      TutorProfile.findOneAndUpdate({ user: user._id }, { $set: profileUpdates }),
+      StudentProfile.findOneAndUpdate({ user: user._id }, { $set: profileUpdates }),
+    ]);
   }
 
   res.status(200).json({

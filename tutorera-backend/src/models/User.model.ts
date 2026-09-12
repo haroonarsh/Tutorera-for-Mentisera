@@ -61,6 +61,11 @@ const userSchema = new Schema<IUser>(
     locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
     address: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], index: "2dsphere" },
+    },
     timezone: { type: String, trim: true },
     currency: { type: String, uppercase: true, trim: true },
     preferredLanguage: { type: String, lowercase: true, trim: true, default: "en" },
