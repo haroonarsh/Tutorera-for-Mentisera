@@ -92,6 +92,7 @@ const navSections: NavSection[] = [
       { href: "/admin/payouts", label: "Payouts", icon: <Banknote size={17} />, permission: "payout.read" },
       { href: "/admin/reconciliation", label: "Reconciliation", icon: <Calculator size={17} />, permission: "finance.reconcile" },
       { href: "/admin/fee-config", label: "Fee Config", icon: <Sliders size={17} />, permission: "finance.fee_configure" },
+      { href: "/admin/payment-providers", label: "Payment Providers", icon: <CreditCard size={17} />, permission: "finance.fee_configure" },
     ],
   },
   {
