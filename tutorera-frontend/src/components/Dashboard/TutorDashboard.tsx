@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 // components/dashboard/TutorDashboard.tsx
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -18,6 +18,7 @@ import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import CommissionCalculator from "./CommissionCalculator";
 import { Sparkles, Calculator } from "lucide-react";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
+import { DashCard, DashButton, StatusBadge, EmptyState } from "./ui";
 
 const C = UI_COLORS;
 
@@ -74,10 +75,10 @@ function TutorApplicationStatusCard() {
 
   return (
     <div className={cardClass} style={{
-      background: isActionRequired ? "linear-gradient(135deg, #b45309 0%, #d97706 100%)" :
-                  isDanger ? "linear-gradient(135deg, #991b1b 0%, #dc2626 100%)" :
-                  isSuccess ? "linear-gradient(135deg, #065f46 0%, #16a34a 100%)" :
-                  "linear-gradient(135deg, #021550 0%, #0329B2 100%)",
+      background: isActionRequired ? `linear-gradient(135deg, ${STATUS_COLORS.warning.color} 0%, ${C.orange} 100%)` :
+                  isDanger ? `linear-gradient(135deg, ${STATUS_COLORS.danger.color} 0%, ${C.error} 100%)` :
+                  isSuccess ? `linear-gradient(135deg, ${STATUS_COLORS.success.color} 0%, ${C.success} 100%)` :
+                  `linear-gradient(135deg, ${C.primary} 0%, ${C.accent} 100%)`,
       color: "#fff",
       borderRadius: 16,
       padding: "18px 20px",
@@ -106,7 +107,7 @@ function TutorApplicationStatusCard() {
         }}>Track Application →</Link>
         {isActionRequired && (
           <Link href={data.actionRequired?.cta.href || "/onboarding/tutor"} style={{
-            background: "#fff", color: "#b45309", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
+            background: C.surface, color: STATUS_COLORS.warning.color, borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
           }}>Complete Verification →</Link>
         )}
       </div>
@@ -176,18 +177,15 @@ function BookingCard({ booking }: { booking: DashBooking }) {
 
       {/* Action buttons row */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-      <button
+      <DashButton
+        variant="secondary"
+        size="sm"
         onClick={handleChatClick}
         disabled={creatingChat}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-          padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#EEF5FF',
-          color: creatingChat ? '#9ca3af' : '#0329B2', borderRadius: '0.5rem',
-          border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600',
-          cursor: creatingChat ? 'not-allowed' : 'pointer', marginBottom: '0.5rem'
-        }}>
+        style={{ marginBottom: '0.5rem' }}
+      >
         {creatingChat ? "Opening..." : "💬 Chat"}
-      </button>
+      </DashButton>
 
       {/* ── NEW: Need Help button ── */}
         <button type="button" className={s.btnWarning} style={{ marginBottom: '0.5rem' }} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
@@ -201,7 +199,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         )}
 
         {studentRated && (
-          <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, padding: '0.5rem 0' }}>
+          <span style={{ fontSize: '0.8rem', color: TEXT_COLORS.success, fontWeight: 600, padding: '0.5rem 0' }}>
             ✓ Student Rated
           </span>
         )}
@@ -221,7 +219,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         </span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
-      <details style={{marginTop:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>{money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>{money(booking.subtotal||booking.amount)}</b></span><span>Tutor fee: <b>{money(booking.tutorFee||0)}</b></span><span>Tax: <b>{money(booking.tax||0)}</b></span><span>Tutor net: <b>{money(booking.tutorNet||booking.amount)}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
+      <details style={{marginTop:"0.75rem",background:C.card,padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode}</b></span><span>Rate: <b>{money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>{money(booking.subtotal||booking.amount)}</b></span><span>Tutor fee: <b>{money(booking.tutorFee||0)}</b></span><span>Tax: <b>{money(booking.tax||0)}</b></span><span>Tutor net: <b>{money(booking.tutorNet||booking.amount)}</b></span><span>Payment: <b>{booking.paymentStatus}</b></span></div><p style={{fontSize:11,color:TEXT_COLORS.muted,marginTop:8}}>The stored cancellation and refund policy applies to this booking.</p></details>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
     </div>
 
@@ -293,19 +291,9 @@ function OpenRequestCard({
               <span>·</span>
               <span>{timeAgo(request.createdAt)}</span>
               <span>·</span>
-              <span
-                style={{
-                  fontSize: "0.74rem",
-                  fontWeight: 700,
-                  padding: "1px 6px",
-                  borderRadius: "0.25rem",
-                  backgroundColor: isExpired ? "#fef2f2" : diffHours < 24 ? "#fffbeb" : "#ecfdf5",
-                  color: isExpired ? "#dc2626" : diffHours < 24 ? "#d97706" : "#059669",
-                  border: `1px solid ${isExpired ? "#fecaca" : diffHours < 24 ? "#fde68a" : "#a7f3d0"}`,
-                }}
-              >
+              <StatusBadge tone={isExpired ? "danger" : diffHours < 24 ? "warning" : "success"}>
                 {closingText}
-              </span>
+              </StatusBadge>
             </div>
           </div>
           <span className={statusBadgeClass(request.status)}>{request.status}</span>
@@ -316,22 +304,7 @@ function OpenRequestCard({
         {matchReasons && matchReasons.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 0 12px" }}>
             {matchReasons.slice(0, 3).map((r, i) => (
-              <span
-                key={i}
-                style={{
-                  fontSize: 11,
-                  padding: "2px 8px",
-                  borderRadius: 6,
-                  background: "#f0fdf4",
-                  color: "#166534",
-                  border: "1px solid #bbf7d0",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4
-                }}
-              >
-                ✓ {r}
-              </span>
+              <StatusBadge key={i} tone="success">✓ {r}</StatusBadge>
             ))}
           </div>
         )}
@@ -356,7 +329,7 @@ function OpenRequestCard({
 
         <div style={{ marginTop: 14, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {isExpired ? (
-            <span style={{ fontSize: "0.82rem", color: "#dc2626", fontWeight: 600, padding: "6px 10px", background: "#fef2f2", borderRadius: 6, border: "1px solid #fecaca" }}>
+            <span style={{ fontSize: "0.82rem", color: STATUS_COLORS.danger.color, fontWeight: 600, padding: "6px 10px", background: STATUS_COLORS.danger.bg, borderRadius: 6, border: `1px solid ${STATUS_COLORS.danger.border}` }}>
               This request has expired and is no longer accepting offers.
             </span>
           ) : request.bid ? (
@@ -430,14 +403,12 @@ function DirectRequestCard({
   };
 
   return (
-    <div className={s.card} style={{ borderColor: '#bfdbfe', backgroundColor: '#fafbff' }}>
+    <div className={s.card} style={{ borderColor: STATUS_COLORS.info.border, backgroundColor: C.card }}>
       <div className={s.cardHeader}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
             <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
-            <span style={{ backgroundColor: '#EEF5FF', color: '#0329B2', fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
-              📩 Direct Request
-            </span>
+            <StatusBadge tone="info">📩 Direct Request</StatusBadge>
           </div>
           <div className={s.cardMeta}>
             <span>{request.level}</span>
@@ -495,23 +466,23 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
         <div className={s.personRow}>
           <div style={{
             width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
-            border: "2.5px solid #e5e7eb", background: "#e5e7eb", flexShrink: 0,
+            border: `2.5px solid ${C.border}`, background: C.border, flexShrink: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, fontWeight: 700, color: "#0329B2",
+            fontSize: 20, fontWeight: 700, color: C.accent,
           }}>
             {profile.user.avatar
               ? <img src={profile.user.avatar} alt={profile.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : profile.user.name.charAt(0).toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: "0 0 3px", fontSize: 17, fontWeight: 700, color: "#021550" }}>
+            <p style={{ margin: "0 0 3px", fontSize: 17, fontWeight: 700, color: C.primary }}>
               {profile.user.name}
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>{profile.city} · {profile.teachingMode}</p>
+            <p style={{ margin: 0, fontSize: 13, color: TEXT_COLORS.muted }}>{profile.city} · {profile.teachingMode}</p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: "#021550" }}>
-              PKR {profile.hourlyRate.toLocaleString()}<span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 400 }}>/hr</span>
+            <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: C.primary }}>
+              PKR {profile.hourlyRate.toLocaleString()}<span style={{ fontSize: 12, color: TEXT_COLORS.muted, fontWeight: 400 }}>/hr</span>
             </p>
             <span className={`${s.badge} ${profile.verificationStatus === "approved" ? s.badgeApproved : s.badgePending}`}>
               {profile.verificationStatus === "approved" ? "✓ Verified" : profile.verificationStatus}
@@ -520,23 +491,24 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
         </div>
 
         {profile.bio && (
-          <p style={{ margin: "12px 0 0", fontSize: 13, color: "#6b7280", lineHeight: 1.6 }}>
+          <p style={{ margin: "12px 0 0", fontSize: 13, color: TEXT_COLORS.muted, lineHeight: 1.6 }}>
             {profile.bio}
           </p>
         )}
 
         <div style={{ marginTop: 12 }}>
-          <Link href="/profile" style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "8px 16px", borderRadius: 8, border: "1.5px solid #e5e7eb",
-            fontSize: 13, fontWeight: 500, color: "#374151", textDecoration: "none",
-            transition: "all 0.15s",
-          }}>
-            <svg width={13} height={13} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
+          <DashButton
+            variant="secondary"
+            size="sm"
+            href="/profile"
+            icon={
+              <svg width={13} height={13} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+            }
+          >
             Edit Profile
-          </Link>
+          </DashButton>
         </div>
       </div>
 
@@ -547,7 +519,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           <div className={s.tagList}>
             {profile.subjects.length > 0
               ? profile.subjects.map((sub) => <span key={sub} className={`${s.tag}`}>{sub}</span>)
-              : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+              : <span style={{ fontSize: 13, color: TEXT_COLORS.muted }}>None added</span>}
           </div>
         </div>
 
@@ -556,7 +528,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           <div className={s.tagList}>
             {profile.levels.length > 0
               ? profile.levels.map((lvl) => <span key={lvl} className={`${s.tag} ${s.tagGray}`}>{lvl}</span>)
-              : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+              : <span style={{ fontSize: 13, color: TEXT_COLORS.muted }}>None added</span>}
           </div>
         </div>
 
@@ -564,10 +536,10 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           <p className={s.profileCardTitle}>Education</p>
           {profile.education.length > 0 ? profile.education.map((edu) => (
             <div key={edu._id} style={{ marginBottom: 8 }}>
-              <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "#021550" }}>{edu.degree}</p>
-              <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{edu.institution} · {edu.year}</p>
+              <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: C.primary }}>{edu.degree}</p>
+              <p style={{ margin: 0, fontSize: 12, color: TEXT_COLORS.muted }}>{edu.institution} · {edu.year}</p>
             </div>
-          )) : <span style={{ fontSize: 13, color: "#9ca3af" }}>None added</span>}
+          )) : <span style={{ fontSize: 13, color: TEXT_COLORS.muted }}>None added</span>}
         </div>
 
         <div className={s.profileCard} style={{ gridColumn: '1 / -1' }}>
@@ -702,14 +674,14 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   return (
     <>
       {/* Header */}
-      <div className={s.header} style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
+      <div className={s.header} style={{ background: `linear-gradient(135deg, ${C.primary} 0%, ${C.accent} 100%)`, color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
         <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
           <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
               {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: C.cyan, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Tutor Opportunity Marketplace
               </span>
               <h1 className={s.greeting} style={{ color: "white", fontSize: "1.5rem", fontWeight: 800, margin: "0.2rem 0" }}>
@@ -812,10 +784,10 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     className={`${s.tab} ${tab === "recommended" ? s.tabActive : ""}`}
     style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
   >
-    <Sparkles size={14} style={{ color: tab === "recommended" ? "#08bffc" : "#f59e0b" }} />
+    <Sparkles size={14} style={{ color: tab === "recommended" ? C.cyan : C.gold }} />
     ✨ Matched For You
     {recommended.length > 0 && (
-      <span className={`${s.tabBadge} ${tab === "recommended" ? s.tabActiveBadge : ""}`} style={{ background: "#f59e0b", color: "#fff" }}>
+      <span className={`${s.tabBadge} ${tab === "recommended" ? s.tabActiveBadge : ""}`} style={{ background: C.gold, color: "#fff" }}>
         {recommended.length}
       </span>
     )}
@@ -866,21 +838,20 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             {loadingB ? (
               <div className={s.spinner} />
             ) : bookings.length === 0 ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>📅</div>
-                <p className={s.emptyTitle}>No bookings yet</p>
-                <p className={s.emptyDesc}>Browse matching requests and send offers to get your first booking.</p>
-                <button type="button" onClick={() => setTab("browse")} className={s.btnPrimary}>Browse Requests</button>
-              </div>
+              <EmptyState
+                icon="📅"
+                title="No bookings yet"
+                description="Browse matching requests and send offers to get your first booking."
+                action={{ label: "Browse Requests", onClick: () => setTab("browse") }}
+              />
             ) : (
               <>
                 {bookings.map((b) => <BookingCard key={b._id} booking={b} />)}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                    <button type="button" onClick={loadMoreBookings} disabled={loadingMoreBookings}
-                      style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingMoreBookings ? 'not-allowed' : 'pointer' }}>
+                    <DashButton variant="secondary" size="md" onClick={loadMoreBookings} disabled={loadingMoreBookings}>
                       {loadingMoreBookings ? "Loading..." : "Load More Bookings"}
-                    </button>
+                    </DashButton>
                   </div>
                 )}
               </>
@@ -894,10 +865,10 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             <div className={s.sectionHeader}>
               <div>
                 <h2 className={s.sectionTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ color: "#f59e0b" }}>✨</span>
+                  <span style={{ color: C.gold }}>✨</span>
                   Smart Matched Student Requests
                 </h2>
-                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+                <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "4px 0 0" }}>
                   Ranked by your subject specializations, teaching mode, location feasibility, and schedule compatibility.
                 </p>
               </div>
@@ -905,26 +876,20 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             </div>
 
             {bidSuccess && (
-              <div style={{
-                background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
-                color: "#059669", borderRadius: 10, padding: "12px 16px", fontSize: 13,
-                fontWeight: 500, marginBottom: 16,
-              }}>
+              <DashCard padding="sm" accent={STATUS_COLORS.success.color} style={{ background: STATUS_COLORS.success.bg, borderColor: STATUS_COLORS.success.border, color: STATUS_COLORS.success.color, fontSize: 13, fontWeight: 500, marginBottom: 16 }}>
                 ✓ Offer sent successfully. The student will review it shortly.
-              </div>
+              </DashCard>
             )}
 
             {loadingRec ? (
               <div className={s.spinner} />
             ) : recommended.length === 0 ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>🎯</div>
-                <p className={s.emptyTitle}>No personalized matches right now</p>
-                <p className={s.emptyDesc}>
-                  As students post requests matching your subjects and teaching mode, they will appear here with high match scores. You can also browse all open requests.
-                </p>
-                <button type="button" onClick={() => setTab("browse")} className={s.btnPrimary}>Browse All Requests</button>
-              </div>
+              <EmptyState
+                icon="🎯"
+                title="No personalized matches right now"
+                description="As students post requests matching your subjects and teaching mode, they will appear here with high match scores. You can also browse all open requests."
+                action={{ label: "Browse All Requests", onClick: () => setTab("browse") }}
+              />
             ) : (
               recommended.map((item) => (
                 <OpenRequestCard
@@ -979,23 +944,19 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             </div>
 
             {bidSuccess && (
-              <div style={{
-                background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
-                color: "#059669", borderRadius: 10, padding: "12px 16px", fontSize: 13,
-                fontWeight: 500, marginBottom: 16,
-              }}>
+              <DashCard padding="sm" accent={STATUS_COLORS.success.color} style={{ background: STATUS_COLORS.success.bg, borderColor: STATUS_COLORS.success.border, color: STATUS_COLORS.success.color, fontSize: 13, fontWeight: 500, marginBottom: 16 }}>
                 ✓ Offer sent successfully. The student will review it shortly.
-              </div>
+              </DashCard>
             )}
 
             {loadingR ? (
               <div className={s.spinner} />
             ) : requests.length === 0 ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>🔍</div>
-                <p className={s.emptyTitle}>No open requests right now</p>
-                <p className={s.emptyDesc}>Check back later — new student requests appear here as they're posted.</p>
-              </div>
+              <EmptyState
+                icon="🔍"
+                title="No open requests right now"
+                description="Check back later — new student requests appear here as they're posted."
+              />
             ) : (
               requests.map((r) => (
                 <OpenRequestCard key={r._id} request={r} onBidPlaced={() => {
@@ -1017,11 +978,11 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             {loadingP ? (
               <div className={s.spinner} />
             ) : !profile ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>👤</div>
-                <p className={s.emptyTitle}>Profile not found</p>
-                <p className={s.emptyDesc}>Complete your tutor profile to start receiving students.</p>
-              </div>
+              <EmptyState
+                icon="👤"
+                title="Profile not found"
+                description="Complete your tutor profile to start receiving students."
+              />
             ) : (
               <ProfileSection profile={profile} />
             )}
@@ -1034,7 +995,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             <div className={s.sectionHeader}>
               <div>
                 <h2 className={s.sectionTitle}>Commission Calculator</h2>
-                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+                <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "4px 0 0" }}>
                   See exactly what you take home after TUTORERA fees — before you accept any booking.
                 </p>
               </div>

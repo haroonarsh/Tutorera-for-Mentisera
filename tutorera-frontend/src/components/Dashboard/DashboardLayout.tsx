@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          style={{ background: 'none', border: '1px solid #e5e7eb', cursor: 'pointer', color: C.gray500, borderRadius: '0.375rem', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px' }}
+          style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.gray500, borderRadius: '0.375rem', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px' }}
           className="hidden-mobile">
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
@@ -118,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
                 borderRadius: '0.5rem', textDecoration: 'none',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                backgroundColor: isActive ? '#EEF5FF' : 'transparent',
+                backgroundColor: isActive ? C.accentLight : 'transparent',
                 color: isActive ? C.accent : C.gray500,
                 fontWeight: isActive ? '600' : '400',
                 fontSize: '0.875rem', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)',
@@ -132,7 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
 
         {!collapsed && (
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem', margin: 0 }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: C.gray500, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem', margin: 0 }}>
             {user?.role === "tutor" ? "TEACHING" : "LEARNING"}
           </p>
         )}
@@ -147,7 +147,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
                 borderRadius: '0.5rem', textDecoration: 'none',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                backgroundColor: isActive ? '#EEF5FF' : 'transparent',
+                backgroundColor: isActive ? C.accentLight : 'transparent',
                 color: isActive ? C.accent : C.gray500,
                 fontWeight: isActive ? '600' : '400',
                 fontSize: '0.875rem', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)',
@@ -168,11 +168,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             display: 'flex', alignItems: 'center', gap: '0.625rem',
             padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
             borderRadius: '0.5rem', border: 'none', background: 'none',
-            cursor: 'pointer', color: '#ef4444', width: '100%',
+            cursor: 'pointer', color: STATUS_COLORS.danger.color, width: '100%',
             justifyContent: collapsed ? 'center' : 'flex-start',
             fontSize: '0.875rem', fontWeight: '500',
           }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = STATUS_COLORS.danger.bg)}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
           <LogOut size={18} />
           {!collapsed && <span>Sign out</span>}
@@ -233,7 +233,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/notifications" style={{ position: 'relative', color: C.gray500, display: 'flex' }}>
               <Bell size={20} />
             </Link>
-            <Link href="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.25rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '2rem', backgroundColor: 'white' }}>
+            <Link href="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.25rem 0.75rem', border: `1px solid ${C.border}`, borderRadius: '2rem', backgroundColor: 'white' }}>
               <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden' }}>
                 {user?.avatar ? <img src={user.avatar} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user?.name?.charAt(0).toUpperCase()}
               </div>

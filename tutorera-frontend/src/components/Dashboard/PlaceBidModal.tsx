@@ -5,6 +5,8 @@ import api from "@/lib/axios";
 import { DashRequest } from "@/types/dashboard";
 import { GST_ON_PLATFORM_FEE_PERCENT, PLATFORM_FEE_PERCENT } from "@/lib/site";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { DashCard } from "./ui";
 import styles from "./PostRequestModal.module.css";
 
 type Props = {
@@ -62,15 +64,15 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
         </div>
 
         <div className={styles.modalBody}>
-          <div style={{ background: "#f8fafc", padding: 14, borderRadius: 10 }}>
+          <DashCard padding="sm" style={{ background: UI_COLORS.gray50, boxShadow: "none" }}>
             <strong>{request.subject} · {request.level}</strong>
             <p>Student proposed {currency} {request.budget.toLocaleString()}/{request.pricingUnit || "hour"}</p>
             {!request.allowCounterOffers && (
-              <p style={{ fontSize: 12, color: "#64748b" }}>
+              <p style={{ fontSize: 12, color: TEXT_COLORS.muted }}>
                 This student has disabled counter-offers, so tutors can only accept the proposed rate.
               </p>
             )}
-          </div>
+          </DashCard>
 
           {error && <div className={styles.error}>{error}</div>}
 
@@ -101,19 +103,19 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
               placeholder="Relevant experience and teaching approach. Do not share private contact details."
             />
             {Boolean(message && /(\+92|0092|92)?[\s\-]?3[0-9]{2}[\s\-]?[0-9]{7}|\b\d[\d\s\-]{8,12}\d\b|whatsapp|whatsap|watsapp|wa\.me|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(message)) && (
-              <p style={{ fontSize: 12, color: "#b45309", background: "#fef3c7", padding: "6px 10px", borderRadius: 6, margin: "6px 0 0", border: "1px solid #fde68a" }}>
+              <p style={{ fontSize: 12, color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, padding: "6px 10px", borderRadius: 6, margin: "6px 0 0", border: `1px solid ${STATUS_COLORS.warning.border}` }}>
                 ⚠️ <strong>Safety Warning:</strong> Sharing phone numbers, WhatsApp, or emails violates platform rules and will flag your offer for moderation.
               </p>
             )}
           </div>
 
-          <div style={{ background: "#fffbeb", padding: 14, borderRadius: 10, fontSize: 13, lineHeight: 1.7 }}>
+          <DashCard padding="sm" style={{ background: STATUS_COLORS.warning.bg, boxShadow: "none", fontSize: 13, lineHeight: 1.7 }}>
             <strong>Estimated earnings</strong><br />
             Agreed rate: {currency} {value.toLocaleString()}<br />
             TUTORERA fee ({PLATFORM_FEE_PERCENT}%): {currency} {fee.toLocaleString()}<br />
             Tax ({GST_ON_PLATFORM_FEE_PERCENT}% of fee): {currency} {tax.toLocaleString()}<br />
             <strong>Estimated net: {currency} {net.toLocaleString()}</strong>
-          </div>
+          </DashCard>
         </div>
 
         <div className={styles.modalFooter}>

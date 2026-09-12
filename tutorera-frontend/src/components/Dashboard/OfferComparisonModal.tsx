@@ -1,10 +1,11 @@
 "use client";
 import React from "react";
-import Link from "next/link";
 import { DashBid } from "@/types/dashboard";
 import { formatPKR } from "@/lib/site";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { DashCard, DashButton, StatusBadge, statusTone } from "./ui";
 
 interface OfferComparisonModalProps {
   offers: DashBid[];
@@ -40,7 +41,7 @@ export default function OfferComparisonModal({
             showBreakdown={false}
           />
         ) : (
-          <span style={{ color: "#9ca3af" }}>N/A</span>
+          <span style={{ color: TEXT_COLORS.muted }}>N/A</span>
         ),
     },
     {
@@ -56,10 +57,10 @@ export default function OfferComparisonModal({
       render: (bid) => (
         <span>
           {bid.profile?.isVerified ? (
-            <span style={{ color: "#059669", fontWeight: 600 }}>✓ </span>
+            <span style={{ color: TEXT_COLORS.success, fontWeight: 600 }}>✓ </span>
           ) : null}
           <strong>{bid.profile?.averageRating?.toFixed(1) || "New"}</strong>{" "}
-          <span style={{ color: "#6b7280", fontSize: "0.85em" }}>
+          <span style={{ color: TEXT_COLORS.muted, fontSize: "0.85em" }}>
             ({bid.profile?.totalReviews || 0} reviews)
           </span>
         </span>
@@ -96,7 +97,7 @@ export default function OfferComparisonModal({
             </div>
           ))
         ) : (
-          <span style={{ color: "#9ca3af" }}>Not listed</span>
+          <span style={{ color: TEXT_COLORS.muted }}>Not listed</span>
         ),
     },
     {
@@ -105,7 +106,7 @@ export default function OfferComparisonModal({
         bid.profile?.subjects?.length ? (
           <span>{bid.profile.subjects.slice(0, 4).join(", ")}</span>
         ) : (
-          <span style={{ color: "#9ca3af" }}>Not listed</span>
+          <span style={{ color: TEXT_COLORS.muted }}>Not listed</span>
         ),
     },
     {
@@ -114,16 +115,16 @@ export default function OfferComparisonModal({
         bid.availability ? (
           <span>{bid.availability}</span>
         ) : (
-          <span style={{ color: "#9ca3af" }}>Not specified</span>
+          <span style={{ color: TEXT_COLORS.muted }}>Not specified</span>
         ),
     },
     {
       label: "Verification",
       render: (bid) =>
         bid.profile?.isVerified ? (
-          <span style={{ color: "#059669", fontWeight: 600 }}>✓ Fully Verified</span>
+          <span style={{ color: TEXT_COLORS.success, fontWeight: 600 }}>✓ Fully Verified</span>
         ) : (
-          <span style={{ color: "#dc2626" }}>Unverified</span>
+          <span style={{ color: TEXT_COLORS.danger }}>Unverified</span>
         ),
     },
     {
@@ -141,13 +142,13 @@ export default function OfferComparisonModal({
       label: "Demo Video",
       render: (bid) => bid.profile?.demoVideoStatus === "approved" && bid.profile.videoIntro ? (
         <a href={bid.profile.videoIntro} target="_blank" rel="noopener noreferrer">Watch demo</a>
-      ) : <span style={{ color: "#9ca3af" }}>Not available</span>,
+      ) : <span style={{ color: TEXT_COLORS.muted }}>Not available</span>,
     },
     {
       label: "Message",
       render: (bid) => (
-        <span style={{ fontSize: "0.85em", color: "#374151" }}>
-          {bid.message || <span style={{ color: "#9ca3af" }}>No message</span>}
+        <span style={{ fontSize: "0.85em", color: TEXT_COLORS.secondary }}>
+          {bid.message || <span style={{ color: TEXT_COLORS.muted }}>No message</span>}
         </span>
       ),
     },
@@ -171,10 +172,9 @@ export default function OfferComparisonModal({
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div
+      <DashCard
+        padding="none"
         style={{
-          background: "white",
-          borderRadius: "1rem",
           width: "100%",
           maxWidth: 900,
           maxHeight: "90vh",
@@ -185,21 +185,21 @@ export default function OfferComparisonModal({
         <div
           style={{
             padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid #e5e7eb",
+            borderBottom: `1px solid ${UI_COLORS.border}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             position: "sticky",
             top: 0,
-            background: "white",
+            background: UI_COLORS.surface,
             zIndex: 1,
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#021550" }}>
+            <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: TEXT_COLORS.primary }}>
               Compare Tutor Offers ({selectedOffers.length})
             </h2>
-            <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+            <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: TEXT_COLORS.muted }}>
               Side-by-side comparison of selected offers
             </p>
           </div>
@@ -207,7 +207,7 @@ export default function OfferComparisonModal({
             onClick={onClose}
             aria-label="Close comparison"
             style={{
-              background: "#f3f4f6",
+              background: UI_COLORS.gray50,
               border: "none",
               borderRadius: "50%",
               width: 36,
@@ -217,7 +217,7 @@ export default function OfferComparisonModal({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#374151",
+              color: TEXT_COLORS.secondary,
             }}
           >
             ×
@@ -238,10 +238,10 @@ export default function OfferComparisonModal({
                   style={{
                     textAlign: "left",
                     padding: "0.75rem 1rem",
-                    background: "#f9fafb",
-                    borderBottom: "1px solid #e5e7eb",
+                    background: UI_COLORS.gray50,
+                    borderBottom: `1px solid ${UI_COLORS.border}`,
                     fontWeight: 700,
-                    color: "#374151",
+                    color: TEXT_COLORS.secondary,
                     minWidth: 120,
                     position: "sticky",
                     left: 0,
@@ -256,8 +256,8 @@ export default function OfferComparisonModal({
                     style={{
                       textAlign: "center",
                       padding: "0.75rem 1rem",
-                      background: "#f9fafb",
-                      borderBottom: "1px solid #e5e7eb",
+                      background: UI_COLORS.gray50,
+                      borderBottom: `1px solid ${UI_COLORS.border}`,
                       minWidth: 200,
                     }}
                   >
@@ -267,13 +267,13 @@ export default function OfferComparisonModal({
                           width: 48,
                           height: 48,
                           borderRadius: "50%",
-                          background: "#e0e7ff",
+                          background: UI_COLORS.accentLight,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontWeight: 800,
                           fontSize: "1.1rem",
-                          color: "#3730a3",
+                          color: UI_COLORS.accent,
                           overflow: "hidden",
                         }}
                       >
@@ -283,7 +283,7 @@ export default function OfferComparisonModal({
                           bid.tutor.name.charAt(0).toUpperCase()
                         )}
                       </div>
-                      <span style={{ fontWeight: 800, color: "#021550" }}>{bid.tutor.name}</span>
+                      <span style={{ fontWeight: 800, color: TEXT_COLORS.primary }}>{bid.tutor.name}</span>
                     </div>
                   </th>
                 ))}
@@ -294,18 +294,18 @@ export default function OfferComparisonModal({
                 <tr
                   key={row.label}
                   style={{
-                    background: i % 2 === 0 ? "white" : "#f9fafb",
+                    background: i % 2 === 0 ? UI_COLORS.surface : UI_COLORS.gray50,
                   }}
                 >
                   <td
                     style={{
                       padding: "0.65rem 1rem",
-                      borderBottom: "1px solid #f3f4f6",
+                      borderBottom: `1px solid ${UI_COLORS.border}`,
                       fontWeight: 600,
-                      color: "#374151",
+                      color: TEXT_COLORS.secondary,
                       position: "sticky",
                       left: 0,
-                      background: i % 2 === 0 ? "white" : "#f9fafb",
+                      background: i % 2 === 0 ? UI_COLORS.surface : UI_COLORS.gray50,
                       zIndex: 1,
                     }}
                   >
@@ -316,7 +316,7 @@ export default function OfferComparisonModal({
                       key={bid._id}
                       style={{
                         padding: "0.65rem 1rem",
-                        borderBottom: "1px solid #f3f4f6",
+                        borderBottom: `1px solid ${UI_COLORS.border}`,
                         textAlign: "center",
                         verticalAlign: "middle",
                       }}
@@ -326,16 +326,16 @@ export default function OfferComparisonModal({
                   ))}
                 </tr>
               ))}
-              <tr style={{ background: "#eff6ff" }}>
+              <tr style={{ background: UI_COLORS.accentLight }}>
                 <td
                   style={{
                     padding: "0.75rem 1rem",
-                    borderBottom: "1px solid #e5e7eb",
+                    borderBottom: `1px solid ${UI_COLORS.border}`,
                     fontWeight: 700,
-                    color: "#1d4ed8",
+                    color: UI_COLORS.accent,
                     position: "sticky",
                     left: 0,
-                    background: "#eff6ff",
+                    background: UI_COLORS.accentLight,
                     zIndex: 1,
                   }}
                 >
@@ -346,69 +346,27 @@ export default function OfferComparisonModal({
                     key={bid._id}
                     style={{
                       padding: "0.75rem 1rem",
-                      borderBottom: "1px solid #e5e7eb",
+                      borderBottom: `1px solid ${UI_COLORS.border}`,
                       textAlign: "center",
                       verticalAlign: "middle",
                     }}
                   >
                     {["pending", "submitted", "viewed", "countered"].includes(bid.status) ? (
                       <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-                        <button
+                        <DashButton
+                          variant="primary"
+                          size="sm"
                           onClick={() => onAccept(bid._id)}
                           disabled={acceptingId === bid._id}
-                          style={{
-                            padding: "0.4rem 0.85rem",
-                            background: "#0329b2",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "0.4rem",
-                            fontWeight: 700,
-                            fontSize: "0.8rem",
-                            cursor: acceptingId === bid._id ? "not-allowed" : "pointer",
-                            opacity: acceptingId === bid._id ? 0.6 : 1,
-                          }}
                         >
                           {acceptingId === bid._id ? "Accepting..." : "Accept"}
-                        </button>
-                        <Link
-                          href={`/tutors/${bid.tutor._id}`}
-                          style={{
-                            padding: "0.4rem 0.85rem",
-                            background: "white",
-                            color: "#374151",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "0.4rem",
-                            fontWeight: 600,
-                            fontSize: "0.8rem",
-                            textDecoration: "none",
-                          }}
-                        >
+                        </DashButton>
+                        <DashButton variant="secondary" size="sm" href={`/tutors/${bid.tutor._id}`}>
                           Profile
-                        </Link>
+                        </DashButton>
                       </div>
                     ) : (
-                      <span
-                        style={{
-                          padding: "0.25rem 0.6rem",
-                          borderRadius: "9999px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          background:
-                            bid.status === "accepted"
-                              ? "#d1fae5"
-                              : bid.status === "rejected" || bid.status === "withdrawn"
-                              ? "#fee2e2"
-                              : "#f3f4f6",
-                          color:
-                            bid.status === "accepted"
-                              ? "#065f46"
-                              : bid.status === "rejected" || bid.status === "withdrawn"
-                              ? "#991b1b"
-                              : "#6b7280",
-                        }}
-                      >
-                        {bid.status}
-                      </span>
+                      <StatusBadge tone={statusTone(bid.status)}>{bid.status}</StatusBadge>
                     )}
                   </td>
                 ))}
@@ -416,7 +374,7 @@ export default function OfferComparisonModal({
             </tbody>
           </table>
         </div>
-      </div>
+      </DashCard>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS, SPACING } from "@/lib/brand";
 // components/dashboard/StudentDashboard.tsx
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
 import PostRequestModal from "./PostRequestModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
-import { Trash2, Clock, Video, ShieldCheck } from "lucide-react";
+import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
@@ -18,6 +18,7 @@ import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
 import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
+import { DashCard, DashButton, StatusBadge, EmptyState, StatTile, statusTone } from "./ui";
 
 const C = UI_COLORS;
 
@@ -44,23 +45,21 @@ function timeAgo(dateStr: string, nowMs: number = 0): string {
   return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
 }
 
-function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: string, nowMs: number = 0) {
+type ExpiryTone = "danger" | "success" | "warning";
+
+function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: string, nowMs: number = 0): { text: string; detail: string; tone: ExpiryTone } {
   if (isExpired || !expiresAt) {
     return {
       text: "⚠️ Expired",
       detail: expiredAt ? `Expired on ${new Date(expiredAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}` : "Expired",
-      color: "#dc2626",
-      bg: "#fef2f2",
-      border: "#fecaca",
+      tone: "danger",
     };
   }
   if (!nowMs) {
     return {
       text: "⏱️ Active",
       detail: `Expires: ${new Date(expiresAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}`,
-      color: "#059669",
-      bg: "#ecfdf5",
-      border: "#a7f3d0",
+      tone: "success",
     };
   }
   const diffMs = new Date(expiresAt).getTime() - nowMs;
@@ -68,9 +67,7 @@ function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: 
     return {
       text: "⚠️ Expired",
       detail: "No longer active",
-      color: "#dc2626",
-      bg: "#fef2f2",
-      border: "#fecaca",
+      tone: "danger",
     };
   }
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -86,17 +83,13 @@ function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: 
     return {
       text: `⚡ Closes in ${Math.max(1, diffHours)}h`,
       detail: `Expires: ${localizedTime}`,
-      color: "#d97706",
-      bg: "#fffbeb",
-      border: "#fde68a",
+      tone: "warning",
     };
   }
   return {
     text: `⏱️ ${diffDays} ${diffDays === 1 ? "day" : "days"} left`,
     detail: `Expires: ${localizedTime}`,
-    color: "#059669",
-    bg: "#ecfdf5",
-    border: "#a7f3d0",
+    tone: "success",
   };
 }
 
@@ -229,19 +222,16 @@ function BookingCard({ booking, onClaimSubmitted }: {
           <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
           {/* First session badge */}
           {booking.isFirstSession && (
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#EEF5FF', color: '#0329B2', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
-              1st Session
-            </span>
+            <StatusBadge tone="info">1st Session</StatusBadge>
           )}
         </div>
       </div>
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-        <button type="button" onClick={handleChatClick} disabled={creatingChat}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#EEF5FF', color: creatingChat ? '#9ca3af' : '#0329B2', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600', cursor: creatingChat ? 'not-allowed' : 'pointer' }}>
+        <DashButton type="button" variant="secondary" size="sm" onClick={handleChatClick} disabled={creatingChat}>
           {creatingChat ? "Opening..." : "💬 Chat"}
-        </button>
+        </DashButton>
 
         <button type="button" className={s.btnWarning} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
@@ -255,61 +245,46 @@ function BookingCard({ booking, onClaimSubmitted }: {
         )}
 
         {booking.status === "completed" && (
-          <button
-            type="button"
-            onClick={handleBookAgain}
-            disabled={rebooking}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.5rem 1rem', backgroundColor: rebooking ? '#dbeafe' : '#EEF5FF',
-              color: rebooking ? '#64748b' : '#0329B2', borderRadius: '0.5rem',
-              border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '700',
-              cursor: rebooking ? 'wait' : 'pointer',
-            }}>
+          <DashButton type="button" variant="secondary" size="sm" onClick={handleBookAgain} disabled={rebooking}>
             {rebooking ? "Preparing..." : "↻ Book Again"}
-          </button>
+          </DashButton>
         )}
 
-        {alreadyRated && (
-          <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, padding: '0.5rem 0' }}>
-            ✓ Rated
-          </span>
-        )}
+        {alreadyRated && <StatusBadge tone="success">✓ Rated</StatusBadge>}
 
         {/* ── First Session Guarantee button ── */}
         {showGuaranteeButton && (
-          <button type="button" onClick={() => setShowClaimForm(!showClaimForm)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showClaimForm ? '#fef2f2' : '#fff1f2', color: '#C81B7F', borderRadius: '0.5rem', border: '1px solid #fecdd3', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+          <DashButton type="button" variant="danger" size="sm" onClick={() => setShowClaimForm(!showClaimForm)} style={{ color: C.magenta }}>
             😕 Not Satisfied?
-          </button>
+          </DashButton>
         )}
       </div>
 
       {booking.status === "completed" && (
-        <div style={{ background: "linear-gradient(135deg, #EEF5FF 0%, #F8FAFF 100%)", border: "1px solid #bfdbfe", borderRadius: "0.75rem", padding: "0.9rem", marginBottom: "0.75rem" }}>
-          <p style={{ margin: "0 0 0.5rem", color: "#021550", fontWeight: 800, fontSize: "0.85rem" }}>
+        <DashCard padding="sm" accent={C.accent} style={{ background: `linear-gradient(135deg, ${C.accentLight} 0%, ${C.card} 100%)`, borderColor: STATUS_COLORS.info.border, marginBottom: "0.75rem" }}>
+          <p style={{ margin: "0 0 0.5rem", color: TEXT_COLORS.primary, fontWeight: 800, fontSize: "0.85rem" }}>
             Continue Learning
           </p>
-          <p style={{ margin: "0 0 0.75rem", color: "#475569", fontSize: "0.75rem", lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 0.75rem", color: TEXT_COLORS.muted, fontSize: "0.75rem", lineHeight: 1.5 }}>
             Rebook this tutor by posting a new requirement using the previous subject, mode, and agreed rate as a starting point. Tutors can then respond with a fresh offer.
           </p>
           <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }} aria-label="Future learning options">
             {["Book Again"].map((option) => (
-              <span key={option} style={{ border: "1px solid #dbeafe", background: "#0329B2", color: "white", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
+              <span key={option} style={{ border: `1px solid ${STATUS_COLORS.info.border}`, background: C.accent, color: "white", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
                 {option}
               </span>
             ))}
           </div>
-        </div>
+        </DashCard>
       )}
 
       {/* ── Secure checkout instructions — only when payment is pending ── */}
       {booking.paymentStatus === "pending" && booking.status !== "cancelled" && (
-        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
-          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534', marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <DashCard padding="sm" accent={STATUS_COLORS.success.color} style={{ background: STATUS_COLORS.success.bg, borderColor: STATUS_COLORS.success.border, marginBottom: "0.75rem" }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: TEXT_COLORS.success, marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             💳 Payment Required
           </p>
-          <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.success, marginBottom: '0.875rem', lineHeight: 1.5 }}>
             Review the final amount below. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. TUTORERA verifies payment server-side before marking a booking paid.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
@@ -320,61 +295,47 @@ function BookingCard({ booking, onClaimSubmitted }: {
               { label: "Total Payable", value: money(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
               { label: "Currency", value: "PKR — Pakistani Rupees" },
             ].map(item => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>{item.label}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#14532d', fontFamily: 'monospace' }}>{item.value}</span>
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: C.surface, borderRadius: '0.375rem', border: `1px solid ${STATUS_COLORS.success.border}`, flexWrap: 'wrap', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.7rem', color: UI_COLORS.success, fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: TEXT_COLORS.success, fontFamily: 'monospace' }}>{item.value}</span>
               </div>
             ))}
           </div>
-          <p style={{ fontSize: '0.7rem', color: '#15803d', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handlePay}
-              disabled={paying}
-              style={{
-                border: 0,
-                borderRadius: 999,
-                padding: "0.55rem 1.25rem",
-                background: paying ? "#86efac" : "#16a34a",
-                color: "#ffffff",
-                fontWeight: 800,
-                cursor: paying ? "wait" : "pointer",
-                boxShadow: "0 2px 4px rgba(22, 101, 52, 0.2)",
-              }}
-            >
+          <p style={{ fontSize: '0.7rem', color: TEXT_COLORS.success, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <DashButton type="button" variant="success" onClick={handlePay} disabled={paying} style={{ borderRadius: 999 }}>
               {paying ? "Starting Checkout..." : "Pay Securely →"}
-            </button>{" "}
+            </DashButton>{" "}
             <span>I agree to TUTORERA&apos;s <Link href="/terms">Terms & Conditions</Link>, <Link href="/refund-policy">Refund Policy</Link> and <Link href="/cancellation-policy">Cancellation Policy</Link>. Payment support: <strong>{SUPPORT_EMAIL}</strong></span>
           </p>
-        </div>
+        </DashCard>
       )}
 
-      <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
+      <details style={{marginBottom:"0.75rem",background:C.gray50,padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:TEXT_COLORS.muted,marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
 
       {/* Claim submitted confirmation */}
       {claimSubmitted && (
-        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+        <DashCard padding="sm" style={{ background: STATUS_COLORS.success.bg, borderColor: STATUS_COLORS.success.border, marginBottom: '0.5rem', fontSize: '0.8rem', color: STATUS_COLORS.success.color, fontWeight: 600 }}>
           ✅ Guarantee claim submitted. We'll review it within 24–48 hours.
-        </div>
+        </DashCard>
       )}
 
       {/* Claim form — expands inline */}
       {showClaimForm && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
-          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C81B7F', marginBottom: '0.75rem' }}>
+        <DashCard padding="sm" style={{ background: STATUS_COLORS.danger.bg, borderColor: STATUS_COLORS.danger.border, marginBottom: "0.75rem" }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: C.magenta, marginBottom: '0.75rem' }}>
             First Session Guarantee Claim
           </p>
-          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.875rem', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.875rem', lineHeight: 1.5 }}>
             Not happy with your first session? Tell us why and we'll make it right — credit to try another tutor or a refund.
           </p>
 
           {/* Reason select */}
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#021550', marginBottom: '0.3rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: TEXT_COLORS.primary, marginBottom: '0.3rem' }}>
               What went wrong? *
             </label>
             <select title="Claim reasons" value={claimReason} onChange={e => setClaimReason(e.target.value)}
-              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: '#021550', backgroundColor: 'white', boxSizing: 'border-box' }}>
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: `1.5px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: TEXT_COLORS.primary, backgroundColor: C.surface, boxSizing: 'border-box' }}>
               <option value="">Select a reason</option>
               <option value="Tutor didn't show up">Tutor didn't show up</option>
               <option value="Tutor was unprepared">Tutor was unprepared</option>
@@ -388,24 +349,23 @@ function BookingCard({ booking, onClaimSubmitted }: {
 
           {/* Optional details */}
           <div style={{ marginBottom: '0.875rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#021550', marginBottom: '0.3rem' }}>
-              Additional details <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: TEXT_COLORS.primary, marginBottom: '0.3rem' }}>
+              Additional details <span style={{ color: TEXT_COLORS.muted, fontWeight: 400 }}>(optional)</span>
             </label>
             <textarea value={claimDetails} onChange={e => setClaimDetails(e.target.value)} rows={3}
               placeholder="Tell us more about what happened..."
-              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#021550', boxSizing: 'border-box' }} />
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: `1.5px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: TEXT_COLORS.primary, boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button type="button" onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim}
-              style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#C81B7F', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
+            <DashButton type="button" variant="danger" onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim} fullWidth style={{ color: C.magenta, borderColor: C.magenta }}>
               {submittingClaim ? "Submitting..." : "Submit Claim"}
-            </button>
+            </DashButton>
             <button type="button" className={s.btnOutline} onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}>
               Cancel
             </button>
           </div>
-        </div>
+        </DashCard>
       )}
 
       <div className={s.infoRow}>
@@ -455,7 +415,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
           </div>
         </Link>
         <button type="button" className={s.btnIcon} onClick={handleRemove} disabled={removing}
-          style={{ color: '#C81B7F' }}
+          style={{ color: C.magenta }}
           aria-label="Remove from favourites">
           <Trash2 size={16} />
         </button>
@@ -622,30 +582,14 @@ function RequestCard({
 
       {/* Expiry countdown badge & localized status indicator */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
-        <span
-          style={{
-            fontSize: "0.78rem",
-            fontWeight: 700,
-            padding: "3px 8px",
-            borderRadius: "0.375rem",
-            color: expiryBadge.color,
-            backgroundColor: expiryBadge.bg,
-            border: `1px solid ${expiryBadge.border}`,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-          title={expiryBadge.detail}
-        >
-          {expiryBadge.text}
+        <span title={expiryBadge.detail}>
+          <StatusBadge tone={expiryBadge.tone}>{expiryBadge.text}</StatusBadge>
         </span>
-        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+        <span style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted }}>
           {expiryBadge.detail}
         </span>
         {(request.extensionCount || 0) > 0 && (
-          <span style={{ fontSize: "0.72rem", color: "#64748b", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>
-            Extended {request.extensionCount}x
-          </span>
+          <StatusBadge tone="neutral">Extended {request.extensionCount}x</StatusBadge>
         )}
       </div>
 
@@ -687,114 +631,42 @@ function RequestCard({
         )}
 
         {request.canExtend && (
-          <button
-            type="button"
-            onClick={handleExtend}
-            disabled={extending}
-            style={{
-              padding: "0.5rem 0.85rem",
-              backgroundColor: "#0329b2",
-              color: "white",
-              border: "none",
-              borderRadius: "0.5rem",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              cursor: extending ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              boxShadow: "0 2px 6px rgba(3, 41, 178, 0.25)",
-            }}
-          >
+          <DashButton type="button" variant="primary" size="sm" onClick={handleExtend} disabled={extending}>
             {extending ? "Extending..." : `+ Extend 7 Days (${request.extensionCount || 0}/${request.maxExtensions || 2})`}
-          </button>
+          </DashButton>
         )}
 
         {request.canRepost && (
-          <button
-            type="button"
-            onClick={handleRepost}
-            disabled={reposting}
-            style={{
-              padding: "0.5rem 0.85rem",
-              backgroundColor: "#059669",
-              color: "white",
-              border: "none",
-              borderRadius: "0.5rem",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              cursor: reposting ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              boxShadow: "0 2px 6px rgba(5, 150, 105, 0.25)",
-            }}
-          >
+          <DashButton type="button" variant="success" size="sm" onClick={handleRepost} disabled={reposting}>
             {reposting ? "Reposting..." : "🔄 Repost Request"}
-          </button>
+          </DashButton>
         )}
 
         {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && (
-          <button
-            type="button"
-            onClick={() => setConfirmClose(true)}
-            disabled={closing}
-            style={{
-              padding: "0.5rem 0.75rem",
-              backgroundColor: "white",
-              color: "#6b7280",
-              border: "1px solid #e5e7eb",
-              borderRadius: "0.5rem",
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              cursor: closing ? "not-allowed" : "pointer",
-            }}
-          >
+          <DashButton type="button" variant="ghost" size="sm" onClick={() => setConfirmClose(true)} disabled={closing} style={{ color: TEXT_COLORS.muted, border: `1px solid ${C.border}` }}>
             {closing ? "Closing..." : "Close Request"}
-          </button>
+          </DashButton>
         )}
-        {confirmClose && <div role="presentation" style={{position:"fixed",inset:0,zIndex:1000,display:"grid",placeItems:"center",padding:"1rem",background:"rgba(2,21,80,.62)"}}><section role="alertdialog" aria-modal="true" aria-labelledby="close-request-title" style={{maxWidth:440,background:"white",borderRadius:"1rem",padding:"1.5rem",color:"#021550"}}><h2 id="close-request-title" style={{marginTop:0}}>Close tuition request?</h2><p style={{color:"#475569",lineHeight:1.5}}>Tutors will no longer be able to send offers for this request.</p><div style={{display:"flex",justifyContent:"flex-end",gap:"0.6rem"}}><button type="button" onClick={()=>setConfirmClose(false)}>Cancel</button><button type="button" disabled={closing} onClick={handleClose} style={{background:"#b91c1c",color:"white",border:0,borderRadius:6,padding:"0.55rem .8rem",fontWeight:700}}>Close request</button></div></section></div>}
+        {confirmClose && <div role="presentation" style={{position:"fixed",inset:0,zIndex:1000,display:"grid",placeItems:"center",padding:"1rem",background:"rgba(2,21,80,.62)"}}><section role="alertdialog" aria-modal="true" aria-labelledby="close-request-title" style={{maxWidth:440,background:C.surface,borderRadius:"1rem",padding:"1.5rem",color:TEXT_COLORS.primary}}><h2 id="close-request-title" style={{marginTop:0}}>Close tuition request?</h2><p style={{color:TEXT_COLORS.secondary,lineHeight:1.5}}>Tutors will no longer be able to send offers for this request.</p><div style={{display:"flex",justifyContent:"flex-end",gap:"0.6rem"}}><DashButton type="button" variant="secondary" size="sm" onClick={()=>setConfirmClose(false)}>Cancel</DashButton><DashButton type="button" variant="danger" size="sm" disabled={closing} onClick={handleClose}>Close request</DashButton></div></section></div>}
 
         {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
-          <button
-            type="button"
-            onClick={() => setShowMatchedTutors(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              padding: "0.5rem 0.85rem",
-              backgroundColor: "#eff6ff",
-              color: "#1d4ed8",
-              border: "1px solid #bfdbfe",
-              borderRadius: "0.5rem",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
+          <DashButton type="button" variant="secondary" size="sm" onClick={() => setShowMatchedTutors(true)}>
             ⚡ View AI Matched Tutors
-          </button>
+          </DashButton>
         )}
       </div>
 
           {expanded && (
             <div className={s.bidsSection}>
               <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><p className={s.bidsSectionTitle}>Tutor Offers ({bids.length})</p><label style={{fontSize:12}}>Sort by <select value={offerSort} onChange={e=>{setOfferSort(e.target.value);loadBids(true,e.target.value)}}><option value="best_match">Best Match</option><option value="lowest_rate">Lowest Rate</option><option value="highest_rated">Highest Rated</option><option value="most_experienced">Most Experienced</option><option value="fastest_response">Fastest Response</option><option value="most_sessions">Most Sessions Completed</option></select></label>{selectedBids.length >= 2 && (
-              <button
-                onClick={() => setShowCompare(true)}
-                style={{padding:"0.35rem 0.85rem",background:"#0329b2",color:"white",border:"none",borderRadius:"0.4rem",fontWeight:700,fontSize:"0.8rem",cursor:"pointer"}}
-              >
+              <DashButton size="sm" variant="primary" onClick={() => setShowCompare(true)}>
                 Compare ({selectedBids.length}) Offers
-              </button>
+              </DashButton>
             )}</div>
               {bidsLoading ? (
                 <div className={s.spinner} />
               ) : bids.length === 0 ? (
-                <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>
-                  No offers yet. Matching verified tutors can respond soon.
-                </p>
+                <EmptyState icon="📭" title="No offers yet" description="Matching verified tutors can respond soon." />
               ) : (
                 bids.map((bid) => (
                   <div key={bid._id} className={s.bidCard}>
@@ -810,7 +682,7 @@ function RequestCard({
                           );
                         }}
                         aria-label={`Select ${bid.tutor.name} for comparison`}
-                        style={{marginTop:4,cursor:"pointer",width:16,height:16,accentColor:"#0329b2"}}
+                        style={{marginTop:4,cursor:"pointer",width:16,height:16,accentColor:C.accent}}
                       />
                     )}
                     <div className={s.bidAvatar}>
@@ -846,12 +718,9 @@ function RequestCard({
                       {bid.availability && <p className={s.bidMessage}>Availability: {bid.availability}</p>}
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
-                        <Link href={tutorProfileHref({ _id: bid.tutor._id, user: { name: bid.tutor.name }, subjects: [], city: "Pakistan" })} className={s.btnOutline}
-                          style={{ fontSize: 12, padding: "6px 12px", textDecoration: "none",
-                            display: "inline-flex", border: "1.5px solid #e5e7eb",
-                            borderRadius: 8, color: "#374151", fontWeight: 500 }}>
+                        <DashButton href={tutorProfileHref({ _id: bid.tutor._id, user: { name: bid.tutor.name }, subjects: [], city: "Pakistan" })} variant="secondary" size="sm">
                           View Profile
-                        </Link>
+                        </DashButton>
                         {bid.profile?.demoVideoStatus === "approved" && bid.profile.videoIntro && (
                           <a href={bid.profile.videoIntro} target="_blank" rel="noopener noreferrer" className={s.btnOutline}>
                             <Video size={14} aria-hidden="true" /> Watch Demo
@@ -880,9 +749,7 @@ function RequestCard({
                           </button>
                         )}
                         {!(["pending", "submitted", "viewed", "countered", "payment_pending"].includes(bid.status)) && (
-                          <span className={`${s.badge} ${bid.status === "accepted" ? s.badgeAccepted : s.badgeCancelled}`}>
-                            {bid.status}
-                          </span>
+                          <StatusBadge tone={statusTone(bid.status)}>{bid.status}</StatusBadge>
                         )}
                       </div>
                     </div>
@@ -891,7 +758,17 @@ function RequestCard({
               )}
             </div>
           )}
-      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of {formatMoney(countering.amount, countering.currency || "PKR")}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed {formatMoney(countering.initialStudentRate, countering.currency || "PKR", countering.pricingUnit)}. Current tutor offer is {formatMoney(countering.amount, countering.currency || "PKR", countering.pricingUnit)}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder={`Amount in ${countering.currency || "PKR"}`}/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
+      {countering && (
+        <DashCard padding="sm" accent={C.accent} style={{ marginTop: 12, background: C.accentLight, borderColor: STATUS_COLORS.info.border }} role="dialog" aria-modal="true" aria-label="Counter offer">
+          <strong>Counter tutor offer of {formatMoney(countering.amount, countering.currency || "PKR")}</strong>
+          <p style={{fontSize:12,color:TEXT_COLORS.muted}}>Student proposed {formatMoney(countering.initialStudentRate, countering.currency || "PKR", countering.pricingUnit)}. Current tutor offer is {formatMoney(countering.amount, countering.currency || "PKR", countering.pricingUnit)}. {counterLimitText}</p>
+          <div style={{display:"grid",gap:8}}>
+            <input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder={`Amount in ${countering.currency || "PKR"}`}/>
+            <textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/>
+            <div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div>
+          </div>
+        </DashCard>
+      )}
 
       {/* AI Matched Tutors Drawer Modal */}
       {showMatchedTutors && (
@@ -1026,14 +903,14 @@ const fetchRequests = useCallback(async () => {
   return (
     <>
       {/* Header */}
-      <div className={s.header} style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
+      <div className={s.header} style={{ background: `linear-gradient(135deg, ${C.primary} 0%, ${C.accent} 100%)`, color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
         <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
           <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
               {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: C.cyan, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Student Marketplace Dashboard
               </span>
               <h1 className={s.greeting} style={{ color: "white", fontSize: "1.5rem", fontWeight: 800, margin: "0.2rem 0" }}>
@@ -1057,102 +934,44 @@ const fetchRequests = useCallback(async () => {
 
       <div className={s.content}>
         {/* Stats */}
-        <div className={s.stats}>
-          <div className={s.statCard}>
-            <div className={s.statIcon} style={{ background: "rgba(37,99,235,0.1)" }}>
-              <svg width={22} height={22} viewBox="0 0 20 20" fill="#0329B2" aria-hidden="true">
-                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div>
-              <div className={s.statValue}>{requests.length}</div>
-              <div className={s.statLabel}>Total Requests</div>
-            </div>
-          </div>
-
-          <div className={s.statCard}>
-            <div className={s.statIcon} style={{ background: "rgba(16,185,129,0.1)" }}>
-              <svg width={22} height={22} viewBox="0 0 20 20" fill="#10b981" aria-hidden="true">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div>
-              <div className={s.statValue}>{openCount}</div>
-              <div className={s.statLabel}>Open Requests</div>
-            </div>
-          </div>
-
-          <div className={s.statCard}>
-            <div className={s.statIcon} style={{ background: "rgba(245,158,11,0.1)" }}>
-              <svg width={22} height={22} viewBox="0 0 20 20" fill="#d97706" aria-hidden="true">
-                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-              </svg>
-            </div>
-            <div>
-              <div className={s.statValue}>{upcomingCount}</div>
-              <div className={s.statLabel}>Upcoming Sessions</div>
-            </div>
-          </div>
-
-          <div className={s.statCard}>
-            <div className={s.statIcon} style={{ background: "rgba(107,114,128,0.1)" }}>
-              <svg width={22} height={22} viewBox="0 0 20 20" fill="#6b7280" aria-hidden="true">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </div>
-            <div>
-              <div className={s.statValue}>{completedCount}</div>
-              <div className={s.statLabel}>Completed Sessions</div>
-            </div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: SPACING.space4, marginBottom: SPACING.space6 }}>
+          <StatTile icon={<FileText size={20} />} value={requests.length} label="Total Requests" tone="info" />
+          <StatTile icon={<CheckCircle2 size={20} />} value={openCount} label="Open Requests" tone="success" />
+          <StatTile icon={<Clock size={20} />} value={upcomingCount} label="Upcoming Sessions" tone="warning" />
+          <StatTile icon={<Award size={20} />} value={completedCount} label="Completed Sessions" tone="neutral" />
         </div>
 
         {/* Waiting Offers Urgency Banner */}
         {requests.some(r => Boolean(r.bid || r.status === "receiving_offers" || r.status === "negotiating" || (r as any).bids?.length)) && (
-          <div 
+          <DashCard
+            padding="md"
+            accent={STATUS_COLORS.success.color}
             style={{
-              background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
-              border: "1.5px solid #6ee7b7",
-              borderRadius: "0.875rem",
-              padding: "1rem 1.25rem",
+              background: STATUS_COLORS.success.bg,
+              borderColor: STATUS_COLORS.success.border,
               marginBottom: "1.5rem",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
               gap: "0.75rem",
-              boxShadow: "0 4px 12px rgba(5, 150, 105, 0.08)"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <span style={{ fontSize: "1.5rem" }}>⚡</span>
               <div>
-                <strong style={{ color: "#065f46", fontSize: "0.98rem", display: "block" }}>
+                <strong style={{ color: STATUS_COLORS.success.color, fontSize: "0.98rem", display: "block" }}>
                   Verified Tutors Have Responded to Your Tuition Request!
                 </strong>
-                <span style={{ color: "#047857", fontSize: "0.82rem" }}>
+                <span style={{ color: TEXT_COLORS.success, fontSize: "0.82rem" }}>
                   You have active tutor offers awaiting your decision. Compare rates, qualifications, and background verification.
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => setTab("requests")}
-              style={{
-                background: "#059669",
-                color: "white",
-                border: "none",
-                padding: "0.6rem 1.25rem",
-                borderRadius: "0.5rem",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3)"
-              }}
-            >
+            <DashButton variant="success" onClick={() => setTab("requests")}>
               Review Offers Now →
-            </button>
-          </div>
+            </DashButton>
+          </DashCard>
         )}
 
         {/* Tabs */}
@@ -1203,8 +1022,8 @@ const fetchRequests = useCallback(async () => {
                       fontWeight: 700,
                       border: "none",
                       cursor: "pointer",
-                      backgroundColor: requestFilter === "active" ? "#0329b2" : "#e2e8f0",
-                      color: requestFilter === "active" ? "white" : "#475569",
+                      backgroundColor: requestFilter === "active" ? C.accent : C.border,
+                      color: requestFilter === "active" ? "white" : TEXT_COLORS.muted,
                       transition: "all 0.2s",
                     }}
                   >
@@ -1220,8 +1039,8 @@ const fetchRequests = useCallback(async () => {
                       fontWeight: 700,
                       border: "none",
                       cursor: "pointer",
-                      backgroundColor: requestFilter === "expired" ? "#dc2626" : "#e2e8f0",
-                      color: requestFilter === "expired" ? "white" : "#475569",
+                      backgroundColor: requestFilter === "expired" ? STATUS_COLORS.danger.color : C.border,
+                      color: requestFilter === "expired" ? "white" : TEXT_COLORS.muted,
                       transition: "all 0.2s",
                     }}
                   >
@@ -1237,8 +1056,8 @@ const fetchRequests = useCallback(async () => {
                       fontWeight: 700,
                       border: "none",
                       cursor: "pointer",
-                      backgroundColor: requestFilter === "all" ? "#0f172a" : "#e2e8f0",
-                      color: requestFilter === "all" ? "white" : "#475569",
+                      backgroundColor: requestFilter === "all" ? C.primary : C.border,
+                      color: requestFilter === "all" ? "white" : TEXT_COLORS.muted,
                       transition: "all 0.2s",
                     }}
                   >
@@ -1254,20 +1073,14 @@ const fetchRequests = useCallback(async () => {
             {loadingR ? (
               <div className={s.spinner} />
             ) : displayedRequests.length === 0 ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>📋</div>
-                <p className={s.emptyTitle}>
-                  {requestFilter === "expired" ? "No expired requests" : requestFilter === "active" ? "No active requests seeking tutors" : "No requests yet"}
-                </p>
-                <p className={s.emptyDesc}>
-                  {requestFilter === "expired"
-                    ? "Requests stay active for 7 days. When expired, you can review past offers and easily repost anytime."
-                    : "Post your tuition requirement with budget and schedule. Matched verified tutors will send proposals to you."}
-                </p>
-                <button type="button" onClick={() => setShowModal(true)} className={s.btnPrimary}>
-                  Post a Request
-                </button>
-              </div>
+              <EmptyState
+                icon="📋"
+                title={requestFilter === "expired" ? "No expired requests" : requestFilter === "active" ? "No active requests seeking tutors" : "No requests yet"}
+                description={requestFilter === "expired"
+                  ? "Requests stay active for 7 days. When expired, you can review past offers and easily repost anytime."
+                  : "Post your tuition requirement with budget and schedule. Matched verified tutors will send proposals to you."}
+                action={{ label: "Post a Request", onClick: () => setShowModal(true) }}
+              />
             ) : (
               displayedRequests.map((r) => (
                 <RequestCard
@@ -1294,20 +1107,15 @@ const fetchRequests = useCallback(async () => {
             {loadingB ? (
               <div className={s.spinner} />
             ) : bookings.length === 0 ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>📅</div>
-                <p className={s.emptyTitle}>No bookings yet</p>
-                <p className={s.emptyDesc}>Accept a tutor offer from your requests to create a booking.</p>
-              </div>
+              <EmptyState icon="📅" title="No bookings yet" description="Accept a tutor offer from your requests to create a booking." />
             ) : (
               <>
                 {bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                    <button type="button" onClick={loadMoreBookings} disabled={loadingMoreBookings}
-                      style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingMoreBookings ? 'not-allowed' : 'pointer' }}>
+                    <DashButton type="button" variant="secondary" onClick={loadMoreBookings} disabled={loadingMoreBookings}>
                       {loadingMoreBookings ? "Loading..." : "Load More Bookings"}
-                    </button>
+                    </DashButton>
                   </div>
                 )}
               </>
@@ -1325,14 +1133,12 @@ const fetchRequests = useCallback(async () => {
             {loadingF ? (
               <div className={s.spinner} />
             ) : favourites.length === 0 ? (
-              <div className={s.empty}>
-                <div className={s.emptyIcon}>❤️</div>
-                <p className={s.emptyTitle}>No saved tutors yet</p>
-                <p className={s.emptyDesc}>Browse tutors and tap the heart icon to save your favourites here.</p>
-                <Link href="/tutors" className={s.btnPrimary} style={{ textDecoration: 'none' }}>
-                  Browse Tutors
-                </Link>
-              </div>
+              <EmptyState
+                icon="❤️"
+                title="No saved tutors yet"
+                description="Browse tutors and tap the heart icon to save your favourites here."
+                action={{ label: "Browse Tutors", href: "/tutors" }}
+              />
             ) : (
               favourites.map((t) => (
                 <SavedTutorCard

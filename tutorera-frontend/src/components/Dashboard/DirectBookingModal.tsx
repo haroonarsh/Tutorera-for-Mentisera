@@ -6,6 +6,8 @@ import SlotPicker from "@/components/Tutors/SlotPicker";
 import styles from "./PostRequestModal.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatMoney } from "@/lib/site";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { DashCard } from "./ui";
 
 const LEVELS = ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
@@ -116,11 +118,11 @@ export default function DirectBookingModal({
     return (
       <div className={styles.overlay} role="dialog" aria-modal="true">
         <div ref={modalRef} className={styles.modal} style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
-          <div style={{ width: 64, height: 64, backgroundColor: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+          <div style={{ width: 64, height: 64, backgroundColor: STATUS_COLORS.success.bg, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <span style={{ fontSize: '1.75rem' }}>✅</span>
           </div>
           <h2 className={styles.modalTitle} style={{ marginBottom: '0.75rem' }}>Request Sent!</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '1.5rem' }}>
             Your booking request for <strong>{selectedSlot?.dayName} at {selectedSlot?.startTime}</strong> has been sent to <strong>{tutorName}</strong>. You'll be notified once they respond.
           </p>
           <button onClick={onClose} className={styles.submitBtn} style={{ width: '100%' }}>Done</button>
@@ -141,10 +143,10 @@ export default function DirectBookingModal({
           {error && <div className={styles.error}>{error}</div>}
 
           {/* Rate */}
-          <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: '#0329B2', fontWeight: 600 }}>Tutor's Rate</span>
-            <span style={{ fontSize: '0.95rem', color: '#021550', fontWeight: 800 }}>{formatMoney(hourlyRate, currency, "hour")}</span>
-          </div>
+          <DashCard padding="sm" style={{ background: UI_COLORS.accentLight, borderColor: STATUS_COLORS.info.border, boxShadow: 'none', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8rem', color: UI_COLORS.accent, fontWeight: 600 }}>Tutor's Rate</span>
+            <span style={{ fontSize: '0.95rem', color: TEXT_COLORS.primary, fontWeight: 800 }}>{formatMoney(hourlyRate, currency, "hour")}</span>
+          </DashCard>
 
           {/* Subject + Level */}
           <div className={styles.row}>
@@ -185,12 +187,12 @@ export default function DirectBookingModal({
                 <option value="in-person">In-Person Home Tuition (Police Verified)</option>
               </select>
               {form.teachingMode === "in-person" && (
-                <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#9a3412", fontWeight: 500 }}>
+                <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: TEXT_COLORS.warning, fontWeight: 500 }}>
                   🛡️ Home Tuition: Tutors must hold an approved Police Verification Report.
                 </p>
               )}
               {form.teachingMode === "online" && (
-                <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#15803d", fontWeight: 500 }}>
+                <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: TEXT_COLORS.success, fontWeight: 500 }}>
                   🌐 Online Tuition: Conducted live via interactive video & screen-sharing.
                 </p>
               )}
@@ -198,7 +200,7 @@ export default function DirectBookingModal({
           ) : (
             <div className={styles.field} style={{ marginBottom: '1rem' }}>
               <label className={styles.label}>Teaching Mode</label>
-              <div style={{ padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: '#021550', fontWeight: 600, backgroundColor: '#F5F7FF' }}>
+              <div style={{ padding: '0.7rem 1rem', border: `1.5px solid ${UI_COLORS.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', color: TEXT_COLORS.primary, fontWeight: 600, backgroundColor: UI_COLORS.gray50 }}>
                 {tutorTeachingMode === "online" ? "🌐 Online Tuition (Borderless — No Police Check Needed)" : "🏠 In-Person Home Tuition (Police Verified)"}
               </div>
             </div>

@@ -2,6 +2,8 @@
 // components/dashboard/RatingModal.tsx
 import { useState } from "react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { DashCard, DashButton } from "./ui";
 
 interface Props {
   title: string;
@@ -47,24 +49,24 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
         role="dialog"
         aria-modal="true"
         aria-labelledby="rating-modal-title"
-        style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+        style={{ backgroundColor: UI_COLORS.surface, borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
-            <h2 id="rating-modal-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#021550', margin: '0 0 4px' }}>{title}</h2>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>{subtitle}</p>
+            <h2 id="rating-modal-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: TEXT_COLORS.primary, margin: '0 0 4px' }}>{title}</h2>
+            <p style={{ fontSize: '0.8rem', color: TEXT_COLORS.muted, margin: 0 }}>{subtitle}</p>
           </div>
           <button onClick={onClose} aria-label="Close"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.25rem', lineHeight: 1, padding: '0 0 0 1rem' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_COLORS.muted, fontSize: '1.25rem', lineHeight: 1, padding: '0 0 0 1rem' }}>
             ×
           </button>
         </div>
 
         {error && (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.6rem 0.875rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem' }}>
+          <DashCard padding="sm" style={{ background: STATUS_COLORS.danger.bg, borderColor: STATUS_COLORS.danger.border, boxShadow: 'none', padding: '0.6rem 0.875rem', marginBottom: '1rem', color: TEXT_COLORS.danger, fontSize: '0.8rem' }}>
             {error}
-          </div>
+          </DashCard>
         )}
 
         {/* Stars */}
@@ -78,12 +80,12 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
                 onMouseLeave={() => setHovered(0)}
                 aria-label={`${star} star${star > 1 ? "s" : ""} - ${REASONS[star]}`}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', fontSize: '2rem', lineHeight: 1, transition: 'transform 0.1s', transform: hovered >= star || rating >= star ? 'scale(1.15)' : 'scale(1)' }}>
-                <span style={{ color: (hovered || rating) >= star ? '#f59e0b' : '#e5e7eb' }}>★</span>
+                <span style={{ color: (hovered || rating) >= star ? UI_COLORS.gold : UI_COLORS.border }}>★</span>
               </button>
             ))}
           </div>
           {(hovered || rating) > 0 && (
-            <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f59e0b', margin: 0 }}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 700, color: UI_COLORS.gold, margin: 0 }}>
               {REASONS[hovered || rating]}
             </p>
           )}
@@ -91,7 +93,7 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
 
         {/* Comment */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#021550', marginBottom: '0.4rem' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: TEXT_COLORS.primary, marginBottom: '0.4rem' }}>
             Your comment *
           </label>
           <textarea
@@ -99,24 +101,22 @@ export default function RatingModal({ title, subtitle, onSubmit, onClose }: Prop
             onChange={e => setComment(e.target.value)}
             rows={4}
             placeholder="Share your experience in detail (min. 10 characters)..."
-            style={{ width: '100%', padding: '0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#021550', boxSizing: 'border-box' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#0329B2')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
-          <p style={{ fontSize: '0.7rem', color: comment.length < 10 ? '#9ca3af' : '#16a34a', margin: '4px 0 0', textAlign: 'right' }}>
+            style={{ width: '100%', padding: '0.75rem', border: `1.5px solid ${UI_COLORS.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: TEXT_COLORS.primary, boxSizing: 'border-box' }}
+            onFocus={e => (e.currentTarget.style.borderColor = UI_COLORS.accent)}
+            onBlur={e => (e.currentTarget.style.borderColor = UI_COLORS.border)} />
+          <p style={{ fontSize: '0.7rem', color: comment.length < 10 ? TEXT_COLORS.muted : TEXT_COLORS.success, margin: '4px 0 0', textAlign: 'right' }}>
             {comment.length} characters {comment.length < 10 ? `(${10 - comment.length} more needed)` : "✓"}
           </p>
         </div>
 
         {/* Footer */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={onClose}
-            style={{ flex: 1, padding: '0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>
+          <DashButton variant="secondary" size="md" onClick={onClose} style={{ flex: 1 }}>
             Cancel
-          </button>
-          <button onClick={handleSubmit} disabled={loading}
-            style={{ flex: 1, padding: '0.75rem', backgroundColor: loading ? '#93c5fd' : '#0329B2', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.875rem' }}>
+          </DashButton>
+          <DashButton variant="primary" size="md" onClick={handleSubmit} disabled={loading} style={{ flex: 1 }}>
             {loading ? "Submitting..." : "Submit Rating"}
-          </button>
+          </DashButton>
         </div>
       </div>
     </div>
