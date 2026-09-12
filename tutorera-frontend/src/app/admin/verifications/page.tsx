@@ -52,7 +52,7 @@ export default function VerificationsPage() {
       setApplications(res.data.applications || []);
       setPagination({ page: res.data.page || 1, pages: res.data.pages || 1, total: res.data.total || 0 });
     } catch (err) {
-      showError("Failed to load applications");
+      showError(err, "Failed to load applications");
       console.error(err);
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export default function VerificationsPage() {
       showSuccess(`${componentMap[component].label} approved`);
       fetchApplications(pagination.page);
     } catch (err) {
-      showError(`Failed to approve ${componentMap[component].label}`);
+      showError(err, `Failed to approve ${componentMap[component].label}`);
       console.error(err);
     } finally {
       setActionLoading(null);
@@ -109,7 +109,7 @@ export default function VerificationsPage() {
       setRejectReason("");
       fetchApplications(pagination.page);
     } catch (err) {
-      showError(`Failed to reject ${componentMap[component].label}`);
+      showError(err, `Failed to reject ${componentMap[component].label}`);
       console.error(err);
     } finally {
       setActionLoading(null);
