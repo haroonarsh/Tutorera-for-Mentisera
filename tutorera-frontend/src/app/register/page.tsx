@@ -9,12 +9,15 @@ import { useAuth } from "@/context/AuthContext";
 import GoogleButton from "@/components/GoogleButton";
 import api from "@/lib/axios";
 import { Suspense } from "react";
+import { useGeoData } from "@/lib/geoService";
 
 const C = UI_COLORS;
 
-const launchMarkets = [{ code: "PK", name: "Pakistan", dial: "+92" }, { code: "AE", name: "United Arab Emirates", dial: "+971" }, { code: "GB", name: "United Kingdom", dial: "+44" }];
+const FALLBACK_MARKETS = [{ code: "PK", name: "Pakistan", phoneCode: "+92" }, { code: "AE", name: "United Arab Emirates", phoneCode: "+971" }, { code: "GB", name: "United Kingdom", phoneCode: "+44" }];
 
 function RegisterForm() {
+  const geo = useGeoData();
+  const launchMarkets = geo.countries.length > 0 ? geo.countries : FALLBACK_MARKETS;
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "", countryCode: "PK", preferredLanguage: "en" });
   const [citySuggestions, setCitySuggestions] = useState<Array<{ _id?: string; name: string }>>([]);
   const [referralCode, setReferralCode] = useState("");
@@ -155,7 +158,7 @@ function RegisterForm() {
           <div>
             <label htmlFor="countryCode" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Country or market</label>
             <select id="countryCode" name="countryCode" value={form.countryCode} onChange={handleChange} required style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', color: C.primary, background: 'white' }}>
-              {launchMarkets.map((market) => <option key={market.code} value={market.code}>{market.name} ({market.dial})</option>)}
+              {launchMarkets.map((market) => <option key={market.code} value={market.code}>{market.name} ({market.phoneCode})</option>)}
             </select>
             {form.countryCode !== "PK" && <p style={{ margin: '.45rem 0 0', color: C.gray500, fontSize: '.78rem', lineHeight: 1.5 }}>Discovery beta: profiles, requests, offers, and negotiation are available. Acceptance and payment are not available yet.</p>}
           </div>
@@ -164,7 +167,7 @@ function RegisterForm() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone</label>
-              <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder={`${launchMarkets.find((market) => market.code === form.countryCode)?.dial} …`}
+              <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder={`${launchMarkets.find((market) => market.code === form.countryCode)?.phoneCode} …`}
                 style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                 onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                 onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
