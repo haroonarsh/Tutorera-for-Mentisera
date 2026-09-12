@@ -8,7 +8,7 @@ import BrandLogo from "@/components/BrandLogo";
 import {
   LayoutDashboard, Bell, Settings, LogOut,
   ChevronLeft, ChevronRight, MessageSquare,
-  CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness,
+  CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness, BookOpen,
 } from "lucide-react";
 
 const C = UI_COLORS;
@@ -33,11 +33,13 @@ const tutorItems: NavItem[] = [
   { href: "/browse-requests", label: "Browse Requests", icon: <Search size={18} /> },
   { href: "/opportunities", label: "Teaching Opportunities", icon: <BriefcaseBusiness size={18} /> },
   { href: "/profile",         label: "My Profile",      icon: <User size={18} /> },
+  { href: "/tutor/guidebook", label: "Tutor Guidebook",  icon: <BookOpen size={18} /> },
 ];
 
 const studentItems: NavItem[] = [
   { href: "/tutors",  label: "Find a Tutor", icon: <Search size={18} /> },
   { href: "/profile", label: "My Profile",   icon: <User size={18} /> },
+  { href: "/student/guidebook", label: "Student Guidebook", icon: <BookOpen size={18} /> },
 ];
 
 // Page title map
@@ -49,6 +51,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings':      'Settings',
   '/opportunities': 'Teaching Opportunities',
   '/profile':       'My Profile',
+  '/student/guidebook': 'Student Guidebook',
+  '/tutor/guidebook':   'Tutor Guidebook',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
