@@ -38,9 +38,9 @@ export default function ContactsPage() {
     if (type !== "all") params.set("type", type);
     api.get(`/admin/contacts?${params.toString()}`)
       .then(res => {
-        setContacts(res.data.contacts);
-        setPagination(res.data.pagination);
-        setCounts(res.data.counts);
+        setContacts(res.data.contacts || []);
+        setPagination(res.data.pagination || { page: 1, pages: 1, total: 0 });
+        setCounts(res.data.counts || { all: 0, support: 0, general: 0 });
       })
       .catch(console.error)
       .finally(() => setLoading(false));

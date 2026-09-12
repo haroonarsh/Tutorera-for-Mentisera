@@ -49,8 +49,8 @@ export default function VerificationsPage() {
     setLoading(true);
     try {
       const res = await api.get(`/tracking/admin/applications?status=${filter}&page=${page}&limit=20`);
-      setApplications(res.data.applications);
-      setPagination(res.data.pagination);
+      setApplications(res.data.applications || []);
+      setPagination({ page: res.data.page || 1, pages: res.data.pages || 1, total: res.data.total || 0 });
     } catch (err) {
       showError("Failed to load applications");
       console.error(err);
