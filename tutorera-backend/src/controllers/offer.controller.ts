@@ -18,6 +18,7 @@ import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { releaseExpiredPaymentHold } from "./request.controller";
+import { previewPromoDiscount, PromoCodeError } from "../services/promoCode.service";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
@@ -240,6 +241,18 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     try {
       const student = await User.findById(request.student).select("name email phone");
       const fees = calculateMarketplaceFees(offer.amount);
+
+      let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+      const originalStudentTotal = fees.studentTotal;
+      const promoCodeInput = req.body?.promoCode;
+      if (promoCodeInput) {
+        appliedPromo = await previewPromoDiscount(request.student.toString(), req.user?.role, promoCodeInput, fees.studentTotal);
+        // The discount comes out of the platform's own margin (studentFee),
+        // never the tutor's payout - tutorNet/tutorFee/tax are untouched.
+        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+        fees.studentTotal = fees.subtotal + fees.studentFee;
+      }
+
       const checkoutUrl = await paymentProvider.createCheckout({
         amount: fees.studentTotal,
         currency: offer.currency || request.currency || "PKR",
@@ -257,6 +270,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
         failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
         checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
+        ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
       });
 
       await logAudit({
@@ -283,6 +297,12 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         { _id: offer._id, status: "payment_pending" },
         { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
       );
+
+      if (err instanceof PromoCodeError) {
+        res.status(err.statusCode).json({ success: false, message: err.message });
+        return;
+      }
+
       console.error("Failed to create Rapid Gateway checkout for offer acceptance:", err);
       res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
     }

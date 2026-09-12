@@ -445,6 +445,9 @@ function RequestCard({
   const [bids, setBids] = useState<DashBid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [promoInputFor, setPromoInputFor] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoError, setPromoError] = useState("");
   const [offerSort, setOfferSort] = useState("best_match");
   const [countering, setCountering] = useState<DashBid | null>(null);
   const [counterAmount, setCounterAmount] = useState("");
@@ -515,10 +518,11 @@ function RequestCard({
     }
   }
 
-  async function acceptBid(bidId: string) {
+  async function acceptBid(bidId: string, promoCodeToApply?: string) {
     setAccepting(bidId);
+    setPromoError("");
     try {
-      const res = await axiosInstance.post(`/offers/${bidId}/accept`);
+      const res = await axiosInstance.post(`/offers/${bidId}/accept`, promoCodeToApply ? { promoCode: promoCodeToApply } : undefined);
       const checkoutUrl = res.data?.checkoutUrl;
       if (checkoutUrl) {
         window.location.assign(checkoutUrl);
@@ -526,8 +530,11 @@ function RequestCard({
         console.error("Accept-offer response had no checkoutUrl:", res.data);
         setAccepting(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to accept bid:", err);
+      if (promoCodeToApply) {
+        setPromoError(err?.response?.data?.message || "That promo code couldn't be applied.");
+      }
       setAccepting(null);
     }
   }
@@ -728,16 +735,33 @@ function RequestCard({
                         )}
                         {["pending", "submitted", "viewed", "countered"].includes(bid.status) && (<>
                           <button
-                            onClick={() => acceptBid(bid._id)}
+                            onClick={() => acceptBid(bid._id, promoInputFor === bid._id ? promoCode.trim() || undefined : undefined)}
                             disabled={accepting === bid._id}
                             className={s.btnSuccess}
                           >
                             {accepting === bid._id ? "Accepting…" : "Accept Offer"}
                           </button>
+                          {promoInputFor === bid._id ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                              <input
+                                type="text"
+                                value={promoCode}
+                                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(""); }}
+                                placeholder="PROMO CODE"
+                                style={{ padding: "0.4rem 0.6rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.4rem", fontSize: "0.8rem", width: "140px" }}
+                              />
+                              <button type="button" onClick={() => { setPromoInputFor(null); setPromoCode(""); setPromoError(""); }} className={s.btnOutline}>Cancel</button>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setPromoInputFor(bid._id)} className={s.btnOutline}>Have a promo code?</button>
+                          )}
                           {request.allowCounterOffers && bid.latestSenderRole !== "student" && (bid.counterCounts?.student ?? 0) < 3 && <button type="button" onClick={() => {setCountering(bid);setCounterAmount(String(bid.amount))}} className={s.btnOutline}>Counter Offer</button>}
                           <Link href="/chat" className={s.btnOutline}>Message</Link>
                           <button type="button" onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
                           <Link href={`/support?topic=report-tutor&offer=${bid._id}`} className={s.btnOutline}>Report</Link>
+                          {promoInputFor === bid._id && promoError && (
+                            <p style={{ color: STATUS_COLORS.danger.color, fontSize: "0.75rem", width: "100%", margin: "0.25rem 0 0" }}>{promoError}</p>
+                          )}
                         </>)}
                         {(bid.status as string) === "payment_pending" && (
                           <button
