@@ -31,7 +31,7 @@ import {
   getAllRefundRequests,
   updateRefundRequestStatus,
 } from "../controllers/refundRequest.controller";
-import { getAllReferrals } from "../controllers/referral.controller";
+import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { getAllTutorRatings, getTutorRatingsForAdmin } from "../controllers/review.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
@@ -69,6 +69,7 @@ import geographyAdminRoutes from "./admin/geography.routes";
 import verificationRoutes from "./admin/verification.routes";
 import subjectRoutes from "./admin/subject.routes";
 import emailTemplateRoutes from "./admin/emailTemplate.routes";
+import promoCodeRoutes from "./admin/promoCode.routes";
 
 const router = Router();
 
@@ -102,6 +103,7 @@ router.use("/geography", geographyAdminRoutes);
 router.use("/verification", verificationRoutes);
 router.use("/subjects", subjectRoutes);
 router.use("/email-templates", emailTemplateRoutes);
+router.use("/promo-codes", promoCodeRoutes);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);
@@ -167,6 +169,8 @@ router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), valida
 router.get("/refund-requests", requirePermission("claims.read"), getAllRefundRequests);
 router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateRefundRequestStatus);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
+router.get("/referral-config", requirePermission("growth.manage"), getReferralConfigAdmin);
+router.put("/referral-config", requirePermission("growth.manage"), updateReferralConfigAdmin);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
 router.get("/tutor-ratings", requirePermission("tutor.quality_manage"), getAllTutorRatings);

@@ -3,11 +3,21 @@ import { AuthRequest } from "../types";
 import User from "../models/User.model";
 import Referral from "../models/Referral.model";
 import Booking from "../models/Booking.model";
+import ReferralConfig from "../models/ReferralConfig.model";
 import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
 
-const REFERRAL_CREDIT_PKR = 200;
-const REFERRED_DISCOUNT_PKR = 200;
+// Defaults used until an admin saves a ReferralConfig document (or if the
+// config is later deleted) - keeps the reward amounts working out of the box
+// while still being adjustable from /admin/referral-config without a deploy.
+const DEFAULT_REFERRAL_CREDIT_PKR = 200;
+const DEFAULT_REFERRED_DISCOUNT_PKR = 200;
+
+async function getReferralConfig(): Promise<{ referrerRewardAmount: number; referredDiscountAmount: number; isActive: boolean }> {
+  const config = await ReferralConfig.findOne();
+  if (!config) return { referrerRewardAmount: DEFAULT_REFERRAL_CREDIT_PKR, referredDiscountAmount: DEFAULT_REFERRED_DISCOUNT_PKR, isActive: true };
+  return { referrerRewardAmount: config.referrerRewardAmount, referredDiscountAmount: config.referredDiscountAmount, isActive: config.isActive };
+}
 
 // Generate a unique referral code
 function generateReferralCode(name: string): string {
@@ -37,9 +47,13 @@ export const getMyReferral = async (req: AuthRequest, res: Response): Promise<vo
     .sort("-createdAt");
 
   const totalReferred   = referrals.length;
-  const creditedCount   = referrals.filter(r => r.status === "credited").length;
+  const creditedReferrals = referrals.filter(r => r.status === "credited");
+  const creditedCount   = creditedReferrals.length;
   const pendingCount    = referrals.filter(r => r.status === "pending").length;
-  const totalEarned     = creditedCount * REFERRAL_CREDIT_PKR;
+  // Sum each referral's own recorded creditAmount rather than the current
+  // config value, since the reward may have changed since older referrals
+  // were credited - this keeps historical totals accurate.
+  const totalEarned     = creditedReferrals.reduce((sum, r) => sum + r.creditAmount, 0);
 
   res.status(200).json({
     success: true,
@@ -87,9 +101,15 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  const { referrerRewardAmount, referredDiscountAmount, isActive } = await getReferralConfig();
+  if (!isActive) {
+    res.status(400).json({ success: false, message: "The referral program is currently paused." });
+    return;
+  }
+
   // Link the referral
   currentUser.referredBy = referrer._id;
-  currentUser.referralCredit = (currentUser.referralCredit || 0) + REFERRED_DISCOUNT_PKR;
+  currentUser.referralCredit = (currentUser.referralCredit || 0) + referredDiscountAmount;
   await currentUser.save();
 
   // Create referral record
@@ -97,7 +117,7 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     referrer: referrer._id,
     referred: currentUser._id,
     status: "pending",
-    creditAmount: REFERRAL_CREDIT_PKR,
+    creditAmount: referrerRewardAmount,
   });
 
   // Notify referrer
@@ -108,7 +128,7 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">Your referral link worked! 🎉</h2>
         <p><strong>${currentUser.name}</strong> just signed up using your referral code.</p>
-        <p>You'll receive <strong>Rs. ${REFERRAL_CREDIT_PKR} credit</strong> once they complete their first booking.</p>
+        <p>You'll receive <strong>Rs. ${referrerRewardAmount} credit</strong> once they complete their first booking.</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Referral Program</p>
       </div>
@@ -117,8 +137,8 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
 
   res.status(200).json({
     success: true,
-    message: `Referral code applied! You've received Rs. ${REFERRED_DISCOUNT_PKR} credit to use on your first booking.`,
-    creditAdded: REFERRED_DISCOUNT_PKR,
+    message: `Referral code applied! You've received Rs. ${referredDiscountAmount} credit to use on your first booking.`,
+    creditAdded: referredDiscountAmount,
   });
 };
 
@@ -136,9 +156,11 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
     });
     if (!referral) return;
 
-    // Credit the referrer
+    // Credit the referrer with the amount locked in when this referral was
+    // created (not the current config value, in case it has since changed).
+    const creditAmount = referral.creditAmount;
     await User.findByIdAndUpdate(user.referredBy, {
-      $inc: { referralCredit: REFERRAL_CREDIT_PKR },
+      $inc: { referralCredit: creditAmount },
     });
 
     // Mark referral as credited
@@ -150,13 +172,13 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
     if (referrer) {
       await sendEmail({
         to: referrer.email,
-        subject: "💰 You earned Rs. 200 referral credit — TUTORERA®",
+        subject: `💰 You earned Rs. ${creditAmount} referral credit — TUTORERA®`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1a1a2e;">Rs. ${REFERRAL_CREDIT_PKR} credit added! 💰</h2>
+            <h2 style="color: #1a1a2e;">Rs. ${creditAmount} credit added! 💰</h2>
             <p>Your referral <strong>${user.name}</strong> just completed their first booking.</p>
-            <p>We've added <strong>Rs. ${REFERRAL_CREDIT_PKR}</strong> to your TUTORERA® credit balance.</p>
-            <p>Your total credit balance: <strong>Rs. ${(referrer.referralCredit || 0) + REFERRAL_CREDIT_PKR}</strong></p>
+            <p>We've added <strong>Rs. ${creditAmount}</strong> to your TUTORERA® credit balance.</p>
+            <p>Your total credit balance: <strong>Rs. ${(referrer.referralCredit || 0) + creditAmount}</strong></p>
             <hr />
             <p style="color: #6b7280; font-size: 0.875rem;">Share your referral link to earn more credit.</p>
             <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Referral Program</p>
@@ -188,4 +210,43 @@ export const getAllReferrals = async (req: AuthRequest, res: Response): Promise<
     totalCreditIssued: totalCredit,
     referrals,
   });
+};
+
+// @desc    Get the current referral reward configuration
+// @route   GET /api/admin/referral-config
+// @access  Private (admin)
+export const getReferralConfigAdmin = async (_req: AuthRequest, res: Response): Promise<void> => {
+  let config = await ReferralConfig.findOne();
+  if (!config) config = await ReferralConfig.create({});
+  res.status(200).json({ success: true, config });
+};
+
+// @desc    Update the referral reward configuration
+// @route   PUT /api/admin/referral-config
+// @access  Private (admin)
+export const updateReferralConfigAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { referrerRewardAmount, referredDiscountAmount, isActive } = req.body;
+
+  let config = await ReferralConfig.findOne();
+  if (!config) config = new ReferralConfig({});
+
+  if (referrerRewardAmount !== undefined) {
+    if (referrerRewardAmount < 0) {
+      res.status(400).json({ success: false, message: "Reward amount can't be negative" });
+      return;
+    }
+    config.referrerRewardAmount = referrerRewardAmount;
+  }
+  if (referredDiscountAmount !== undefined) {
+    if (referredDiscountAmount < 0) {
+      res.status(400).json({ success: false, message: "Discount amount can't be negative" });
+      return;
+    }
+    config.referredDiscountAmount = referredDiscountAmount;
+  }
+  if (isActive !== undefined) config.isActive = isActive;
+  config.updatedBy = req.user?._id;
+
+  await config.save();
+  res.status(200).json({ success: true, config });
 };

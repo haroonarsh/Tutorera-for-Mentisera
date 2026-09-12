@@ -112,6 +112,7 @@ const navSections: NavSection[] = [
     title: "Growth",
     items: [
       { href: "/admin/referrals", label: "Referrals", icon: <Gift size={17} />, permission: "growth.read" },
+      { href: "/admin/promotions", label: "Promo Codes", icon: <Gift size={17} />, permission: "growth.manage" },
       { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={17} />, permission: "analytics.read" },
     ],
   },

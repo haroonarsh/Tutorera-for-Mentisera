@@ -1,8 +1,9 @@
 "use client";
-import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
-import { Gift } from "lucide-react";
+import { Gift, Save } from "lucide-react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = UI_COLORS;
 
@@ -13,6 +14,89 @@ interface Referral {
   status: "pending" | "credited";
   creditAmount: number;
   createdAt: string;
+}
+
+interface ReferralConfig {
+  referrerRewardAmount: number;
+  referredDiscountAmount: number;
+  isActive: boolean;
+}
+
+function ReferralConfigPanel() {
+  const [config, setConfig] = useState<ReferralConfig | null>(null);
+  const [form, setForm] = useState({ referrerRewardAmount: "200", referredDiscountAmount: "200", isActive: true });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get("/admin/referral-config")
+      .then(res => {
+        const c: ReferralConfig = res.data.config;
+        setConfig(c);
+        setForm({ referrerRewardAmount: String(c.referrerRewardAmount), referredDiscountAmount: String(c.referredDiscountAmount), isActive: c.isActive });
+      })
+      .catch(err => showError(err, "Failed to load referral configuration"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await api.put("/admin/referral-config", {
+        referrerRewardAmount: Number(form.referrerRewardAmount),
+        referredDiscountAmount: Number(form.referredDiscountAmount),
+        isActive: form.isActive,
+      });
+      setConfig(res.data.config);
+      showSuccess("Referral reward settings updated");
+    } catch (err) {
+      showError(err, "Failed to update referral configuration");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, padding: '1.5rem', marginBottom: '1.5rem' }}>
+      <h2 style={{ fontSize: '1rem', fontWeight: 700, color: C.primary, margin: '0 0 0.25rem' }}>Reward Configuration</h2>
+      <p style={{ color: C.gray500, fontSize: '0.82rem', margin: '0 0 1.1rem' }}>Adjust the referral rewards without a code deploy. Existing credited referrals keep their original amount.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.1rem' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>Referrer Reward (Rs.)</label>
+          <input
+            type="number"
+            value={form.referrerRewardAmount}
+            onChange={e => setForm({ ...form, referrerRewardAmount: e.target.value })}
+            style={{ width: '100%', padding: '0.55rem 0.7rem', border: `1px solid ${C.border}`, borderRadius: '0.4rem', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>New Signup Discount (Rs.)</label>
+          <input
+            type="number"
+            value={form.referredDiscountAmount}
+            onChange={e => setForm({ ...form, referredDiscountAmount: e.target.value })}
+            style={{ width: '100%', padding: '0.55rem 0.7rem', border: `1px solid ${C.border}`, borderRadius: '0.4rem', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: TEXT_COLORS.secondary, cursor: 'pointer', paddingBottom: '0.6rem' }}>
+            <input type="checkbox" checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />
+            Program active
+          </label>
+        </div>
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.1rem', background: STATUS_COLORS.success.color, color: C.surface, border: 'none', borderRadius: '0.5rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, opacity: saving ? 0.7 : 1 }}
+      >
+        <Save size={16} /> {saving ? "Saving..." : "Save Settings"}
+      </button>
+    </div>
+  );
 }
 
 export default function AdminReferralsPage() {
@@ -41,6 +125,8 @@ export default function AdminReferralsPage() {
           Total credit issued: <strong style={{ color: C.primary }}>Rs. {totalCredit.toLocaleString()}</strong>
         </p>
       </div>
+
+      <ReferralConfigPanel />
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>

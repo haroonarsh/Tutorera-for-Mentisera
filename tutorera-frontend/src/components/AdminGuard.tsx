@@ -43,6 +43,7 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/broadcasts": "broadcast.send",
   "/admin/student-ratings": "student.read",
   "/admin/referrals": "growth.read",
+  "/admin/promotions": "growth.manage",
   "/admin/refund-requests": "claims.read",
   "/admin/blogs": "content.manage",
   "/admin/feature-flags": "market.configure",
