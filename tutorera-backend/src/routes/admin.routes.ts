@@ -66,6 +66,8 @@ import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
 import geographyAdminRoutes from "./admin/geography.routes";
 import verificationRoutes from "./admin/verification.routes";
+import subjectRoutes from "./admin/subject.routes";
+import emailTemplateRoutes from "./admin/emailTemplate.routes";
 
 const router = Router();
 
@@ -97,6 +99,8 @@ router.use("/tax-config", taxConfigRoutes);
 router.use("/exchange-rates", exchangeRateAdminRoutes);
 router.use("/geography", geographyAdminRoutes);
 router.use("/verification", verificationRoutes);
+router.use("/subjects", subjectRoutes);
+router.use("/email-templates", emailTemplateRoutes);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);

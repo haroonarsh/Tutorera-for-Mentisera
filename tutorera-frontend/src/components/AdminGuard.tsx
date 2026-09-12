@@ -18,6 +18,14 @@ const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/control-tower": "system.monitor",
   "/admin/parents": "student.read",
   "/admin/refund-requests": "claims.read",
+  "/admin/curriculum": "market.configure",
+  "/admin/tutor-ratings": "tutor.quality_manage",
+  "/admin/promotions": "growth.manage",
+  "/admin/cms": "system.monitor",
+  "/admin/reports": "analytics.read",
+  "/admin/blogs": "content.manage",
+  "/admin/feature-flags": "market.configure",
+  "/admin/email-templates": "system.monitor",
 };
 
 const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
@@ -39,6 +47,9 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/student-ratings": "student.read",
   "/admin/referrals": "growth.read",
   "/admin/refund-requests": "claims.read",
+  "/admin/blogs": "content.manage",
+  "/admin/feature-flags": "market.configure",
+  "/admin/email-templates": "system.monitor",
 };
 
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {
@@ -56,7 +67,7 @@ function hasPermission(adminRole?: string, adminPermissions?: string[], required
       finance: ["payment.read","payment.manage","payment.refund","payout.read","payout.approve","payout.process","finance.reconcile","finance.fee_configure","bookings.read","analytics.read"],
       support: ["student.read","tutor.read","request.read","bookings.read","claims.read","safety.create","payment.read"],
       growth: ["growth.read","growth.manage","broadcast.send","analytics.read","users.read"],
-      content: ["growth.read","analytics.read"],
+      content: ["growth.read","analytics.read","content.manage"],
       analyst: ["analytics.read","request.read","tutor.read","student.read","bookings.read","payment.read","matching.read","growth.read","market.read","audit.read","system.monitor"],
     };
     const perms = rolePerms[adminRole] || [];

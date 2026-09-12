@@ -7,7 +7,7 @@ import {
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity, MapPin, X, HeartHandshake, RotateCcw,
+  KeyRound, Activity, MapPin, X, HeartHandshake, RotateCcw, Flag, Settings,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AdminGuard from "@/components/AdminGuard";
@@ -25,7 +25,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   finance: ["payment.read","payment.manage","payment.refund","payout.read","payout.approve","payout.process","finance.reconcile","finance.fee_configure","bookings.read","analytics.read"],
   support: ["student.read","tutor.read","request.read","bookings.read","claims.read","safety.create","payment.read"],
   growth: ["growth.read","growth.manage","broadcast.send","analytics.read","users.read"],
-  content: ["growth.read","analytics.read"],
+  content: ["growth.read","analytics.read","content.manage"],
   analyst: ["analytics.read","request.read","tutor.read","student.read","bookings.read","payment.read","matching.read","growth.read","market.read","audit.read","system.monitor"],
   country_admin: ["market.read","market.configure","analytics.read","tutor.read","student.read","request.read","bookings.read","payment.read","payout.read","finance.fee_configure","audit.read"],
 };
@@ -74,6 +74,7 @@ const navSections: NavSection[] = [
       { href: "/admin/tutors", label: "Tutors Directory", icon: <BookOpen size={17} />, permission: "tutor.read" },
       { href: "/admin/applications", label: "Applications", icon: <ClipboardList size={17} />, permission: "tutor.read" },
       { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={17} />, permission: "tutor.verify" },
+      { href: "/admin/tutor-ratings", label: "Tutor Ratings", icon: <Star size={17} />, permission: "tutor.quality_manage" },
       { href: "/admin/supply-gaps", label: "Supply Gaps", icon: <TrendingDown size={17} />, permission: "analytics.read" },
       { href: "/admin/liquidity", label: "Liquidity Scores", icon: <ActivitySquare size={17} />, permission: "analytics.read" },
     ],
@@ -83,6 +84,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/matching", label: "Smart Matching", icon: <Sparkles size={17} />, permission: "matching.read" },
       { href: "/admin/bookings", label: "Bookings", icon: <CheckCircle size={17} />, permission: "bookings.read" },
+      { href: "/admin/curriculum", label: "Curriculum & Subjects", icon: <BookOpen size={17} />, permission: "market.configure" },
     ],
   },
   {
@@ -93,6 +95,7 @@ const navSections: NavSection[] = [
       { href: "/admin/reconciliation", label: "Reconciliation", icon: <Calculator size={17} />, permission: "finance.reconcile" },
       { href: "/admin/fee-config", label: "Fee Config", icon: <Sliders size={17} />, permission: "finance.fee_configure" },
       { href: "/admin/payment-providers", label: "Payment Providers", icon: <CreditCard size={17} />, permission: "finance.fee_configure" },
+      { href: "/admin/reports", label: "Reports & Exports", icon: <FileText size={17} />, permission: "analytics.read" },
     ],
   },
   {
@@ -107,6 +110,7 @@ const navSections: NavSection[] = [
     title: "Growth",
     items: [
       { href: "/admin/referrals", label: "Referrals", icon: <Gift size={17} />, permission: "growth.read" },
+      { href: "/admin/promotions", label: "Promotions & Vouchers", icon: <Gift size={17} />, permission: "growth.manage" },
       { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={17} />, permission: "analytics.read" },
     ],
   },
@@ -125,7 +129,10 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/broadcasts", label: "Broadcasts", icon: <Radio size={17} />, permission: "broadcast.send" },
       { href: "/admin/email-logs", label: "Email Logs", icon: <Mail size={17} />, permission: "growth.read" },
+      { href: "/admin/email-templates", label: "Email Templates", icon: <FileText size={17} />, permission: "system.monitor" },
       { href: "/admin/contacts", label: "Inquiries", icon: <MessageSquare size={17} />, permission: "student.read" },
+      { href: "/admin/blogs", label: "Blogs", icon: <BookOpen size={17} />, permission: "content.manage" },
+      { href: "/admin/cms", label: "CMS & Pages", icon: <FileText size={17} />, permission: "system.monitor" },
     ],
   },
   {
@@ -133,6 +140,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/users", label: "Users & Accounts", icon: <Users size={17} />, permission: "users.read" },
       { href: "/admin/roles", label: "Admin Roles (RBAC)", icon: <KeyRound size={17} />, permission: "roles.manage" },
+      { href: "/admin/feature-flags", label: "Feature Flags", icon: <Flag size={17} />, permission: "market.configure" },
       { href: "/admin/audit-logs", label: "Audit Logs", icon: <FileText size={17} />, permission: "audit.read" },
       { href: "/admin/system-health", label: "System Health", icon: <Activity size={17} />, permission: "system.monitor" },
     ],
