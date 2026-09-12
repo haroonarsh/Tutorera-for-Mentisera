@@ -113,7 +113,6 @@ const navSections: NavSection[] = [
     title: "Growth",
     items: [
       { href: "/admin/referrals", label: "Referrals", icon: <Gift size={17} />, permission: "growth.read" },
-      { href: "/admin/promotions", label: "Promotions & Vouchers", icon: <Gift size={17} />, permission: "growth.manage" },
       { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={17} />, permission: "analytics.read" },
     ],
   },
@@ -135,7 +134,6 @@ const navSections: NavSection[] = [
       { href: "/admin/email-templates", label: "Email Templates", icon: <FileText size={17} />, permission: "system.monitor" },
       { href: "/admin/contacts", label: "Inquiries", icon: <MessageSquare size={17} />, permission: "student.read" },
       { href: "/admin/blogs", label: "Blogs", icon: <BookOpen size={17} />, permission: "content.manage" },
-      { href: "/admin/cms", label: "CMS & Pages", icon: <FileText size={17} />, permission: "system.monitor" },
     ],
   },
   {

@@ -162,3 +162,74 @@ export const getSubjectCategories = async (_req: AuthRequest, res: Response): Pr
     res.status(500).json({ success: false, message: "Failed to get categories" });
   }
 };
+
+// The tutor-facing subject list used across signup, browse and matching lives
+// as a static array (lib/location.ts's MASTER_SUBJECTS on the frontend) that
+// was never migrated into this admin-managed Subject collection, so the
+// Curriculum admin page shows "No subjects found" even though the platform
+// has an active subject catalog. This seeds that catalog from the same list
+// (upserting by slug so it's safe to run more than once).
+const DEFAULT_SUBJECTS: { name: string; category: string }[] = [
+  { name: "Mathematics", category: "STEM" },
+  { name: "Physics", category: "STEM" },
+  { name: "Chemistry", category: "STEM" },
+  { name: "Biology", category: "STEM" },
+  { name: "English", category: "Languages" },
+  { name: "Computer Science", category: "STEM" },
+  { name: "Economics", category: "Business & Economics" },
+  { name: "Accounting", category: "Business & Economics" },
+  { name: "Business Studies", category: "Business & Economics" },
+  { name: "Urdu", category: "Languages" },
+  { name: "Islamiyat", category: "Religious Studies" },
+  { name: "Pakistan Studies", category: "Social Studies" },
+  { name: "Statistics", category: "STEM" },
+  { name: "Sociology", category: "Social Studies" },
+  { name: "Psychology", category: "Social Studies" },
+  { name: "History", category: "Social Studies" },
+  { name: "Geography", category: "Social Studies" },
+  { name: "MDCAT", category: "Test Preparation" },
+  { name: "ECAT", category: "Test Preparation" },
+  { name: "SAT", category: "Test Preparation" },
+  { name: "IELTS", category: "Test Preparation" },
+  { name: "Quran & Arabic", category: "Religious Studies" },
+  { name: "General Science", category: "STEM" },
+];
+
+export const seedDefaultSubjects = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    let created = 0;
+    let skipped = 0;
+    for (let i = 0; i < DEFAULT_SUBJECTS.length; i++) {
+      const { name, category } = DEFAULT_SUBJECTS[i];
+      const slug = generateSlug(name);
+      const existing = await Subject.findOne({ slug });
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      await Subject.create({
+        name,
+        slug,
+        category,
+        level: [],
+        sortOrder: i,
+        createdBy: req.user?._id,
+      });
+      created++;
+    }
+
+    await logAudit({
+      action: "subjects_seeded",
+      actor: req.user?.name,
+      actorId: req.user?._id?.toString(),
+      entity: "Subject",
+      targetId: "bulk",
+      targetName: `${created} created, ${skipped} already existed`,
+    });
+
+    res.json({ success: true, created, skipped });
+  } catch (error) {
+    console.error("Error seeding default subjects:", error);
+    res.status(500).json({ success: false, message: "Failed to seed default subjects" });
+  }
+};

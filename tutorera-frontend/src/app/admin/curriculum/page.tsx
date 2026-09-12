@@ -33,6 +33,7 @@ export default function CurriculumPage() {
     sortOrder: 0,
   });
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const EDUCATION_LEVELS = ["Primary", "Secondary", "High School", "University", "Professional"];
 
@@ -47,6 +48,19 @@ export default function CurriculumPage() {
     } catch (err) {
       showError("Failed to load subjects");
       console.error(err);
+    }
+  };
+
+  const handleSeedDefaults = async () => {
+    setSeeding(true);
+    try {
+      const res = await api.post("/admin/subjects/seed-defaults");
+      showSuccess(`Added ${res.data.created} subjects${res.data.skipped ? ` (${res.data.skipped} already existed)` : ""}`);
+      await Promise.all([fetchCategories(), fetchSubjects()]);
+    } catch (err) {
+      showError(err, "Failed to seed default subjects");
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -363,7 +377,27 @@ export default function CurriculumPage() {
           }}
         >
           <AlertCircle size={32} style={{ margin: "0 auto 1rem", opacity: 0.5 }} />
-          No subjects found. Create one to get started.
+          <p style={{ margin: "0 0 1rem" }}>No subjects found. Create one, or seed the platform&apos;s default subject catalog.</p>
+          <button
+            type="button"
+            onClick={handleSeedDefaults}
+            disabled={seeding}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.6rem 1.1rem",
+              background: C.accentBright,
+              color: C.surface,
+              border: "none",
+              borderRadius: "0.5rem",
+              cursor: seeding ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              opacity: seeding ? 0.7 : 1,
+            }}
+          >
+            <Plus size={16} /> {seeding ? "Seeding..." : "Seed Default Subjects"}
+          </button>
         </div>
       ) : (
         <div style={{ display: "grid", gap: "1rem" }}>

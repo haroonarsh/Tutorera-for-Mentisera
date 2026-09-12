@@ -20,8 +20,6 @@ const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/refund-requests": "claims.read",
   "/admin/curriculum": "market.configure",
   "/admin/tutor-ratings": "tutor.quality_manage",
-  "/admin/promotions": "growth.manage",
-  "/admin/cms": "system.monitor",
   "/admin/reports": "analytics.read",
   "/admin/blogs": "content.manage",
   "/admin/feature-flags": "market.configure",

@@ -6,6 +6,7 @@ import {
   updateSubject,
   deleteSubject,
   getSubjectCategories,
+  seedDefaultSubjects,
 } from "../../controllers/subject.controller";
 import { protect, authorize } from "../../middlewares/auth.middleware";
 import { requirePermission } from "../../middlewares/rbac.middleware";
@@ -16,6 +17,7 @@ router.use(protect, authorize("admin"), requirePermission("market.configure"));
 
 router.get("/", listSubjects);
 router.get("/categories", getSubjectCategories);
+router.post("/seed-defaults", seedDefaultSubjects);
 router.get("/:id", getSubject);
 router.post("/", createSubject);
 router.put("/:id", updateSubject);
