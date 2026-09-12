@@ -31,7 +31,10 @@ const popularSubjects = [
 
 const popularCities = [
   { name: "Pakistan", areas: "Online nationwide and local home tuition where available", href: "/pk/home-tutors/lahore" },
-  { name: "United Arab Emirates", areas: "Discovery beta for local and online tutor matching", href: "/ae/tutors" },
+  { name: "United States", areas: "Local and online tutor matching nationwide", href: "/us/tutors" },
+  { name: "India", areas: "Local and online tutor matching nationwide", href: "/in/tutors" },
+  { name: "Saudi Arabia", areas: "Local and online tutor matching nationwide", href: "/sa/tutors" },
+  { name: "United Arab Emirates", areas: "Local and online tutor matching nationwide", href: "/ae/tutors" },
   { name: "United Kingdom", areas: "Discovery beta for local and online tutor matching", href: "/gb/tutors" },
   { name: "Online Worldwide", areas: "Learn across borders in a timezone and language that work for you", href: "/online-tutors" },
 ];
