@@ -252,7 +252,7 @@ export default function HeroMarketplace() {
                 }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "#166534", fontWeight: 700 }}>
-                  <ShieldCheck size={15} color="#16a34a" /> 100% Risk-Free First Session
+                  <ShieldCheck size={15} color="#16a34a" /> First-Session Protection
                 </span>
                 <Link
                   href="/first-session-guarantee"

@@ -98,7 +98,7 @@ export default function TrustSafetySection() {
                     fontWeight: 800,
                     border: "1px solid #bbf7d0"
                   }}>
-                    <Sparkles size={12} /> 100% Risk-Free
+                    <Sparkles size={12} /> First-Session Protection
                   </div>
                 )}
 
