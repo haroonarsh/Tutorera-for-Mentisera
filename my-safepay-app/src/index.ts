@@ -8,7 +8,9 @@ const PaymentLedgerSchema = new mongoose.Schema({
   status: { type: String, required: true },
   amount: { type: Number, required: true },
   currency: { type: String, required: true },
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  booking: { type: mongoose.Schema.Types.ObjectId, ref: "Booking", index: true },
+  bid: { type: mongoose.Schema.Types.ObjectId, ref: "Bid", index: true },
+  student: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
   metadata: { type: mongoose.Schema.Types.Mixed },
 }, { timestamps: true });
 
@@ -38,7 +40,7 @@ app.get("/", (c) => c.text("Safepay Worker is running!"));
 
 app.post("/checkout", async (c) => {
   const body = await c.req.json();
-  const { amount, currency, reference } = body;
+  const { amount, currency, reference, studentId, bookingId, bidId, feeSnapshot, metadata } = body;
   
   if (!c.env.SAFEPAY_API_KEY) {
     return c.json({ error: "Safepay is not configured" }, 500);
@@ -55,7 +57,10 @@ app.post("/checkout", async (c) => {
       status: "pending",
       amount,
       currency,
-      metadata: { checkoutUrl },
+      student: studentId || null,
+      booking: bookingId || null,
+      bid: bidId || null,
+      metadata: { checkoutUrl, feeSnapshot, ...metadata },
     });
 
     return c.json({ checkoutUrl });

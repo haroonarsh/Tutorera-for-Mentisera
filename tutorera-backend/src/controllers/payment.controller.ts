@@ -105,8 +105,8 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
     return;
   }
 
-  const signature = req.header("X-RapidGateway-Signature");
-  const timestamp = req.header("X-RapidGateway-Timestamp");
+  const signature = req.header("x-sfpy-signature") || "";
+  const timestamp = req.header("x-sfpy-timestamp") || "";
 
   const isValid = paymentProvider.verifyWebhookSignature(rawBody, signature, timestamp);
   if (!isValid) {

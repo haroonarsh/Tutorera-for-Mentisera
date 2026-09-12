@@ -33,7 +33,7 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     bid: { type: Schema.Types.ObjectId, ref: "Bid", index: true },
     student: { type: Schema.Types.ObjectId, ref: "User", index: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", index: true },
-    provider: { type: String, required: true, trim: true, default: "rapid_gateway", index: true },
+    provider: { type: String, required: true, trim: true, default: "safepay", index: true },
     providerEventId: { type: String, trim: true, index: true },
     providerTransactionId: { type: String, required: true, trim: true, index: true },
     eventType: { type: String, enum: ["checkout.created", "payment.succeeded", "payment.failed", "payment.refunded", "payout.requested", "payout.completed", "manual.adjustment"], required: true },

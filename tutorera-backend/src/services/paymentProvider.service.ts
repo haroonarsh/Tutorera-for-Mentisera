@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "../config/constants";
 import PaymentLedger from "../models/PaymentLedger.model";
-import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
+import { safepayProvider } from "./safepayProvider.service";
 
-export type PaymentProviderName = "rapid_gateway" | "stripe";
+export type PaymentProviderName = "safepay" | "stripe";
 export type LedgerProviderName = PaymentProviderName | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
@@ -40,7 +40,7 @@ export interface ProviderWebhookEvent {
 }
 
 export const paymentProvider = {
-  name: "rapid_gateway" as PaymentProviderName,
+  name: "safepay" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
     const currency = (params.currency || "PKR").toUpperCase();
@@ -49,15 +49,22 @@ export const paymentProvider = {
       return stripeProvider.createCheckout({ ...params, currency });
     }
 
-    const checkoutUrl = await createTransaction({
+    const checkoutUrl = await safepayProvider.createCheckout({
       amount: params.amount,
-      customerMobileNo: params.customerMobileNo,
-      customerEmail: params.customerEmail,
-      basketId: params.basketId,
-      description: params.description,
-      successUrl: params.successUrl,
-      failureUrl: params.failureUrl,
-      checkoutUrl: params.checkoutUrl,
+      currency: params.currency,
+      reference: params.basketId,
+      metadata: {
+        studentMobileNo: params.customerMobileNo,
+        studentEmail: params.customerEmail,
+        description: params.description,
+        successUrl: params.successUrl,
+        failureUrl: params.failureUrl,
+        checkoutUrl: params.checkoutUrl,
+        studentId: params.studentId,
+        bookingId: params.bookingId,
+        bidId: params.bidId,
+        feeSnapshot: params.feeSnapshot,
+      }
     });
 
     await recordPaymentLedger({
@@ -77,7 +84,7 @@ export const paymentProvider = {
     return checkoutUrl;
   },
 
-  verifyWebhookSignature,
+  verifyWebhookSignature: safepayProvider.verifyWebhookSignature,
 
   normalizeWebhook(body: {
     eventId: string;
@@ -88,7 +95,7 @@ export const paymentProvider = {
     currency?: string;
   }): ProviderWebhookEvent {
     return {
-      provider: "rapid_gateway",
+      provider: "safepay",
       eventId: body.eventId,
       eventType: body.eventType,
       merchantTransactionId: body.merchantTransactionId,

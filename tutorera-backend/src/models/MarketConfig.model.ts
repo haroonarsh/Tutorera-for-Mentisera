@@ -53,7 +53,7 @@ const marketConfigSchema = new Schema<IMarketConfig>(
     homeTuitionEnabled: { type: Boolean, default: false },
     studentRegistration: { type: Boolean, default: true },
     tutorRegistration: { type: Boolean, default: true },
-    paymentProvider: { type: String, default: "none" },
+    paymentProvider: { type: String, enum: ["safepay", "stripe", "none"], default: "none" },
     paymentsEnabled: { type: Boolean, default: false },
     payoutsEnabled: { type: Boolean, default: false },
     backgroundCheckRequired: { type: Boolean, default: true },

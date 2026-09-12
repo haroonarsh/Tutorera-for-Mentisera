@@ -3,7 +3,7 @@ import MarketConfig, { IMarketConfig } from "../models/MarketConfig.model";
 export const LAUNCH_MARKETS = {
   PK: {
     countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "PKR", currencySymbol: "Rs.",
-    timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "rapid_gateway",
+    timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "safepay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
@@ -42,7 +42,7 @@ export const LAUNCH_MARKETS = {
 export async function ensureLaunchMarkets(): Promise<void> {
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
     const safetyLock = countryCode === "PK"
-      ? { paymentProvider: "rapid_gateway", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", featureFlags: config.featureFlags }
+      ? { paymentProvider: "safepay", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", featureFlags: config.featureFlags }
       : ["AE", "US", "SA", "IN"].includes(countryCode)
       ? { paymentProvider: "stripe", paymentsEnabled: true, payoutsEnabled: true, launchStatus: "live", featureFlags: config.featureFlags }
       : { paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false, launchStatus: "beta", featureFlags: config.featureFlags };
@@ -97,7 +97,7 @@ export async function assertAcceptanceAvailable(countryCode?: string): Promise<I
     error.code = "MARKET_DISCOVERY_ONLY";
     throw error;
   }
-  if (market.countryCode !== "PK" || market.paymentProvider !== "rapid_gateway") {
+  if (market.countryCode !== "PK" || market.paymentProvider !== "safepay") {
     const error = new Error("No compliant payment provider is configured for this market.") as Error & { statusCode: number; code: string };
     error.statusCode = 409;
     error.code = "PAYMENT_PROVIDER_UNAVAILABLE";
