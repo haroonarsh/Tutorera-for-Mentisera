@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCountryByCode, COUNTRIES } from "@/lib/location";
 import { SITE_URL } from "@/lib/site";
+import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
 import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
 import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
 import TopRequestsSection from "@/components/TopRequestsSection";
@@ -11,13 +11,13 @@ interface Props {
   params: Promise<{ countryCode: string }>;
 }
 
-export function generateStaticParams() {
-  return COUNTRIES.map((c) => ({ countryCode: c.code.toLowerCase() }));
+export async function generateStaticParams() {
+  return liveCountryCodeParams();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode } = await params;
-  const country = getCountryByCode(countryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) return { title: "TUTORERA" };
 
   const title = `Find Tutors & Teaching Opportunities in ${country.name} | TUTORERA`;
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CountryLandingPage({ params }: Props) {
   const { countryCode } = await params;
-  const country = getCountryByCode(countryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) notFound();
 
   return (

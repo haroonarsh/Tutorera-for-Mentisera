@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import type { FiltersState, PaginationMeta, TutorProfile } from "@/types/tutor";
-import { CITIES, INITIAL_FILTERS, SORT_OPTIONS } from "@/types/tutor";
+import { INITIAL_FILTERS, SORT_OPTIONS } from "@/types/tutor";
 import TutorCard from "./TutorCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
@@ -37,7 +37,21 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
   const [loading, setLoading] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => !["search", "sortBy"].includes(key) && value).length;
+
+  useEffect(() => {
+    const q = filters.city.trim();
+    if (q.length < 2) { setCityOptions([]); return; }
+    if (cityTimer.current) clearTimeout(cityTimer.current);
+    cityTimer.current = setTimeout(() => {
+      api.get(`/geo/search?q=${encodeURIComponent(q)}`)
+        .then((res) => setCityOptions((res.data?.results?.cities || []).map((c: { name: string }) => c.name)))
+        .catch(() => setCityOptions([]));
+    }, 200);
+    return () => { if (cityTimer.current) clearTimeout(cityTimer.current); };
+  }, [filters.city]);
 
   const load = useCallback(async (page: number, next: FiltersState) => {
     setLoading(true);
@@ -55,7 +69,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
 
   function change(key: keyof FiltersState, value: string) {
     const next = { ...filters, [key]: value }; setFilters(next);
-    if (["search", "minPrice", "maxPrice"].includes(key)) {
+    if (["search", "minPrice", "maxPrice", "city"].includes(key)) {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => load(1, next), 450);
     } else load(1, next);
@@ -69,7 +83,20 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       <p className={styles.heroSubtitle}>{subtitle || (pagination.total ? `${pagination.total} verified tutors available worldwide and locally` : "Browse qualified tutors for online and in-person sessions")}</p>
       <div className={styles.searchBar} role="search">
         <div className={styles.searchField}><input type="search" placeholder="Search by subject or tutor name..." aria-label="Search tutors" value={filters.search} onChange={(event) => change("search", event.target.value)} className={styles.searchInput} /></div>
-        <div className={styles.cityField}><select aria-label="Filter tutors by city" value={filters.city} onChange={(event) => change("city", event.target.value)} className={styles.citySelect}><option value="">All Cities</option>{CITIES.map((city) => <option key={city}>{city}</option>)}</select></div>
+        <div className={styles.cityField}>
+          <input
+            type="text"
+            list="tutors-city-options"
+            aria-label="Filter tutors by city"
+            placeholder="All Cities"
+            value={filters.city}
+            onChange={(event) => change("city", event.target.value)}
+            className={styles.citySelect}
+          />
+          <datalist id="tutors-city-options">
+            {cityOptions.map((city) => <option key={city} value={city} />)}
+          </datalist>
+        </div>
         <button onClick={() => load(1, filters)} className={styles.searchBtn}>Search</button>
       </div>
     </div></div>

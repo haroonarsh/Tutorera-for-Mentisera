@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCountryByCode } from "@/lib/location";
+import { resolveCountry } from "@/lib/geo-server";
 import { SITE_URL } from "@/lib/site";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors } from "@/lib/tutor-directory";
@@ -20,7 +20,7 @@ function formatName(slug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode, state, city } = await params;
-  const country = getCountryByCode(countryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) return { title: "TUTORERA" };
 
   const cityName = formatName(city);
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function StateCityLandingPage({ params, searchParams }: Props) {
   const { countryCode, state, city } = await params;
-  const country = getCountryByCode(countryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) notFound();
 
   const cityName = formatName(city);

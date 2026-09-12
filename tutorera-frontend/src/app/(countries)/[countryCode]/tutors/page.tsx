@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors, CITIES } from "@/lib/tutor-directory";
-import { getCountryByCode, COUNTRIES } from "@/lib/location";
+import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
 import { SeoEligibilityService } from "@/lib/seo-eligibility";
@@ -15,17 +15,13 @@ interface Props {
 
 const value = (input: string | string[] | undefined) => (typeof input === "string" ? input : "");
 
-export function generateStaticParams() {
-  return [
-    { countryCode: "pk" },
-    { countryCode: "ae" },
-    { countryCode: "gb" },
-  ];
+export async function generateStaticParams() {
+  return liveCountryCodeParams();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode } = await params;
-  const country = getCountryByCode(countryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) return { title: "Tutors Directory", robots: { index: false, follow: true } };
 
   const title = `Find Verified Tutors in ${country.name} | Online & Home Tuition`;
@@ -50,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CountryTutorsPage({ params, searchParams }: Props) {
   const { countryCode } = await params;
-  const country = getCountryByCode(countryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) notFound();
 
   const queryParams = await searchParams;

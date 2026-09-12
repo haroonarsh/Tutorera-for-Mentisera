@@ -48,7 +48,20 @@ export default function BrowseRequestsPage() {
   const [bidModalRequest, setBidModalRequest] = useState<RequestItem | null>(null);
   const geo = useGeoData();
 
-  const availableCities = country ? getCitiesForCountry(country) : [];
+  const [availableCities, setAvailableCities] = useState<{ id?: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (!country) { setAvailableCities([]); return; }
+    let cancelled = false;
+    api.get(`/geo/cities?country=${encodeURIComponent(country)}&limit=100`)
+      .then((res) => {
+        if (cancelled) return;
+        const remote = (res.data?.cities || []).map((c: { _id?: string; name: string }) => ({ id: c._id, name: c.name }));
+        setAvailableCities(remote.length > 0 ? remote : getCitiesForCountry(country));
+      })
+      .catch(() => { if (!cancelled) setAvailableCities(getCitiesForCountry(country)); });
+    return () => { cancelled = true; };
+  }, [country]);
 
   const fetchRequests = useCallback(async (pageNum: number) => {
     setLoading(true);

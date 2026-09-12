@@ -7,6 +7,7 @@ import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react"
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
+import { getCitiesForCountry } from "@/lib/location";
 
 const C = UI_COLORS;
 
@@ -30,7 +31,19 @@ export default function ProfilePage() {
   });
 
   const userCountryCode = personalForm.countryCode || user?.countryCode || "PK";
-  const cities = (geo.countries?.find(c => c.code === userCountryCode)?.cities?.map(ct => ct.name)) || ["Other"];
+  const [cities, setCities] = useState<string[]>(() => getCitiesForCountry(userCountryCode).map(ct => ct.name));
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get(`/geo/cities?country=${encodeURIComponent(userCountryCode)}&limit=100`)
+      .then((res) => {
+        if (cancelled) return;
+        const remote = (res.data?.cities || []).map((c: { name: string }) => c.name);
+        setCities(remote.length > 0 ? remote : getCitiesForCountry(userCountryCode).map(ct => ct.name));
+      })
+      .catch(() => { if (!cancelled) setCities(getCitiesForCountry(userCountryCode).map(ct => ct.name)); });
+    return () => { cancelled = true; };
+  }, [userCountryCode]);
 
   // Tutor profile form
   const [tutorForm, setTutorForm] = useState({
