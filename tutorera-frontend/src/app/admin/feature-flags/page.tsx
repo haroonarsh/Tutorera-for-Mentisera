@@ -23,7 +23,7 @@ export default function FeatureFlagsPage() {
     key: "",
     description: "",
     enabled: false,
-    scope: "global" as const,
+    scope: "global" as "global" | "country",
     countryCodes: [] as string[],
   });
   const [saving, setSaving] = useState(false);
