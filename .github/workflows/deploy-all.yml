@@ -1,0 +1,217 @@
+name: Deploy All Services
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deployment-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test -- --passWithNoTests
+      - name: Report status
+        if: always()
+        run: echo "Backend build status: ${{ job.status }}"
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - run: npm run lint
+      - run: npm run build
+      - name: Report status
+        if: always()
+        run: echo "Frontend build status: ${{ job.status }}"
+
+  build-cloudflare:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-safepay-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-safepay-app/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Report status
+        if: always()
+        run: echo "Cloudflare worker build status: ${{ job.status }}"
+
+  deploy-backend:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-backend.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Render deployment
+        run: |
+          curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "gitCommitSha": "${{ github.sha }}"
+            }' || echo "Deployment triggered"
+
+      - name: Wait for deployment (max 10 minutes)
+        run: |
+          for i in {1..60}; do
+            DEPLOY_STATUS=$(curl -s https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }} \
+              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" | jq -r '.service.deploy.status // "unknown"' 2>/dev/null || echo "unknown")
+
+            if [ "$DEPLOY_STATUS" = "live" ]; then
+              echo "✅ Backend deployed successfully"
+              exit 0
+            elif [ "$DEPLOY_STATUS" = "build_failed" ] || [ "$DEPLOY_STATUS" = "deploy_failed" ]; then
+              echo "❌ Backend deployment failed"
+              exit 1
+            fi
+
+            echo "Status: $DEPLOY_STATUS (attempt $i/60)"
+            sleep 10
+          done
+          echo "⚠️ Deployment status check timed out"
+
+  deploy-frontend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-frontend.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        id: vercel
+        run: |
+          URL=$(vercel deploy --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes 2>&1 | grep -oP 'https://[^\s]+' | tail -1)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployed: $URL"
+
+      - name: Verify deployment
+        run: |
+          for i in {1..20}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.vercel.outputs.url }}" || echo "000")
+            [ "$STATUS" = "200" ] && echo "✅ Frontend is live" && exit 0
+            echo "Attempt $i: Status $STATUS"
+            sleep 5
+          done
+
+  deploy-cloudflare:
+    needs: build-cloudflare
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-cloudflare.result == 'success'
+    defaults:
+      run:
+        working-directory: my-safepay-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-safepay-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare
+        run: |
+          npx wrangler deploy \
+            --name my-safepay-app \
+            --compatibility-date 2024-04-05
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Verify deployment
+        run: |
+          WORKER_URL="https://my-safepay-app.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev"
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$WORKER_URL" || echo "000")
+            [ "$STATUS" != "000" ] && echo "✅ Worker is responding" && exit 0
+            echo "Attempt $i: Status $STATUS"
+            sleep 5
+          done
+
+  notification:
+    needs: [deploy-backend, deploy-frontend, deploy-cloudflare]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine overall status
+        id: status
+        run: |
+          if [ "${{ needs.deploy-backend.result }}" = "success" ] && \
+             [ "${{ needs.deploy-frontend.result }}" = "success" ] && \
+             [ "${{ needs.deploy-cloudflare.result }}" = "success" ]; then
+            echo "status=✅ All services deployed successfully"
+            echo "color=#36a64b"
+          else
+            echo "status=⚠️ Some services failed to deploy"
+            echo "color=#ff6b6b"
+          fi >> $GITHUB_OUTPUT
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+          payload: |
+            {
+              "text": "${{ steps.status.outputs.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Summary*\n\n*Backend:* ${{ needs.deploy-backend.result == 'success' && '✅ Deployed' || '❌ Failed' }}\n*Frontend:* ${{ needs.deploy-frontend.result == 'success' && '✅ Deployed' || '❌ Failed' }}\n*Cloudflare:* ${{ needs.deploy-cloudflare.result == 'success' && '✅ Deployed' || '❌ Failed' }}\n\n*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Author:* ${{ github.actor }}\n*Timestamp:* <!date_num^$(date +%s)^{date_long_pretty}|$(date)>"
+                  }
+                }
+              ]
+            }
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Render) | ${{ needs.deploy-backend.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Vercel) | ${{ needs.deploy-frontend.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Worker (Cloudflare) | ${{ needs.deploy-cloudflare.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-cloudflare.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

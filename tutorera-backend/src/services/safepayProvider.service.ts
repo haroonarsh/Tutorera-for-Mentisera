@@ -18,6 +18,11 @@ export const safepayProvider = {
    */
   async createCheckout(params: SafepayCheckoutParams): Promise<string> {
     try {
+      if (!process.env.SAFEPAY_WORKER_URL) {
+        console.warn("SAFEPAY_WORKER_URL is unset. Falling back to sandbox mock checkout.");
+        return `https://sandbox.api.getsafepay.com/checkout/pay?env=sandbox&reference=${params.reference}&amount=${params.amount}`;
+      }
+
       const response = await axios.post(`${SAFEPAY_WORKER_URL}/checkout`, {
         amount: params.amount,
         currency: params.currency || "PKR",
@@ -32,6 +37,11 @@ export const safepayProvider = {
       return response.data.checkoutUrl;
     } catch (error: any) {
       console.error("Safepay Edge Worker checkout failed:", error.response?.data || error.message);
+      // Fallback in case the edge worker fails (e.g. locally)
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Falling back to sandbox mock checkout due to error.");
+        return `https://sandbox.api.getsafepay.com/checkout/pay?env=sandbox&reference=${params.reference}&amount=${params.amount}`;
+      }
       throw new Error("Failed to generate Safepay checkout link via edge worker.");
     }
   },

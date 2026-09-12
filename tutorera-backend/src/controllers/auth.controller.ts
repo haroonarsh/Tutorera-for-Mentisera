@@ -1,6 +1,4 @@
 import { Request, Response } from "express";
-import TutorProfile from "../models/TutorProfile.model";
-import StudentProfile from "../models/StudentProfile.model";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.model";
 import { logAudit } from "../utils/logAudit";

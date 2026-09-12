@@ -214,6 +214,29 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     offer.paymentPendingExpiresAt = paymentPendingExpiresAt;
     await offer.save();
 
+    // If a tutor is accepting a student's counter-offer, do NOT generate a checkout session for the tutor!
+    if (isTutorOwner) {
+      await sendNotification(req.app.get("io"), request.student.toString(), {
+        title: "Offer Accepted",
+        message: "The tutor accepted your counter-offer! Please complete the payment to confirm the booking.",
+        type: "booking",
+        link: "/dashboard",
+      });
+      await logAudit({
+        action: "tutor_accepted_counter_offer",
+        actor: req.user?.name,
+        actorId: userId,
+        entity: "Bid",
+        targetId: offer.id,
+        metadata: { finalAgreedRate: offer.amount },
+      });
+      res.status(200).json({
+        success: true,
+        message: "Counter-offer accepted! The student has been notified to complete the payment.",
+      });
+      return;
+    }
+
     try {
       const student = await User.findById(request.student).select("name email phone");
       const fees = calculateMarketplaceFees(offer.amount);

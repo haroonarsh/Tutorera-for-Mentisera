@@ -1,0 +1,123 @@
+name: Deploy Frontend to Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tutorera-frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel (Production)
+        id: deploy
+        run: |
+          OUTPUT=$(vercel deploy --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            2>&1)
+          echo "deploy_output=$OUTPUT" >> $GITHUB_OUTPUT
+          echo "$OUTPUT"
+
+      - name: Extract deployment URL
+        id: url
+        run: |
+          URL=$(echo "${{ steps.deploy.outputs.deploy_output }}" | grep -oP 'https://[^\s]+' | tail -1)
+          echo "deployment_url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployment URL: $URL"
+
+      - name: Health check
+        run: |
+          URL="${{ steps.url.outputs.deployment_url }}"
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Frontend is live and responding"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS, retrying..."
+            sleep 10
+          done
+          echo "⚠️ Frontend took longer to start but deployment completed"
+
+      - name: Slack notification - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+          payload: |
+            {
+              "text": "✅ Frontend deployed to Vercel successfully",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Frontend Deployment Success*\n*URL:* ${{ steps.url.outputs.deployment_url }}\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Slack notification - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+          payload: |
+            {
+              "text": "❌ Frontend deployment to Vercel failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ Frontend Deployment Failed*\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*Details:* Check GitHub Actions logs"
+                  }
+                }
+              ]
+            }

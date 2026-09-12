@@ -79,14 +79,25 @@ export async function syncReviewQueueForProfile(tutorProfileId: string): Promise
       component,
     }).lean();
 
+    const slaHours = component === "police" ? 48 : 24;
+
     if (!existing) {
-      const slaHours = component === "police" ? 48 : 24;
       await TutorDocumentReview.create({
         tutor: tutorId,
         tutorProfile: tutorProfileId,
         component,
         status: "pending",
         priority: 0,
+        slaHours,
+        slaDeadline: new Date(now.getTime() + slaHours * 60 * 60 * 1000),
+        autoEscalated: false,
+      });
+    } else if (existing.status !== "pending" && existing.status !== "in_review") {
+      await TutorDocumentReview.findByIdAndUpdate(existing._id, {
+        status: "pending",
+        rejectionReason: "",
+        completedAt: null,
+        priority: 1, // bump priority for resubmissions
         slaHours,
         slaDeadline: new Date(now.getTime() + slaHours * 60 * 60 * 1000),
         autoEscalated: false,

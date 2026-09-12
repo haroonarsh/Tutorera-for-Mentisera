@@ -38,6 +38,8 @@ export interface TutorProfile {
   policeVerificationStatus?: string;
   fullName?: string;
   matchScore?: number;
+  matchBreakdown?: Record<string, number>;
+  matchReasons?: string[];
   averageResponseMinutes?: number;
   responseTimeFormatted?: string;
   lastActiveAt?: string;
