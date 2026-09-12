@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
 
@@ -28,18 +28,18 @@ interface LogsResponse {
 // ── Action colour coding ──────────────────────────────────────────────────────
 function getActionStyle(action: string): { bg: string; color: string } {
   if (action.includes("approved") || action.includes("activated") || action.includes("confirmed") || action.includes("completed") || action.includes("paid") || action.includes("credited")) {
-    return { bg: '#f0fdf4', color: '#16a34a' };
+    return { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color };
   }
   if (action.includes("rejected") || action.includes("deactivated") || action.includes("cancelled") || action.includes("refunded")) {
-    return { bg: '#fef2f2', color: '#ef4444' };
+    return { bg: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color };
   }
   if (action.includes("registered") || action.includes("created") || action.includes("placed")) {
-    return { bg: '#EEF5FF', color: '#0329B2' };
+    return { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color };
   }
   if (action.includes("updated")) {
-    return { bg: '#fdf4ff', color: '#9333ea' };
+    return { bg: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color };
   }
-  return { bg: '#f3f4f6', color: '#6b7280' };
+  return { bg: STATUS_COLORS.neutral.bg, color: STATUS_COLORS.neutral.color };
 }
 
 function formatAction(action: string): string {
@@ -131,11 +131,11 @@ export default function AuditLogsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
           { label: "Total Events",      value: total.toLocaleString(),  icon: "📋", color: C.accent  },
-          { label: "Action Filter",     value: actionFilter === "all" ? "All" : formatAction(actionFilter), icon: "🔍", color: '#7c3aed' },
-          { label: "Entity Filter",     value: entityFilter === "all" ? "All" : entityFilter, icon: "🏷️", color: '#d97706' },
-          { label: "Latest Batch",      value: loading ? "Loading" : logs.length > 0 ? "Loaded" : "Empty", icon: "⏱️", color: '#16a34a' },
+          { label: "Action Filter",     value: actionFilter === "all" ? "All" : formatAction(actionFilter), icon: "🔍", color: STATUS_COLORS.purple.color },
+          { label: "Entity Filter",     value: entityFilter === "all" ? "All" : entityFilter, icon: "🏷️", color: STATUS_COLORS.warning.color },
+          { label: "Latest Batch",      value: loading ? "Loading" : logs.length > 0 ? "Loaded" : "Empty", icon: "⏱️", color: STATUS_COLORS.success.color },
         ].map(s => (
-          <div key={s.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.1rem 1.25rem', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+          <div key={s.label} style={{ backgroundColor: C.surface, borderRadius: '0.875rem', padding: '1.1rem 1.25rem', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
             <div style={{ width: 36, height: 36, backgroundColor: C.gray50, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
               {s.icon}
             </div>
@@ -153,7 +153,7 @@ export default function AuditLogsPage() {
           title="Actions"
           value={actionFilter}
           onChange={e => setActionFilter(e.target.value)}
-          style={{ padding: '0.55rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}>
+          style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, outline: 'none', cursor: 'pointer' }}>
           {actions.map(a => (
             <option key={a} value={a}>{a === "all" ? "All Actions" : formatAction(a)}</option>
           ))}
@@ -163,7 +163,7 @@ export default function AuditLogsPage() {
           title="Entities"
           value={entityFilter}
           onChange={e => setEntityFilter(e.target.value)}
-          style={{ padding: '0.55rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: 'white', outline: 'none', cursor: 'pointer' }}>
+          style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, outline: 'none', cursor: 'pointer' }}>
           {entities.map(e => (
             <option key={e} value={e}>{e === "all" ? "All Entities" : e}</option>
           ))}
@@ -171,7 +171,7 @@ export default function AuditLogsPage() {
 
         <button
           onClick={() => { setActionFilter("all"); setEntityFilter("all"); setPage(1); }}
-          style={{ padding: '0.55rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', color: C.gray500, backgroundColor: 'white', cursor: 'pointer', fontWeight: '600' }}>
+          style={{ padding: '0.55rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.gray500, backgroundColor: C.surface, cursor: 'pointer', fontWeight: '600' }}>
           Reset
         </button>
 
@@ -179,15 +179,15 @@ export default function AuditLogsPage() {
           <button
             onClick={() => exportCSV(logs)}
             disabled={logs.length === 0}
-            style={{ padding: '0.55rem 1.25rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: 'white', cursor: logs.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: logs.length === 0 ? 0.5 : 1 }}>
+            style={{ padding: '0.55rem 1.25rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', color: C.primary, backgroundColor: C.surface, cursor: logs.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: logs.length === 0 ? 0.5 : 1 }}>
             ↓ Export CSV
           </button>
         </div>
       </div>
 
       {/* Event Stream Table */}
-      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>Event Stream</h3>
           <span style={{ fontSize: '0.75rem', color: C.gray500 }}>
             {loading ? "Loading..." : `Showing ${logs.length} of ${total} events`}
@@ -195,9 +195,9 @@ export default function AuditLogsPage() {
         </div>
 
         {/* Desktop Table Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr 1.2fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="audit-desktop-header">
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr 1.2fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="audit-desktop-header">
           {["Action", "Actor", "Entity", "Target", "Timestamp"].map(h => (
-            <p key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
+            <p key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: C.gray500, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
           ))}
         </div>
 
@@ -218,7 +218,7 @@ export default function AuditLogsPage() {
           logs.map((log, idx) => {
             const style = getActionStyle(log.action);
             return (
-              <div key={log._id} style={{ borderBottom: idx < logs.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+              <div key={log._id} style={{ borderBottom: idx < logs.length - 1 ? `1px solid ${STATUS_COLORS.neutral.bg}` : 'none' }}>
 
                 {/* Desktop Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr 1.2fr', padding: '0.875rem 1.5rem', alignItems: 'center' }} className="audit-desktop-row">
@@ -235,7 +235,7 @@ export default function AuditLogsPage() {
                   </div>
 
                   {/* Entity */}
-                  <span style={{ fontSize: '0.78rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '0.35rem', backgroundColor: '#f3f4f6', color: C.primary, width: 'fit-content' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '600', padding: '0.2rem 0.6rem', borderRadius: '0.35rem', backgroundColor: STATUS_COLORS.neutral.bg, color: C.primary, width: 'fit-content' }}>
                     {log.entity}
                   </span>
 
@@ -250,7 +250,7 @@ export default function AuditLogsPage() {
                       </p>
                     )}
                     {log.metadata && Object.keys(log.metadata).length > 0 && (
-                      <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0.15rem 0 0', fontFamily: 'monospace' }}>
+                      <p style={{ fontSize: '0.7rem', color: C.gray500, margin: '0.15rem 0 0', fontFamily: 'monospace' }}>
                         {Object.entries(log.metadata).map(([k, v]) => `${k}: ${v}`).join(" · ")}
                       </p>
                     )}
@@ -259,7 +259,7 @@ export default function AuditLogsPage() {
                   {/* Timestamp */}
                   <div>
                     <p style={{ fontSize: '0.8rem', color: C.gray500, margin: 0 }}>{timeAgo(log.createdAt)}</p>
-                    <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: 0 }}>
+                    <p style={{ fontSize: '0.7rem', color: C.gray500, margin: 0 }}>
                       {new Date(log.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
                     </p>
                   </div>
@@ -303,7 +303,7 @@ export default function AuditLogsPage() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            style={{ padding: '0.5rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: '600', color: page === 1 ? C.gray500 : C.primary, backgroundColor: 'white', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>
+            style={{ padding: '0.5rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: '600', color: page === 1 ? C.gray500 : C.primary, backgroundColor: C.surface, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>
             ← Prev
           </button>
           <span style={{ fontSize: '0.875rem', color: C.gray500, padding: '0 0.5rem' }}>
@@ -312,7 +312,7 @@ export default function AuditLogsPage() {
           <button
             onClick={() => setPage(p => Math.min(pages, p + 1))}
             disabled={page === pages}
-            style={{ padding: '0.5rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: '600', color: page === pages ? C.gray500 : C.primary, backgroundColor: 'white', cursor: page === pages ? 'not-allowed' : 'pointer', opacity: page === pages ? 0.5 : 1 }}>
+            style={{ padding: '0.5rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: '600', color: page === pages ? C.gray500 : C.primary, backgroundColor: C.surface, cursor: page === pages ? 'not-allowed' : 'pointer', opacity: page === pages ? 0.5 : 1 }}>
             Next →
           </button>
         </div>

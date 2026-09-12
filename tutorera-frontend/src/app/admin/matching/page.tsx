@@ -15,6 +15,7 @@ import { tutorProfileHref } from "@/lib/tutor-directory";
 import { useAuth } from "@/context/AuthContext";
 import AvatarImage from "@/components/Common/AvatarImage";
 import { AdminDialog } from "@/components/admin/AdminUI";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface MatchAnalytics {
   totalMatches: number;
@@ -311,10 +312,10 @@ export default function AdminMatchingPage() {
       {/* Executive Command Header */}
       <div
         style={{
-          background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)",
+          background: `linear-gradient(135deg, ${UI_COLORS.primary} 0%, ${UI_COLORS.accent} 100%)`,
           borderRadius: "1rem",
           padding: "1.5rem 1.75rem",
-          color: "#ffffff",
+          color: UI_COLORS.surface,
           marginBottom: "1.5rem",
           boxShadow: "0 10px 25px -5px rgba(2,21,80,0.25)",
           display: "flex",
@@ -326,7 +327,7 @@ export default function AdminMatchingPage() {
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
-            <span style={{ display: "inline-block", width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 10px #10b981" }} />
+            <span style={{ display: "inline-block", width: "9px", height: "9px", borderRadius: "50%", background: UI_COLORS.success, boxShadow: `0 0 10px ${UI_COLORS.success}` }} />
             <span style={{ fontSize: "0.74rem", fontWeight: 800, letterSpacing: "0.08em", color: "#93c5fd", textTransform: "uppercase" }}>
               ALGORITHM ARCHITECTURE · MULTI-FACTOR ENGINE
             </span>
@@ -337,18 +338,18 @@ export default function AdminMatchingPage() {
           <h1 style={{ fontSize: "1.75rem", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
             Smart Tutor Matching Engine
           </h1>
-          <p style={{ margin: "0.25rem 0 0", color: "#cbd5e1", fontSize: "0.85rem" }}>
+          <p style={{ margin: "0.25rem 0 0", color: UI_COLORS.border, fontSize: "0.85rem" }}>
             Multi-objective student compatibility, progressive notification waves, and explainable tutor ranking.
           </p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "0.5rem", padding: "0.4rem 0.75rem", fontSize: "0.78rem" }}>
-            <span style={{ color: "#bfdbfe" }}>Live Requests: </span>
-            <strong style={{ color: "#ffffff" }}>{analytics?.activeRequestsCount ?? "—"}</strong>
-            <span style={{ color: "#bfdbfe", margin: "0 0.4rem" }}>•</span>
-            <span style={{ color: "#bfdbfe" }}>Verified Tutors: </span>
-            <strong style={{ color: "#ffffff" }}>{analytics?.verifiedTutorsCount ?? "—"}</strong>
+            <span style={{ color: STATUS_COLORS.info.border }}>Live Requests: </span>
+            <strong style={{ color: UI_COLORS.surface }}>{analytics?.activeRequestsCount ?? "—"}</strong>
+            <span style={{ color: STATUS_COLORS.info.border, margin: "0 0.4rem" }}>•</span>
+            <span style={{ color: STATUS_COLORS.info.border }}>Verified Tutors: </span>
+            <strong style={{ color: UI_COLORS.surface }}>{analytics?.verifiedTutorsCount ?? "—"}</strong>
           </div>
 
           <button
@@ -358,8 +359,8 @@ export default function AdminMatchingPage() {
               display: "inline-flex",
               alignItems: "center",
               gap: "0.4rem",
-              background: "#ffffff",
-              color: "#021550",
+              background: UI_COLORS.surface,
+              color: UI_COLORS.primary,
               border: "none",
               padding: "0.55rem 1rem",
               borderRadius: "0.5rem",
@@ -369,7 +370,7 @@ export default function AdminMatchingPage() {
               boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
             }}
           >
-            <Play size={14} fill="#021550" />
+            <Play size={14} fill={UI_COLORS.primary} />
             Launch Match Simulator
           </button>
         </div>
@@ -378,8 +379,8 @@ export default function AdminMatchingPage() {
       {/* Segmented Control Navigation Tab Bar */}
       <div
         style={{
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
+          background: UI_COLORS.surface,
+          border: `1px solid ${UI_COLORS.border}`,
           borderRadius: "0.75rem",
           padding: "0.35rem",
           marginBottom: "1.5rem",
@@ -390,7 +391,7 @@ export default function AdminMatchingPage() {
       >
         {[
           { id: "analytics", label: "Telemetry & Conversion", icon: <BarChart2 size={16} /> },
-          { id: "simulator", label: "Interactive Match Simulator", icon: <Play size={16} fill={activeTab === "simulator" ? "#ffffff" : "#0329b2"} /> },
+          { id: "simulator", label: "Interactive Match Simulator", icon: <Play size={16} fill={activeTab === "simulator" ? UI_COLORS.surface : UI_COLORS.accent} /> },
           { id: "weights", label: "Algorithm Weights & Calibration", icon: <Sliders size={16} /> },
         ].map((tab) => {
           const active = activeTab === tab.id;
@@ -405,9 +406,9 @@ export default function AdminMatchingPage() {
                 gap: "0.5rem",
                 padding: "0.55rem 1.15rem",
                 borderRadius: "0.5rem",
-                border: active ? "1px solid #0329b2" : "1px solid transparent",
-                background: active ? "#0329b2" : "transparent",
-                color: active ? "#ffffff" : "#475569",
+                border: active ? `1px solid ${UI_COLORS.accent}` : "1px solid transparent",
+                background: active ? UI_COLORS.accent : "transparent",
+                color: active ? UI_COLORS.surface : TEXT_COLORS.muted,
                 fontSize: "0.84rem",
                 fontWeight: active ? 800 : 600,
                 cursor: "pointer",
@@ -427,11 +428,11 @@ export default function AdminMatchingPage() {
       {activeTab === "analytics" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {/* Organized Filter Console */}
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+          <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Filter size={15} color="#0329b2" />
-                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a" }}>Filter Telemetry Scope</span>
+                <Filter size={15} color={UI_COLORS.accent} />
+                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: TEXT_COLORS.body }}>Filter Telemetry Scope</span>
               </div>
 
               {/* Quick Date Presets */}
@@ -451,9 +452,9 @@ export default function AdminMatchingPage() {
                       borderRadius: "999px",
                       fontSize: "0.72rem",
                       fontWeight: quickDatePreset === p.id ? 800 : 600,
-                      border: quickDatePreset === p.id ? "1px solid #0329b2" : "1px solid #e2e8f0",
-                      background: quickDatePreset === p.id ? "#eff6ff" : "#f8fafc",
-                      color: quickDatePreset === p.id ? "#0329b2" : "#64748b",
+                      border: quickDatePreset === p.id ? `1px solid ${UI_COLORS.accent}` : `1px solid ${UI_COLORS.border}`,
+                      background: quickDatePreset === p.id ? STATUS_COLORS.info.bg : STATUS_COLORS.neutral.bg,
+                      color: quickDatePreset === p.id ? UI_COLORS.accent : UI_COLORS.gray500,
                       cursor: "pointer",
                     }}
                   >
@@ -471,11 +472,11 @@ export default function AdminMatchingPage() {
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "0.75rem", alignItems: "end" }}
             >
               <div>
-                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Market Scope</label>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Market Scope</label>
                 <select
                   value={analyticsFilters.countryCode}
                   onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, countryCode: e.target.value })}
-                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem", background: UI_COLORS.surface }}
                 >
                   <option value="">All Markets</option>
                   <option value="PK">Pakistan (PK)</option>
@@ -485,11 +486,11 @@ export default function AdminMatchingPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Teaching Mode</label>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Teaching Mode</label>
                 <select
                   value={analyticsFilters.mode}
                   onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, mode: e.target.value })}
-                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem", background: UI_COLORS.surface }}
                 >
                   <option value="">All Modes</option>
                   <option value="online">Online Worldwide</option>
@@ -498,24 +499,24 @@ export default function AdminMatchingPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>City Focus</label>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>City Focus</label>
                 <input
                   type="text"
                   placeholder="e.g. Lahore, Islamabad..."
                   value={analyticsFilters.city}
                   onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, city: e.target.value })}
-                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Subject Filter</label>
+                <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Subject Filter</label>
                 <input
                   type="text"
                   placeholder="e.g. Mathematics, Physics..."
                   value={analyticsFilters.subject}
                   onChange={(e) => setAnalyticsFilters({ ...analyticsFilters, subject: e.target.value })}
-                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                  style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
                 />
               </div>
 
@@ -527,8 +528,8 @@ export default function AdminMatchingPage() {
                     padding: "0.5rem 0.9rem",
                     borderRadius: "0.5rem",
                     border: "none",
-                    background: "#0329b2",
-                    color: "#ffffff",
+                    background: UI_COLORS.accent,
+                    color: UI_COLORS.surface,
                     fontSize: "0.8rem",
                     fontWeight: 800,
                     cursor: "pointer",
@@ -546,9 +547,9 @@ export default function AdminMatchingPage() {
                   style={{
                     padding: "0.5rem 0.75rem",
                     borderRadius: "0.5rem",
-                    border: "1px solid #cbd5e1",
-                    background: "#ffffff",
-                    color: "#475569",
+                    border: `1px solid ${UI_COLORS.border}`,
+                    background: UI_COLORS.surface,
+                    color: TEXT_COLORS.muted,
                     fontSize: "0.8rem",
                     fontWeight: 700,
                     cursor: "pointer",
@@ -561,66 +562,66 @@ export default function AdminMatchingPage() {
           </div>
 
           {analyticsError && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.6rem", padding: "0.85rem 1rem", color: "#991b1b", fontSize: "0.82rem" }}>
+            <div style={{ background: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: "0.6rem", padding: "0.85rem 1rem", color: STATUS_COLORS.danger.color, fontSize: "0.82rem" }}>
               {analyticsError}
             </div>
           )}
 
           {/* 5 High-Impact Metric KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "1rem" }}>
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Match Evaluations</span>
-                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#eff6ff", color: "#0329b2" }}><Layers size={16} /></span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Match Evaluations</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.info.bg, color: UI_COLORS.accent }}><Layers size={16} /></span>
               </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#0f172a" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: TEXT_COLORS.body }}>
                 {loadingAnalytics ? "..." : (analytics?.totalMatches ?? 0).toLocaleString()}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Across all live student requests</div>
+              <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>Across all live student requests</div>
             </div>
 
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Avg Match Score</span>
-                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#ecfdf5", color: "#059669" }}><Award size={16} /></span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Avg Match Score</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color }}><Award size={16} /></span>
               </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#059669" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.success.color }}>
                 {loadingAnalytics ? "..." : analytics?.avgMatchScore != null ? `${analytics.avgMatchScore}%` : "—"}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Target compatibility: &ge; 70%</div>
+              <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>Target compatibility: &ge; 70%</div>
             </div>
 
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Offer Conversion</span>
-                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#f5f3ff", color: "#7c3aed" }}><TrendingUp size={16} /></span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Offer Conversion</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color }}><TrendingUp size={16} /></span>
               </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#7c3aed" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.purple.color }}>
                 {loadingAnalytics ? "..." : `${analytics?.offerConversionRate ?? 0}%`}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Evaluations leading to formal bids</div>
+              <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>Evaluations leading to formal bids</div>
             </div>
 
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Booking Conversion</span>
-                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#f0fdf4", color: "#16a34a" }}><CheckCircle2 size={16} /></span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Booking Conversion</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.success.bg, color: UI_COLORS.success }}><CheckCircle2 size={16} /></span>
               </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#16a34a" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: UI_COLORS.success }}>
                 {loadingAnalytics ? "..." : `${analytics?.bookingConversionRate ?? 0}%`}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Matches confirmed & scheduled</div>
+              <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>Matches confirmed & scheduled</div>
             </div>
 
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Response Time</span>
-                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#fffbeb", color: "#d97706" }}><Clock size={16} /></span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Response Time</span>
+                <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color }}><Clock size={16} /></span>
               </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#d97706" }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.warning.color }}>
                 {loadingAnalytics ? "..." : analytics?.avgStudentResponseMinutes != null ? `${analytics.avgStudentResponseMinutes}m` : "—"}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>Notification to tutor offer</div>
+              <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>Notification to tutor offer</div>
             </div>
           </div>
 
@@ -628,8 +629,8 @@ export default function AdminMatchingPage() {
           {!loadingAnalytics && !analyticsError && analytics && !analytics.hasData && (
             <div
               style={{
-                background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)",
-                border: "1px solid #bfdbfe",
+                background: `linear-gradient(135deg, ${STATUS_COLORS.success.bg} 0%, ${STATUS_COLORS.info.bg} 100%)`,
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "0.85rem",
                 padding: "1.5rem",
                 display: "flex",
@@ -641,12 +642,12 @@ export default function AdminMatchingPage() {
             >
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }} />
-                  <strong style={{ color: "#021550", fontSize: "0.95rem" }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: UI_COLORS.success }} />
+                  <strong style={{ color: UI_COLORS.primary, fontSize: "0.95rem" }}>
                     Algorithm Engine Ready · Real-Time Calculation Active
                   </strong>
                 </div>
-                <p style={{ margin: 0, fontSize: "0.82rem", color: "#475569", maxWidth: "700px" }}>
+                <p style={{ margin: 0, fontSize: "0.82rem", color: TEXT_COLORS.muted, maxWidth: "700px" }}>
                   Historical logs record after progressive notifications are dispatched. You can immediately evaluate any live student request or custom requirement in the <strong>Interactive Match Simulator</strong>.
                 </p>
               </div>
@@ -660,8 +661,8 @@ export default function AdminMatchingPage() {
                   gap: "0.4rem",
                   padding: "0.55rem 1rem",
                   borderRadius: "0.5rem",
-                  background: "#0329b2",
-                  color: "#ffffff",
+                  background: UI_COLORS.accent,
+                  color: UI_COLORS.surface,
                   fontSize: "0.82rem",
                   fontWeight: 800,
                   border: "none",
@@ -676,27 +677,27 @@ export default function AdminMatchingPage() {
           {/* Tier Distribution & Algorithmic Trust Safeguards (Side-by-Side) */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
             {/* Score Tier Distribution */}
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: `1px solid ${UI_COLORS.border}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Zap size={16} color="#d97706" />
-                  <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>Match Score Tier Distribution</strong>
+                  <Zap size={16} color={STATUS_COLORS.warning.color} />
+                  <strong style={{ fontSize: "0.92rem", color: TEXT_COLORS.body }}>Match Score Tier Distribution</strong>
                 </div>
-                <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Compatibility Bands</span>
+                <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500 }}>Compatibility Bands</span>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
-                    <span style={{ color: "#059669" }}>Excellent Match (&ge; 90%)</span>
+                    <span style={{ color: STATUS_COLORS.success.color }}>Excellent Match (&ge; 90%)</span>
                     <span>{tierDist.excellent}</span>
                   </div>
-                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
+                  <div style={{ height: "8px", borderRadius: "999px", background: UI_COLORS.card, overflow: "hidden" }}>
                     <div
                       style={{
                         height: "100%",
                         borderRadius: "999px",
-                        background: "#059669",
+                        background: STATUS_COLORS.success.color,
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.excellent / totalMatchesCount) * 100) : 0}%`,
                         transition: "width 250ms ease",
                       }}
@@ -709,7 +710,7 @@ export default function AdminMatchingPage() {
                     <span style={{ color: "#0284c7" }}>Great Match (80 - 89%)</span>
                     <span>{tierDist.great}</span>
                   </div>
-                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
+                  <div style={{ height: "8px", borderRadius: "999px", background: UI_COLORS.card, overflow: "hidden" }}>
                     <div
                       style={{
                         height: "100%",
@@ -724,15 +725,15 @@ export default function AdminMatchingPage() {
 
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
-                    <span style={{ color: "#7c3aed" }}>Good Match (70 - 79%)</span>
+                    <span style={{ color: STATUS_COLORS.purple.color }}>Good Match (70 - 79%)</span>
                     <span>{tierDist.good}</span>
                   </div>
-                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
+                  <div style={{ height: "8px", borderRadius: "999px", background: UI_COLORS.card, overflow: "hidden" }}>
                     <div
                       style={{
                         height: "100%",
                         borderRadius: "999px",
-                        background: "#7c3aed",
+                        background: STATUS_COLORS.purple.color,
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.good / totalMatchesCount) * 100) : 0}%`,
                         transition: "width 250ms ease",
                       }}
@@ -742,15 +743,15 @@ export default function AdminMatchingPage() {
 
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, marginBottom: "0.3rem" }}>
-                    <span style={{ color: "#d97706" }}>Fair Match (60 - 69%)</span>
+                    <span style={{ color: STATUS_COLORS.warning.color }}>Fair Match (60 - 69%)</span>
                     <span>{tierDist.fair}</span>
                   </div>
-                  <div style={{ height: "8px", borderRadius: "999px", background: "#f1f5f9", overflow: "hidden" }}>
+                  <div style={{ height: "8px", borderRadius: "999px", background: UI_COLORS.card, overflow: "hidden" }}>
                     <div
                       style={{
                         height: "100%",
                         borderRadius: "999px",
-                        background: "#d97706",
+                        background: STATUS_COLORS.warning.color,
                         width: `${totalMatchesCount > 0 ? Math.round((tierDist.fair / totalMatchesCount) * 100) : 0}%`,
                         transition: "width 250ms ease",
                       }}
@@ -761,39 +762,39 @@ export default function AdminMatchingPage() {
             </div>
 
             {/* Algorithm Fairness & Trust Rules */}
-            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: `1px solid ${UI_COLORS.border}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <ShieldCheck size={16} color="#0329b2" />
-                  <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>Algorithm Fairness & Trust Rules</strong>
+                  <ShieldCheck size={16} color={UI_COLORS.accent} />
+                  <strong style={{ fontSize: "0.92rem", color: TEXT_COLORS.body }}>Algorithm Fairness & Trust Rules</strong>
                 </div>
-                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "#059669", background: "#ecfdf5", padding: "0.15rem 0.5rem", borderRadius: "999px" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: STATUS_COLORS.success.color, background: STATUS_COLORS.success.bg, padding: "0.15rem 0.5rem", borderRadius: "999px" }}>
                   Enforced
                 </span>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.78rem" }}>
-                <div style={{ display: "flex", gap: "0.6rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
-                  <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <div style={{ display: "flex", gap: "0.6rem", background: STATUS_COLORS.neutral.bg, padding: "0.75rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}` }}>
+                  <CheckCircle2 size={16} color={STATUS_COLORS.success.color} style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
-                    <strong style={{ color: "#0f172a", display: "block" }}>Zero Platform Revenue Bias</strong>
-                    <span style={{ color: "#64748b" }}>Matches are ranked purely on student-tutor capability and subject match, never to maximize platform fees.</span>
+                    <strong style={{ color: TEXT_COLORS.body, display: "block" }}>Zero Platform Revenue Bias</strong>
+                    <span style={{ color: UI_COLORS.gray500 }}>Matches are ranked purely on student-tutor capability and subject match, never to maximize platform fees.</span>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "0.6rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
-                  <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <div style={{ display: "flex", gap: "0.6rem", background: STATUS_COLORS.neutral.bg, padding: "0.75rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}` }}>
+                  <CheckCircle2 size={16} color={STATUS_COLORS.success.color} style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
-                    <strong style={{ color: "#0f172a", display: "block" }}>Home Tuition Police Verification Gate</strong>
-                    <span style={{ color: "#64748b" }}>Tutors cannot receive home tuition match waves without verified background checks.</span>
+                    <strong style={{ color: TEXT_COLORS.body, display: "block" }}>Home Tuition Police Verification Gate</strong>
+                    <span style={{ color: UI_COLORS.gray500 }}>Tutors cannot receive home tuition match waves without verified background checks.</span>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "0.6rem", background: "#f8fafc", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
-                  <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <div style={{ display: "flex", gap: "0.6rem", background: STATUS_COLORS.neutral.bg, padding: "0.75rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}` }}>
+                  <CheckCircle2 size={16} color={STATUS_COLORS.success.color} style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
-                    <strong style={{ color: "#0f172a", display: "block" }}>Bayesian Cold-Start Protection</strong>
-                    <span style={{ color: "#64748b" }}>Prior rating shrinkage protects new tutors from sparse review distortions while maintaining student quality standards.</span>
+                    <strong style={{ color: TEXT_COLORS.body, display: "block" }}>Bayesian Cold-Start Protection</strong>
+                    <span style={{ color: UI_COLORS.gray500 }}>Prior rating shrinkage protects new tutors from sparse review distortions while maintaining student quality standards.</span>
                   </div>
                 </div>
               </div>
@@ -808,20 +809,20 @@ export default function AdminMatchingPage() {
       {activeTab === "simulator" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {/* Simulation Control Console */}
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+          <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <Play size={16} fill="#0329b2" color="#0329b2" />
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: TEXT_COLORS.body, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Play size={16} fill={UI_COLORS.accent} color={UI_COLORS.accent} />
                   Live Match Simulation & Diagnostics
                 </h3>
-                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: UI_COLORS.gray500 }}>
                   Test compatibility algorithms against live requests or custom sandbox criteria.
                 </p>
               </div>
 
               {/* Mode Toggle */}
-              <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "0.5rem", padding: "0.25rem" }}>
+              <div style={{ display: "flex", background: UI_COLORS.card, borderRadius: "0.5rem", padding: "0.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setSimMode("live")}
@@ -829,8 +830,8 @@ export default function AdminMatchingPage() {
                     padding: "0.35rem 0.75rem",
                     borderRadius: "0.35rem",
                     border: "none",
-                    background: simMode === "live" ? "#ffffff" : "transparent",
-                    color: simMode === "live" ? "#0329b2" : "#64748b",
+                    background: simMode === "live" ? UI_COLORS.surface : "transparent",
+                    color: simMode === "live" ? UI_COLORS.accent : UI_COLORS.gray500,
                     fontSize: "0.78rem",
                     fontWeight: simMode === "live" ? 800 : 600,
                     cursor: "pointer",
@@ -845,8 +846,8 @@ export default function AdminMatchingPage() {
                     padding: "0.35rem 0.75rem",
                     borderRadius: "0.35rem",
                     border: "none",
-                    background: simMode === "custom" ? "#ffffff" : "transparent",
-                    color: simMode === "custom" ? "#0329b2" : "#64748b",
+                    background: simMode === "custom" ? UI_COLORS.surface : "transparent",
+                    color: simMode === "custom" ? UI_COLORS.accent : UI_COLORS.gray500,
                     fontSize: "0.78rem",
                     fontWeight: simMode === "custom" ? 800 : 600,
                     cursor: "pointer",
@@ -859,13 +860,13 @@ export default function AdminMatchingPage() {
 
             {simMode === "live" ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted }}>
                   Select Live Demand Request:
                 </label>
                 {loadingRequests ? (
-                  <div style={{ fontSize: "0.8rem", color: "#64748b" }}>Scanning open requests...</div>
+                  <div style={{ fontSize: "0.8rem", color: UI_COLORS.gray500 }}>Scanning open requests...</div>
                 ) : liveRequests.length === 0 ? (
-                  <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.5rem", padding: "0.85rem", fontSize: "0.8rem", color: "#92400e" }}>
+                  <div style={{ background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, borderRadius: "0.5rem", padding: "0.85rem", fontSize: "0.8rem", color: STATUS_COLORS.warning.color }}>
                     No active student requests currently awaiting matching. Switch to <strong>Custom Test Sandbox</strong> to simulate arbitrary requirements.
                   </div>
                 ) : (
@@ -877,9 +878,9 @@ export default function AdminMatchingPage() {
                         flex: "1 1 320px",
                         padding: "0.55rem 0.75rem",
                         borderRadius: "0.5rem",
-                        border: "1px solid #cbd5e1",
+                        border: `1px solid ${UI_COLORS.border}`,
                         fontSize: "0.82rem",
-                        background: "#ffffff",
+                        background: UI_COLORS.surface,
                       }}
                     >
                       {liveRequests.map((req) => (
@@ -896,8 +897,8 @@ export default function AdminMatchingPage() {
                       style={{
                         padding: "0.55rem 1.25rem",
                         borderRadius: "0.5rem",
-                        background: "#0329b2",
-                        color: "#ffffff",
+                        background: UI_COLORS.accent,
+                        color: UI_COLORS.surface,
                         border: "none",
                         fontSize: "0.82rem",
                         fontWeight: 800,
@@ -916,21 +917,21 @@ export default function AdminMatchingPage() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", alignItems: "end" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Subject</label>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Subject</label>
                   <input
                     type="text"
                     value={customRequest.subject}
                     onChange={(e) => setCustomRequest({ ...customRequest, subject: e.target.value })}
-                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Academic Level</label>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Academic Level</label>
                   <select
                     value={customRequest.level}
                     onChange={(e) => setCustomRequest({ ...customRequest, level: e.target.value })}
-                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem", background: UI_COLORS.surface }}
                   >
                     <option value="Primary">Primary (1-5)</option>
                     <option value="Middle">Middle (6-8)</option>
@@ -943,11 +944,11 @@ export default function AdminMatchingPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Teaching Mode</label>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Teaching Mode</label>
                   <select
                     value={customRequest.teachingMode}
                     onChange={(e) => setCustomRequest({ ...customRequest, teachingMode: e.target.value })}
-                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#ffffff" }}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem", background: UI_COLORS.surface }}
                   >
                     <option value="online">Online Worldwide</option>
                     <option value="in-person">In-Person Home Tuition</option>
@@ -955,22 +956,22 @@ export default function AdminMatchingPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>City (for Home)</label>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>City (for Home)</label>
                   <input
                     type="text"
                     value={customRequest.city}
                     onChange={(e) => setCustomRequest({ ...customRequest, city: e.target.value })}
-                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: "0.25rem" }}>Student Budget</label>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: TEXT_COLORS.muted, marginBottom: "0.25rem" }}>Student Budget</label>
                   <input
                     type="number"
                     value={customRequest.budget}
                     onChange={(e) => setCustomRequest({ ...customRequest, budget: Number(e.target.value) })}
-                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                    style={{ width: "100%", padding: "0.45rem 0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
                   />
                 </div>
 
@@ -983,8 +984,8 @@ export default function AdminMatchingPage() {
                       width: "100%",
                       padding: "0.5rem 1rem",
                       borderRadius: "0.5rem",
-                      background: "#0329b2",
-                      color: "#ffffff",
+                      background: UI_COLORS.accent,
+                      color: UI_COLORS.surface,
                       border: "none",
                       fontSize: "0.8rem",
                       fontWeight: 800,
@@ -1008,23 +1009,23 @@ export default function AdminMatchingPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               {/* Telemetry Bar */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Eligible Candidates</div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a", marginTop: "0.2rem" }}>
+                <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Eligible Candidates</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: TEXT_COLORS.body, marginTop: "0.2rem" }}>
                     {simulationResult.totalEligible} tutors
                   </div>
                 </div>
 
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Ranked Matches</div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0329b2", marginTop: "0.2rem" }}>
+                <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>Ranked Matches</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: UI_COLORS.accent, marginTop: "0.2rem" }}>
                     {simulationResult.totalRanked} tutors
                   </div>
                 </div>
 
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>High Compatibility (&ge;80%)</div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#059669", marginTop: "0.2rem" }}>
+                <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: UI_COLORS.gray500, textTransform: "uppercase" }}>High Compatibility (&ge;80%)</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: STATUS_COLORS.success.color, marginTop: "0.2rem" }}>
                     {(simulationResult.tierSummary?.excellent || 0) + (simulationResult.tierSummary?.great || 0)} tutors
                   </div>
                 </div>
@@ -1032,13 +1033,13 @@ export default function AdminMatchingPage() {
 
               {/* Candidate Cards */}
               <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <Award size={18} color="#059669" />
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: TEXT_COLORS.body, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Award size={18} color={STATUS_COLORS.success.color} />
                   Ranked Tutor Candidates ({simulationResult.matches?.length || 0})
                 </h3>
 
                 {simulationResult.matches?.length === 0 ? (
-                  <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "2.5rem", textAlign: "center", color: "#64748b", fontSize: "0.82rem" }}>
+                  <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "2.5rem", textAlign: "center", color: UI_COLORS.gray500, fontSize: "0.82rem" }}>
                     No tutors met the hard eligibility criteria (check subject match, city scope, or police clearance requirements).
                   </div>
                 ) : (
@@ -1051,8 +1052,8 @@ export default function AdminMatchingPage() {
                       <div
                         key={tutor._id || index}
                         style={{
-                          background: "#ffffff",
-                          border: "1px solid #e2e8f0",
+                          background: UI_COLORS.surface,
+                          border: `1px solid ${UI_COLORS.border}`,
                           borderRadius: "0.75rem",
                           padding: "1.25rem",
                           boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
@@ -1065,7 +1066,7 @@ export default function AdminMatchingPage() {
                       >
                         {/* Tutor Info */}
                         <div style={{ display: "flex", gap: "1rem", flex: "1 1 340px" }}>
-                          <span style={{ fontSize: "1.2rem", fontWeight: 900, color: "#cbd5e1", width: "28px" }}>
+                          <span style={{ fontSize: "1.2rem", fontWeight: 900, color: UI_COLORS.border, width: "28px" }}>
                             #{index + 1}
                           </span>
                           <AvatarImage src={tutor.avatar} alt={tutor.name || "Tutor"} name={tutor.name || "Tutor"} size={48} />
@@ -1074,34 +1075,34 @@ export default function AdminMatchingPage() {
                               <Link
                                 href={tutorProfileHref(tutor)}
                                 target="_blank"
-                                style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem", textDecoration: "none" }}
+                                style={{ fontWeight: 800, color: TEXT_COLORS.body, fontSize: "0.95rem", textDecoration: "none" }}
                               >
                                 {tutor.name}
                               </Link>
                               {tutor.policeCertificateVerified && (
-                                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "#059669", background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "0.1rem 0.4rem", borderRadius: "0.3rem" }}>
+                                <span style={{ fontSize: "0.7rem", fontWeight: 800, color: STATUS_COLORS.success.color, background: STATUS_COLORS.success.bg, border: `1px solid ${STATUS_COLORS.success.border}`, padding: "0.1rem 0.4rem", borderRadius: "0.3rem" }}>
                                   ✓ Police Verified
                                 </span>
                               )}
                               <MatchScoreBadge score={score} tier={tier} />
                             </div>
 
-                            <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
+                            <div style={{ fontSize: "0.75rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>
                               <span>📍 {tutor.city || "Pakistan"}</span>
                               <span style={{ margin: "0 0.4rem" }}>•</span>
                               <span>💼 {tutor.experience ? `${tutor.experience} yrs exp` : "1 yr exp"}</span>
                               <span style={{ margin: "0 0.4rem" }}>•</span>
                               <span>★ {tutor.averageRating ? tutor.averageRating.toFixed(1) : "New (4.85)"}</span>
                               <span style={{ margin: "0 0.4rem" }}>•</span>
-                              <strong style={{ color: "#0f172a" }}>{tutor.currency || "PKR"} {tutor.hourlyRate ? tutor.hourlyRate.toLocaleString() : "2,500"}/hr</strong>
+                              <strong style={{ color: TEXT_COLORS.body }}>{tutor.currency || "PKR"} {tutor.hourlyRate ? tutor.hourlyRate.toLocaleString() : "2,500"}/hr</strong>
                             </div>
 
                             {/* Reasons */}
                             {match.reasons && match.reasons.length > 0 && (
                               <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
                                 {match.reasons.map((r: string, i: number) => (
-                                  <span key={i} style={{ fontSize: "0.7rem", color: "#334155", background: "#f1f5f9", padding: "0.15rem 0.5rem", borderRadius: "0.3rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                                    <CheckCircle2 size={12} color="#059669" />
+                                  <span key={i} style={{ fontSize: "0.7rem", color: TEXT_COLORS.secondary, background: UI_COLORS.card, padding: "0.15rem 0.5rem", borderRadius: "0.3rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                                    <CheckCircle2 size={12} color={STATUS_COLORS.success.color} />
                                     {r}
                                   </span>
                                 ))}
@@ -1112,12 +1113,12 @@ export default function AdminMatchingPage() {
 
                         {/* Breakdown Box */}
                         {match.scoreBreakdown && (
-                          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "0.5rem", padding: "0.75rem", fontSize: "0.74rem", minWidth: "220px" }}>
-                            <strong style={{ display: "block", marginBottom: "0.35rem", color: "#0f172a" }}>Score Breakdown</strong>
+                          <div style={{ background: STATUS_COLORS.neutral.bg, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.5rem", padding: "0.75rem", fontSize: "0.74rem", minWidth: "220px" }}>
+                            <strong style={{ display: "block", marginBottom: "0.35rem", color: TEXT_COLORS.body }}>Score Breakdown</strong>
                             {Object.entries(match.scoreBreakdown).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", color: "#64748b", margin: "0.15rem 0" }}>
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", color: UI_COLORS.gray500, margin: "0.15rem 0" }}>
                                 <span style={{ textTransform: "capitalize" }}>{k.replace(/([A-Z])/g, " $1")}</span>
-                                <strong style={{ color: "#0f172a" }}>{Number(v)} pts</strong>
+                                <strong style={{ color: TEXT_COLORS.body }}>{Number(v)} pts</strong>
                               </div>
                             ))}
                           </div>
@@ -1136,27 +1137,27 @@ export default function AdminMatchingPage() {
       {/* TAB 3: ALGORITHM WEIGHTS & CALIBRATION                                    */}
       {/* ========================================================================= */}
       {activeTab === "weights" && (
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {configError && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", padding: "0.85rem", color: "#991b1b", fontSize: "0.82rem" }}>
+            <div style={{ background: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: "0.5rem", padding: "0.85rem", color: STATUS_COLORS.danger.color, fontSize: "0.82rem" }}>
               {configError}
             </div>
           )}
 
           {/* Top Control */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", paddingBottom: "1rem", borderBottom: "1px solid #e2e8f0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", paddingBottom: "1rem", borderBottom: `1px solid ${UI_COLORS.border}` }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <Sliders size={18} color="#0329b2" />
+              <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: TEXT_COLORS.body, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Sliders size={18} color={UI_COLORS.accent} />
                 Live Algorithm Weight Calibration
               </h2>
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+              <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: UI_COLORS.gray500 }}>
                 Each matching mode must sum to exactly 100 points across factors.
               </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "0.5rem", padding: "0.25rem" }}>
+              <div style={{ display: "flex", background: UI_COLORS.card, borderRadius: "0.5rem", padding: "0.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setSelectedMode("online")}
@@ -1164,8 +1165,8 @@ export default function AdminMatchingPage() {
                     padding: "0.35rem 0.75rem",
                     borderRadius: "0.35rem",
                     border: "none",
-                    background: selectedMode === "online" ? "#ffffff" : "transparent",
-                    color: selectedMode === "online" ? "#0329b2" : "#64748b",
+                    background: selectedMode === "online" ? UI_COLORS.surface : "transparent",
+                    color: selectedMode === "online" ? UI_COLORS.accent : UI_COLORS.gray500,
                     fontSize: "0.78rem",
                     fontWeight: selectedMode === "online" ? 800 : 600,
                     cursor: "pointer",
@@ -1180,8 +1181,8 @@ export default function AdminMatchingPage() {
                     padding: "0.35rem 0.75rem",
                     borderRadius: "0.35rem",
                     border: "none",
-                    background: selectedMode === "home" ? "#ffffff" : "transparent",
-                    color: selectedMode === "home" ? "#0329b2" : "#64748b",
+                    background: selectedMode === "home" ? UI_COLORS.surface : "transparent",
+                    color: selectedMode === "home" ? UI_COLORS.accent : UI_COLORS.gray500,
                     fontSize: "0.78rem",
                     fontWeight: selectedMode === "home" ? 800 : 600,
                     cursor: "pointer",
@@ -1198,8 +1199,8 @@ export default function AdminMatchingPage() {
                 style={{
                   padding: "0.5rem 1.1rem",
                   borderRadius: "0.5rem",
-                  background: currentWeightTotal === 100 ? "#0329b2" : "#94a3b8",
-                  color: "#ffffff",
+                  background: currentWeightTotal === 100 ? UI_COLORS.accent : UI_COLORS.gray500,
+                  color: UI_COLORS.surface,
                   border: "none",
                   fontSize: "0.8rem",
                   fontWeight: 800,
@@ -1220,14 +1221,14 @@ export default function AdminMatchingPage() {
             style={{
               padding: "0.75rem 1rem",
               borderRadius: "0.5rem",
-              background: currentWeightTotal === 100 ? "#ecfdf5" : "#fffbeb",
-              border: `1px solid ${currentWeightTotal === 100 ? "#a7f3d0" : "#fde68a"}`,
+              background: currentWeightTotal === 100 ? STATUS_COLORS.success.bg : STATUS_COLORS.warning.bg,
+              border: `1px solid ${currentWeightTotal === 100 ? STATUS_COLORS.success.border : STATUS_COLORS.warning.border}`,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               fontSize: "0.85rem",
               fontWeight: 800,
-              color: currentWeightTotal === 100 ? "#065f46" : "#92400e",
+              color: currentWeightTotal === 100 ? STATUS_COLORS.success.color : STATUS_COLORS.warning.color,
             }}
           >
             <span>{selectedMode === "online" ? "Online Tutoring" : "Home Tuition"} Weight Sum</span>
@@ -1236,7 +1237,7 @@ export default function AdminMatchingPage() {
 
           {/* Sliders Grid */}
           {loadingConfig ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>Loading algorithm configuration...</div>
+            <div style={{ padding: "3rem", textAlign: "center", color: UI_COLORS.gray500 }}>Loading algorithm configuration...</div>
           ) : currentWeights ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
               {Object.entries(currentWeights).map(([key, val]) => {
@@ -1249,15 +1250,15 @@ export default function AdminMatchingPage() {
                   <div
                     key={key}
                     style={{
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
+                      background: STATUS_COLORS.neutral.bg,
+                      border: `1px solid ${UI_COLORS.border}`,
                       borderRadius: "0.6rem",
                       padding: "1rem",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#0f172a" }}>{readableLabel}</span>
-                      <span style={{ fontSize: "0.78rem", fontWeight: 900, color: "#0329b2", background: "#eff6ff", padding: "0.15rem 0.5rem", borderRadius: "0.3rem" }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: TEXT_COLORS.body }}>{readableLabel}</span>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 900, color: UI_COLORS.accent, background: STATUS_COLORS.info.bg, padding: "0.15rem 0.5rem", borderRadius: "0.3rem" }}>
                         {numericVal} pts
                       </span>
                     </div>
@@ -1269,10 +1270,10 @@ export default function AdminMatchingPage() {
                       step="1"
                       value={numericVal}
                       onChange={(e) => handleWeightChange(selectedMode, key, Number(e.target.value))}
-                      style={{ width: "100%", accentColor: "#0329b2", cursor: "pointer" }}
+                      style={{ width: "100%", accentColor: UI_COLORS.accent, cursor: "pointer" }}
                     />
 
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#94a3b8", marginTop: "0.25rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>
                       <span>0 pts (Disabled)</span>
                       <span>40 pts (Dominant)</span>
                     </div>
@@ -1283,21 +1284,21 @@ export default function AdminMatchingPage() {
           ) : null}
 
           {/* Revision History */}
-          <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "1.25rem" }}>
-            <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <History size={16} color="#0329b2" />
+          <div style={{ borderTop: `1px solid ${UI_COLORS.border}`, paddingTop: "1.25rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 800, color: TEXT_COLORS.body, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <History size={16} color={UI_COLORS.accent} />
               Algorithm Calibration History & Audit
             </h3>
             {configHistory.length === 0 ? (
-              <p style={{ fontSize: "0.8rem", color: "#64748b" }}>No changes recorded yet.</p>
+              <p style={{ fontSize: "0.8rem", color: UI_COLORS.gray500 }}>No changes recorded yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {configHistory.slice(0, 6).map((entry) => (
                   <div
                     key={entry._id}
                     style={{
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
+                      background: STATUS_COLORS.neutral.bg,
+                      border: `1px solid ${UI_COLORS.border}`,
                       borderRadius: "0.5rem",
                       padding: "0.75rem 1rem",
                       display: "flex",
@@ -1307,8 +1308,8 @@ export default function AdminMatchingPage() {
                     }}
                   >
                     <div>
-                      <strong style={{ color: "#0f172a" }}>Revision {entry.revision}: {entry.changeReason}</strong>
-                      <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.15rem" }}>
+                      <strong style={{ color: TEXT_COLORS.body }}>Revision {entry.revision}: {entry.changeReason}</strong>
+                      <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, marginTop: "0.15rem" }}>
                         {entry.changedBy?.name || "Admin"} · {new Date(entry.createdAt).toLocaleString()}
                       </div>
                     </div>
@@ -1320,9 +1321,9 @@ export default function AdminMatchingPage() {
                         style={{
                           padding: "0.35rem 0.75rem",
                           borderRadius: "0.4rem",
-                          border: "1px solid #cbd5e1",
-                          background: "#ffffff",
-                          color: "#0329b2",
+                          border: `1px solid ${UI_COLORS.border}`,
+                          background: UI_COLORS.surface,
+                          color: UI_COLORS.accent,
                           fontSize: "0.75rem",
                           fontWeight: 700,
                           cursor: "pointer",
@@ -1345,7 +1346,7 @@ export default function AdminMatchingPage() {
             description="Changes take effect immediately across all live request matching and offer ranking."
             footer={
               <>
-                <button type="button" onClick={() => setConfirmingConfig(false)} style={{ padding: "0.5rem 0.9rem", borderRadius: "0.4rem", border: "1px solid #cbd5e1", background: "#ffffff", fontSize: "0.8rem", fontWeight: 700 }}>
+                <button type="button" onClick={() => setConfirmingConfig(false)} style={{ padding: "0.5rem 0.9rem", borderRadius: "0.4rem", border: `1px solid ${UI_COLORS.border}`, background: UI_COLORS.surface, fontSize: "0.8rem", fontWeight: 700 }}>
                   Cancel
                 </button>
                 <button
@@ -1355,8 +1356,8 @@ export default function AdminMatchingPage() {
                   style={{
                     padding: "0.5rem 1.1rem",
                     borderRadius: "0.5rem",
-                    background: "#0329b2",
-                    color: "#ffffff",
+                    background: UI_COLORS.accent,
+                    color: UI_COLORS.surface,
                     border: "none",
                     fontSize: "0.8rem",
                     fontWeight: 800,
@@ -1369,7 +1370,7 @@ export default function AdminMatchingPage() {
             }
           >
             <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: "0.3rem" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: "0.3rem" }}>
                 Reason for Calibration (Required for Audit Trail, min 8 chars):
               </label>
               <textarea
@@ -1377,7 +1378,7 @@ export default function AdminMatchingPage() {
                 onChange={(e) => setChangeReason(e.target.value)}
                 rows={3}
                 placeholder="Explain the operational rationale (e.g. increase Bayesian review weighting for Lahore home tutors)..."
-                style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
               />
             </div>
           </AdminDialog>
@@ -1390,7 +1391,7 @@ export default function AdminMatchingPage() {
             description="Creates a new audited revision from the snapshot."
             footer={
               <>
-                <button type="button" onClick={() => setRollbackTarget(null)} style={{ padding: "0.5rem 0.9rem", borderRadius: "0.4rem", border: "1px solid #cbd5e1", background: "#ffffff", fontSize: "0.8rem", fontWeight: 700 }}>
+                <button type="button" onClick={() => setRollbackTarget(null)} style={{ padding: "0.5rem 0.9rem", borderRadius: "0.4rem", border: `1px solid ${UI_COLORS.border}`, background: UI_COLORS.surface, fontSize: "0.8rem", fontWeight: 700 }}>
                   Cancel
                 </button>
                 <button
@@ -1400,8 +1401,8 @@ export default function AdminMatchingPage() {
                   style={{
                     padding: "0.5rem 1.1rem",
                     borderRadius: "0.5rem",
-                    background: "#0329b2",
-                    color: "#ffffff",
+                    background: UI_COLORS.accent,
+                    color: UI_COLORS.surface,
                     border: "none",
                     fontSize: "0.8rem",
                     fontWeight: 800,
@@ -1414,7 +1415,7 @@ export default function AdminMatchingPage() {
             }
           >
             <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: "0.3rem" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: "0.3rem" }}>
                 Reason for Rollback (Required for Audit Trail):
               </label>
               <textarea
@@ -1422,7 +1423,7 @@ export default function AdminMatchingPage() {
                 onChange={(e) => setRollbackReason(e.target.value)}
                 rows={3}
                 placeholder="Describe why previous calibration is being restored..."
-                style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.8rem" }}
               />
             </div>
           </AdminDialog>

@@ -5,6 +5,7 @@ import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import s from "@/components/Tracking/tracking.module.css";
 import { formatDateLong } from "@/lib/site";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 type Params = Promise<{ id: string }>;
 
@@ -232,9 +233,9 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
   return (
     <div style={{ padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#0329B2", margin: "0 0 6px" }}>Admin · Applications</p>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#021550", margin: "0 0 4px" }}>{data.tutorName}</h1>
-        <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 16px" }}>
+        <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: UI_COLORS.accent, margin: "0 0 6px" }}>Admin · Applications</p>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: TEXT_COLORS.primary, margin: "0 0 4px" }}>{data.tutorName}</h1>
+        <p style={{ color: TEXT_COLORS.muted, fontSize: 13, margin: "0 0 16px" }}>
           {data.applicationId} · {data.tutorEmail} · Submitted {formatDateLong(p.createdAt)}
         </p>
 
@@ -247,8 +248,8 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                 <button type="button" onClick={() => openUploadModal("cnicBack")} style={btnUploadStyle}>+ Upload Back</button>
               </div>
             </div>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px" }}>Current: <strong>{p.cnicVerificationStatus}</strong></p>
-            {p.cnicRejectionReason && <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>Last reason: {p.cnicRejectionReason}</p>}
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.cnicVerificationStatus}</strong></p>
+            {p.cnicRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.cnicRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={() => handleViewDocument("cnicFront")} style={btnSecondaryStyle}>View front</button>
               <button onClick={() => handleViewDocument("cnicBack")} style={btnSecondaryStyle}>View back</button>
@@ -265,8 +266,8 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               <p className={s.cardTitle} style={{ margin: 0 }}>Educational documents</p>
               <button type="button" onClick={() => openUploadModal("degree")} style={btnUploadStyle}>+ Upload Degree</button>
             </div>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px" }}>Current: <strong>{p.degreeVerificationStatus}</strong></p>
-            {p.degreeRejectionReason && <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>Last reason: {p.degreeRejectionReason}</p>}
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.degreeVerificationStatus}</strong></p>
+            {p.degreeRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.degreeRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={() => handleViewDocument("degreeDoc")} style={btnSecondaryStyle}>View document</button>
             </div>
@@ -282,8 +283,8 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               <p className={s.cardTitle} style={{ margin: 0 }}>Demo video</p>
               <button type="button" onClick={() => openUploadModal("videoIntro")} style={btnUploadStyle}>+ Upload / Add Video</button>
             </div>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px" }}>Current: <strong>{p.demoVideoStatus}</strong></p>
-            {p.demoVideoRejectionReason && <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>Last reason: {p.demoVideoRejectionReason}</p>}
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.demoVideoStatus}</strong></p>
+            {p.demoVideoRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.demoVideoRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <a href={p.videoIntro} target="_blank" rel="noreferrer" style={btnSecondaryStyle}>Open video URL</a>
             </div>
@@ -299,8 +300,8 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               <p className={s.cardTitle} style={{ margin: 0 }}>Police verification {isPoliceRequired ? "" : "(not required)"}</p>
               <button type="button" onClick={() => openUploadModal("policeCertificate")} style={btnUploadStyle}>+ Upload Police Doc</button>
             </div>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 8px" }}>Current: <strong>{p.policeVerificationStatus}</strong></p>
-            {p.policeRejectionReason && <p style={{ fontSize: 12, color: "#b91c1c", margin: "0 0 8px" }}>Last reason: {p.policeRejectionReason}</p>}
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.policeVerificationStatus}</strong></p>
+            {p.policeRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.policeRejectionReason}</p>}
             {isPoliceRequired && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button onClick={() => handleViewDocument("policeCertificate")} style={btnSecondaryStyle}>View certificate</button>
@@ -320,14 +321,14 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
             value={reasonFor}
             onChange={e => setReasonFor(e.target.value)}
             placeholder="Visible to the tutor in the rejection email and tracking page."
-            style={{ width: "100%", minHeight: 70, padding: 10, border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontFamily: "inherit" }}
+            style={{ width: "100%", minHeight: 70, padding: 10, border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 13, fontFamily: "inherit" }}
           />
         </div>
 
         <div className={`${s.grid} ${s.three}`} style={{ marginBottom: 16 }}>
           <div className={s.card}>
             <p className={s.cardTitle} style={{ marginBottom: 8 }}>Marketplace eligibility</p>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 10px" }}>Currently <strong>{p.marketplaceEligible ? "enabled" : "disabled"}</strong></p>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 10px" }}>Currently <strong>{p.marketplaceEligible ? "enabled" : "disabled"}</strong></p>
             <div style={{ display: "flex", gap: 6 }}>
               <button disabled={busyKey === "marketplace-true"} onClick={() => handleToggleEligibility("marketplace", true)} style={btnSuccessStyle}>Enable</button>
               <button disabled={busyKey === "marketplace-false"} onClick={() => handleToggleEligibility("marketplace", false)} style={btnSecondaryStyle}>Disable</button>
@@ -335,7 +336,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
           </div>
           <div className={s.card}>
             <p className={s.cardTitle} style={{ marginBottom: 8 }}>Home tuition eligibility</p>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 10px" }}>Currently <strong>{p.homeTuitionEligible ? "enabled" : "disabled"}</strong></p>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 10px" }}>Currently <strong>{p.homeTuitionEligible ? "enabled" : "disabled"}</strong></p>
             <div style={{ display: "flex", gap: 6 }}>
               <button disabled={busyKey === "home-tuition-true"} onClick={() => handleToggleEligibility("home-tuition", true)} style={btnSuccessStyle}>Enable</button>
               <button disabled={busyKey === "home-tuition-false"} onClick={() => handleToggleEligibility("home-tuition", false)} style={btnSecondaryStyle}>Disable</button>
@@ -343,7 +344,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
           </div>
           <div className={s.card}>
             <p className={s.cardTitle} style={{ marginBottom: 8 }}>Lifecycle controls</p>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 10px" }}>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 10px" }}>
               Suspended: <strong>{p.suspendedAt ? "Yes" : "No"}</strong> · Re-verification: <strong>{p.reVerificationRequired ? "Required" : "No"}</strong>
             </p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -364,7 +365,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               {data.history.map(h => (
                 <li key={h.id} className={s.historyItem}>
                   <span className={s.historyDate}>{formatDateLong(h.at)}</span>
-                  <p className={s.historyMessage}><strong>{h.event}</strong> — {h.message} <span style={{ color: "#94a3b8" }}>({h.actor})</span></p>
+                  <p className={s.historyMessage}><strong>{h.event}</strong> — {h.message} <span style={{ color: UI_COLORS.gray500 }}>({h.actor})</span></p>
                 </li>
               ))}
             </ul>
@@ -390,7 +391,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
           >
             <div
               style={{
-                backgroundColor: "#fff",
+                backgroundColor: UI_COLORS.surface,
                 borderRadius: 16,
                 maxWidth: 480,
                 width: "100%",
@@ -401,10 +402,10 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 800, color: "#021550", margin: 0 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 800, color: TEXT_COLORS.primary, margin: 0 }}>
                     Upload on Tutor&apos;s Behalf
                   </h2>
-                  <p style={{ fontSize: 12, color: "#64748b", margin: "2px 0 0" }}>
+                  <p style={{ fontSize: 12, color: UI_COLORS.gray500, margin: "2px 0 0" }}>
                     Uploading: {getDocTypeLabel(uploadDocType)}
                   </p>
                 </div>
@@ -412,7 +413,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                   type="button"
                   onClick={() => setUploadModalOpen(false)}
                   disabled={uploadSubmitting}
-                  style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748b" }}
+                  style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: UI_COLORS.gray500 }}
                 >
                   ✕
                 </button>
@@ -420,7 +421,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
 
               <form onSubmit={handleUploadSubmit}>
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: 6 }}>
                     Document Type
                   </label>
                   <select
@@ -430,7 +431,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                       setUploadFile(null);
                       setUploadVideoUrl("");
                     }}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13 }}
+                    style={{ width: "100%", padding: "8px 12px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 13 }}
                   >
                     <option value="cnicFront">CNIC (Front) — JPG, PNG, WEBP, PDF</option>
                     <option value="cnicBack">CNIC (Back) — JPG, PNG, WEBP, PDF</option>
@@ -441,7 +442,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: 6 }}>
                     Select File {uploadDocType === "videoIntro" ? "(MP4 format, max 50MB)" : "(PDF, JPG, PNG, WEBP, max 10MB)"}
                   </label>
                   <input
@@ -451,7 +452,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                     style={{ width: "100%", fontSize: 13 }}
                   />
                   {uploadFile && (
-                    <p style={{ fontSize: 11, color: "#059669", margin: "4px 0 0" }}>
+                    <p style={{ fontSize: 11, color: STATUS_COLORS.success.color, margin: "4px 0 0" }}>
                       Selected: {uploadFile.name} ({(uploadFile.size / (1024 * 1024)).toFixed(2)} MB)
                     </p>
                   )}
@@ -459,7 +460,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
 
                 {uploadDocType === "videoIntro" && (
                   <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: 6 }}>
                       Or Video Link / Embed URL (YouTube, Vimeo, Cloudinary, etc.)
                     </label>
                     <input
@@ -467,7 +468,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                       placeholder="https://..."
                       value={uploadVideoUrl}
                       onChange={e => setUploadVideoUrl(e.target.value)}
-                      style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13 }}
+                      style={{ width: "100%", padding: "8px 12px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 13 }}
                     />
                   </div>
                 )}
@@ -480,7 +481,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                     onChange={e => setUploadAutoApprove(e.target.checked)}
                     style={{ cursor: "pointer", width: 16, height: 16 }}
                   />
-                  <label htmlFor="autoApproveCheck" style={{ fontSize: 13, color: "#1e293b", cursor: "pointer", fontWeight: 600 }}>
+                  <label htmlFor="autoApproveCheck" style={{ fontSize: 13, color: TEXT_COLORS.body, cursor: "pointer", fontWeight: 600 }}>
                     Auto-approve this document immediately
                   </label>
                 </div>
@@ -511,7 +512,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
   );
 }
 
-const btnSecondaryStyle: React.CSSProperties = { background: "#fff", color: "#021550", border: "1px solid #cbd5e1", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" };
-const btnSuccessStyle: React.CSSProperties = { background: "#16a34a", color: "#fff", border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const btnDangerStyle: React.CSSProperties = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const btnUploadStyle: React.CSSProperties = { background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" };
+const btnSecondaryStyle: React.CSSProperties = { background: UI_COLORS.surface, color: TEXT_COLORS.primary, border: `1px solid ${UI_COLORS.border}`, borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" };
+const btnSuccessStyle: React.CSSProperties = { background: UI_COLORS.success, color: UI_COLORS.surface, border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const btnDangerStyle: React.CSSProperties = { background: UI_COLORS.error, color: UI_COLORS.surface, border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const btnUploadStyle: React.CSSProperties = { background: STATUS_COLORS.info.bg, color: UI_COLORS.accent, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" };

@@ -7,6 +7,7 @@ import {
   CheckCircle, AlertCircle, ShieldCheck, ExternalLink, Calendar,
 } from "lucide-react";
 import api from "@/lib/axios";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface ParentRow {
   userId: string;
@@ -78,16 +79,16 @@ export default function ParentsDirectoryPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <Link href="/admin" style={{ color: "#64748b", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
               <ArrowLeft size={14} /> Control Tower
             </Link>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0329b2" }}>Parents & Guardians</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: UI_COLORS.accent }}>Parents & Guardians</span>
           </div>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 900, color: TEXT_COLORS.body, margin: 0 }}>
             Parents & Guardians Directory
           </h1>
-          <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
             Monitor parent accounts, linked child learners, guardian booking approvals, and onboarding progression.
           </p>
         </div>
@@ -101,8 +102,8 @@ export default function ParentsDirectoryPage() {
               gap: "0.4rem",
               padding: "0.55rem 0.95rem",
               borderRadius: "0.5rem",
-              background: "#021550",
-              color: "#ffffff",
+              background: UI_COLORS.primary,
+              color: UI_COLORS.surface,
               fontSize: "0.82rem",
               fontWeight: 700,
               textDecoration: "none",
@@ -121,9 +122,9 @@ export default function ParentsDirectoryPage() {
               gap: "0.4rem",
               padding: "0.55rem 0.9rem",
               borderRadius: "0.5rem",
-              border: "1px solid #e2e8f0",
-              background: "#ffffff",
-              color: "#334155",
+              border: `1px solid ${UI_COLORS.border}`,
+              background: UI_COLORS.surface,
+              color: TEXT_COLORS.secondary,
               fontSize: "0.82rem",
               fontWeight: 700,
               cursor: loading ? "not-allowed" : "pointer",
@@ -137,45 +138,45 @@ export default function ParentsDirectoryPage() {
 
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+        <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Total Parents</span>
-            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#eff6ff", color: "#0329b2" }}><HeartHandshake size={16} /></span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Total Parents</span>
+            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: UI_COLORS.accentLight, color: UI_COLORS.accent }}><HeartHandshake size={16} /></span>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#0f172a" }}>{loading ? "..." : totalParents}</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>Registered guardian accounts</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: TEXT_COLORS.body }}>{loading ? "..." : totalParents}</div>
+          <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.2rem" }}>Registered guardian accounts</div>
         </div>
 
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+        <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Learners Linked</span>
-            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#ecfdf5", color: "#059669" }}><CheckCircle size={16} /></span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Learners Linked</span>
+            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color }}><CheckCircle size={16} /></span>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#059669" }}>{loading ? "..." : learnerLinkedCount}</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>{totalLearners} child student profiles active</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.success.color }}>{loading ? "..." : learnerLinkedCount}</div>
+          <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.2rem" }}>{totalLearners} child student profiles active</div>
         </div>
 
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+        <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Profile Started</span>
-            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#fffbeb", color: "#d97706" }}><AlertCircle size={16} /></span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Profile Started</span>
+            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color }}><AlertCircle size={16} /></span>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#d97706" }}>{loading ? "..." : (summary.PROFILE_STARTED || 0)}</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>Profile created, pending child link</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.warning.color }}>{loading ? "..." : (summary.PROFILE_STARTED || 0)}</div>
+          <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.2rem" }}>Profile created, pending child link</div>
         </div>
 
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+        <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1.1rem 1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Guardian Consent</span>
-            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: "#f5f3ff", color: "#7c3aed" }}><ShieldCheck size={16} /></span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Guardian Consent</span>
+            <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color }}><ShieldCheck size={16} /></span>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#7c3aed" }}>{loading ? "..." : consentRequiredCount}</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>Mandatory booking sign-off</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.purple.color }}>{loading ? "..." : consentRequiredCount}</div>
+          <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.2rem" }}>Mandatory booking sign-off</div>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {[
             { id: "ALL", label: "All Parents", count: totalParents },
@@ -193,9 +194,9 @@ export default function ParentsDirectoryPage() {
                   borderRadius: "999px",
                   fontSize: "0.78rem",
                   fontWeight: active ? 800 : 600,
-                  border: active ? "1px solid #0329b2" : "1px solid #e2e8f0",
-                  background: active ? "#0329b2" : "#f8fafc",
-                  color: active ? "#ffffff" : "#475569",
+                  border: active ? `1px solid ${UI_COLORS.accent}` : `1px solid ${UI_COLORS.border}`,
+                  background: active ? UI_COLORS.accent : UI_COLORS.card,
+                  color: active ? UI_COLORS.surface : TEXT_COLORS.secondary,
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
@@ -211,7 +212,7 @@ export default function ParentsDirectoryPage() {
         </div>
 
         <div style={{ position: "relative", minWidth: "260px" }}>
-          <Search size={15} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+          <Search size={15} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: TEXT_COLORS.muted }} />
           <input
             type="text"
             placeholder="Search parent name, email, city..."
@@ -221,7 +222,7 @@ export default function ParentsDirectoryPage() {
               width: "100%",
               padding: "0.5rem 0.85rem 0.5rem 2.2rem",
               borderRadius: "0.5rem",
-              border: "1px solid #cbd5e1",
+              border: `1px solid ${UI_COLORS.border}`,
               fontSize: "0.82rem",
               outline: "none",
             }}
@@ -230,16 +231,16 @@ export default function ParentsDirectoryPage() {
       </div>
 
       {/* Parents Table */}
-      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+      <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.75rem", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
         {loading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
+          <div style={{ padding: "3rem", textAlign: "center", color: TEXT_COLORS.muted }}>
             <RefreshCw size={24} className="animate-spin" style={{ margin: "0 auto 0.75rem" }} />
             <p style={{ fontSize: "0.9rem", fontWeight: 600 }}>Loading parents directory...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
+          <div style={{ padding: "3rem", textAlign: "center", color: TEXT_COLORS.muted }}>
             <Users size={32} style={{ margin: "0 auto 0.75rem", opacity: 0.4 }} />
-            <p style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1e293b", margin: 0 }}>No parents found</p>
+            <p style={{ fontSize: "0.95rem", fontWeight: 700, color: TEXT_COLORS.body, margin: 0 }}>No parents found</p>
             <p style={{ fontSize: "0.82rem", margin: "0.25rem 0 0" }}>
               {search || phaseFilter !== "ALL" ? "Try adjusting your search query or phase filter." : "No parent accounts registered in this scope yet."}
             </p>
@@ -248,7 +249,7 @@ export default function ParentsDirectoryPage() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569", fontWeight: 700 }}>
+                <tr style={{ background: UI_COLORS.card, borderBottom: `1px solid ${UI_COLORS.border}`, color: TEXT_COLORS.secondary, fontWeight: 700 }}>
                   <th style={{ padding: "0.75rem 1rem" }}>Parent Name</th>
                   <th style={{ padding: "0.75rem 1rem" }}>Contact / Location</th>
                   <th style={{ padding: "0.75rem 1rem" }}>Readiness Phase</th>
@@ -262,27 +263,27 @@ export default function ParentsDirectoryPage() {
                 {filtered.map((p) => {
                   const phaseColor =
                     p.phase === "LEARNER_LINKED"
-                      ? { bg: "#ecfdf5", text: "#065f46", border: "#a7f3d0" }
+                      ? { bg: STATUS_COLORS.success.bg, text: STATUS_COLORS.success.color, border: STATUS_COLORS.success.border }
                       : p.phase === "PROFILE_STARTED"
-                      ? { bg: "#fffbeb", text: "#92400e", border: "#fde68a" }
-                      : { bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" };
+                      ? { bg: STATUS_COLORS.warning.bg, text: STATUS_COLORS.warning.color, border: STATUS_COLORS.warning.border }
+                      : { bg: UI_COLORS.card, text: TEXT_COLORS.secondary, border: UI_COLORS.border };
 
                   return (
-                    <tr key={p.userId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={p.userId} style={{ borderBottom: `1px solid ${UI_COLORS.border}` }}>
                       <td style={{ padding: "0.85rem 1rem" }}>
-                        <div style={{ fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "999px", background: "#eff6ff", color: "#0329b2", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 800 }}>
+                        <div style={{ fontWeight: 800, color: TEXT_COLORS.body, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          <span style={{ width: "26px", height: "26px", borderRadius: "999px", background: UI_COLORS.accentLight, color: UI_COLORS.accent, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 800 }}>
                             {p.name?.charAt(0)?.toUpperCase() || "P"}
                           </span>
                           {p.name || "Unnamed Parent"}
                         </div>
-                        <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.15rem", paddingLeft: "30px" }}>
+                        <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.15rem", paddingLeft: "30px" }}>
                           {p.email}
                         </div>
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", color: "#334155" }}>
+                      <td style={{ padding: "0.85rem 1rem", color: TEXT_COLORS.secondary }}>
                         <div>{p.city || "City not set"}</div>
-                        <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{p.countryCode || "PK"}</div>
+                        <div style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>{p.countryCode || "PK"}</div>
                       </td>
                       <td style={{ padding: "0.85rem 1rem" }}>
                         <span
@@ -301,20 +302,20 @@ export default function ParentsDirectoryPage() {
                         </span>
                       </td>
                       <td style={{ padding: "0.85rem 1rem" }}>
-                        <span style={{ fontWeight: 800, color: p.linkedLearners > 0 ? "#059669" : "#64748b" }}>
+                        <span style={{ fontWeight: 800, color: p.linkedLearners > 0 ? STATUS_COLORS.success.color : TEXT_COLORS.muted }}>
                           {p.linkedLearners} {p.linkedLearners === 1 ? "Learner" : "Learners"}
                         </span>
                       </td>
                       <td style={{ padding: "0.85rem 1rem" }}>
                         {p.approvalRequiredForBookings ? (
-                          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#7c3aed", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: STATUS_COLORS.purple.color, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
                             <ShieldCheck size={13} /> Required
                           </span>
                         ) : (
-                          <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Standard</span>
+                          <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>Standard</span>
                         )}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", color: "#64748b", fontSize: "0.75rem" }}>
+                      <td style={{ padding: "0.85rem 1rem", color: TEXT_COLORS.muted, fontSize: "0.75rem" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
                           <Calendar size={12} />
                           {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}
@@ -329,9 +330,9 @@ export default function ParentsDirectoryPage() {
                             gap: "0.25rem",
                             padding: "0.35rem 0.65rem",
                             borderRadius: "0.4rem",
-                            border: "1px solid #cbd5e1",
-                            background: "#ffffff",
-                            color: "#0329b2",
+                            border: `1px solid ${UI_COLORS.border}`,
+                            background: UI_COLORS.surface,
+                            color: UI_COLORS.accent,
                             textDecoration: "none",
                             fontSize: "0.75rem",
                             fontWeight: 700,

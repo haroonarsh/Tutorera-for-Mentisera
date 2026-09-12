@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 type Metrics = Record<string, number | null> & { lossReasons?: Record<string, number> };
@@ -126,7 +126,7 @@ export default function Page() {
       <h1 style={{ fontSize: "1.8rem" }}>Marketplace Analytics</h1>
       <p style={{ color: UI_COLORS.gray600, margin: ".5rem 0 2rem" }}>Operational request, offer, negotiation, conversion, pricing and trust signals.</p>
 
-      {loadError && <p role="alert" style={{ color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: 12 }}>{loadError}</p>}
+      {loadError && <p role="alert" style={{ color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, borderRadius: 10, padding: 12 }}>{loadError}</p>}
 
       {loading && !metrics ? (
         <p>Loading...</p>
@@ -179,8 +179,8 @@ export default function Page() {
             <article key={request._id} style={panel}>
               <strong>{request.subject || "Tuition request"}</strong>
               <p style={muted}>{request.student?.name || "Student"} - {request.city || "Online"} - {request.level || "Any level"} - {request.teachingMode || "mode open"} - {formatPKR(request.budget)} - {request.status || "status pending"}</p>
-              {request.lossReason && <p style={{ ...muted, color: "#7c2d12" }}>Loss reason: {lossReasonLabels[request.lossReason] || request.lossReason}{request.lossReasonDetail ? ` — ${request.lossReasonDetail}` : ""}</p>}
-              {request.flaggedForModeration && <p style={{ color: "#92400e", fontSize: 13 }}>Flags: {(request.moderationReasons || []).join(", ") || "manual review"}</p>}
+              {request.lossReason && <p style={{ ...muted, color: STATUS_COLORS.warning.color }}>Loss reason: {lossReasonLabels[request.lossReason] || request.lossReason}{request.lossReasonDetail ? ` — ${request.lossReasonDetail}` : ""}</p>}
+              {request.flaggedForModeration && <p style={{ color: STATUS_COLORS.warning.color, fontSize: 13 }}>Flags: {(request.moderationReasons || []).join(", ") || "manual review"}</p>}
             </article>
           ))}
         </div>
@@ -209,7 +209,7 @@ export default function Page() {
   );
 }
 
-const panel = { background: "white", padding: 18, border: "1px solid #dbe5ff", borderRadius: 12, boxShadow: "0 14px 34px rgba(2,21,80,.06)" } as const;
+const panel = { background: "white", padding: 18, border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(2,21,80,.06)" } as const;
 const muted = { fontSize: 13, color: UI_COLORS.gray600, margin: "4px 0" } as const;
 const sectionTitle = { fontSize: 20, margin: "0 0 12px" } as const;
 const button = { marginTop: 10, border: `1px solid ${UI_COLORS.accentLight}`, borderRadius: 10, background: "white", color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 700, cursor: "pointer" } as const;

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TrendingDown, ArrowLeft, RefreshCw, AlertCircle, CheckCircle, ShieldCheck, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface SupplyGap {
   subject: string;
@@ -44,16 +45,16 @@ export default function SupplyGapsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <Link href="/admin" style={{ color: "#64748b", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
               <ArrowLeft size={14} /> Control Tower
             </Link>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#4f46e5" }}>Tutor Operations</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: UI_COLORS.purple }}>Tutor Operations</span>
           </div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: TEXT_COLORS.body, margin: 0 }}>
             Supply Gap & Tutor Density Intelligence
           </h1>
-          <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
             Identify localized demand deficits where verified tutor supply is insufficient.
           </p>
         </div>
@@ -66,8 +67,8 @@ export default function SupplyGapsPage() {
             alignItems: "center",
             gap: "0.4rem",
             padding: "0.55rem 0.9rem",
-            backgroundColor: "white",
-            border: "1px solid #cbd5e1",
+            backgroundColor: UI_COLORS.surface,
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.4rem",
             fontSize: "0.82rem",
             fontWeight: 700,
@@ -79,28 +80,28 @@ export default function SupplyGapsPage() {
       </div>
 
       {/* Summary Card */}
-      <div style={{ backgroundColor: criticalCount > 0 ? "#fef2f2" : "#f0fdf4", border: `1px solid ${criticalCount > 0 ? "#fecaca" : "#bbf7d0"}`, borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <AlertCircle size={20} color={criticalCount > 0 ? "#dc2626" : "#16a34a"} />
+      <div style={{ backgroundColor: criticalCount > 0 ? STATUS_COLORS.danger.bg : STATUS_COLORS.success.bg, border: `1px solid ${criticalCount > 0 ? STATUS_COLORS.danger.border : STATUS_COLORS.success.border}`, borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <AlertCircle size={20} color={criticalCount > 0 ? UI_COLORS.error : UI_COLORS.success} />
         <div>
-          <strong style={{ color: criticalCount > 0 ? "#991b1b" : "#166534", fontSize: "0.9rem" }}>
+          <strong style={{ color: criticalCount > 0 ? STATUS_COLORS.danger.color : UI_COLORS.success, fontSize: "0.9rem" }}>
             {criticalCount} Critical Marketplace Supply Deficits Detected
           </strong>
-          <p style={{ margin: "0.15rem 0 0", fontSize: "0.78rem", color: criticalCount > 0 ? "#b91c1c" : "#15803d" }}>
+          <p style={{ margin: "0.15rem 0 0", fontSize: "0.78rem", color: criticalCount > 0 ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color }}>
             High-density student request areas requiring targeted tutor acquisition campaigns or online conversion incentives.
           </p>
         </div>
       </div>
 
       {/* Supply Gaps Table */}
-      <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden" }}>
+      <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", border: `1px solid ${UI_COLORS.border}`, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>Calculating Supply-Demand Ratios…</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: TEXT_COLORS.muted }}>Calculating Supply-Demand Ratios…</div>
         ) : gaps.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>No active demand recorded for supply gap calculation.</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: TEXT_COLORS.muted }}>No active demand recorded for supply gap calculation.</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
-              <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left", color: "#64748b" }}>
+              <tr style={{ backgroundColor: STATUS_COLORS.neutral.bg, borderBottom: `1px solid ${UI_COLORS.border}`, textAlign: "left", color: TEXT_COLORS.muted }}>
                 <th style={{ padding: "0.85rem 1.25rem", fontWeight: 800 }}>Subject & Curriculum</th>
                 <th style={{ padding: "0.85rem 1rem", fontWeight: 800 }}>Location & Mode</th>
                 <th style={{ padding: "0.85rem 1rem", fontWeight: 800 }}>Active Requests</th>
@@ -112,29 +113,29 @@ export default function SupplyGapsPage() {
             </thead>
             <tbody>
               {gaps.map((gap, idx) => (
-                <tr key={`${gap.subject}-${gap.city}-${idx}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "1rem 1.25rem", fontWeight: 800, color: "#0f172a" }}>
+                <tr key={`${gap.subject}-${gap.city}-${idx}`} style={{ borderBottom: `1px solid ${STATUS_COLORS.neutral.bg}` }}>
+                  <td style={{ padding: "1rem 1.25rem", fontWeight: 800, color: TEXT_COLORS.body }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                      <BookOpen size={14} color="#0329b2" />
+                      <BookOpen size={14} color={UI_COLORS.accent} />
                       {gap.subject}
                     </div>
                   </td>
-                  <td style={{ padding: "1rem 1rem", color: "#475569" }}>
+                  <td style={{ padding: "1rem 1rem", color: TEXT_COLORS.secondary }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                      <MapPin size={13} color="#64748b" />
+                      <MapPin size={13} color={TEXT_COLORS.muted} />
                       <span>{gap.city}</span>
-                      <span style={{ fontSize: "0.7rem", background: "#f1f5f9", padding: "0.1rem 0.4rem", borderRadius: "999px" }}>
+                      <span style={{ fontSize: "0.7rem", background: STATUS_COLORS.neutral.bg, padding: "0.1rem 0.4rem", borderRadius: "999px" }}>
                         {gap.teachingMode}
                       </span>
                     </div>
                   </td>
-                  <td style={{ padding: "1rem 1rem", fontWeight: 800, color: "#0f172a" }}>
+                  <td style={{ padding: "1rem 1rem", fontWeight: 800, color: TEXT_COLORS.body }}>
                     {gap.activeRequests}
                   </td>
-                  <td style={{ padding: "1rem 1rem", fontWeight: 700, color: "#334155" }}>
+                  <td style={{ padding: "1rem 1rem", fontWeight: 700, color: TEXT_COLORS.secondary }}>
                     {gap.eligibleTutors}
                   </td>
-                  <td style={{ padding: "1rem 1rem", fontWeight: 700, color: gap.policeVerifiedTutors === 0 ? "#dc2626" : "#059669" }}>
+                  <td style={{ padding: "1rem 1rem", fontWeight: 700, color: gap.policeVerifiedTutors === 0 ? UI_COLORS.error : UI_COLORS.success }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
                       <ShieldCheck size={14} />
                       {gap.policeVerifiedTutors}
@@ -149,23 +150,23 @@ export default function SupplyGapsPage() {
                         fontWeight: 800,
                         backgroundColor:
                           gap.gapStatus === "CRITICAL_GAP"
-                            ? "#fee2e2"
+                            ? STATUS_COLORS.danger.bg
                             : gap.gapStatus === "MODERATE_GAP"
-                            ? "#ffedd5"
-                            : "#ecfdf5",
+                            ? STATUS_COLORS.warning.bg
+                            : STATUS_COLORS.success.bg,
                         color:
                           gap.gapStatus === "CRITICAL_GAP"
-                            ? "#991b1b"
+                            ? STATUS_COLORS.danger.color
                             : gap.gapStatus === "MODERATE_GAP"
                             ? "#9a3412"
-                            : "#059669",
+                            : UI_COLORS.success,
                       }}
                     >
                       {gap.supplyDemandRatio.toFixed(2)}x
                     </span>
                   </td>
                   <td style={{ padding: "1rem 1.25rem" }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.78rem", color: gap.gapStatus === "CRITICAL_GAP" ? "#dc2626" : gap.gapStatus === "MODERATE_GAP" ? "#d97706" : "#059669" }}>
+                    <span style={{ fontWeight: 700, fontSize: "0.78rem", color: gap.gapStatus === "CRITICAL_GAP" ? UI_COLORS.error : gap.gapStatus === "MODERATE_GAP" ? STATUS_COLORS.warning.color : UI_COLORS.success }}>
                       {gap.gapStatus === "CRITICAL_GAP"
                         ? "🚨 Recruit Tutors / Propose Online"
                         : gap.gapStatus === "MODERATE_GAP"

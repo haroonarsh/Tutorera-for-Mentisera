@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { MessageSquare, AlertTriangle, CheckCircle } from "lucide-react";
 import api from "@/lib/axios";
@@ -90,7 +90,7 @@ export default function ContactsPage() {
             style={{
               padding: '0.5rem 1.25rem', borderRadius: '999px', cursor: 'pointer',
               fontSize: '0.875rem', fontWeight: '600',
-              border: filter === tab.key ? 'none' : '1px solid #e5e7eb',
+              border: filter === tab.key ? 'none' : `1px solid ${UI_COLORS.border}`,
               backgroundColor: filter === tab.key ? C.primary : 'white',
               color: filter === tab.key ? 'white' : C.gray500,
               display: 'flex', alignItems: 'center', gap: '0.4rem',
@@ -100,10 +100,10 @@ export default function ContactsPage() {
               <span style={{
                 backgroundColor: filter === tab.key
                   ? 'rgba(255,255,255,0.25)'
-                  : tab.key === "support" ? '#fef2f2' : '#f3f4f6',
+                  : tab.key === "support" ? STATUS_COLORS.danger.bg : STATUS_COLORS.neutral.bg,
                 color: filter === tab.key
                   ? 'white'
-                  : tab.key === "support" ? '#ef4444' : C.gray500,
+                  : tab.key === "support" ? STATUS_COLORS.danger.color : C.gray500,
                 fontSize: '0.7rem', fontWeight: 700,
                 padding: '0.1rem 0.5rem', borderRadius: '999px',
               }}>
@@ -120,8 +120,8 @@ export default function ContactsPage() {
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : contacts.length === 0 ? (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-          <MessageSquare size={40} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: `1px solid ${UI_COLORS.border}` }}>
+          <MessageSquare size={40} color={UI_COLORS.border} style={{ margin: '0 auto 1rem' }} />
           <p style={{ color: C.gray500 }}>No messages in this category.</p>
         </div>
       ) : (
@@ -135,16 +135,16 @@ export default function ContactsPage() {
               <div key={contact._id} style={{
                 backgroundColor: 'white',
                 borderRadius: '0.875rem',
-                border: `1px solid ${isUrgent && !isResolved ? '#fca5a5' : '#e5e7eb'}`,
+                border: `1px solid ${isUrgent && !isResolved ? STATUS_COLORS.danger.border : UI_COLORS.border}`,
                 overflow: 'hidden',
                 opacity: isResolved ? 0.75 : 1,
               }}>
 
                 {/* Urgent banner */}
                 {isUrgent && !isResolved && (
-                  <div style={{ backgroundColor: '#fef2f2', padding: '0.4rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <AlertTriangle size={13} color="#ef4444" />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>URGENT — Needs immediate attention</span>
+                  <div style={{ backgroundColor: STATUS_COLORS.danger.bg, padding: '0.4rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <AlertTriangle size={13} color={STATUS_COLORS.danger.color} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: STATUS_COLORS.danger.color }}>URGENT — Needs immediate attention</span>
                   </div>
                 )}
 
@@ -155,11 +155,11 @@ export default function ContactsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{
                       width: '40px', height: '40px', borderRadius: '50%',
-                      backgroundColor: isSupport ? '#fff7ed' : '#EEF5FF',
+                      backgroundColor: isSupport ? STATUS_COLORS.warning.bg : C.accentLight,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
                       {isSupport
-                        ? <AlertTriangle size={18} color="#d97706" />
+                        ? <AlertTriangle size={18} color={STATUS_COLORS.warning.color} />
                         : <MessageSquare size={18} color={C.accent} />}
                     </div>
                     <div>
@@ -167,13 +167,13 @@ export default function ContactsPage() {
                         <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', margin: 0 }}>{contact.name}</p>
                         {/* Type badge */}
                         {isSupport && (
-                          <span style={{ backgroundColor: '#fff7ed', color: '#d97706', fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '999px', border: '1px solid #fed7aa' }}>
+                          <span style={{ backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color, fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '999px', border: `1px solid ${STATUS_COLORS.warning.border}` }}>
                             SUPPORT
                           </span>
                         )}
                         {/* Role badge */}
                         {contact.userRole && (
-                          <span style={{ backgroundColor: '#f3f4f6', color: C.gray500, fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '999px' }}>
+                          <span style={{ backgroundColor: STATUS_COLORS.neutral.bg, color: C.gray500, fontSize: '0.65rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '999px' }}>
                             {contact.userRole}
                           </span>
                         )}
@@ -189,31 +189,31 @@ export default function ContactsPage() {
                     {/* Status badge */}
                     <span style={{
                       padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
-                      backgroundColor: contact.status === "resolved" ? '#f0fdf4' : contact.status === "in_progress" ? '#EEF5FF' : '#fffbeb',
-                      color: contact.status === "resolved" ? '#16a34a' : contact.status === "in_progress" ? C.accent : '#d97706',
+                      backgroundColor: contact.status === "resolved" ? STATUS_COLORS.success.bg : contact.status === "in_progress" ? C.accentLight : STATUS_COLORS.warning.bg,
+                      color: contact.status === "resolved" ? UI_COLORS.success : contact.status === "in_progress" ? C.accent : STATUS_COLORS.warning.color,
                       textTransform: 'capitalize',
                     }}>
                       {contact.status.replace("_", " ")}
                     </span>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontWeight: '600', color: C.primary, fontSize: '0.875rem', margin: '0 0 2px' }}>{contact.subject}</p>
-                      <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>{new Date(contact.createdAt).toLocaleDateString()}</p>
+                      <p style={{ color: TEXT_COLORS.muted, fontSize: '0.75rem', margin: 0 }}>{new Date(contact.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Expanded detail */}
                 {expanded === contact._id && (
-                  <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid #f3f4f6', backgroundColor: C.gray50 }}>
+                  <div style={{ padding: '1.25rem 1.5rem', borderTop: `1px solid ${STATUS_COLORS.neutral.bg}`, backgroundColor: C.gray50 }}>
 
                     {/* Booking ID reference for support requests */}
                     {isSupport && contact.bookingId && (
-                      <div style={{ backgroundColor: '#EEF5FF', border: '1px solid #bfdbfe', borderRadius: '0.4rem', padding: '0.5rem 0.875rem', marginBottom: '1rem', fontSize: '0.8rem', color: C.accent, fontWeight: 600 }}>
+                      <div style={{ backgroundColor: C.accentLight, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: '0.4rem', padding: '0.5rem 0.875rem', marginBottom: '1rem', fontSize: '0.8rem', color: C.accent, fontWeight: 600 }}>
                         📎 Booking ID: {contact.bookingId}
                       </div>
                     )}
 
-                    <p style={{ fontSize: '0.75rem', fontWeight: '600', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Message</p>
+                    <p style={{ fontSize: '0.75rem', fontWeight: '600', color: TEXT_COLORS.muted, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Message</p>
                     <p style={{ color: C.primary, fontSize: '0.9rem', lineHeight: '1.7', marginBottom: '1.25rem' }}>{contact.message}</p>
 
                     {/* Action buttons */}
@@ -224,7 +224,7 @@ export default function ContactsPage() {
                       </a>
                       {contact.phone && (
                         <a href={`https://wa.me/92${contact.phone.replace(/^0/, '')}`} target="_blank" rel="noopener noreferrer"
-                          style={{ padding: '0.5rem 1rem', backgroundColor: '#16a34a', color: 'white', borderRadius: '0.4rem', textDecoration: 'none', fontSize: '0.8rem', fontWeight: '600' }}>
+                          style={{ padding: '0.5rem 1rem', backgroundColor: UI_COLORS.success, color: 'white', borderRadius: '0.4rem', textDecoration: 'none', fontSize: '0.8rem', fontWeight: '600' }}>
                           WhatsApp
                         </a>
                       )}
@@ -236,7 +236,7 @@ export default function ContactsPage() {
                             <button
                               disabled={statusLoading === contact._id}
                               onClick={() => handleStatusChange(contact._id, "in_progress")}
-                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#EEF5FF', color: C.accent, border: '1px solid #bfdbfe', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              style={{ padding: '0.5rem 0.875rem', backgroundColor: C.accentLight, color: C.accent, border: `1px solid ${STATUS_COLORS.info.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                               Mark In Progress
                             </button>
                           )}
@@ -244,7 +244,7 @@ export default function ContactsPage() {
                             <button
                               disabled={statusLoading === contact._id}
                               onClick={() => handleStatusChange(contact._id, "resolved")}
-                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                              style={{ padding: '0.5rem 0.875rem', backgroundColor: STATUS_COLORS.success.bg, color: UI_COLORS.success, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                               <CheckCircle size={13} /> Mark Resolved
                             </button>
                           )}
@@ -252,7 +252,7 @@ export default function ContactsPage() {
                             <button
                               disabled={statusLoading === contact._id}
                               onClick={() => handleStatusChange(contact._id, "open")}
-                              style={{ padding: '0.5rem 0.875rem', backgroundColor: '#F5F7FF', color: C.gray500, border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                              style={{ padding: '0.5rem 0.875rem', backgroundColor: C.gray50, color: C.gray500, border: `1px solid ${UI_COLORS.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                               Reopen
                             </button>
                           )}
@@ -267,14 +267,14 @@ export default function ContactsPage() {
         {!loading && pagination.pages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
           <button onClick={() => fetchContacts(pagination.page - 1, filter)} disabled={pagination.page <= 1}
-            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page <= 1 ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: `1px solid ${UI_COLORS.border}`, backgroundColor: 'white', color: pagination.page <= 1 ? UI_COLORS.border : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
             ← Previous
           </button>
           <span style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '0.85rem', color: C.gray500, fontWeight: '600' }}>
             Page {pagination.page} of {pagination.pages}
           </span>
           <button onClick={() => fetchContacts(pagination.page + 1, filter)} disabled={pagination.page >= pagination.pages}
-            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page >= pagination.pages ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: `1px solid ${UI_COLORS.border}`, backgroundColor: 'white', color: pagination.page >= pagination.pages ? UI_COLORS.border : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
             Next →
           </button>
         </div>

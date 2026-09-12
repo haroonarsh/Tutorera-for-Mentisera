@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw, Users, BookOpen, ArrowRight, Search, HeartHandshake, ArrowLeft } from "lucide-react";
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 type StudentRow = { userId: string; name: string; email: string; countryCode?: string; city?: string; phase: string; onboardingComplete: boolean; requestCount: number; lastRequestAt?: string; lastUpdatedAt: string };
 type ParentRow = { userId: string; name: string; email: string; countryCode?: string; city?: string; phase: string; linkedLearners: number; approvalRequiredForBookings: boolean; lastUpdatedAt: string };
@@ -72,9 +73,9 @@ function AdminOnboardingContent() {
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     border: 0,
-    borderBottom: active ? "3px solid #016EF8" : "3px solid transparent",
+    borderBottom: active ? `3px solid ${UI_COLORS.accent}` : "3px solid transparent",
     background: "transparent",
-    color: active ? "#021550" : "#64748b",
+    color: active ? UI_COLORS.primary : UI_COLORS.gray500,
     fontWeight: 800,
     padding: "12px 18px",
     cursor: "pointer",
@@ -90,16 +91,16 @@ function AdminOnboardingContent() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <Link href="/admin" style={{ color: "#64748b", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <Link href="/admin" style={{ color: UI_COLORS.gray500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
               <ArrowLeft size={14} /> Control Tower
             </Link>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0329b2" }}>Onboarding Pipelines</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: UI_COLORS.accent }}>Onboarding Pipelines</span>
           </div>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 900, color: TEXT_COLORS.body, margin: 0 }}>
             Application & Readiness Pipelines
           </h1>
-          <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
+          <p style={{ color: UI_COLORS.gray500, fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
             Monitor and expedite onboarding progression across Students and Parents/Guardians.
           </p>
         </div>
@@ -110,7 +111,7 @@ function AdminOnboardingContent() {
       </div>
 
       <section style={card}>
-        <div style={{ borderBottom: "1px solid #e2e8f0", display: "flex", flexWrap: "wrap", background: "#f8fafc" }}>
+        <div style={{ borderBottom: `1px solid ${UI_COLORS.border}`, display: "flex", flexWrap: "wrap", background: STATUS_COLORS.neutral.bg }}>
           <button type="button" onClick={() => handleTabChange("students")} style={tabStyle(tab === "students")}>
             <Users size={17} /> Student Onboarding
           </button>
@@ -119,7 +120,7 @@ function AdminOnboardingContent() {
           </button>
         </div>
 
-        <div style={{ padding: 16, borderBottom: "1px solid #e2e8f0", background: "#fbfdff" }}>
+        <div style={{ padding: 16, borderBottom: `1px solid ${UI_COLORS.border}`, background: UI_COLORS.accentLight }}>
           {/* Phase Filter Chips */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 14 }}>
             {Object.entries(summary).map(([key, count]) => (
@@ -129,18 +130,18 @@ function AdminOnboardingContent() {
                 onClick={() => setPhase(phase === key ? "" : key)}
                 style={{
                   textAlign: "left",
-                  border: phase === key ? "2px solid #016EF8" : "1px solid #dbe5f3",
-                  background: phase === key ? "#eff6ff" : "#fff",
+                  border: phase === key ? `2px solid ${UI_COLORS.accent}` : `1px solid ${UI_COLORS.border}`,
+                  background: phase === key ? UI_COLORS.accentLight : UI_COLORS.surface,
                   padding: "10px 12px",
                   borderRadius: 10,
                   cursor: "pointer",
                   transition: "all 120ms ease",
                 }}
               >
-                <span style={{ display: "block", color: "#52627e", fontSize: 11, fontWeight: 800 }}>
+                <span style={{ display: "block", color: UI_COLORS.gray600, fontSize: 11, fontWeight: 800 }}>
                   {(tab === "students" ? studentLabels : parentLabels)[key] || key}
                 </span>
-                <strong style={{ fontSize: 20, color: "#021550" }}>{count}</strong>
+                <strong style={{ fontSize: 20, color: UI_COLORS.primary }}>{count}</strong>
               </button>
             ))}
           </div>
@@ -152,8 +153,8 @@ function AdminOnboardingContent() {
             }}
             style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
           >
-            <label style={{ flex: "1 1 280px", display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #cbd5e1", borderRadius: 9, padding: "0 10px" }}>
-              <Search size={15} color="#64748b" />
+            <label style={{ flex: "1 1 280px", display: "flex", alignItems: "center", gap: 8, background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 9, padding: "0 10px" }}>
+              <Search size={15} color={UI_COLORS.gray500} />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -161,7 +162,7 @@ function AdminOnboardingContent() {
                 style={{ border: 0, outline: 0, width: "100%", padding: 10, fontSize: 13 }}
               />
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #cbd5e1", borderRadius: 9, padding: "0 10px", color: "#52627e", fontSize: 12, fontWeight: 700 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 9, padding: "0 10px", color: UI_COLORS.gray600, fontSize: 12, fontWeight: 700 }}>
               Market
               <input
                 value={countryCode}
@@ -294,17 +295,17 @@ function ParentTable({ rows }: { rows: ParentRow[] }) {
 
 function Pill({ value }: { value: string }) {
   return (
-    <span style={{ display: "inline-block", borderRadius: 999, padding: "4px 10px", background: "#eff6ff", color: "#0329B2", fontSize: 12, fontWeight: 800 }}>
+    <span style={{ display: "inline-block", borderRadius: 999, padding: "4px 10px", background: UI_COLORS.accentLight, color: UI_COLORS.accent, fontSize: 12, fontWeight: 800 }}>
       {value}
     </span>
   );
 }
 
-const card: React.CSSProperties = { background: "#fff", border: "1px solid #dbe5f3", borderRadius: 16, overflow: "hidden", boxShadow: "0 6px 24px rgba(2,21,80,.05)" };
+const card: React.CSSProperties = { background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 6px 24px rgba(2,21,80,.05)" };
 const table: React.CSSProperties = { width: "100%", borderCollapse: "collapse", minWidth: 920 };
-const th: React.CSSProperties = { textAlign: "left", color: "#52627e", fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", padding: "13px 16px", background: "#f8faff", borderBottom: "1px solid #e2e8f0" };
-const td: React.CSSProperties = { padding: "14px 16px", color: "#263652", fontSize: 13, borderBottom: "1px solid #edf2f7", verticalAlign: "middle" };
-const small: React.CSSProperties = { display: "block", color: "#64748b", marginTop: 3, fontSize: 12 };
-const empty: React.CSSProperties = { padding: 32, textAlign: "center", color: "#64748b" };
-const button: React.CSSProperties = { alignSelf: "center", display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid #b9c9e2", background: "#fff", color: "#021550", padding: "10px 14px", borderRadius: 10, fontWeight: 800, cursor: "pointer" };
-const link: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, color: "#0329B2", fontWeight: 800, textDecoration: "none", whiteSpace: "nowrap" };
+const th: React.CSSProperties = { textAlign: "left", color: UI_COLORS.gray600, fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", padding: "13px 16px", background: UI_COLORS.card, borderBottom: `1px solid ${UI_COLORS.border}` };
+const td: React.CSSProperties = { padding: "14px 16px", color: TEXT_COLORS.secondary, fontSize: 13, borderBottom: `1px solid ${UI_COLORS.border}`, verticalAlign: "middle" };
+const small: React.CSSProperties = { display: "block", color: UI_COLORS.gray500, marginTop: 3, fontSize: 12 };
+const empty: React.CSSProperties = { padding: 32, textAlign: "center", color: UI_COLORS.gray500 };
+const button: React.CSSProperties = { alignSelf: "center", display: "inline-flex", alignItems: "center", gap: 8, border: `1px solid ${UI_COLORS.border}`, background: UI_COLORS.surface, color: UI_COLORS.primary, padding: "10px 14px", borderRadius: 10, fontWeight: 800, cursor: "pointer" };
+const link: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, color: UI_COLORS.accent, fontWeight: 800, textDecoration: "none", whiteSpace: "nowrap" };

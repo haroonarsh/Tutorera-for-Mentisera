@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -33,14 +33,14 @@ interface Stats {
 type FilterStatus = "all" | "pending" | "approved" | "processing" | "paid";
 
 const statusColors: Record<string, { bg: string; color: string }> = {
-  pending:   { bg: '#fef3c7', color: '#d97706' },
-  approved:  { bg: '#eff6ff', color: '#2563eb' },
-  processing:{ bg: '#f5f3ff', color: '#7c3aed' },
-  paid:      { bg: '#f0fdf4', color: '#16a34a' },
-  upcoming:  { bg: '#EEF5FF', color: '#0329B2' },
-  completed: { bg: '#f0fdf4', color: '#16a34a' },
-  ongoing:   { bg: '#fdf4ff', color: '#9333ea' },
-  cancelled: { bg: '#fef2f2', color: '#ef4444' },
+  pending:   { bg: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color },
+  approved:  { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color },
+  processing:{ bg: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color },
+  paid:      { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color },
+  upcoming:  { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color },
+  completed: { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color },
+  ongoing:   { bg: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color },
+  cancelled: { bg: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color },
 };
 
 export default function PayoutsPage() {
@@ -116,8 +116,8 @@ export default function PayoutsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
 
         {/* Pending Amount */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: '1px solid #e5e7eb', borderLeft: '4px solid #f59e0b' }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: `1px solid ${C.border}`, borderLeft: `4px solid ${STATUS_COLORS.warning.color}` }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: STATUS_COLORS.warning.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
             Pending Payouts
           </p>
           <p style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>
@@ -129,8 +129,8 @@ export default function PayoutsPage() {
         </div>
 
         {/* Paid Amount */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: '1px solid #e5e7eb', borderLeft: '4px solid #16a34a' }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: `1px solid ${C.border}`, borderLeft: `4px solid ${C.success}` }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: C.success, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
             Total Paid Out
           </p>
           <p style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>
@@ -142,14 +142,14 @@ export default function PayoutsPage() {
         </div>
 
         {/* Manual settlement disclosure */}
-        <div style={{ backgroundColor: '#fffbeb', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: '1px solid #fde68a' }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+        <div style={{ backgroundColor: STATUS_COLORS.warning.bg, borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: `1px solid ${STATUS_COLORS.warning.border}` }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: '700', color: STATUS_COLORS.warning.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
             Settlement controls
           </p>
           <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, fontFamily: 'monospace' }}>
             Manual review
           </p>
-          <p style={{ fontSize: '0.75rem', color: '#a16207', marginTop: '0.25rem' }}>
+          <p style={{ fontSize: '0.75rem', color: STATUS_COLORS.warning.color, marginTop: '0.25rem' }}>
             Record each approved, processing, and completed state with an audit note.
           </p>
         </div>
@@ -164,7 +164,7 @@ export default function PayoutsPage() {
               fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer',
               backgroundColor: filter === tab.key ? C.primary : 'white',
               color: filter === tab.key ? 'white' : C.gray500,
-              border: filter === tab.key ? 'none' : '1px solid #e5e7eb',
+              border: filter === tab.key ? 'none' : `1px solid ${C.border}`,
             }}>
             {tab.label}
           </button>
@@ -172,13 +172,13 @@ export default function PayoutsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
 
         {/* Desktop Table Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1.2fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1.2fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }}
           className="payouts-desktop-header">
           {["Tutor", "Student", "Amount", "Payout", "Session", "Payout Status", "Action"].map(h => (
-            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: C.gray500, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
               {h}
             </p>
           ))}
@@ -201,7 +201,7 @@ export default function PayoutsPage() {
           </div>
         ) : (
           bookings.map((booking, idx) => (
-            <div key={booking._id} style={{ borderBottom: idx < bookings.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+            <div key={booking._id} style={{ borderBottom: idx < bookings.length - 1 ? `1px solid ${C.border}` : 'none' }}>
 
               {/* Desktop Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1fr 1.2fr', padding: '1rem 1.5rem', alignItems: 'center' }}
@@ -233,7 +233,7 @@ export default function PayoutsPage() {
                 </div>
 
                 {/* Tutor Payout */}
-                <p style={{ fontSize: '0.95rem', fontWeight: '800', color: '#16a34a', margin: 0 }}>
+                <p style={{ fontSize: '0.95rem', fontWeight: '800', color: C.success, margin: 0 }}>
                   {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
                 </p>
 
@@ -241,7 +241,7 @@ export default function PayoutsPage() {
                 <span style={{
                   fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem',
                   borderRadius: '999px', width: 'fit-content',
-                  backgroundColor: statusColors[booking.status]?.bg || '#f3f4f6',
+                  backgroundColor: statusColors[booking.status]?.bg || STATUS_COLORS.neutral.bg,
                   color: statusColors[booking.status]?.color || C.gray500,
                   textTransform: 'capitalize',
                 }}>
@@ -252,7 +252,7 @@ export default function PayoutsPage() {
                 <span style={{
                   fontSize: '0.75rem', fontWeight: '600', padding: '0.2rem 0.6rem',
                   borderRadius: '999px', width: 'fit-content',
-                  backgroundColor: statusColors[booking.payoutStatus]?.bg || '#f3f4f6',
+                  backgroundColor: statusColors[booking.payoutStatus]?.bg || STATUS_COLORS.neutral.bg,
                   color: statusColors[booking.payoutStatus]?.color || C.gray500,
                   textTransform: 'capitalize',
                 }}>
@@ -262,7 +262,7 @@ export default function PayoutsPage() {
                 {/* Action */}
                 {booking.payoutStatus === "paid" ? (
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600', margin: 0 }}>✓ Paid</p>
+                    <p style={{ fontSize: '0.75rem', color: C.success, fontWeight: '600', margin: 0 }}>✓ Paid</p>
                     {booking.payoutNote && (
                       <p style={{ fontSize: '0.7rem', color: C.gray500, margin: 0 }}>{booking.payoutNote}</p>
                     )}
@@ -276,11 +276,11 @@ export default function PayoutsPage() {
                     disabled={actionLoading === booking._id}
                     style={{
                       padding: '0.45rem 0.875rem', borderRadius: '0.4rem',
-                      backgroundColor: actionLoading === booking._id ? '#e5e7eb' : '#f0fdf4',
-                      color: actionLoading === booking._id ? C.gray500 : '#16a34a',
+                      backgroundColor: actionLoading === booking._id ? C.border : STATUS_COLORS.success.bg,
+                      color: actionLoading === booking._id ? C.gray500 : C.success,
                       fontWeight: '700', fontSize: '0.75rem',
                       cursor: actionLoading === booking._id ? 'not-allowed' : 'pointer',
-                      border: '1px solid #bbf7d0',
+                      border: `1px solid ${STATUS_COLORS.success.border}`,
                       whiteSpace: 'nowrap',
                     }}>
                     {actionLoading === booking._id ? 'Saving...' : payoutAction(booking.payoutStatus)?.label}
@@ -302,8 +302,8 @@ export default function PayoutsPage() {
                   <span style={{
                     fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem',
                     borderRadius: '999px', flexShrink: 0,
-                    backgroundColor: statusColors[booking.payoutStatus]?.bg || '#fef3c7',
-                    color: statusColors[booking.payoutStatus]?.color || '#d97706',
+                    backgroundColor: statusColors[booking.payoutStatus]?.bg || STATUS_COLORS.warning.bg,
+                    color: statusColors[booking.payoutStatus]?.color || STATUS_COLORS.warning.color,
                     textTransform: 'capitalize',
                   }}>
                     {booking.payoutStatus || 'pending'}
@@ -313,7 +313,7 @@ export default function PayoutsPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <div>
                     <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>Student: {booking.student?.name}</p>
-                    <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: '0.25rem 0 0' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.success, margin: '0.25rem 0 0' }}>
                       Payout: {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
                       <span style={{ fontSize: '0.7rem', color: C.gray500, fontWeight: '500' }}>
                         {" "}/ {booking.currency || "PKR"} {(booking.amount || 0).toLocaleString()} total
@@ -325,8 +325,8 @@ export default function PayoutsPage() {
                       onClick={() => handlePayoutAction(booking)}
                       disabled={actionLoading === booking._id}
                       style={{
-                        padding: '0.45rem 0.875rem', border: '1px solid #bbf7d0', borderRadius: '0.4rem',
-                        backgroundColor: '#f0fdf4', color: '#16a34a',
+                        padding: '0.45rem 0.875rem', border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: '0.4rem',
+                        backgroundColor: STATUS_COLORS.success.bg, color: C.success,
                         fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer',
                       }}>
                       {actionLoading === booking._id ? 'Saving...' : payoutAction(booking.payoutStatus)?.label}

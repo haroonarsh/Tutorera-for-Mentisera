@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Eye, EyeOff, Clock, Download, ExternalLink } from "lucide-react";
 import api from "@/lib/axios";
@@ -109,11 +109,11 @@ export default function VerificationsPage() {
 
   const statusBadge = (status: string) => {
     const colors: Record<string, { bg: string; color: string; icon: string }> = {
-      pending: { bg: '#fffbeb', color: '#d97706', icon: '⏱️' },
-      approved: { bg: '#f0fdf4', color: '#16a34a', icon: '✅' },
-      rejected: { bg: '#fef2f2', color: '#ef4444', icon: '❌' },
-      not_submitted: { bg: '#f3f4f6', color: '#6b7280', icon: '⬜' },
-      not_required: { bg: '#e0e7ff', color: '#4f46e5', icon: '➖' },
+      pending: { bg: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color, icon: '⏱️' },
+      approved: { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, icon: '✅' },
+      rejected: { bg: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color, icon: '❌' },
+      not_submitted: { bg: STATUS_COLORS.neutral.bg, color: STATUS_COLORS.neutral.color, icon: '⬜' },
+      not_required: { bg: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color, icon: '➖' },
     };
     const config = colors[status] || colors.pending;
     return (
@@ -140,7 +140,7 @@ export default function VerificationsPage() {
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {filterOptions.map(opt => (
           <button key={opt.key} onClick={() => setFilter(opt.key)}
-            style={{ padding: '0.5rem 1.25rem', borderRadius: '999px', border: filter === opt.key ? 'none' : '1px solid #e5e7eb', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', backgroundColor: filter === opt.key ? C.primary : 'white', color: filter === opt.key ? 'white' : C.gray500 }}>
+            style={{ padding: '0.5rem 1.25rem', borderRadius: '999px', border: filter === opt.key ? 'none' : `1px solid ${C.border}`, cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', backgroundColor: filter === opt.key ? C.primary : 'white', color: filter === opt.key ? 'white' : C.gray500 }}>
             {opt.label}
           </button>
         ))}
@@ -152,14 +152,14 @@ export default function VerificationsPage() {
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : applications.length === 0 ? (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-          <Clock size={40} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: `1px solid ${C.border}` }}>
+          <Clock size={40} color={C.border} style={{ margin: '0 auto 1rem' }} />
           <p style={{ color: C.gray500, fontWeight: '600' }}>No applications in this status</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {applications.map(app => (
-            <div key={app.applicationId} style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <div key={app.applicationId} style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
 
               {/* Header Row */}
               <div style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -170,33 +170,33 @@ export default function VerificationsPage() {
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontWeight: '700', color: C.primary, fontSize: '1rem' }}>{app.tutorName}</p>
                     <p style={{ color: C.gray500, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.tutorEmail}</p>
-                    <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>ID: {app.applicationId}</p>
+                    <p style={{ color: C.gray500, fontSize: '0.75rem' }}>ID: {app.applicationId}</p>
                   </div>
                 </div>
                 <button onClick={() => setExpanded(expanded === app.applicationId ? null : app.applicationId)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', color: C.primary }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 1rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', color: C.primary }}>
                   {expanded === app.applicationId ? <><EyeOff size={14} /> Hide</> : <><Eye size={14} /> View Details</>}
                 </button>
               </div>
 
               {/* Component Status Grid */}
-              <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <div style={{ padding: '1.25rem 1.5rem', backgroundColor: C.card, borderTop: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 {Object.entries(componentMap).map(([key, { label }]) => {
                   const comp = app.verificationComponents[key as keyof typeof componentMap];
                   const isRejecting = componentRejecting?.appId === app.profile._id && componentRejecting?.component === key;
                   return (
-                    <div key={key} style={{ padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', backgroundColor: 'white' }}>
+                    <div key={key} style={{ padding: '0.75rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', backgroundColor: 'white' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                         <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{label}</span>
                         {statusBadge(comp.status)}
                       </div>
                       {comp.status === "rejected" && comp.rejectionReason && (
-                        <div style={{ fontSize: '0.75rem', color: '#ef4444', marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: '#fef2f2', borderRadius: '0.25rem', maxHeight: '60px', overflow: 'hidden' }}>
+                        <div style={{ fontSize: '0.75rem', color: STATUS_COLORS.danger.color, marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: STATUS_COLORS.danger.bg, borderRadius: '0.25rem', maxHeight: '60px', overflow: 'hidden' }}>
                           <strong>Feedback:</strong> {comp.rejectionReason}
                         </div>
                       )}
                       {comp.reviewedAt && (
-                        <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                        <p style={{ fontSize: '0.7rem', color: C.gray500, marginBottom: '0.5rem' }}>
                           Reviewed: {new Date(comp.reviewedAt).toLocaleDateString()}
                         </p>
                       )}
@@ -205,38 +205,38 @@ export default function VerificationsPage() {
                           <button
                             onClick={() => handleComponentApprove(app.profile._id, key as keyof typeof componentMap)}
                             disabled={actionLoading === `${app.profile._id}-${key}`}
-                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', fontWeight: '600', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '0.375rem', cursor: 'pointer' }}
+                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', fontWeight: '600', background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: '0.375rem', cursor: 'pointer' }}
                           >
                             ✓ Approve
                           </button>
                           <button
                             onClick={() => setComponentRejecting({ appId: app.profile._id, component: key })}
-                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', fontWeight: '600', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '0.375rem', cursor: 'pointer' }}
+                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', fontWeight: '600', background: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color, border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.375rem', cursor: 'pointer' }}
                           >
                             ✕ Reject
                           </button>
                         </div>
                       )}
                       {isRejecting && (
-                        <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#fef2f2', borderRadius: '0.375rem' }}>
+                        <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: STATUS_COLORS.danger.bg, borderRadius: '0.375rem' }}>
                           <input
                             type="text"
                             placeholder="Feedback..."
                             value={rejectReason}
                             onChange={e => setRejectReason(e.target.value)}
-                            style={{ width: '100%', padding: '0.3rem', fontSize: '0.75rem', border: '1px solid #fecaca', borderRadius: '0.25rem', marginBottom: '0.3rem', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '0.3rem', fontSize: '0.75rem', border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.25rem', marginBottom: '0.3rem', boxSizing: 'border-box' }}
                           />
                           <div style={{ display: 'flex', gap: '0.3rem' }}>
                             <button
                               onClick={() => handleComponentReject(app.profile._id, key as keyof typeof componentMap)}
                               disabled={actionLoading === `${app.profile._id}-${key}`}
-                              style={{ flex: 1, padding: '0.3rem', fontSize: '0.7rem', fontWeight: '600', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer' }}
+                              style={{ flex: 1, padding: '0.3rem', fontSize: '0.7rem', fontWeight: '600', background: STATUS_COLORS.danger.color, color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer' }}
                             >
                               Confirm
                             </button>
                             <button
                               onClick={() => { setComponentRejecting(null); setRejectReason(""); }}
-                              style={{ flex: 1, padding: '0.3rem', fontSize: '0.7rem', fontWeight: '600', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '0.25rem', cursor: 'pointer' }}
+                              style={{ flex: 1, padding: '0.3rem', fontSize: '0.7rem', fontWeight: '600', background: C.border, color: TEXT_COLORS.secondary, border: 'none', borderRadius: '0.25rem', cursor: 'pointer' }}
                             >
                               Cancel
                             </button>
@@ -250,7 +250,7 @@ export default function VerificationsPage() {
 
               {/* Expanded Details */}
               {expanded === app.applicationId && (
-                <div style={{ borderTop: '1px solid #f3f4f6', padding: '1.5rem' }}>
+                <div style={{ borderTop: `1px solid ${C.border}`, padding: '1.5rem' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                     {/* Application Info */}
                     <div style={{ backgroundColor: C.gray50, borderRadius: '0.75rem', padding: '1.25rem' }}>
@@ -262,7 +262,7 @@ export default function VerificationsPage() {
                           { label: "Teaching Mode", value: app.profile.teachingMode },
                         ].map(item => (
                           <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{item.label}</span>
+                            <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{item.label}</span>
                             <span style={{ fontSize: '0.8rem', fontWeight: '600', color: C.primary, textTransform: 'capitalize' }}>{item.value || "—"}</span>
                           </div>
                         ))}
@@ -275,7 +275,7 @@ export default function VerificationsPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {Object.entries(componentMap).map(([key, { label }]) => (
                           <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{label}</span>
+                            <span style={{ fontSize: '0.8rem', color: C.gray600 }}>{label}</span>
                             {statusBadge(app.verificationComponents[key as keyof typeof componentMap].status)}
                           </div>
                         ))}
@@ -293,16 +293,16 @@ export default function VerificationsPage() {
                           { label: "Police Cert", url: app.profile.policeCertificate, required: app.profile.teachingMode === "in-person" || app.profile.teachingMode === "both" },
                         ].map(doc => (
                           <div key={doc.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                            <span style={{ fontSize: '0.8rem', color: C.gray600 }}>
                               {doc.label}
-                              {"required" in doc && doc.required && <span style={{ color: '#ef4444', marginLeft: '3px' }}>*</span>}
+                              {"required" in doc && doc.required && <span style={{ color: STATUS_COLORS.danger.color, marginLeft: '3px' }}>*</span>}
                             </span>
                             {doc.url ? (
                               <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
                                 <Download size={12} /> View
                               </a>
                             ) : (
-                              <span style={{ fontSize: '0.75rem', color: "required" in doc && doc.required ? '#ef4444' : '#9ca3af', fontWeight: "required" in doc && doc.required ? '600' : '400' }}>
+                              <span style={{ fontSize: '0.75rem', color: "required" in doc && doc.required ? STATUS_COLORS.danger.color : C.gray500, fontWeight: "required" in doc && doc.required ? '600' : '400' }}>
                                 {"required" in doc && doc.required ? "Missing ⚠" : "—"}
                               </span>
                             )}
@@ -328,7 +328,7 @@ export default function VerificationsPage() {
               disabled={loading}
               style={{
                 padding: '0.5rem 0.75rem',
-                border: page === pagination.page ? 'none' : '1px solid #e5e7eb',
+                border: page === pagination.page ? 'none' : `1px solid ${C.border}`,
                 background: page === pagination.page ? C.primary : 'white',
                 color: page === pagination.page ? 'white' : C.primary,
                 borderRadius: '0.375rem',

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calculator, ArrowLeft, RefreshCw, CheckCircle, AlertTriangle, Download, DollarSign } from "lucide-react";
 import api from "@/lib/axios";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface ReconciliationSummary {
   totalGMV: number;
@@ -78,16 +79,16 @@ export default function ReconciliationPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <Link href="/admin" style={{ color: "#64748b", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <Link href="/admin" style={{ color: UI_COLORS.gray500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
               <ArrowLeft size={14} /> Control Tower
             </Link>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#059669" }}>Finance Operations</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: STATUS_COLORS.success.color }}>Finance Operations</span>
           </div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: TEXT_COLORS.body, margin: 0 }}>
             Settlement & Financial Reconciliation
           </h1>
-          <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
+          <p style={{ color: UI_COLORS.gray500, fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
             Audit Gross Marketplace Value, platform commission, gateway deductions, and expected settlements.
           </p>
         </div>
@@ -101,7 +102,7 @@ export default function ReconciliationPage() {
             gap: "0.4rem",
             padding: "0.55rem 0.9rem",
             backgroundColor: "white",
-            border: "1px solid #cbd5e1",
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.4rem",
             fontSize: "0.82rem",
             fontWeight: 700,
@@ -113,14 +114,14 @@ export default function ReconciliationPage() {
       </div>
 
       {summary?.ledger && (
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #dbe5ff", marginBottom: "1.25rem" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 900, color: "#0f172a", margin: "0 0 0.75rem" }}>Payment Provider Ledger Summary</h2>
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1rem", border: `1px solid ${UI_COLORS.accentLight}`, marginBottom: "1.25rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 900, color: TEXT_COLORS.body, margin: "0 0 0.75rem" }}>Payment Provider Ledger Summary</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
             {Object.entries(summary.ledger).map(([status, row]) => (
-              <div key={status} style={{ background: "#f8faff", border: "1px solid #e2e8f0", borderRadius: "0.65rem", padding: "0.8rem" }}>
-                <span style={{ color: "#64748b", fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase" }}>{status}</span>
-                <strong style={{ display: "block", color: "#021550", fontSize: "1.2rem", marginTop: "0.15rem" }}>{row.count}</strong>
-                <span style={{ color: "#475569", fontSize: "0.75rem" }}>Gross PKR {Math.round(row.grossAmount || 0).toLocaleString()}</span>
+              <div key={status} style={{ background: UI_COLORS.card, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.65rem", padding: "0.8rem" }}>
+                <span style={{ color: UI_COLORS.gray500, fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase" }}>{status}</span>
+                <strong style={{ display: "block", color: UI_COLORS.primary, fontSize: "1.2rem", marginTop: "0.15rem" }}>{row.count}</strong>
+                <span style={{ color: TEXT_COLORS.muted, fontSize: "0.75rem" }}>Gross PKR {Math.round(row.grossAmount || 0).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -129,44 +130,44 @@ export default function ReconciliationPage() {
 
       {/* Financial Metrics Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase" }}>Gross Marketplace Value</span>
-          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", marginTop: "0.2rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: `1px solid ${UI_COLORS.border}` }}>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 800, textTransform: "uppercase" }}>Gross Marketplace Value</span>
+          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: TEXT_COLORS.body, marginTop: "0.2rem" }}>
             PKR {(summary?.totalGMV ?? 0).toLocaleString()}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#059669", fontWeight: 600 }}>Total Student Volume</span>
+          <span style={{ fontSize: "0.72rem", color: STATUS_COLORS.success.color, fontWeight: 600 }}>Total Student Volume</span>
         </div>
 
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase" }}>Tutor Net Payouts</span>
-          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", marginTop: "0.2rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: `1px solid ${UI_COLORS.border}` }}>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 800, textTransform: "uppercase" }}>Tutor Net Payouts</span>
+          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: TEXT_COLORS.body, marginTop: "0.2rem" }}>
             PKR {(summary?.totalTutorNet ?? 0).toLocaleString()}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Payable to Service Providers</span>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 600 }}>Payable to Service Providers</span>
         </div>
 
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase" }}>Platform Gross Fee</span>
-          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#0329b2", marginTop: "0.2rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: `1px solid ${UI_COLORS.border}` }}>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 800, textTransform: "uppercase" }}>Platform Gross Fee</span>
+          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: UI_COLORS.accent, marginTop: "0.2rem" }}>
             PKR {(summary?.totalPlatformGross ?? 0).toLocaleString()}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Student + Tutor Commissions</span>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 600 }}>Student + Tutor Commissions</span>
         </div>
 
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase" }}>Est. Gateway Fees</span>
-          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#d97706", marginTop: "0.2rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: `1px solid ${UI_COLORS.border}` }}>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 800, textTransform: "uppercase" }}>Est. Gateway Fees</span>
+          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: STATUS_COLORS.warning.color, marginTop: "0.2rem" }}>
             PKR {(summary?.totalEstimatedGatewayFees ?? 0).toLocaleString()}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>2.9% + PKR 30 Processing</span>
+          <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500, fontWeight: 600 }}>2.9% + PKR 30 Processing</span>
         </div>
 
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #a7f3d0", background: "#ecfdf5" }}>
-          <span style={{ fontSize: "0.72rem", color: "#065f46", fontWeight: 800, textTransform: "uppercase" }}>Net Platform Settlement</span>
-          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#059669", marginTop: "0.2rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: `1px solid ${STATUS_COLORS.success.border}`, background: STATUS_COLORS.success.bg }}>
+          <span style={{ fontSize: "0.72rem", color: STATUS_COLORS.success.color, fontWeight: 800, textTransform: "uppercase" }}>Net Platform Settlement</span>
+          <div style={{ fontSize: "1.45rem", fontWeight: 900, color: STATUS_COLORS.success.color, marginTop: "0.2rem" }}>
             PKR {(summary?.netPlatformSettlement ?? 0).toLocaleString()}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#047857", fontWeight: 600 }}>Net Take Home Revenue</span>
+          <span style={{ fontSize: "0.72rem", color: STATUS_COLORS.success.color, fontWeight: 600 }}>Net Take Home Revenue</span>
         </div>
       </div>
 
@@ -189,8 +190,8 @@ export default function ReconciliationPage() {
               fontWeight: 700,
               border: "none",
               cursor: "pointer",
-              backgroundColor: filter === f.id ? "#0f172a" : "#f1f5f9",
-              color: filter === f.id ? "white" : "#475569",
+              backgroundColor: filter === f.id ? TEXT_COLORS.body : UI_COLORS.card,
+              color: filter === f.id ? "white" : TEXT_COLORS.muted,
             }}
           >
             {f.label}
@@ -199,15 +200,15 @@ export default function ReconciliationPage() {
       </div>
 
       {/* Reconciliation Table */}
-      <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden" }}>
+      <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: `1px solid ${UI_COLORS.border}`, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>Loading Financial Ledger…</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: UI_COLORS.gray500 }}>Loading Financial Ledger…</div>
         ) : bookings.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>No booking records found.</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: UI_COLORS.gray500 }}>No booking records found.</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
             <thead>
-              <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left", color: "#64748b" }}>
+              <tr style={{ backgroundColor: UI_COLORS.card, borderBottom: `1px solid ${UI_COLORS.border}`, textAlign: "left", color: UI_COLORS.gray500 }}>
                 <th style={{ padding: "0.8rem 1.2rem", fontWeight: 800 }}>Booking / Date</th>
                 <th style={{ padding: "0.8rem 1rem", fontWeight: 800 }}>Student & Tutor</th>
                 <th style={{ padding: "0.8rem 1rem", fontWeight: 800 }}>Gross Total</th>
@@ -220,30 +221,30 @@ export default function ReconciliationPage() {
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b._id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "0.9rem 1.2rem", color: "#0f172a" }}>
+                <tr key={b._id} style={{ borderBottom: `1px solid ${UI_COLORS.card}` }}>
+                  <td style={{ padding: "0.9rem 1.2rem", color: TEXT_COLORS.body }}>
                     <strong style={{ display: "block" }}>{b.request?.subject || "Tuition Session"}</strong>
-                    <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                    <span style={{ fontSize: "0.72rem", color: UI_COLORS.gray500 }}>
                       {new Date(b.createdAt).toLocaleDateString()}
                     </span>
                   </td>
-                  <td style={{ padding: "0.9rem 1rem", color: "#334155" }}>
+                  <td style={{ padding: "0.9rem 1rem", color: TEXT_COLORS.secondary }}>
                     <div>Student: <strong>{b.student?.name || "Student"}</strong></div>
-                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Tutor: {b.tutor?.name || "Tutor"}</div>
+                    <div style={{ fontSize: "0.72rem", color: UI_COLORS.gray500 }}>Tutor: {b.tutor?.name || "Tutor"}</div>
                   </td>
-                  <td style={{ padding: "0.9rem 1rem", fontWeight: 800, color: "#0f172a" }}>
+                  <td style={{ padding: "0.9rem 1rem", fontWeight: 800, color: TEXT_COLORS.body }}>
                     PKR {(b.studentTotal || b.subtotal || 0).toLocaleString()}
                   </td>
-                  <td style={{ padding: "0.9rem 1rem", fontWeight: 700, color: "#059669" }}>
+                  <td style={{ padding: "0.9rem 1rem", fontWeight: 700, color: STATUS_COLORS.success.color }}>
                     PKR {((b.subtotal || 0) - (b.tutorFee || 0)).toLocaleString()}
                   </td>
-                  <td style={{ padding: "0.9rem 1rem", fontWeight: 700, color: "#0329b2" }}>
+                  <td style={{ padding: "0.9rem 1rem", fontWeight: 700, color: UI_COLORS.accent }}>
                     PKR {((b.studentFee || 0) + (b.tutorFee || 0)).toLocaleString()}
                   </td>
-                  <td style={{ padding: "0.9rem 1rem", color: "#d97706" }}>
+                  <td style={{ padding: "0.9rem 1rem", color: STATUS_COLORS.warning.color }}>
                     PKR {b.estimatedGatewayFee.toLocaleString()}
                   </td>
-                  <td style={{ padding: "0.9rem 1rem", fontWeight: 800, color: "#0f172a" }}>
+                  <td style={{ padding: "0.9rem 1rem", fontWeight: 800, color: TEXT_COLORS.body }}>
                     PKR {b.expectedSettlement.toLocaleString()}
                   </td>
                   <td style={{ padding: "0.9rem 1.2rem" }}>
@@ -255,16 +256,16 @@ export default function ReconciliationPage() {
                         fontWeight: 800,
                         backgroundColor:
                           b.paymentStatus === "confirmed" || b.paymentStatus === "received"
-                            ? "#ecfdf5"
+                            ? STATUS_COLORS.success.bg
                             : b.paymentStatus === "failed"
-                            ? "#fef2f2"
-                            : "#fffbeb",
+                            ? STATUS_COLORS.danger.bg
+                            : STATUS_COLORS.warning.bg,
                         color:
                           b.paymentStatus === "confirmed" || b.paymentStatus === "received"
-                            ? "#059669"
+                            ? STATUS_COLORS.success.color
                             : b.paymentStatus === "failed"
-                            ? "#dc2626"
-                            : "#d97706",
+                            ? STATUS_COLORS.danger.color
+                            : STATUS_COLORS.warning.color,
                       }}
                     >
                       {b.paymentStatus}
@@ -277,17 +278,17 @@ export default function ReconciliationPage() {
         )}
       </div>
 
-      <section style={{ marginTop: "1.5rem", backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden" }}>
-        <div style={{ padding: "1rem 1.2rem", borderBottom: "1px solid #e2e8f0" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>Recent Payment Ledger Events</h2>
-          <p style={{ color: "#64748b", fontSize: "0.78rem", margin: "0.25rem 0 0" }}>Provider transaction events recorded for checkout, payment success, and payment failure.</p>
+      <section style={{ marginTop: "1.5rem", backgroundColor: "white", borderRadius: "0.75rem", border: `1px solid ${UI_COLORS.border}`, overflow: "hidden" }}>
+        <div style={{ padding: "1rem 1.2rem", borderBottom: `1px solid ${UI_COLORS.border}` }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 900, color: TEXT_COLORS.body, margin: 0 }}>Recent Payment Ledger Events</h2>
+          <p style={{ color: UI_COLORS.gray500, fontSize: "0.78rem", margin: "0.25rem 0 0" }}>Provider transaction events recorded for checkout, payment success, and payment failure.</p>
         </div>
         {ledger.length === 0 ? (
-          <div style={{ padding: "1.5rem", color: "#64748b", fontSize: "0.85rem" }}>No provider ledger events recorded yet.</div>
+          <div style={{ padding: "1.5rem", color: UI_COLORS.gray500, fontSize: "0.85rem" }}>No provider ledger events recorded yet.</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
             <thead>
-              <tr style={{ backgroundColor: "#f8fafc", color: "#64748b", textAlign: "left" }}>
+              <tr style={{ backgroundColor: UI_COLORS.card, color: UI_COLORS.gray500, textAlign: "left" }}>
                 <th style={{ padding: "0.75rem 1rem" }}>Event</th>
                 <th style={{ padding: "0.75rem 1rem" }}>Provider Ref</th>
                 <th style={{ padding: "0.75rem 1rem" }}>Gross</th>
@@ -297,14 +298,14 @@ export default function ReconciliationPage() {
             </thead>
             <tbody>
               {ledger.map((row) => (
-                <tr key={row._id} style={{ borderTop: "1px solid #f1f5f9" }}>
+                <tr key={row._id} style={{ borderTop: `1px solid ${UI_COLORS.card}` }}>
                   <td style={{ padding: "0.8rem 1rem" }}>
-                    <strong style={{ display: "block", color: "#0f172a" }}>{row.eventType}</strong>
-                    <span style={{ color: "#64748b" }}>{new Date(row.createdAt).toLocaleString()}</span>
+                    <strong style={{ display: "block", color: TEXT_COLORS.body }}>{row.eventType}</strong>
+                    <span style={{ color: UI_COLORS.gray500 }}>{new Date(row.createdAt).toLocaleString()}</span>
                   </td>
-                  <td style={{ padding: "0.8rem 1rem", color: "#334155" }}>{row.providerTransactionId}</td>
+                  <td style={{ padding: "0.8rem 1rem", color: TEXT_COLORS.secondary }}>{row.providerTransactionId}</td>
                   <td style={{ padding: "0.8rem 1rem", fontWeight: 800 }}>{row.currency} {Math.round(row.grossAmount || 0).toLocaleString()}</td>
-                  <td style={{ padding: "0.8rem 1rem", color: "#059669", fontWeight: 700 }}>PKR {Math.round(row.tutorPayable || 0).toLocaleString()}</td>
+                  <td style={{ padding: "0.8rem 1rem", color: STATUS_COLORS.success.color, fontWeight: 700 }}>PKR {Math.round(row.tutorPayable || 0).toLocaleString()}</td>
                   <td style={{ padding: "0.8rem 1rem" }}>{row.status} / {row.settlementStatus}</td>
                 </tr>
               ))}

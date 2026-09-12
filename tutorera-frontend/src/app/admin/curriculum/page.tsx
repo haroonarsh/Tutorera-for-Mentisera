@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { Plus, Edit2, Trash2, X, Save, AlertCircle } from "lucide-react";
 import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+
+const C = UI_COLORS;
 
 interface Subject {
   _id: string;
@@ -144,7 +147,7 @@ export default function CurriculumPage() {
               alignItems: "center",
               gap: "0.5rem",
               padding: "0.625rem 1rem",
-              background: "#3b82f6",
+              background: C.accent,
               color: "white",
               border: "none",
               borderRadius: "0.5rem",
@@ -161,8 +164,8 @@ export default function CurriculumPage() {
       {showForm && (
         <div
           style={{
-            background: "white",
-            border: "1px solid #e5e7eb",
+            background: C.surface,
+            border: `1px solid ${C.border}`,
             borderRadius: "0.75rem",
             padding: "1.5rem",
             marginBottom: "2rem",
@@ -182,7 +185,7 @@ export default function CurriculumPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${C.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                 }}
@@ -199,7 +202,7 @@ export default function CurriculumPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${C.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                 }}
@@ -223,8 +226,8 @@ export default function CurriculumPage() {
                     alignItems: "center",
                     gap: "0.5rem",
                     padding: "0.5rem 0.75rem",
-                    border: `1px solid ${form.level.includes(level) ? "#3b82f6" : "#d1d5db"}`,
-                    background: form.level.includes(level) ? "#eff6ff" : "white",
+                    border: `1px solid ${form.level.includes(level) ? C.accent : C.border}`,
+                    background: form.level.includes(level) ? C.accentLight : C.surface,
                     borderRadius: "0.375rem",
                     cursor: "pointer",
                   }}
@@ -255,7 +258,7 @@ export default function CurriculumPage() {
               style={{
                 width: "100%",
                 padding: "0.5rem",
-                border: "1px solid #d1d5db",
+                border: `1px solid ${C.border}`,
                 borderRadius: "0.375rem",
                 fontSize: "0.875rem",
                 fontFamily: "inherit",
@@ -273,7 +276,7 @@ export default function CurriculumPage() {
               style={{
                 width: "100%",
                 padding: "0.5rem",
-                border: "1px solid #d1d5db",
+                border: `1px solid ${C.border}`,
                 borderRadius: "0.375rem",
                 fontSize: "0.875rem",
               }}
@@ -285,8 +288,8 @@ export default function CurriculumPage() {
               onClick={handleCancel}
               style={{
                 padding: "0.625rem 1rem",
-                border: "1px solid #d1d5db",
-                background: "white",
+                border: `1px solid ${C.border}`,
+                background: C.surface,
                 borderRadius: "0.375rem",
                 cursor: "pointer",
                 fontWeight: 600,
@@ -302,7 +305,7 @@ export default function CurriculumPage() {
                 alignItems: "center",
                 gap: "0.5rem",
                 padding: "0.625rem 1rem",
-                background: saving ? "#9ca3af" : "#10b981",
+                background: saving ? C.gray500 : STATUS_COLORS.success.color,
                 color: "white",
                 border: "none",
                 borderRadius: "0.375rem",
@@ -323,7 +326,7 @@ export default function CurriculumPage() {
           onChange={(e) => setFilter({ ...filter, category: e.target.value })}
           style={{
             padding: "0.5rem",
-            border: "1px solid #d1d5db",
+            border: `1px solid ${C.border}`,
             borderRadius: "0.375rem",
           }}
         >
@@ -339,7 +342,7 @@ export default function CurriculumPage() {
           onChange={(e) => setFilter({ ...filter, isActive: e.target.value === "true" })}
           style={{
             padding: "0.5rem",
-            border: "1px solid #d1d5db",
+            border: `1px solid ${C.border}`,
             borderRadius: "0.375rem",
           }}
         >
@@ -354,9 +357,9 @@ export default function CurriculumPage() {
           style={{
             textAlign: "center",
             padding: "3rem",
-            background: "#f9fafb",
+            background: STATUS_COLORS.neutral.bg,
             borderRadius: "0.75rem",
-            color: "#6b7280",
+            color: TEXT_COLORS.muted,
           }}
         >
           <AlertCircle size={32} style={{ margin: "0 auto 1rem", opacity: 0.5 }} />
@@ -373,18 +376,18 @@ export default function CurriculumPage() {
                 gap: "1rem",
                 alignItems: "center",
                 padding: "1rem",
-                background: "white",
-                border: "1px solid #e5e7eb",
+                background: C.surface,
+                border: `1px solid ${C.border}`,
                 borderRadius: "0.75rem",
               }}
             >
               <div>
                 <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>{subject.name}</div>
-                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                <div style={{ fontSize: "0.875rem", color: TEXT_COLORS.muted }}>
                   {subject.category} • {subject.level.join(", ")}
                 </div>
                 {subject.description && (
-                  <div style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "0.875rem", color: C.gray500, marginTop: "0.25rem" }}>
                     {subject.description}
                   </div>
                 )}
@@ -397,8 +400,8 @@ export default function CurriculumPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
+                  background: STATUS_COLORS.neutral.bg,
+                  border: `1px solid ${C.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
                 }}
@@ -413,11 +416,11 @@ export default function CurriculumPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#fee2e2",
-                  border: "1px solid #fecaca",
+                  background: STATUS_COLORS.danger.bg,
+                  border: `1px solid ${STATUS_COLORS.danger.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
-                  color: "#991b1b",
+                  color: STATUS_COLORS.danger.color,
                 }}
               >
                 <Trash2 size={16} />

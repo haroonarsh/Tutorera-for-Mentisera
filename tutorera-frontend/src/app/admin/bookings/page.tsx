@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -45,17 +45,17 @@ export default function BookingsPage() {
   };
 
   const statusColors: Record<string, { bg: string; color: string }> = {
-    upcoming: { bg: '#EEF5FF', color: '#0329B2' },
-    ongoing: { bg: '#fffbeb', color: '#d97706' },
-    completed: { bg: '#f0fdf4', color: '#16a34a' },
-    cancelled: { bg: '#fef2f2', color: '#ef4444' },
+    upcoming: { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color },
+    ongoing: { bg: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color },
+    completed: { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color },
+    cancelled: { bg: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color },
   };
 
   const paymentColors: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fffbeb', color: '#d97706' },
-    received: { bg: '#EEF5FF', color: '#0329B2' },
-    confirmed: { bg: '#f0fdf4', color: '#16a34a' },
-    refunded: { bg: '#fef2f2', color: '#ef4444' },
+    pending: { bg: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color },
+    received: { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color },
+    confirmed: { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color },
+    refunded: { bg: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color },
   };
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
@@ -81,7 +81,7 @@ export default function BookingsPage() {
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {["all", "upcoming", "ongoing", "completed", "cancelled"].map(tab => (
           <button key={tab} onClick={() => setFilter(tab)}
-            style={{ padding: '0.5rem 1rem', borderRadius: '999px', border: filter === tab ? 'none' : '1px solid #e5e7eb', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: filter === tab ? C.primary : 'white', color: filter === tab ? 'white' : C.gray500 }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: '999px', border: filter === tab ? 'none' : `1px solid ${C.border}`, cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: filter === tab ? C.primary : C.surface, color: filter === tab ? C.surface : C.gray500 }}>
             {tab}
           </button>
         ))}
@@ -93,7 +93,7 @@ export default function BookingsPage() {
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : bookings.length === 0 ? (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: `1px solid ${C.border}` }}>
           <p style={{ color: C.gray500 }}>No bookings found.</p>
         </div>
       ) : (
@@ -101,22 +101,22 @@ export default function BookingsPage() {
           {bookings.map(booking => {
             const { platformFee, tutorPayout } = calculateFees(booking.amount);
             return (
-              <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div key={booking._id} style={{ backgroundColor: C.surface, borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'start' }}>
 
                   {/* Student + Tutor */}
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Student → Tutor</p>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Student → Tutor</p>
                     <p style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{booking.student?.name}</p>
                     <p style={{ fontSize: '0.8rem', color: C.gray500 }}>{booking.student?.email}</p>
-                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0.25rem 0' }}>↓</p>
+                    <p style={{ fontSize: '0.8rem', color: TEXT_COLORS.muted, margin: '0.25rem 0' }}>↓</p>
                     <p style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{booking.tutor?.name}</p>
                     <p style={{ fontSize: '0.8rem', color: C.gray500 }}>{booking.tutor?.email}</p>
                   </div>
 
                   {/* Financials */}
                   <div style={{ backgroundColor: C.gray50, borderRadius: '0.5rem', padding: '1rem' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Financials</p>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Financials</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Total Amount</span>
@@ -124,21 +124,21 @@ export default function BookingsPage() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Platform Fee ({PLATFORM_FEE_PERCENT}%)</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#d97706' }}>Rs. {platformFee.toLocaleString()}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: STATUS_COLORS.warning.color }}>Rs. {platformFee.toLocaleString()}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e5e7eb', paddingTop: '0.35rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: '0.35rem' }}>
                         <span style={{ fontSize: '0.8rem', color: C.gray500 }}>Tutor Payout</span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#16a34a' }}>Rs. {tutorPayout.toLocaleString()}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.success }}>Rs. {tutorPayout.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Status */}
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Status</p>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: '600' }}>Status</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <div>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Booking</p>
+                        <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.3rem' }}>Booking</p>
                         <select
                           title="status"
                           value={booking.status}
@@ -147,7 +147,7 @@ export default function BookingsPage() {
                           style={{
                             padding: '0.35rem 0.6rem',
                             borderRadius: '0.4rem',
-                            border: '1px solid #e5e7eb',
+                            border: `1px solid ${C.border}`,
                             fontSize: '0.78rem',
                             fontWeight: '600',
                             cursor: updatingStatus === booking._id ? 'not-allowed' : 'pointer',
@@ -163,13 +163,13 @@ export default function BookingsPage() {
                         </select>
                       </div>
                       <div>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Payment</p>
+                        <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.2rem' }}>Payment</p>
                         <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: paymentColors[booking.paymentStatus]?.bg, color: paymentColors[booking.paymentStatus]?.color, textTransform: 'capitalize' }}>
                           {booking.paymentStatus}
                         </span>
                       </div>
                     </div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginTop: '0.5rem' }}>
                       {new Date(booking.createdAt).toLocaleDateString()}
                     </p>
                   </div>

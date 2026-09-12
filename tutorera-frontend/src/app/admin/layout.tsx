@@ -14,6 +14,9 @@ import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
 import MuiAdminProvider from "./MuiAdminProvider";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+
+const C = UI_COLORS;
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: ["*"],
@@ -192,13 +195,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const SidebarContent = () => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "260px" }}>
       {/* Brand Header */}
-      <div style={{ padding: "1.25rem 1.25rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
+      <div style={{ padding: "1.25rem 1.25rem 1rem", borderBottom: `1px solid ${C.sidebarBorder}`, flexShrink: 0 }}>
         <BrandLogo variant="light" size="sm" />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.5rem" }}>
-          <span style={{ color: "#93c5fd", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <span style={{ color: C.accentBright, fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Control Tower
           </span>
-          <span style={{ fontSize: "0.68rem", background: "rgba(59, 130, 246, 0.2)", color: "#bfdbfe", padding: "0.15rem 0.45rem", borderRadius: "999px", border: "1px solid rgba(59,130,246,0.3)" }}>
+          <span style={{ fontSize: "0.68rem", background: "rgba(1, 110, 248, 0.2)", color: C.accentBright, padding: "0.15rem 0.45rem", borderRadius: "999px", border: "1px solid rgba(1,110,248,0.3)" }}>
             v2.6 RBAC
           </span>
         </div>
@@ -211,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           if (visibleItems.length === 0) return null;
           return (
             <div key={sec.title}>
-              <p style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
+              <p style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7C89A6", margin: "0 0 0.35rem 0.6rem" }}>
                 {sec.title}
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
@@ -222,7 +225,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
-                      className={isActive ? "bg-blue-800/55" : "hover:bg-white/[0.06]"}
+                      className={isActive ? undefined : "hover:bg-white/[0.06]"}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -233,12 +236,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         fontSize: "0.82rem",
                         fontWeight: isActive ? 700 : 600,
                         color: isActive ? "#ffffff" : "#cbd5e1",
-                        border: isActive ? "1px solid rgba(59,130,246,0.4)" : "1px solid transparent",
+                        background: isActive ? "rgba(1,110,248,0.22)" : "transparent",
+                        border: isActive ? `1px solid rgba(1,110,248,0.4)` : "1px solid transparent",
                         transition: "background-color 150ms ease, border-color 150ms ease, color 150ms ease",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                        <span style={{ color: isActive ? "#60a5fa" : "#94a3b8" }}>{item.icon}</span>
+                        <span style={{ color: isActive ? C.accentBright : "#94a3b8" }}>{item.icon}</span>
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
@@ -248,7 +252,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             fontWeight: 800,
                             padding: "0.1rem 0.4rem",
                             borderRadius: "999px",
-                            backgroundColor: item.badge === "Action" ? "#ef4444" : "#f59e0b",
+                            backgroundColor: item.badge === "Action" ? STATUS_COLORS.danger.color : STATUS_COLORS.warning.color,
                             color: "white",
                           }}
                         >
@@ -265,7 +269,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </nav>
 
       {/* User Footer & Logout */}
-      <div style={{ padding: "0.85rem 1rem", borderTop: "1px solid rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ padding: "0.85rem 1rem", borderTop: `1px solid ${C.sidebarBorder}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "0.5rem" }}>
           <div style={{ color: "white", fontSize: "0.8rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis" }}>
             {user?.name || "Admin"}
@@ -290,7 +294,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             borderRadius: "0.4rem",
             border: "1px solid rgba(255,255,255,0.15)",
             background: "rgba(255,255,255,0.05)",
-            color: "#f87171",
+            color: "#FCA5A5",
             cursor: "pointer",
           }}
         >
@@ -303,21 +307,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AdminGuard>
       {/* WCAG 2.1 SC 2.4.1 Skip Links */}
-      <a href="#main-content" className="skip-link" style={{ position: "absolute", top: "-100%", left: "1rem", background: "#021550", color: "white", padding: "0.75rem 1.25rem", borderRadius: "0 0 0.5rem 0.5rem", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none", zIndex: 99999, transition: "top 0.15s" }} onFocus={(e) => { (e.currentTarget as HTMLElement).style.top = "0"; }} onBlur={(e) => { (e.currentTarget as HTMLElement).style.top = "-100%"; }}>Skip to main content</a>
-      <style>{`.skip-link:focus { outline: 3px solid #fbbf24; outline-offset: 2px; }`}</style>
-      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+      <a href="#main-content" className="skip-link" style={{ position: "absolute", top: "-100%", left: "1rem", background: C.sidebar, color: "white", padding: "0.75rem 1.25rem", borderRadius: "0 0 0.5rem 0.5rem", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none", zIndex: 99999, transition: "top 0.15s" }} onFocus={(e) => { (e.currentTarget as HTMLElement).style.top = "0"; }} onBlur={(e) => { (e.currentTarget as HTMLElement).style.top = "-100%"; }}>Skip to main content</a>
+      <style>{`.skip-link:focus { outline: 3px solid ${STATUS_COLORS.warning.color}; outline-offset: 2px; }`}</style>
+      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F8FAFC" }}>
         {/* Desktop Sidebar */}
         <aside
           style={{
             width: "260px",
-            backgroundColor: "#0a1128",
+            backgroundColor: C.sidebar,
             display: "none",
             flexDirection: "column",
             position: "sticky",
             top: 0,
             height: "100vh",
             zIndex: 40,
-            borderRight: "1px solid #1e293b",
+            borderRight: `1px solid ${C.sidebarBorder}`,
           }}
           className="admin-desktop-sidebar"
         >
@@ -336,8 +340,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <header
             style={{
               height: "56px",
-              backgroundColor: "#0a1128",
-              borderBottom: "1px solid #1e293b",
+              backgroundColor: C.sidebar,
+              borderBottom: `1px solid ${C.sidebarBorder}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -390,7 +394,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 aria-label="Admin navigation"
                 style={{
                   width: "280px",
-                  backgroundColor: "#0a1128",
+                  backgroundColor: C.sidebar,
                   height: "100%",
                   position: "relative",
                 }}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 
 interface CountryMetrics {
   countryCode: string;
@@ -30,11 +31,16 @@ interface GlobalSummary {
   countries: CountryMetrics[];
 }
 
-const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
-  live: { bg: "#10b98122", fg: "#10b981" },
-  beta: { bg: "#f59e0b22", fg: "#f59e0b" },
-  planning: { bg: "#3b82f622", fg: "#3b82f6" },
-  paused: { bg: "#ef444422", fg: "#ef4444" },
+// This page uses a dark-surface layout (UI_COLORS.sidebar backgrounds) that brand.ts has no
+// muted-secondary-text token for — TEXT_COLORS is tuned for light backgrounds and would be
+// unreadable here. Kept as a single named constant rather than repeated ad-hoc literals.
+const MUTED_ON_DARK = "#94a3b8";
+
+const LAUNCH_STATUS_STYLES: Record<string, { bg: string; fg: string }> = {
+  live: { bg: `${STATUS_COLORS.success.color}22`, fg: STATUS_COLORS.success.color },
+  beta: { bg: `${STATUS_COLORS.warning.color}22`, fg: STATUS_COLORS.warning.color },
+  planning: { bg: `${UI_COLORS.accentBright}22`, fg: UI_COLORS.accentBright },
+  paused: { bg: `${STATUS_COLORS.danger.color}22`, fg: STATUS_COLORS.danger.color },
 };
 
 const PLACEHOLDER_COUNTRIES: CountryMetrics[] = [
@@ -74,8 +80,8 @@ export default function GlobalAnalyticsPage() {
     c => statusFilter === "all" || c.launchStatus === statusFilter
   ) || [];
 
-  const cardStyle: React.CSSProperties = { background: "#18181f", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 160 };
-  const metricLabel: React.CSSProperties = { fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "#94a3b8", marginBottom: 2 };
+  const cardStyle: React.CSSProperties = { background: UI_COLORS.sidebar, border: `1px solid ${UI_COLORS.sidebarBorder}`, borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 160 };
+  const metricLabel: React.CSSProperties = { fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED_ON_DARK, marginBottom: 2 };
 
   return (
     <div style={{ padding: "32px", maxWidth: 1400, margin: "0 auto" }}>
@@ -83,9 +89,9 @@ export default function GlobalAnalyticsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 12 }}>🌍 Global Analytics</h2>
-          <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.875rem" }}>Cross-country performance metrics and market health</p>
+          <p style={{ margin: "4px 0 0", color: MUTED_ON_DARK, fontSize: "0.875rem" }}>Cross-country performance metrics and market health</p>
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f0f13", color: "#f1f5f9", fontSize: "0.875rem" }}>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${UI_COLORS.sidebarBorder}`, background: UI_COLORS.sidebar, color: UI_COLORS.surface, fontSize: "0.875rem" }}>
           <option value="all">All Markets</option>
           <option value="live">Live</option>
           <option value="beta">Beta</option>
@@ -94,10 +100,10 @@ export default function GlobalAnalyticsPage() {
         </select>
       </div>
 
-      {error && <div role="alert" style={{ background: "#f59e0b22", border: "1px solid #f59e0b", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#fcd34d", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}><span>{error}</span><button type="button" onClick={fetchData} style={{ minHeight: 36, border: "1px solid #fcd34d", borderRadius: 6, background: "transparent", color: "#fcd34d", fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Try again</button></div>}
+      {error && <div role="alert" style={{ background: `${STATUS_COLORS.warning.color}22`, border: `1px solid ${STATUS_COLORS.warning.color}`, borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: STATUS_COLORS.warning.color, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}><span>{error}</span><button type="button" onClick={fetchData} style={{ minHeight: 36, border: `1px solid ${STATUS_COLORS.warning.color}`, borderRadius: 6, background: "transparent", color: STATUS_COLORS.warning.color, fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Try again</button></div>}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "64px 0", color: "#94a3b8" }}>Loading…</div>
+        <div style={{ textAlign: "center", padding: "64px 0", color: MUTED_ON_DARK }}>Loading…</div>
       ) : data ? (
         <>
           {/* Summary Row */}
@@ -105,7 +111,7 @@ export default function GlobalAnalyticsPage() {
             <div style={cardStyle}>
               <div style={metricLabel}>Markets</div>
               <div style={{ fontSize: "1.75rem", fontWeight: 700 }}>{data.totalCountries}</div>
-              <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{data.liveCountries} live</div>
+              <div style={{ fontSize: "0.8rem", color: MUTED_ON_DARK }}>{data.liveCountries} live</div>
             </div>
             <div style={cardStyle}>
               <div style={metricLabel}>Total Tutors</div>
@@ -121,7 +127,7 @@ export default function GlobalAnalyticsPage() {
             </div>
             <div style={cardStyle}>
               <div style={metricLabel}>Revenue</div>
-              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#fcd34d", paddingTop: "0.45rem" }}>Not aggregated across currencies</div>
+              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: STATUS_COLORS.warning.color, paddingTop: "0.45rem" }}>Not aggregated across currencies</div>
             </div>
           </div>
 
@@ -129,9 +135,9 @@ export default function GlobalAnalyticsPage() {
           <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: 16 }}>Market Breakdown</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
             {filteredCountries.map((c) => {
-              const statusColor = STATUS_COLORS[c.launchStatus] || { bg: "rgba(255,255,255,0.06)", fg: "#94a3b8" };
+              const statusColor = LAUNCH_STATUS_STYLES[c.launchStatus] || { bg: UI_COLORS.sidebarBorder, fg: MUTED_ON_DARK };
               return (
-                <div key={c.countryCode} style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 24, position: "relative" }}>
+                <div key={c.countryCode} style={{ background: UI_COLORS.sidebar, border: `1px solid ${UI_COLORS.sidebarBorder}`, borderRadius: 10, padding: 24, position: "relative" }}>
                   {/* Status chip */}
                   <span style={{ position: "absolute", top: 12, right: 12, display: "inline-block", padding: "2px 10px", borderRadius: 12, fontSize: "0.72rem", fontWeight: 600, background: statusColor.bg, color: statusColor.fg, border: `1px solid ${statusColor.fg}44` }}>{c.launchStatus}</span>
 
@@ -140,7 +146,7 @@ export default function GlobalAnalyticsPage() {
                     <span style={{ fontSize: 28 }}>{c.flag || "🌐"}</span>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{c.countryName}</div>
-                      <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{c.countryCode}</div>
+                      <div style={{ fontSize: "0.8rem", color: MUTED_ON_DARK }}>{c.countryCode}</div>
                     </div>
                   </div>
 
@@ -148,7 +154,7 @@ export default function GlobalAnalyticsPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
                     <div>
                       <div style={metricLabel}>Tutors</div>
-                      <div style={{ fontWeight: 700 }}>{c.totalTutors} <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>({c.verifiedTutors} verified)</span></div>
+                      <div style={{ fontWeight: 700 }}>{c.totalTutors} <span style={{ fontSize: "0.8rem", color: MUTED_ON_DARK }}>({c.verifiedTutors} verified)</span></div>
                     </div>
                     <div>
                       <div style={metricLabel}>Students</div>
@@ -156,7 +162,7 @@ export default function GlobalAnalyticsPage() {
                     </div>
                     <div>
                       <div style={metricLabel}>Requests</div>
-                      <div style={{ fontWeight: 700 }}>{c.totalRequests} <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>({c.activeRequests} active)</span></div>
+                      <div style={{ fontWeight: 700 }}>{c.totalRequests} <span style={{ fontSize: "0.8rem", color: MUTED_ON_DARK }}>({c.activeRequests} active)</span></div>
                     </div>
                     <div>
                       <div style={metricLabel}>Bookings</div>
@@ -164,7 +170,7 @@ export default function GlobalAnalyticsPage() {
                     </div>
                     <div>
                       <div style={metricLabel}>Revenue</div>
-                      <div style={{ fontWeight: 700, color: "#94a3b8" }}>See market finance reports</div>
+                      <div style={{ fontWeight: 700, color: MUTED_ON_DARK }}>See market finance reports</div>
                     </div>
                     <div>
                       <div style={metricLabel}>Match Rate</div>
@@ -176,7 +182,7 @@ export default function GlobalAnalyticsPage() {
             })}
           </div>
         </>
-      ) : <div style={{ textAlign: "center", padding: "48px 0", color: "#94a3b8" }}>No analytics data is available right now.</div>}
+      ) : <div style={{ textAlign: "center", padding: "48px 0", color: MUTED_ON_DARK }}>No analytics data is available right now.</div>}
     </div>
   );
 }

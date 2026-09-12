@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { Plus, Edit2, Trash2, Eye, Save, X, AlertCircle, Copy } from "lucide-react";
 import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 
 interface EmailTemplate {
   _id: string;
@@ -169,7 +170,7 @@ export default function EmailTemplatesPage() {
               alignItems: "center",
               gap: "0.5rem",
               padding: "0.625rem 1rem",
-              background: "#3b82f6",
+              background: UI_COLORS.accent,
               color: "white",
               border: "none",
               borderRadius: "0.5rem",
@@ -187,7 +188,7 @@ export default function EmailTemplatesPage() {
         <div
           style={{
             background: "white",
-            border: "1px solid #e5e7eb",
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.75rem",
             padding: "1.5rem",
             marginBottom: "2rem",
@@ -208,7 +209,7 @@ export default function EmailTemplatesPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                   opacity: editingId ? 0.7 : 1,
@@ -225,7 +226,7 @@ export default function EmailTemplatesPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                 }}
@@ -245,7 +246,7 @@ export default function EmailTemplatesPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                 }}
@@ -266,7 +267,7 @@ export default function EmailTemplatesPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                 }}
@@ -283,14 +284,14 @@ export default function EmailTemplatesPage() {
               style={{
                 width: "100%",
                 padding: "0.5rem",
-                border: "1px solid #d1d5db",
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "0.375rem",
                 fontSize: "0.875rem",
                 fontFamily: "inherit",
                 minHeight: "2rem",
               }}
             />
-            <small style={{ color: "#6b7280", marginTop: "0.25rem", display: "block" }}>
+            <small style={{ color: UI_COLORS.gray500, marginTop: "0.25rem", display: "block" }}>
               💡 Use &#123;&#123;variableName&#125;&#125; for dynamic content (e.g., &#123;&#123;userName&#125;&#125;)
             </small>
           </div>
@@ -304,7 +305,7 @@ export default function EmailTemplatesPage() {
               style={{
                 width: "100%",
                 padding: "0.5rem",
-                border: "1px solid #d1d5db",
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "0.375rem",
                 fontSize: "0.875rem",
                 fontFamily: "monospace",
@@ -322,7 +323,7 @@ export default function EmailTemplatesPage() {
               style={{
                 width: "100%",
                 padding: "0.5rem",
-                border: "1px solid #d1d5db",
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "0.375rem",
                 fontSize: "0.875rem",
                 fontFamily: "monospace",
@@ -336,7 +337,7 @@ export default function EmailTemplatesPage() {
               onClick={handleCancel}
               style={{
                 padding: "0.625rem 1rem",
-                border: "1px solid #d1d5db",
+                border: `1px solid ${UI_COLORS.border}`,
                 background: "white",
                 borderRadius: "0.375rem",
                 cursor: "pointer",
@@ -353,7 +354,7 @@ export default function EmailTemplatesPage() {
                 alignItems: "center",
                 gap: "0.5rem",
                 padding: "0.625rem 1rem",
-                background: saving ? "#9ca3af" : "#10b981",
+                background: saving ? UI_COLORS.gray500 : STATUS_COLORS.success.color,
                 color: "white",
                 border: "none",
                 borderRadius: "0.375rem",
@@ -374,7 +375,7 @@ export default function EmailTemplatesPage() {
           onChange={(e) => setFilter({ ...filter, category: e.target.value })}
           style={{
             padding: "0.5rem",
-            border: "1px solid #d1d5db",
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.375rem",
           }}
         >
@@ -390,7 +391,7 @@ export default function EmailTemplatesPage() {
           onChange={(e) => setFilter({ ...filter, isActive: e.target.value === "true" })}
           style={{
             padding: "0.5rem",
-            border: "1px solid #d1d5db",
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.375rem",
           }}
         >
@@ -405,9 +406,9 @@ export default function EmailTemplatesPage() {
           style={{
             textAlign: "center",
             padding: "3rem",
-            background: "#f9fafb",
+            background: UI_COLORS.card,
             borderRadius: "0.75rem",
-            color: "#6b7280",
+            color: UI_COLORS.gray500,
           }}
         >
           <AlertCircle size={32} style={{ margin: "0 auto 1rem", opacity: 0.5 }} />
@@ -425,17 +426,17 @@ export default function EmailTemplatesPage() {
                 alignItems: "center",
                 padding: "1rem",
                 background: "white",
-                border: "1px solid #e5e7eb",
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "0.75rem",
               }}
             >
               <div>
                 <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>{template.name}</div>
-                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                <div style={{ fontSize: "0.875rem", color: UI_COLORS.gray500 }}>
                   <strong>{template.key}</strong> • {template.category}
                 </div>
                 {template.variables.length > 0 && (
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "0.75rem", color: UI_COLORS.gray500, marginTop: "0.25rem" }}>
                     Variables: {template.variables.join(", ")}
                   </div>
                 )}
@@ -451,8 +452,8 @@ export default function EmailTemplatesPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
+                  background: UI_COLORS.card,
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
                 }}
@@ -467,8 +468,8 @@ export default function EmailTemplatesPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
+                  background: UI_COLORS.card,
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
                 }}
@@ -483,8 +484,8 @@ export default function EmailTemplatesPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
+                  background: UI_COLORS.card,
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
                 }}
@@ -499,11 +500,11 @@ export default function EmailTemplatesPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#fee2e2",
-                  border: "1px solid #fecaca",
+                  background: STATUS_COLORS.danger.bg,
+                  border: `1px solid ${STATUS_COLORS.danger.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
-                  color: "#991b1b",
+                  color: STATUS_COLORS.danger.color,
                 }}
               >
                 <Trash2 size={16} />

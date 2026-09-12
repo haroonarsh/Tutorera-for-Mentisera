@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/axios";
 import { showError } from "@/lib/toast";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 type EmailStatus = "queued" | "sent" | "delivered" | "opened" | "bounced" | "failed";
 
@@ -39,12 +39,13 @@ interface PlannedEvent {
 const statuses: EmailStatus[] = ["queued", "sent", "delivered", "opened", "bounced", "failed"];
 
 const colors: Record<EmailStatus, { bg: string; color: string; border: string }> = {
-  queued: { bg: "#fffbeb", color: "#92400e", border: "#fde68a" },
-  sent: { bg: UI_COLORS.accentLight, color: UI_COLORS.accent, border: "#bfdbfe" },
-  delivered: { bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
-  opened: { bg: "#f5f3ff", color: "#6d28d9", border: "#ddd6fe" },
+  queued: { bg: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color, border: STATUS_COLORS.warning.border },
+  sent: { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color, border: STATUS_COLORS.info.border },
+  delivered: { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, border: STATUS_COLORS.success.border },
+  opened: { bg: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color, border: STATUS_COLORS.purple.border },
+  // "bounced" has no dedicated brand status tone; kept as the closest distinct amber/orange pairing so it stays visually different from "failed" (danger).
   bounced: { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
-  failed: { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca" },
+  failed: { bg: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color, border: STATUS_COLORS.danger.border },
 };
 
 export default function AdminEmailLogsPage() {
@@ -141,7 +142,7 @@ export default function AdminEmailLogsPage() {
                   <td style={td}>{log.relatedEntityType || "-"}<div style={muted}>{log.relatedEntityId || ""}</div></td>
                   <td style={td}>{log.providerMessageId ? <code style={codeStyle}>{log.providerMessageId}</code> : "-"}</td>
                   <td style={td}>{formatDate(log.queuedAt || log.createdAt)}</td>
-                  <td style={td}>{formatDate(log.failedAt || log.sentAt)}{log.bounceReason ? <div style={{ ...muted, color: "#b91c1c" }}>{log.bounceReason}</div> : null}</td>
+                  <td style={td}>{formatDate(log.failedAt || log.sentAt)}{log.bounceReason ? <div style={{ ...muted, color: STATUS_COLORS.danger.color }}>{log.bounceReason}</div> : null}</td>
                 </tr>
               ))}
             </tbody>
@@ -208,19 +209,19 @@ function formatDate(value?: string) {
 }
 
 const eyebrow: React.CSSProperties = { margin: "0 0 6px", color: UI_COLORS.accent, fontSize: 12, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase" };
-const filterBar: React.CSSProperties = { background: "#fff", border: `1px solid ${UI_COLORS.border}`, borderRadius: 18, padding: 16, marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap", boxShadow: UI_COLORS.shadowCard };
-const panel: React.CSSProperties = { background: "#fff", border: `1px solid ${UI_COLORS.border}`, borderRadius: 18, overflow: "hidden", boxShadow: UI_COLORS.shadowCard };
+const filterBar: React.CSSProperties = { background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 18, padding: 16, marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap", boxShadow: UI_COLORS.shadowCard };
+const panel: React.CSSProperties = { background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 18, overflow: "hidden", boxShadow: UI_COLORS.shadowCard };
 const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse", minWidth: 1050 };
 const headRow: React.CSSProperties = { background: UI_COLORS.card, color: UI_COLORS.gray600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" };
-const fieldStyle: React.CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 12, padding: "10px 12px", color: UI_COLORS.primary, background: "#fff", fontWeight: 700 };
+const fieldStyle: React.CSSProperties = { border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, padding: "10px 12px", color: UI_COLORS.primary, background: UI_COLORS.surface, fontWeight: 700 };
 const th: React.CSSProperties = { padding: 14, textAlign: "left", whiteSpace: "nowrap" };
-const td: React.CSSProperties = { padding: 14, color: "#0f172a", verticalAlign: "top", fontSize: 13 };
+const td: React.CSSProperties = { padding: 14, color: TEXT_COLORS.body, verticalAlign: "top", fontSize: 13 };
 const rowStyle: React.CSSProperties = { borderTop: `1px solid ${UI_COLORS.border}` };
 const muted: React.CSSProperties = { marginTop: 4, color: UI_COLORS.gray500, fontSize: 12 };
-const codeStyle: React.CSSProperties = { background: "#f1f5f9", borderRadius: 6, padding: "2px 5px", color: UI_COLORS.primary };
-const pagerStyle: React.CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 800, cursor: "pointer" };
-const plannedPill: React.CSSProperties = { display: "inline-flex", border: "1px solid #e2e8f0", background: "#f8fafc", color: UI_COLORS.gray600, borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 800 };
-const loggedPill: React.CSSProperties = { display: "inline-flex", border: "1px solid #bfdbfe", background: UI_COLORS.accentLight, color: UI_COLORS.accent, borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 800 };
+const codeStyle: React.CSSProperties = { background: STATUS_COLORS.neutral.bg, borderRadius: 6, padding: "2px 5px", color: UI_COLORS.primary };
+const pagerStyle: React.CSSProperties = { border: `1px solid ${UI_COLORS.border}`, borderRadius: 10, background: UI_COLORS.surface, color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 800, cursor: "pointer" };
+const plannedPill: React.CSSProperties = { display: "inline-flex", border: `1px solid ${STATUS_COLORS.neutral.border}`, background: STATUS_COLORS.neutral.bg, color: UI_COLORS.gray600, borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 800 };
+const loggedPill: React.CSSProperties = { display: "inline-flex", border: `1px solid ${STATUS_COLORS.info.border}`, background: UI_COLORS.accentLight, color: UI_COLORS.accent, borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 800 };
 function statusCard(c: { bg: string; color: string; border: string }): React.CSSProperties {
   return { textAlign: "left", border: `1px solid ${c.border}`, background: c.bg, color: c.color, borderRadius: 14, padding: 14, cursor: "pointer", transition: "transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out)" };
 }

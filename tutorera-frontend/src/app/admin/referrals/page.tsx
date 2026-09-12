@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { Gift } from "lucide-react";
 import api from "@/lib/axios";
@@ -50,7 +50,7 @@ export default function AdminReferralsPage() {
           { key: "credited", label: "✅ Credited", count: referrals.filter(r => r.status === "credited").length },
         ].map(tab => (
           <button key={tab.key} onClick={() => setFilter(tab.key as typeof filter)}
-            style={{ padding: '0.5rem 1.25rem', borderRadius: '999px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: filter === tab.key ? 'none' : '1px solid #e5e7eb', backgroundColor: filter === tab.key ? C.primary : 'white', color: filter === tab.key ? 'white' : C.gray500 }}>
+            style={{ padding: '0.5rem 1.25rem', borderRadius: '999px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: filter === tab.key ? 'none' : `1px solid ${C.border}`, backgroundColor: filter === tab.key ? C.primary : 'white', color: filter === tab.key ? 'white' : C.gray500 }}>
             {tab.label} ({tab.count})
           </button>
         ))}
@@ -62,23 +62,23 @@ export default function AdminReferralsPage() {
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-          <Gift size={40} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: `1px solid ${C.border}` }}>
+          <Gift size={40} color={C.gray500} style={{ margin: '0 auto 1rem' }} />
           <p style={{ color: C.gray500 }}>No referrals in this category.</p>
         </div>
       ) : (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }}>
+              <tr style={{ backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }}>
                 {["Referrer", "Referred User", "Joined", "Credit", "Status"].map(h => (
-                  <th key={h} style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  <th key={h} style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: C.gray500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map((r, i) => (
-                <tr key={r._id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                <tr key={r._id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : 'none' }}>
                   <td style={{ padding: '1rem 1.25rem' }}>
                     <p style={{ fontWeight: 600, color: C.primary, fontSize: '0.875rem', margin: '0 0 2px' }}>{r.referrer.name}</p>
                     <p style={{ color: C.gray500, fontSize: '0.75rem', margin: 0 }}>{r.referrer.email}</p>
@@ -94,7 +94,7 @@ export default function AdminReferralsPage() {
                     Rs. {r.creditAmount}
                   </td>
                   <td style={{ padding: '1rem 1.25rem' }}>
-                    <span style={{ padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: r.status === "credited" ? '#f0fdf4' : '#fffbeb', color: r.status === "credited" ? '#16a34a' : '#d97706' }}>
+                    <span style={{ padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: r.status === "credited" ? STATUS_COLORS.success.bg : STATUS_COLORS.warning.bg, color: r.status === "credited" ? STATUS_COLORS.success.color : STATUS_COLORS.warning.color }}>
                       {r.status === "credited" ? "Credited" : "Pending"}
                     </span>
                   </td>

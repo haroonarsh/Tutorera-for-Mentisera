@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Clock, AlertCircle, XCircle } from "lucide-react";
@@ -96,11 +96,11 @@ function PaymentsContent() {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: "Total Confirmed",  value: formatTotals(confirmedBookings, b => b.amount), icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
-          { label: "Pending Payments", value: formatTotals(bookings.filter(b => b.paymentStatus === "pending"), b => b.amount), icon: <Clock size={20} color="#d97706" />, bg: '#fffbeb' },
-          { label: "Platform Revenue", value: formatTotals(confirmedBookings, b => b.platformFee || 0), icon: <AlertCircle size={20} color={C.accent} />, bg: '#EEF5FF' },
+          { label: "Total Confirmed",  value: formatTotals(confirmedBookings, b => b.amount), icon: <CheckCircle size={20} color={STATUS_COLORS.success.color} />, bg: STATUS_COLORS.success.bg },
+          { label: "Pending Payments", value: formatTotals(bookings.filter(b => b.paymentStatus === "pending"), b => b.amount), icon: <Clock size={20} color={STATUS_COLORS.warning.color} />, bg: STATUS_COLORS.warning.bg },
+          { label: "Platform Revenue", value: formatTotals(confirmedBookings, b => b.platformFee || 0), icon: <AlertCircle size={20} color={C.accent} />, bg: UI_COLORS.accentLight },
         ].map(card => (
-          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div key={card.label} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.25rem', border: `1px solid ${UI_COLORS.border}`, display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {card.icon}
             </div>
@@ -113,14 +113,14 @@ function PaymentsContent() {
       </div>
 
       {/* Fee info banner */}
-      <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: '#166534' }}>
+      <div style={{ backgroundColor: STATUS_COLORS.success.bg, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: '0.75rem', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: STATUS_COLORS.success.color }}>
         💡 <strong>Tutor fee: 20% plus 15% tax on that fee (23% effective tutor deduction).</strong> Students currently pay the agreed amount without a marketplace fee.
         Example: agreed PKR 1,000 → student pays PKR 1,000 → estimated tutor net PKR 770.
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '0', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
+        <div style={{ display: 'flex', gap: '0', backgroundColor: UI_COLORS.surface, borderRadius: '0.75rem', padding: '0.3rem', border: `1px solid ${UI_COLORS.border}`, width: 'fit-content' }}>
           {(["payments", "payouts"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500 }}>
@@ -143,9 +143,9 @@ function PaymentsContent() {
                     borderRadius: '999px',
                     fontSize: '0.75rem',
                     fontWeight: active ? 800 : 600,
-                    border: active ? '1px solid #0329b2' : '1px solid #e2e8f0',
-                    background: active ? '#0329b2' : '#ffffff',
-                    color: active ? '#ffffff' : '#475569',
+                    border: active ? `1px solid ${UI_COLORS.accent}` : `1px solid ${UI_COLORS.border}`,
+                    background: active ? UI_COLORS.accent : UI_COLORS.surface,
+                    color: active ? UI_COLORS.surface : TEXT_COLORS.muted,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
                   }}
@@ -175,34 +175,34 @@ function PaymentsContent() {
             const tutorPayout = booking.tutorPayout || 0;
             const curr = booking.currency || "PKR";
             return (
-              <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div key={booking._id} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${UI_COLORS.border}` }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
 
                   {/* Person Info */}
                   <div>
                     {activeTab === "payments" ? (
                       <>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Student</p>
+                        <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.3rem' }}>Student</p>
                         <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>{booking.student?.name}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.student?.email}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.student?.phone}</p>
                       </>
                     ) : (
                       <>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Tutor</p>
+                        <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.3rem' }}>Tutor</p>
                         <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>{booking.tutor?.name}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.tutor?.email}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.tutor?.phone}</p>
                       </>
                     )}
-                    <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    <p style={{ color: TEXT_COLORS.muted, fontSize: '0.75rem', marginTop: '0.5rem' }}>
                       Booked: {new Date(booking.createdAt).toLocaleDateString()}
                     </p>
                   </div>
 
                   {/* Amount Breakdown */}
                   <div style={{ backgroundColor: C.gray50, borderRadius: '0.625rem', padding: '1rem' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem' }}>
                       {activeTab === "payments" ? "Amount to Receive from Student" : "Amount to Pay Tutor"}
                     </p>
                     <p style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary }}>
@@ -223,7 +223,7 @@ function PaymentsContent() {
 
                   {/* Status + Actions */}
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem' }}>
                       {activeTab === "payments" ? "Payment Status" : "Payout Status"}
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -239,7 +239,7 @@ function PaymentsContent() {
                               if (nextStatus !== booking.paymentStatus && !allowed.includes(nextStatus)) return;
                               setSelectedStatus(prev => ({ ...prev, [booking._id]: nextStatus }));
                             }}
-                            style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: 'white' }}>
+                            style={{ padding: '0.5rem', border: `1px solid ${UI_COLORS.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: UI_COLORS.surface }}>
                             <option value="pending" disabled={booking.paymentStatus !== "pending" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("pending")}>Pending</option>
                             <option value="received" disabled={booking.paymentStatus !== "received" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("received")}>Received (Unconfirmed)</option>
                             <option value="confirmed" disabled={booking.paymentStatus !== "confirmed" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("confirmed")}>Confirmed ✅</option>
@@ -253,30 +253,30 @@ function PaymentsContent() {
                             disabled={!canManagePayments}
                             onChange={e => setNote(prev => ({ ...prev, [booking._id]: e.target.value }))}
                             placeholder="Required change reason (8+ characters)"
-                            style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
+                            style={{ padding: '0.5rem', border: `1px solid ${UI_COLORS.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
                           <button
                             type="button"
                             onClick={() => updatePayment(booking._id, selectedStatus[booking._id] || booking.paymentStatus)}
                             disabled={updating === booking._id || !canManagePayments || !selectedStatus[booking._id] || (note[booking._id] || "").trim().length < 8}
-                            style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+                            style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? UI_COLORS.accentBright : C.accent, color: UI_COLORS.surface, border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
                             {updating === booking._id ? "Saving..." : "Update Payment"}
                           </button>
                         </>
                       ) : (
                         <>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? '#f0fdf4' : '#fffbeb', color: booking.payoutStatus === 'paid' ? '#16a34a' : '#d97706', width: 'fit-content' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? STATUS_COLORS.success.bg : STATUS_COLORS.warning.bg, color: booking.payoutStatus === 'paid' ? STATUS_COLORS.success.color : STATUS_COLORS.warning.color, width: 'fit-content' }}>
                             {booking.payoutStatus === 'paid' ? <CheckCircle size={13} /> : <Clock size={13} />}
                             {booking.payoutStatus === 'paid' ? 'Paid Out' : 'Payout Pending'}
                           </div>
                           {booking.payoutStatus !== 'paid' && booking.paymentStatus === 'confirmed' && (
                             <a
                               href="/admin/payouts"
-                              style={{ padding: '0.5rem', backgroundColor: '#16a34a', color: 'white', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: '600', textAlign: 'center', textDecoration: 'none' }}>
+                              style={{ padding: '0.5rem', backgroundColor: STATUS_COLORS.success.color, color: UI_COLORS.surface, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: '600', textAlign: 'center', textDecoration: 'none' }}>
                               Open payout operations
                             </a>
                           )}
                           {booking.paymentStatus !== 'confirmed' && (
-                            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>⚠️ Confirm student payment first</p>
+                            <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted }}>⚠️ Confirm student payment first</p>
                           )}
                         </>
                       )}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { Plus, Edit2, Save, X, AlertCircle } from "lucide-react";
 import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface FeatureFlag {
   _id: string;
@@ -129,8 +130,8 @@ export default function FeatureFlagsPage() {
               alignItems: "center",
               gap: "0.5rem",
               padding: "0.625rem 1rem",
-              background: "#3b82f6",
-              color: "white",
+              background: UI_COLORS.accentBright,
+              color: UI_COLORS.surface,
               border: "none",
               borderRadius: "0.5rem",
               cursor: "pointer",
@@ -145,8 +146,8 @@ export default function FeatureFlagsPage() {
       {showForm && (
         <div
           style={{
-            background: "white",
-            border: "1px solid #e5e7eb",
+            background: UI_COLORS.surface,
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.75rem",
             padding: "1.5rem",
             marginBottom: "2rem",
@@ -166,7 +167,7 @@ export default function FeatureFlagsPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                   opacity: editingId ? 0.7 : 1,
@@ -182,7 +183,7 @@ export default function FeatureFlagsPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   fontSize: "0.875rem",
                   fontFamily: "inherit",
@@ -222,7 +223,7 @@ export default function FeatureFlagsPage() {
                   style={{
                     width: "100%",
                     padding: "0.5rem",
-                    border: "1px solid #d1d5db",
+                    border: `1px solid ${UI_COLORS.border}`,
                     borderRadius: "0.375rem",
                     fontSize: "0.875rem",
                   }}
@@ -246,8 +247,8 @@ export default function FeatureFlagsPage() {
               onClick={handleCancel}
               style={{
                 padding: "0.625rem 1rem",
-                border: "1px solid #d1d5db",
-                background: "white",
+                border: `1px solid ${UI_COLORS.border}`,
+                background: UI_COLORS.surface,
                 borderRadius: "0.375rem",
                 cursor: "pointer",
                 fontWeight: 600,
@@ -263,8 +264,8 @@ export default function FeatureFlagsPage() {
                 alignItems: "center",
                 gap: "0.5rem",
                 padding: "0.625rem 1rem",
-                background: saving ? "#9ca3af" : "#10b981",
-                color: "white",
+                background: saving ? TEXT_COLORS.muted : STATUS_COLORS.success.color,
+                color: UI_COLORS.surface,
                 border: "none",
                 borderRadius: "0.375rem",
                 cursor: saving ? "not-allowed" : "pointer",
@@ -282,9 +283,9 @@ export default function FeatureFlagsPage() {
           style={{
             textAlign: "center",
             padding: "3rem",
-            background: "#f9fafb",
+            background: STATUS_COLORS.neutral.bg,
             borderRadius: "0.75rem",
-            color: "#6b7280",
+            color: TEXT_COLORS.muted,
           }}
         >
           <AlertCircle size={32} style={{ margin: "0 auto 1rem", opacity: 0.5 }} />
@@ -301,30 +302,30 @@ export default function FeatureFlagsPage() {
                 gap: "1rem",
                 alignItems: "center",
                 padding: "1rem",
-                background: "white",
-                border: "1px solid #e5e7eb",
+                background: UI_COLORS.surface,
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "0.75rem",
               }}
             >
               <div>
                 <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>{flag.key}</div>
-                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>{flag.description}</div>
+                <div style={{ fontSize: "0.875rem", color: TEXT_COLORS.muted }}>{flag.description}</div>
                 {flag.scope === "country" && (
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.25rem" }}>
                     🌍 {flag.countryCodes?.join(", ")}
                   </div>
                 )}
               </div>
-              <div style={{ textAlign: "right", fontSize: "0.75rem", color: "#9ca3af" }}>
+              <div style={{ textAlign: "right", fontSize: "0.75rem", color: TEXT_COLORS.muted }}>
                 {flag.updatedBy?.name && `Updated by ${flag.updatedBy.name}`}
               </div>
               <button
                 onClick={() => toggleFlag(flag)}
                 style={{
                   padding: "0.5rem 1rem",
-                  background: flag.enabled ? "#dcfce7" : "#fee2e2",
-                  color: flag.enabled ? "#15803d" : "#991b1b",
-                  border: `1px solid ${flag.enabled ? "#bbf7d0" : "#fecaca"}`,
+                  background: flag.enabled ? STATUS_COLORS.success.bg : STATUS_COLORS.danger.bg,
+                  color: flag.enabled ? STATUS_COLORS.success.color : STATUS_COLORS.danger.color,
+                  border: `1px solid ${flag.enabled ? STATUS_COLORS.success.border : STATUS_COLORS.danger.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
                   fontWeight: 600,
@@ -340,8 +341,8 @@ export default function FeatureFlagsPage() {
                   alignItems: "center",
                   gap: "0.25rem",
                   padding: "0.5rem 0.75rem",
-                  background: "#f3f4f6",
-                  border: "1px solid #d1d5db",
+                  background: STATUS_COLORS.neutral.bg,
+                  border: `1px solid ${UI_COLORS.border}`,
                   borderRadius: "0.375rem",
                   cursor: "pointer",
                 }}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface ControlTowerData {
   pulse: {
@@ -229,27 +230,27 @@ export default function AdminControlTowerPage() {
       title: "Active Demand",
       value: pulse?.activeRequests ?? 0,
       label: "Requests Seeking Tutors",
-      icon: <BookOpen size={20} color="#0329b2" />,
-      bg: "#eff6ff",
-      border: "#bfdbfe",
+      icon: <BookOpen size={20} color={UI_COLORS.accent} />,
+      bg: STATUS_COLORS.info.bg,
+      border: STATUS_COLORS.info.border,
       link: "/admin/marketplace",
     },
     {
       title: "Bookings",
       value: pulse?.successfulBookings ?? 0,
       label: "Confirmed Sessions",
-      icon: <CheckCircle size={20} color="#059669" />,
-      bg: "#ecfdf5",
-      border: "#a7f3d0",
+      icon: <CheckCircle size={20} color={STATUS_COLORS.success.color} />,
+      bg: STATUS_COLORS.success.bg,
+      border: STATUS_COLORS.success.border,
       link: "/admin/bookings",
     },
     {
       title: "Requests At Risk",
       value: pulse?.requestsAtRisk ?? 0,
       label: "Need Liquidity Rescue",
-      icon: <AlertTriangle size={20} color="#d97706" />,
-      bg: "#fffbeb",
-      border: "#fde68a",
+      icon: <AlertTriangle size={20} color={STATUS_COLORS.warning.color} />,
+      bg: STATUS_COLORS.warning.bg,
+      border: STATUS_COLORS.warning.border,
       link: "/admin/at-risk-requests",
       highlight: (pulse?.requestsAtRisk ?? 0) > 0,
     },
@@ -257,9 +258,9 @@ export default function AdminControlTowerPage() {
       title: "Zero-Offer Requests",
       value: pulse?.zeroOfferRequests ?? 0,
       label: "0 Offers > 24 Hours",
-      icon: <TrendingUp size={20} color="#dc2626" />,
-      bg: "#fef2f2",
-      border: "#fecaca",
+      icon: <TrendingUp size={20} color={STATUS_COLORS.danger.color} />,
+      bg: STATUS_COLORS.danger.bg,
+      border: STATUS_COLORS.danger.border,
       link: "/admin/at-risk-requests?filter=zero_offers",
       highlight: (pulse?.zeroOfferRequests ?? 0) > 0,
     },
@@ -267,9 +268,9 @@ export default function AdminControlTowerPage() {
       title: "Verification Backlog",
       value: pulse?.verificationBacklog ?? 0,
       label: "Pending > 48h SLA",
-      icon: <ShieldCheck size={20} color="#4f46e5" />,
-      bg: "#eef2ff",
-      border: "#c7d2fe",
+      icon: <ShieldCheck size={20} color={STATUS_COLORS.purple.color} />,
+      bg: STATUS_COLORS.purple.bg,
+      border: STATUS_COLORS.purple.border,
       link: "/admin/applications?status=UNDER_REVIEW",
       highlight: (pulse?.verificationBacklog ?? 0) > 0,
     },
@@ -277,9 +278,9 @@ export default function AdminControlTowerPage() {
       title: "Failed Payments",
       value: pulse?.failedPayments ?? 0,
       label: "Checkout Stalls",
-      icon: <CreditCard size={20} color="#e11d48" />,
-      bg: "#fff1f2",
-      border: "#fecdd3",
+      icon: <CreditCard size={20} color={STATUS_COLORS.danger.color} />,
+      bg: STATUS_COLORS.danger.bg,
+      border: STATUS_COLORS.danger.border,
       link: "/admin/payments?status=failed",
       highlight: (pulse?.failedPayments ?? 0) > 0,
     },
@@ -287,9 +288,9 @@ export default function AdminControlTowerPage() {
       title: "Safety Incidents",
       value: pulse?.openSafetyCases ?? 0,
       label: "Under Investigation",
-      icon: <ShieldAlert size={20} color="#7c3aed" />,
-      bg: "#f5f3ff",
-      border: "#ddd6fe",
+      icon: <ShieldAlert size={20} color={STATUS_COLORS.purple.color} />,
+      bg: STATUS_COLORS.purple.bg,
+      border: STATUS_COLORS.purple.border,
       link: "/admin/safety-cases?status=open",
       highlight: (pulse?.openSafetyCases ?? 0) > 0,
     },
@@ -314,9 +315,9 @@ export default function AdminControlTowerPage() {
           flexWrap: "wrap",
           gap: "1.25rem",
           padding: "1.25rem 1.5rem",
-          background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)",
+          background: `linear-gradient(135deg, , )`,
           borderRadius: "1rem",
-          color: "#ffffff",
+          color: UI_COLORS.surface,
           boxShadow: "0 10px 25px -5px rgba(2,21,80,0.25)",
         }}
       >
@@ -328,19 +329,19 @@ export default function AdminControlTowerPage() {
                 width: "10px",
                 height: "10px",
                 borderRadius: "50%",
-                background: "#10b981",
-                boxShadow: "0 0 10px #10b981",
+                background: STATUS_COLORS.success.color,
+                boxShadow: `0 0 10px `,
                 animation: "pulse 2s infinite",
               }}
             />
-            <span style={{ fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#93c5fd" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: UI_COLORS.accentBright }}>
               LIVE CONTROL TOWER · GLOBAL OPS
             </span>
           </div>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
             Marketplace Command Center
           </h1>
-          <p style={{ color: "#cbd5e1", fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
+          <p style={{ color: UI_COLORS.accentBright, fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
             Autonomous liquidity balancing, verification SLA management, and real-time transaction oversight.
           </p>
         </div>
@@ -349,7 +350,7 @@ export default function AdminControlTowerPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           {/* Refresh Interval Selector */}
           <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.1)", borderRadius: "0.5rem", padding: "0.2rem 0.4rem" }}>
-            <span style={{ fontSize: "0.72rem", color: "#bfdbfe", padding: "0 0.4rem", fontWeight: 700 }}>Interval:</span>
+            <span style={{ fontSize: "0.72rem", color: STATUS_COLORS.info.border, padding: "0 0.4rem", fontWeight: 700 }}>Interval:</span>
             {[
               { val: 0, label: "Off" },
               { val: 15, label: "15s" },
@@ -361,8 +362,8 @@ export default function AdminControlTowerPage() {
                 onClick={() => setAutoRefreshInterval(option.val)}
                 style={{
                   border: "none",
-                  background: autoRefreshInterval === option.val ? "#ffffff" : "transparent",
-                  color: autoRefreshInterval === option.val ? "#021550" : "#ffffff",
+                  background: autoRefreshInterval === option.val ? UI_COLORS.surface : "transparent",
+                  color: autoRefreshInterval === option.val ? UI_COLORS.primary : UI_COLORS.surface,
                   fontSize: "0.72rem",
                   fontWeight: 800,
                   padding: "0.25rem 0.55rem",
@@ -389,7 +390,7 @@ export default function AdminControlTowerPage() {
               borderRadius: "0.5rem",
               fontSize: "0.82rem",
               fontWeight: 700,
-              color: "#ffffff",
+              color: UI_COLORS.surface,
               cursor: "pointer",
               backdropFilter: "blur(4px)",
             }}
@@ -406,10 +407,10 @@ export default function AdminControlTowerPage() {
             <Link key={c.title} href={c.link} style={{ textDecoration: "none" }}>
               <div
                 style={{
-                  backgroundColor: "white",
+                  backgroundColor: UI_COLORS.surface,
                   borderRadius: "0.75rem",
                   padding: "1.1rem",
-                  border: `1px solid ${c.highlight ? "#fca5a5" : "#e2e8f0"}`,
+                  border: `1px solid ${c.highlight ? STATUS_COLORS.danger.border : UI_COLORS.border}`,
                   boxShadow: c.highlight ? "0 4px 12px rgba(239, 68, 68, 0.08)" : "0 1px 3px rgba(0,0,0,0.02)",
                   transition: "all 0.2s ease",
                   display: "flex",
@@ -419,7 +420,7 @@ export default function AdminControlTowerPage() {
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.6rem" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 800, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {c.title}
                   </span>
                   <div style={{ width: "32px", height: "32px", borderRadius: "0.5rem", background: c.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -427,10 +428,10 @@ export default function AdminControlTowerPage() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "1.8rem", fontWeight: 900, color: c.highlight ? "#dc2626" : "#0f172a", lineHeight: 1 }}>
+                  <div style={{ fontSize: "1.8rem", fontWeight: 900, color: c.highlight ? STATUS_COLORS.danger.color : TEXT_COLORS.body, lineHeight: 1 }}>
                     {loading ? "…" : c.value.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.35rem", fontWeight: 600 }}>
+                  <div style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.35rem", fontWeight: 600 }}>
                     {c.label}
                   </div>
                 </div>
@@ -445,7 +446,7 @@ export default function AdminControlTowerPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.9rem", flexWrap: "wrap", gap: "0.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span style={{ fontSize: "1.2rem" }}>🚨</span>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
               Requires Action Now
             </h2>
           </div>
@@ -458,9 +459,9 @@ export default function AdminControlTowerPage() {
                 gap: "0.35rem",
                 padding: "0.35rem 0.75rem",
                 borderRadius: "0.4rem",
-                border: "1px solid #c7d2fe",
-                background: "#eef2ff",
-                color: "#4338ca",
+                border: `1px solid `,
+                background: STATUS_COLORS.purple.bg,
+                color: STATUS_COLORS.purple.color,
                 fontSize: "0.78rem",
                 fontWeight: 800,
                 cursor: "pointer",
@@ -468,20 +469,20 @@ export default function AdminControlTowerPage() {
             >
               <ShieldCheck size={14} /> Quick Triage Modal
             </button>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted }}>
               {data?.urgentActions?.length ?? 0} items awaiting resolution
             </span>
           </div>
         </div>
 
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+        <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", border: `1px solid `, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
           {loading ? (
-            <div style={{ padding: "2.5rem", textAlign: "center", color: "#94a3b8" }}>
+            <div style={{ padding: "2.5rem", textAlign: "center", color: TEXT_COLORS.muted }}>
               <RefreshCw size={20} className="spin" style={{ margin: "0 auto 0.5rem" }} />
               Scanning operational queues…
             </div>
           ) : !data?.urgentActions || data.urgentActions.length === 0 ? (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#059669", fontWeight: 700 }}>
+            <div style={{ padding: "2rem", textAlign: "center", color: STATUS_COLORS.success.color, fontWeight: 700 }}>
               ✓ All operational queues healthy. No immediate triage actions required!
             </div>
           ) : (
@@ -494,7 +495,7 @@ export default function AdminControlTowerPage() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "1rem 1.25rem",
-                    borderBottom: idx < data.urgentActions.length - 1 ? "1px solid #f1f5f9" : "none",
+                    borderBottom: idx < data.urgentActions.length - 1 ? `1px solid ` : "none",
                     flexWrap: "wrap",
                     gap: "1rem",
                   }}
@@ -509,25 +510,25 @@ export default function AdminControlTowerPage() {
                         textTransform: "uppercase",
                         backgroundColor:
                           action.severity === "critical"
-                            ? "#fee2e2"
+                            ? STATUS_COLORS.danger.bg
                             : action.severity === "high"
-                            ? "#ffedd5"
-                            : "#fef9c3",
+                            ? STATUS_COLORS.warning.bg
+                            : STATUS_COLORS.warning.bg,
                         color:
                           action.severity === "critical"
-                            ? "#991b1b"
+                            ? STATUS_COLORS.danger.color
                             : action.severity === "high"
-                            ? "#9a3412"
-                            : "#854d0e",
+                            ? STATUS_COLORS.warning.color
+                            : STATUS_COLORS.warning.color,
                       }}
                     >
                       {action.severity}
                     </span>
                     <div>
-                      <strong style={{ fontSize: "0.92rem", color: "#0f172a", display: "block" }}>
+                      <strong style={{ fontSize: "0.92rem", color: TEXT_COLORS.body, display: "block" }}>
                         {action.title}
                       </strong>
-                      <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{action.detail}</span>
+                      <span style={{ fontSize: "0.8rem", color: TEXT_COLORS.muted }}>{action.detail}</span>
                     </div>
                   </div>
 
@@ -539,9 +540,9 @@ export default function AdminControlTowerPage() {
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "0.3rem",
-                          backgroundColor: "#f8fafc",
-                          color: "#334155",
-                          border: "1px solid #cbd5e1",
+                          backgroundColor: STATUS_COLORS.neutral.bg,
+                          color: TEXT_COLORS.secondary,
+                          border: `1px solid `,
                           padding: "0.45rem 0.85rem",
                           borderRadius: "0.4rem",
                           fontSize: "0.8rem",
@@ -558,7 +559,7 @@ export default function AdminControlTowerPage() {
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "0.4rem",
-                        backgroundColor: "#0329b2",
+                        backgroundColor: UI_COLORS.accent,
                         color: "white",
                         padding: "0.45rem 0.95rem",
                         borderRadius: "0.4rem",
@@ -582,16 +583,16 @@ export default function AdminControlTowerPage() {
       <section style={{ marginBottom: "2.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
           <div>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
               Onboarding Pipelines & User Readiness
             </h2>
-            <p style={{ color: "#64748b", fontSize: "0.78rem", margin: "0.2rem 0 0" }}>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem", margin: "0.2rem 0 0" }}>
               Track supply and demand activation across tutors, student learners, and parent guardians.
             </p>
           </div>
           <Link
             href="/admin/onboarding"
-            style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0329b2", textDecoration: "none" }}
+            style={{ fontSize: "0.82rem", fontWeight: 700, color: UI_COLORS.accent, textDecoration: "none" }}
           >
             Manage Pipelines →
           </Link>
@@ -599,82 +600,82 @@ export default function AdminControlTowerPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem" }}>
           {/* Tutors Pipeline Card */}
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+          <div style={{ background: UI_COLORS.surface, border: `1px solid `, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ padding: "0.35rem", borderRadius: "0.4rem", background: "#eff6ff", color: "#0329b2" }}><BookOpen size={16} /></span>
-                <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>Tutor Pipeline</strong>
+                <span style={{ padding: "0.35rem", borderRadius: "0.4rem", background: STATUS_COLORS.info.bg, color: UI_COLORS.accent }}><BookOpen size={16} /></span>
+                <strong style={{ fontSize: "0.95rem", color: TEXT_COLORS.body }}>Tutor Pipeline</strong>
               </div>
-              <Link href="/admin/onboarding?tab=tutors" style={{ fontSize: "0.75rem", fontWeight: 700, color: "#0329b2", textDecoration: "none" }}>
+              <Link href="/admin/onboarding?tab=tutors" style={{ fontSize: "0.75rem", fontWeight: 700, color: UI_COLORS.accent, textDecoration: "none" }}>
                 Inspect ({pipeline.tutors.total}) →
               </Link>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem", textAlign: "center" }}>
-              <div style={{ background: "#f8fafc", borderRadius: "0.5rem", padding: "0.6rem 0.4rem" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#0f172a" }}>{pipeline.tutors.started}</div>
-                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700 }}>Started</div>
+              <div style={{ background: STATUS_COLORS.neutral.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem" }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: TEXT_COLORS.body }}>{pipeline.tutors.started}</div>
+                <div style={{ fontSize: "0.68rem", color: TEXT_COLORS.muted, fontWeight: 700 }}>Started</div>
               </div>
-              <div style={{ background: "#fffbeb", borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: "1px solid #fde68a" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#d97706" }}>{pipeline.tutors.underReview}</div>
-                <div style={{ fontSize: "0.68rem", color: "#92400e", fontWeight: 700 }}>Under Review</div>
+              <div style={{ background: STATUS_COLORS.warning.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: `1px solid ` }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: STATUS_COLORS.warning.color }}>{pipeline.tutors.underReview}</div>
+                <div style={{ fontSize: "0.68rem", color: STATUS_COLORS.warning.color, fontWeight: 700 }}>Under Review</div>
               </div>
-              <div style={{ background: "#ecfdf5", borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: "1px solid #a7f3d0" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#059669" }}>{pipeline.tutors.active}</div>
-                <div style={{ fontSize: "0.68rem", color: "#065f46", fontWeight: 700 }}>Market Active</div>
+              <div style={{ background: STATUS_COLORS.success.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: `1px solid ` }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: STATUS_COLORS.success.color }}>{pipeline.tutors.active}</div>
+                <div style={{ fontSize: "0.68rem", color: STATUS_COLORS.success.color, fontWeight: 700 }}>Market Active</div>
               </div>
             </div>
           </div>
 
           {/* Students Pipeline Card */}
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+          <div style={{ background: UI_COLORS.surface, border: `1px solid `, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ padding: "0.35rem", borderRadius: "0.4rem", background: "#f0fdf4", color: "#059669" }}><Users size={16} /></span>
-                <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>Student Pipeline</strong>
+                <span style={{ padding: "0.35rem", borderRadius: "0.4rem", background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color }}><Users size={16} /></span>
+                <strong style={{ fontSize: "0.95rem", color: TEXT_COLORS.body }}>Student Pipeline</strong>
               </div>
-              <Link href="/admin/onboarding?tab=students" style={{ fontSize: "0.75rem", fontWeight: 700, color: "#0329b2", textDecoration: "none" }}>
+              <Link href="/admin/onboarding?tab=students" style={{ fontSize: "0.75rem", fontWeight: 700, color: UI_COLORS.accent, textDecoration: "none" }}>
                 Inspect ({pipeline.students.total}) →
               </Link>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem", textAlign: "center" }}>
-              <div style={{ background: "#f8fafc", borderRadius: "0.5rem", padding: "0.6rem 0.4rem" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#0f172a" }}>{pipeline.students.profileStarted}</div>
-                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700 }}>Profile Started</div>
+              <div style={{ background: STATUS_COLORS.neutral.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem" }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: TEXT_COLORS.body }}>{pipeline.students.profileStarted}</div>
+                <div style={{ fontSize: "0.68rem", color: TEXT_COLORS.muted, fontWeight: 700 }}>Profile Started</div>
               </div>
-              <div style={{ background: "#eff6ff", borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: "1px solid #bfdbfe" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#0329b2" }}>{pipeline.students.readyToPost}</div>
-                <div style={{ fontSize: "0.68rem", color: "#1e40af", fontWeight: 700 }}>Ready to Post</div>
+              <div style={{ background: STATUS_COLORS.info.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: `1px solid ` }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: UI_COLORS.accent }}>{pipeline.students.readyToPost}</div>
+                <div style={{ fontSize: "0.68rem", color: STATUS_COLORS.info.color, fontWeight: 700 }}>Ready to Post</div>
               </div>
-              <div style={{ background: "#ecfdf5", borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: "1px solid #a7f3d0" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#059669" }}>{pipeline.students.activeRequesters}</div>
-                <div style={{ fontSize: "0.68rem", color: "#065f46", fontWeight: 700 }}>Active Requesters</div>
+              <div style={{ background: STATUS_COLORS.success.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: `1px solid ` }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: STATUS_COLORS.success.color }}>{pipeline.students.activeRequesters}</div>
+                <div style={{ fontSize: "0.68rem", color: STATUS_COLORS.success.color, fontWeight: 700 }}>Active Requesters</div>
               </div>
             </div>
           </div>
 
           {/* Parents Pipeline Card */}
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+          <div style={{ background: UI_COLORS.surface, border: `1px solid `, borderRadius: "0.75rem", padding: "1.25rem", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ padding: "0.35rem", borderRadius: "0.4rem", background: "#fdf2f8", color: "#db2777" }}><HeartHandshake size={16} /></span>
-                <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>Parent & Guardian Pipeline</strong>
+                <span style={{ padding: "0.35rem", borderRadius: "0.4rem", background: STATUS_COLORS.purple.bg, color: UI_COLORS.magenta }}><HeartHandshake size={16} /></span>
+                <strong style={{ fontSize: "0.95rem", color: TEXT_COLORS.body }}>Parent & Guardian Pipeline</strong>
               </div>
-              <Link href="/admin/parents" style={{ fontSize: "0.75rem", fontWeight: 700, color: "#0329b2", textDecoration: "none" }}>
+              <Link href="/admin/parents" style={{ fontSize: "0.75rem", fontWeight: 700, color: UI_COLORS.accent, textDecoration: "none" }}>
                 Directory ({pipeline.parents.total}) →
               </Link>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem", textAlign: "center" }}>
-              <div style={{ background: "#f8fafc", borderRadius: "0.5rem", padding: "0.6rem 0.4rem" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#0f172a" }}>{pipeline.parents.registered}</div>
-                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700 }}>Registered</div>
+              <div style={{ background: STATUS_COLORS.neutral.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem" }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: TEXT_COLORS.body }}>{pipeline.parents.registered}</div>
+                <div style={{ fontSize: "0.68rem", color: TEXT_COLORS.muted, fontWeight: 700 }}>Registered</div>
               </div>
-              <div style={{ background: "#fffbeb", borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: "1px solid #fde68a" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#d97706" }}>{pipeline.parents.profileStarted}</div>
-                <div style={{ fontSize: "0.68rem", color: "#92400e", fontWeight: 700 }}>Profile Started</div>
+              <div style={{ background: STATUS_COLORS.warning.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: `1px solid ` }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: STATUS_COLORS.warning.color }}>{pipeline.parents.profileStarted}</div>
+                <div style={{ fontSize: "0.68rem", color: STATUS_COLORS.warning.color, fontWeight: 700 }}>Profile Started</div>
               </div>
-              <div style={{ background: "#ecfdf5", borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: "1px solid #a7f3d0" }}>
-                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#059669" }}>{pipeline.parents.learnerLinked}</div>
-                <div style={{ fontSize: "0.68rem", color: "#065f46", fontWeight: 700 }}>Learner Linked</div>
+              <div style={{ background: STATUS_COLORS.success.bg, borderRadius: "0.5rem", padding: "0.6rem 0.4rem", border: `1px solid ` }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 900, color: STATUS_COLORS.success.color }}>{pipeline.parents.learnerLinked}</div>
+                <div style={{ fontSize: "0.68rem", color: STATUS_COLORS.success.color, fontWeight: 700 }}>Learner Linked</div>
               </div>
             </div>
           </div>
@@ -685,16 +686,16 @@ export default function AdminControlTowerPage() {
       <section style={{ marginBottom: "2.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.9rem", flexWrap: "wrap", gap: "0.75rem" }}>
           <div>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
               Top At-Risk Student Requests
             </h2>
-            <p style={{ color: "#64748b", fontSize: "0.78rem", margin: "0.2rem 0 0" }}>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem", margin: "0.2rem 0 0" }}>
               Requests stalling due to zero offers, low liquidity, or fast-approaching expiry.
             </p>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", gap: "0.25rem", background: "#f1f5f9", padding: "0.2rem", borderRadius: "0.5rem" }}>
+            <div style={{ display: "flex", gap: "0.25rem", background: STATUS_COLORS.neutral.bg, padding: "0.2rem", borderRadius: "0.5rem" }}>
               {[
                 { id: "all", label: "All At-Risk" },
                 { id: "zero_offers", label: "Zero Offers" },
@@ -707,8 +708,8 @@ export default function AdminControlTowerPage() {
                     padding: "0.3rem 0.65rem",
                     borderRadius: "0.35rem",
                     border: "none",
-                    background: atRiskTab === tab.id ? "#ffffff" : "transparent",
-                    color: atRiskTab === tab.id ? "#021550" : "#64748b",
+                    background: atRiskTab === tab.id ? UI_COLORS.surface : "transparent",
+                    color: atRiskTab === tab.id ? UI_COLORS.primary : TEXT_COLORS.muted,
                     fontSize: "0.74rem",
                     fontWeight: atRiskTab === tab.id ? 800 : 600,
                     cursor: "pointer",
@@ -721,16 +722,16 @@ export default function AdminControlTowerPage() {
 
             <Link
               href="/admin/at-risk-requests"
-              style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0329b2", textDecoration: "none", marginLeft: "0.5rem" }}
+              style={{ fontSize: "0.82rem", fontWeight: 700, color: UI_COLORS.accent, textDecoration: "none", marginLeft: "0.5rem" }}
             >
               View Full Queue ({data?.pulse?.requestsAtRisk ?? 0}) →
             </Link>
           </div>
         </div>
 
-        <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+        <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", border: `1px solid `, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
           {filteredAtRisk.length === 0 ? (
-            <div style={{ padding: "2.5rem", textAlign: "center", color: "#64748b" }}>
+            <div style={{ padding: "2.5rem", textAlign: "center", color: TEXT_COLORS.muted }}>
               No requests currently categorized as at-risk in this view.
             </div>
           ) : (
@@ -743,25 +744,25 @@ export default function AdminControlTowerPage() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "1rem 1.25rem",
-                    borderBottom: idx < filteredAtRisk.length - 1 ? "1px solid #f1f5f9" : "none",
+                    borderBottom: idx < filteredAtRisk.length - 1 ? `1px solid ` : "none",
                     flexWrap: "wrap",
                     gap: "1rem",
                   }}
                 >
                   <div style={{ flex: 1, minWidth: "260px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                      <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>
+                      <strong style={{ fontSize: "0.95rem", color: TEXT_COLORS.body }}>
                         {item.request.subject}
                       </strong>
-                      <span style={{ fontSize: "0.72rem", background: "#f1f5f9", color: "#334155", padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
+                      <span style={{ fontSize: "0.72rem", background: STATUS_COLORS.neutral.bg, color: TEXT_COLORS.secondary, padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
                         {item.request.level}
                       </span>
-                      <span style={{ fontSize: "0.72rem", background: "#fee2e2", color: "#991b1b", padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 800 }}>
+                      <span style={{ fontSize: "0.72rem", background: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color, padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 800 }}>
                         Urgency: {item.urgencyScore}%
                       </span>
                     </div>
 
-                    <div style={{ fontSize: "0.78rem", color: "#64748b", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "0.78rem", color: TEXT_COLORS.muted, display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                       <span>Student: <strong>{item.request.student?.name || "Student"}</strong> ({item.request.city || "Online"})</span>
                       <span>Budget: <strong>{item.request.currency || "PKR"} {item.request.budget?.toLocaleString()}</strong></span>
                       <span>Offers: <strong>{item.offersCount}</strong></span>
@@ -770,7 +771,7 @@ export default function AdminControlTowerPage() {
 
                     <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.45rem", flexWrap: "wrap" }}>
                       {item.riskReasons.map((r) => (
-                        <span key={r} style={{ fontSize: "0.7rem", background: "#fff1f2", color: "#b91c1c", border: "1px solid #fecdd3", padding: "0.15rem 0.45rem", borderRadius: "4px" }}>
+                        <span key={r} style={{ fontSize: "0.7rem", background: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color, border: `1px solid `, padding: "0.15rem 0.45rem", borderRadius: "4px" }}>
                           ⚠️ {r}
                         </span>
                       ))}
@@ -784,9 +785,9 @@ export default function AdminControlTowerPage() {
                       disabled={actionLoading === `${item.request._id}-rematch`}
                       style={{
                         padding: "0.4rem 0.75rem",
-                        backgroundColor: "#ecfdf5",
-                        color: "#059669",
-                        border: "1px solid #a7f3d0",
+                        backgroundColor: STATUS_COLORS.success.bg,
+                        color: STATUS_COLORS.success.color,
+                        border: `1px solid `,
                         borderRadius: "0.4rem",
                         fontSize: "0.78rem",
                         fontWeight: 700,
@@ -800,9 +801,9 @@ export default function AdminControlTowerPage() {
                       disabled={actionLoading === `${item.request._id}-extend`}
                       style={{
                         padding: "0.4rem 0.75rem",
-                        backgroundColor: "#eff6ff",
-                        color: "#1d4ed8",
-                        border: "1px solid #bfdbfe",
+                        backgroundColor: STATUS_COLORS.info.bg,
+                        color: STATUS_COLORS.info.color,
+                        border: `1px solid `,
                         borderRadius: "0.4rem",
                         fontSize: "0.78rem",
                         fontWeight: 700,
@@ -816,9 +817,9 @@ export default function AdminControlTowerPage() {
                       disabled={actionLoading === `${item.request._id}-suggest_online`}
                       style={{
                         padding: "0.4rem 0.75rem",
-                        backgroundColor: "#fffbeb",
-                        color: "#b45309",
-                        border: "1px solid #fde68a",
+                        backgroundColor: STATUS_COLORS.warning.bg,
+                        color: STATUS_COLORS.warning.color,
+                        border: `1px solid `,
                         borderRadius: "0.4rem",
                         fontSize: "0.78rem",
                         fontWeight: 700,
@@ -837,21 +838,21 @@ export default function AdminControlTowerPage() {
 
       {/* Operational Command Hub Shortcuts */}
       <section style={{ marginBottom: "2.5rem" }}>
-        <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.9rem" }}>
+        <h2 style={{ fontSize: "1.15rem", fontWeight: 800, color: TEXT_COLORS.body, margin: "0 0 0.9rem" }}>
           Operations & Control Hub Shortcuts
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
           {[
-            { title: "Smart Matching Engine", desc: "Configure weights & inspect affinity scores", link: "/admin/matching", icon: <Sparkles size={18} color="#0329b2" />, bg: "#eff6ff" },
-            { title: "Financial Reconciliation", desc: "Audit gateway fees, refunds & platform margins", link: "/admin/reconciliation", icon: <CreditCard size={18} color="#059669" />, bg: "#ecfdf5" },
-            { title: "Refunds & Claims Desk", desc: "Dispute resolution and money-back requests", link: "/admin/refund-requests", icon: <ShieldAlert size={18} color="#dc2626" />, bg: "#fef2f2" },
-            { title: "Global Markets & Tax", desc: "Country rules, currency, and tax configurations", link: "/admin/markets", icon: <Globe size={18} color="#7c3aed" />, bg: "#f5f3ff" },
+            { title: "Smart Matching Engine", desc: "Configure weights & inspect affinity scores", link: "/admin/matching", icon: <Sparkles size={18} color={UI_COLORS.accent} />, bg: STATUS_COLORS.info.bg },
+            { title: "Financial Reconciliation", desc: "Audit gateway fees, refunds & platform margins", link: "/admin/reconciliation", icon: <CreditCard size={18} color={STATUS_COLORS.success.color} />, bg: STATUS_COLORS.success.bg },
+            { title: "Refunds & Claims Desk", desc: "Dispute resolution and money-back requests", link: "/admin/refund-requests", icon: <ShieldAlert size={18} color={STATUS_COLORS.danger.color} />, bg: STATUS_COLORS.danger.bg },
+            { title: "Global Markets & Tax", desc: "Country rules, currency, and tax configurations", link: "/admin/markets", icon: <Globe size={18} color={STATUS_COLORS.purple.color} />, bg: STATUS_COLORS.purple.bg },
           ].map((item) => (
             <Link key={item.title} href={item.link} style={{ textDecoration: "none" }}>
               <div
                 style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
+                  background: UI_COLORS.surface,
+                  border: `1px solid `,
                   borderRadius: "0.75rem",
                   padding: "1.1rem",
                   display: "flex",
@@ -864,8 +865,8 @@ export default function AdminControlTowerPage() {
                   {item.icon}
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 800, color: "#0f172a" }}>{item.title}</h4>
-                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>{item.desc}</p>
+                  <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 800, color: TEXT_COLORS.body }}>{item.title}</h4>
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: TEXT_COLORS.muted }}>{item.desc}</p>
                 </div>
               </div>
             </Link>
@@ -874,13 +875,13 @@ export default function AdminControlTowerPage() {
       </section>
 
       {/* Reports & Exports Section */}
-      <section style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.25rem", border: "1px solid #e2e8f0" }}>
+      <section style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", padding: "1.25rem", border: `1px solid ` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
           <div>
-            <h3 style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 800, color: TEXT_COLORS.body, margin: 0 }}>
               Export Operating Reports
             </h3>
-            <p style={{ color: "#64748b", fontSize: "0.78rem", margin: "0.2rem 0 0" }}>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem", margin: "0.2rem 0 0" }}>
               Generate comprehensive Excel and PDF summaries for finance, bookings, and compliance.
             </p>
           </div>
@@ -897,9 +898,9 @@ export default function AdminControlTowerPage() {
                 borderRadius: "0.4rem",
                 fontSize: "0.78rem",
                 fontWeight: 700,
-                backgroundColor: "#f0fdf4",
-                color: "#16a34a",
-                border: "1px solid #bbf7d0",
+                backgroundColor: STATUS_COLORS.success.bg,
+                color: UI_COLORS.success,
+                border: `1px solid `,
                 cursor: "pointer",
               }}
             >
@@ -916,9 +917,9 @@ export default function AdminControlTowerPage() {
                 borderRadius: "0.4rem",
                 fontSize: "0.78rem",
                 fontWeight: 700,
-                backgroundColor: "#fef2f2",
-                color: "#dc2626",
-                border: "1px solid #fecaca",
+                backgroundColor: STATUS_COLORS.danger.bg,
+                color: STATUS_COLORS.danger.color,
+                border: `1px solid `,
                 cursor: "pointer",
               }}
             >
@@ -935,9 +936,9 @@ export default function AdminControlTowerPage() {
                 borderRadius: "0.4rem",
                 fontSize: "0.78rem",
                 fontWeight: 700,
-                backgroundColor: "#f0fdf4",
-                color: "#16a34a",
-                border: "1px solid #bbf7d0",
+                backgroundColor: STATUS_COLORS.success.bg,
+                color: UI_COLORS.success,
+                border: `1px solid `,
                 cursor: "pointer",
               }}
             >
@@ -963,7 +964,7 @@ export default function AdminControlTowerPage() {
         >
           <div
             style={{
-              background: "#ffffff",
+              background: UI_COLORS.surface,
               borderRadius: "0.85rem",
               width: "100%",
               maxWidth: "680px",
@@ -976,16 +977,16 @@ export default function AdminControlTowerPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: TEXT_COLORS.body }}>
                   Tutor Verification SLA Backlog
                 </h3>
-                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: TEXT_COLORS.muted }}>
                   Pending applications awaiting identity and document sign-off.
                 </p>
               </div>
               <button
                 onClick={() => setShowVerificationModal(false)}
-                style={{ border: "none", background: "transparent", cursor: "pointer", color: "#94a3b8", padding: "0.25rem" }}
+                style={{ border: "none", background: "transparent", cursor: "pointer", color: TEXT_COLORS.muted, padding: "0.25rem" }}
               >
                 <X size={18} />
               </button>
@@ -993,12 +994,12 @@ export default function AdminControlTowerPage() {
 
             <div style={{ overflowY: "auto", flex: 1, paddingRight: "0.25rem" }}>
               {loadingTutors ? (
-                <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
+                <div style={{ padding: "3rem", textAlign: "center", color: TEXT_COLORS.muted }}>
                   <RefreshCw size={24} className="spin" style={{ margin: "0 auto 0.75rem" }} />
                   Loading verification backlog…
                 </div>
               ) : pendingTutors.length === 0 ? (
-                <div style={{ padding: "3rem", textAlign: "center", color: "#059669" }}>
+                <div style={{ padding: "3rem", textAlign: "center", color: STATUS_COLORS.success.color }}>
                   <CheckCircle size={32} style={{ margin: "0 auto 0.5rem" }} />
                   <p style={{ fontWeight: 700, margin: 0 }}>Verification queue is clear!</p>
                 </div>
@@ -1008,8 +1009,8 @@ export default function AdminControlTowerPage() {
                     <div
                       key={tutor.profileId}
                       style={{
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
+                        background: STATUS_COLORS.neutral.bg,
+                        border: `1px solid `,
                         borderRadius: "0.6rem",
                         padding: "0.85rem 1rem",
                         display: "flex",
@@ -1020,9 +1021,9 @@ export default function AdminControlTowerPage() {
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.9rem" }}>{tutor.name}</div>
-                        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{tutor.email} · {tutor.city || "Pakistan"}</div>
-                        <div style={{ fontSize: "0.72rem", color: "#d97706", fontWeight: 700, marginTop: "0.2rem" }}>
+                        <div style={{ fontWeight: 800, color: TEXT_COLORS.body, fontSize: "0.9rem" }}>{tutor.name}</div>
+                        <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted }}>{tutor.email} · {tutor.city || "Pakistan"}</div>
+                        <div style={{ fontSize: "0.72rem", color: STATUS_COLORS.warning.color, fontWeight: 700, marginTop: "0.2rem" }}>
                           Status: UNDER REVIEW
                         </div>
                       </div>
@@ -1037,8 +1038,8 @@ export default function AdminControlTowerPage() {
                             gap: "0.3rem",
                             padding: "0.4rem 0.8rem",
                             borderRadius: "0.4rem",
-                            background: "#0329b2",
-                            color: "#ffffff",
+                            background: UI_COLORS.accent,
+                            color: UI_COLORS.surface,
                             fontSize: "0.78rem",
                             fontWeight: 700,
                             textDecoration: "none",
@@ -1053,11 +1054,11 @@ export default function AdminControlTowerPage() {
               )}
             </div>
 
-            <div style={{ marginTop: "1.25rem", paddingTop: "0.75rem", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ marginTop: "1.25rem", paddingTop: "0.75rem", borderTop: `1px solid `, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Link
                 href="/admin/applications?status=UNDER_REVIEW"
                 onClick={() => setShowVerificationModal(false)}
-                style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0329b2", textDecoration: "none" }}
+                style={{ fontSize: "0.8rem", fontWeight: 700, color: UI_COLORS.accent, textDecoration: "none" }}
               >
                 View all in Applications Directory →
               </Link>
@@ -1066,9 +1067,9 @@ export default function AdminControlTowerPage() {
                 style={{
                   padding: "0.45rem 0.9rem",
                   borderRadius: "0.4rem",
-                  border: "1px solid #cbd5e1",
-                  background: "#ffffff",
-                  color: "#475569",
+                  border: `1px solid `,
+                  background: UI_COLORS.surface,
+                  color: TEXT_COLORS.muted,
                   fontSize: "0.8rem",
                   fontWeight: 700,
                   cursor: "pointer",

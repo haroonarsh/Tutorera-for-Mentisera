@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface SafetyCaseItem {
   _id: string;
@@ -82,16 +83,16 @@ function SafetyCasesContent() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <Link href="/admin" style={{ color: "#64748b", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
+            <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.82rem", fontWeight: 700 }}>
               <ArrowLeft size={14} /> Control Tower
             </Link>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#7c3aed" }}>Trust & Safety</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: STATUS_COLORS.purple.color }}>Trust & Safety</span>
           </div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a", margin: 0 }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 900, color: TEXT_COLORS.body, margin: 0 }}>
             Trust & Safety Case Management
           </h1>
-          <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
             Investigate incidents, anti-circumvention flags, conduct complaints, and protect students & tutors.
           </p>
         </div>
@@ -104,8 +105,8 @@ function SafetyCasesContent() {
             alignItems: "center",
             gap: "0.4rem",
             padding: "0.55rem 0.9rem",
-            backgroundColor: "white",
-            border: "1px solid #cbd5e1",
+            backgroundColor: UI_COLORS.surface,
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "0.4rem",
             fontSize: "0.82rem",
             fontWeight: 700,
@@ -134,8 +135,8 @@ function SafetyCasesContent() {
               fontWeight: 700,
               border: "none",
               cursor: "pointer",
-              backgroundColor: filterStatus === f.id ? "#0f172a" : "#f1f5f9",
-              color: filterStatus === f.id ? "white" : "#475569",
+              backgroundColor: filterStatus === f.id ? TEXT_COLORS.body : STATUS_COLORS.neutral.bg,
+              color: filterStatus === f.id ? UI_COLORS.surface : TEXT_COLORS.muted,
             }}
           >
             {f.label}
@@ -144,14 +145,14 @@ function SafetyCasesContent() {
       </div>
 
       {/* Cases List */}
-      <div style={{ backgroundColor: "white", borderRadius: "0.75rem", border: "1px solid #e2e8f0", overflow: "hidden" }}>
+      <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", border: `1px solid ${UI_COLORS.border}`, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>Loading Trust & Safety Cases…</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: TEXT_COLORS.muted }}>Loading Trust & Safety Cases…</div>
         ) : cases.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#059669" }}>
+          <div style={{ padding: "3rem", textAlign: "center", color: STATUS_COLORS.success.color }}>
             <CheckCircle size={36} style={{ margin: "0 auto 0.75rem" }} />
             <strong style={{ display: "block", fontSize: "1rem" }}>No active safety incidents in this view!</strong>
-            <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Marketplace conduct is clean and monitored.</span>
+            <span style={{ fontSize: "0.82rem", color: TEXT_COLORS.muted }}>Marketplace conduct is clean and monitored.</span>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column" }}>
@@ -163,14 +164,14 @@ function SafetyCasesContent() {
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: "1.2rem 1.4rem",
-                  borderBottom: idx < cases.length - 1 ? "1px solid #f1f5f9" : "none",
+                  borderBottom: idx < cases.length - 1 ? `1px solid ${STATUS_COLORS.neutral.bg}` : "none",
                   flexWrap: "wrap",
                   gap: "1rem",
                 }}
               >
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
-                    <span style={{ fontFamily: "monospace", fontSize: "0.82rem", fontWeight: 800, color: "#0329b2" }}>
+                    <span style={{ fontFamily: "monospace", fontSize: "0.82rem", fontWeight: 800, color: UI_COLORS.accent }}>
                       {c.caseId}
                     </span>
                     <span
@@ -182,30 +183,30 @@ function SafetyCasesContent() {
                         textTransform: "uppercase",
                         backgroundColor:
                           c.severity === "critical"
-                            ? "#fee2e2"
+                            ? STATUS_COLORS.danger.bg
                             : c.severity === "high"
-                            ? "#ffedd5"
-                            : "#f1f5f9",
+                            ? STATUS_COLORS.warning.bg
+                            : STATUS_COLORS.neutral.bg,
                         color:
                           c.severity === "critical"
-                            ? "#991b1b"
+                            ? STATUS_COLORS.danger.color
                             : c.severity === "high"
-                            ? "#9a3412"
-                            : "#475569",
+                            ? STATUS_COLORS.warning.color
+                            : TEXT_COLORS.muted,
                       }}
                     >
                       {c.severity}
                     </span>
-                    <span style={{ fontSize: "0.74rem", background: "#f5f3ff", color: "#6d28d9", padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
+                    <span style={{ fontSize: "0.74rem", background: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color, padding: "0.15rem 0.5rem", borderRadius: "999px", fontWeight: 700 }}>
                       {c.category.replace(/_/g, " ")}
                     </span>
                   </div>
 
-                  <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", gap: "1.2rem", flexWrap: "wrap" }}>
-                    <span>Reported User: <strong style={{ color: "#0f172a" }}>{c.reportedUser?.name}</strong> ({c.reportedUser?.role})</span>
+                  <div style={{ fontSize: "0.8rem", color: TEXT_COLORS.muted, display: "flex", gap: "1.2rem", flexWrap: "wrap" }}>
+                    <span>Reported User: <strong style={{ color: TEXT_COLORS.body }}>{c.reportedUser?.name}</strong> ({c.reportedUser?.role})</span>
                     <span>Reporter: <strong>{c.reporter?.name || "System Automated Flag"}</strong></span>
                     <span>Created: <strong>{new Date(c.createdAt).toLocaleDateString()}</strong></span>
-                    <span>Status: <strong style={{ textTransform: "capitalize", color: c.status === "resolved" ? "#059669" : "#d97706" }}>{c.status.replace(/_/g, " ")}</strong></span>
+                    <span>Status: <strong style={{ textTransform: "capitalize", color: c.status === "resolved" ? STATUS_COLORS.success.color : STATUS_COLORS.warning.color }}>{c.status.replace(/_/g, " ")}</strong></span>
                   </div>
                 </div>
 
@@ -214,8 +215,8 @@ function SafetyCasesContent() {
                     onClick={() => setSelectedCase(c)}
                     style={{
                       padding: "0.45rem 0.85rem",
-                      backgroundColor: "#0f172a",
-                      color: "white",
+                      backgroundColor: TEXT_COLORS.body,
+                      color: UI_COLORS.surface,
                       border: "none",
                       borderRadius: "0.4rem",
                       fontSize: "0.8rem",
@@ -235,22 +236,22 @@ function SafetyCasesContent() {
       {/* Case Resolution Modal */}
       {selectedCase && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-          <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.5rem", width: "100%", maxWidth: "520px", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ backgroundColor: UI_COLORS.surface, borderRadius: "0.75rem", padding: "1.5rem", width: "100%", maxWidth: "520px", maxHeight: "90vh", overflowY: "auto" }}>
             <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: "0 0 0.5rem" }}>
               Case #{selectedCase.caseId} Investigation
             </h3>
-            <p style={{ color: "#64748b", fontSize: "0.82rem", margin: "0 0 1rem" }}>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: "0.82rem", margin: "0 0 1rem" }}>
               Reported User: <strong>{selectedCase.reportedUser?.name}</strong> ({selectedCase.reportedUser?.email})
             </p>
 
             <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#334155", marginBottom: "0.3rem" }}>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: "0.3rem" }}>
                 Enforcement Action
               </label>
               <select
                 value={resolutionAction}
                 onChange={(e) => setResolutionAction(e.target.value)}
-                style={{ width: "100%", padding: "0.5rem", borderRadius: "0.4rem", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                style={{ width: "100%", padding: "0.5rem", borderRadius: "0.4rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.85rem" }}
               >
                 <option value="warning_issued">Issue Formal Caution / Warning</option>
                 <option value="account_suspended">Suspend Account</option>
@@ -261,7 +262,7 @@ function SafetyCasesContent() {
             </div>
 
             <div style={{ marginBottom: "1.25rem" }}>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#334155", marginBottom: "0.3rem" }}>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: "0.3rem" }}>
                 Investigation Findings & Resolution Summary
               </label>
               <textarea
@@ -269,21 +270,21 @@ function SafetyCasesContent() {
                 value={resolutionSummary}
                 onChange={(e) => setResolutionSummary(e.target.value)}
                 placeholder="Document officer findings, user response, and resolution rationale..."
-                style={{ width: "100%", padding: "0.5rem", borderRadius: "0.4rem", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                style={{ width: "100%", padding: "0.5rem", borderRadius: "0.4rem", border: `1px solid ${UI_COLORS.border}`, fontSize: "0.85rem" }}
               />
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
               <button
                 onClick={() => setSelectedCase(null)}
-                style={{ padding: "0.5rem 1rem", backgroundColor: "#f1f5f9", border: "none", borderRadius: "0.4rem", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
+                style={{ padding: "0.5rem 1rem", backgroundColor: STATUS_COLORS.neutral.bg, border: "none", borderRadius: "0.4rem", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleResolveCase}
                 disabled={submitting || !resolutionSummary.trim()}
-                style={{ padding: "0.5rem 1.25rem", backgroundColor: "#0329b2", color: "white", border: "none", borderRadius: "0.4rem", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
+                style={{ padding: "0.5rem 1.25rem", backgroundColor: UI_COLORS.accent, color: UI_COLORS.surface, border: "none", borderRadius: "0.4rem", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
               >
                 {submitting ? "Saving…" : "Confirm Resolution"}
               </button>

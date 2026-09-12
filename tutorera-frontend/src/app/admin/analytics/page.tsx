@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -65,12 +65,12 @@ function ChartTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      backgroundColor: '#021550',
+      backgroundColor: C.primary,
       borderRadius: '0.5rem',
       padding: '0.6rem 0.875rem',
       boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
     }}>
-      <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
+      <p style={{ color: C.gray500, fontSize: '0.75rem', margin: '0 0 0.2rem' }}>{label}</p>
       <p style={{ color: 'white', fontSize: '0.875rem', fontWeight: '700', margin: 0 }}>
         users : {payload[0].value}
       </p>
@@ -81,10 +81,10 @@ function ChartTooltip({ active, payload, label }: {
 const bookingStatusConfig: {
   key: keyof BookingStatus; label: string; color: string; bg: string;
 }[] = [
-  { key: 'upcoming',  label: 'Upcoming',  color: '#0329B2', bg: '#EEF5FF' },
-  { key: 'ongoing',   label: 'Ongoing',   color: '#9333ea', bg: '#fdf4ff' },
-  { key: 'completed', label: 'Completed', color: '#16a34a', bg: '#f0fdf4' },
-  { key: 'cancelled', label: 'Cancelled', color: '#ef4444', bg: '#fef2f2' },
+  { key: 'upcoming',  label: 'Upcoming',  color: C.accent, bg: C.accentLight },
+  { key: 'ongoing',   label: 'Ongoing',   color: STATUS_COLORS.purple.color, bg: STATUS_COLORS.purple.bg },
+  { key: 'completed', label: 'Completed', color: C.success, bg: STATUS_COLORS.success.bg },
+  { key: 'cancelled', label: 'Cancelled', color: C.error, bg: STATUS_COLORS.danger.bg },
 ];
 
 export default function AnalyticsPage() {
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Analytics</h1>
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Platform-wide metrics and growth.</p>
         </div>
-        <Link href="/admin" style={{ padding: '0.6rem 1.25rem', backgroundColor: C.gray50, color: C.primary, border: '1px solid #e5e7eb', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.8rem' }}>
+        <Link href="/admin" style={{ padding: '0.6rem 1.25rem', backgroundColor: C.gray50, color: C.primary, border: `1px solid ${C.border}`, borderRadius: '0.5rem', textDecoration: 'none', fontWeight: '600', fontSize: '0.8rem' }}>
           ← Dashboard
         </Link>
       </div>
@@ -138,14 +138,14 @@ export default function AnalyticsPage() {
       {/* Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: 'Total Users',         value: ov?.totalUsers,           sub: `+${ov?.newUsersThisMonth ?? 0} this month`,  color: '#0329B2', bg: '#EEF5FF', border: '#bfdbfe' },
-          { label: 'New This Week',        value: ov?.newUsersThisWeek,     sub: 'registered users',                           color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-          { label: 'Total Bookings',       value: ov?.totalBookings,        sub: 'all time',                                   color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-          { label: 'Revenue This Month',   value: `Rs. ${(ov?.revenueThisMonth ?? 0).toLocaleString()}`,  sub: 'confirmed payments', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-          { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: '#0329B2', bg: '#EEF5FF', border: '#bfdbfe' },
-          { label: 'Pending Payouts',      value: `Rs. ${(ov?.pendingPayouts ?? 0).toLocaleString()}`,    sub: 'owed to tutors',      color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+          { label: 'Total Users',         value: ov?.totalUsers,           sub: `+${ov?.newUsersThisMonth ?? 0} this month`,  color: C.accent, bg: C.accentLight, border: STATUS_COLORS.info.border },
+          { label: 'New This Week',        value: ov?.newUsersThisWeek,     sub: 'registered users',                           color: C.success, bg: STATUS_COLORS.success.bg, border: STATUS_COLORS.success.border },
+          { label: 'Total Bookings',       value: ov?.totalBookings,        sub: 'all time',                                   color: C.purple, bg: STATUS_COLORS.purple.bg, border: STATUS_COLORS.purple.border },
+          { label: 'Revenue This Month',   value: `Rs. ${(ov?.revenueThisMonth ?? 0).toLocaleString()}`,  sub: 'confirmed payments', color: STATUS_COLORS.warning.color, bg: STATUS_COLORS.warning.bg, border: STATUS_COLORS.warning.border },
+          { label: 'Platform Fee MTD',     value: `Rs. ${(ov?.platformFeeThisMonth ?? 0).toLocaleString()}`, sub: '20% + 3% GST',  color: C.accent, bg: C.accentLight, border: STATUS_COLORS.info.border },
+          { label: 'Pending Payouts',      value: `Rs. ${(ov?.pendingPayouts ?? 0).toLocaleString()}`,    sub: 'owed to tutors',      color: C.error, bg: STATUS_COLORS.danger.bg, border: STATUS_COLORS.danger.border },
         ].map(card => (
-          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', borderTop: `3px solid ${card.color}` }}>
+          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: `1px solid ${C.border}`, borderTop: `3px solid ${card.color}` }}>
             <p style={{ fontSize: '0.72rem', fontWeight: '700', color: card.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{card.label}</p>
             <p style={{ fontSize: '1.35rem', fontWeight: '800', color: C.primary, marginBottom: '0.2rem' }}>{card.value ?? 0}</p>
             <p style={{ fontSize: '0.72rem', color: C.gray500 }}>{card.sub}</p>
@@ -157,7 +157,7 @@ export default function AnalyticsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }} className="analytics-chart-row">
 
         {/* Signup Trend — recharts AreaChart */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
           <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.2rem' }}>
             User Signup Trend
           </h3>
@@ -168,35 +168,35 @@ export default function AnalyticsPage() {
             <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id="signupGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#0329B2" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#0329B2" stopOpacity={0} />
+                  <stop offset="5%"  stopColor={C.accent} stopOpacity={0.18} />
+                  <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                tick={{ fontSize: 11, fill: C.gray500 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                tick={{ fontSize: 11, fill: C.gray500 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
               />
               <Tooltip
                 content={<ChartTooltip />}
-                cursor={{ stroke: '#0329B2', strokeWidth: 1, strokeDasharray: '4 4' }}
+                cursor={{ stroke: C.accent, strokeWidth: 1, strokeDasharray: '4 4' }}
               />
               <Area
                 type="monotone"
                 dataKey="users"
-                stroke="#0329B2"
+                stroke={C.accent}
                 strokeWidth={2.5}
                 fill="url(#signupGradient)"
                 dot={false}
-                activeDot={{ r: 5, fill: '#0329B2', strokeWidth: 2, stroke: 'white' }}
+                activeDot={{ r: 5, fill: C.accent, strokeWidth: 2, stroke: 'white' }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -205,7 +205,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Booking Status Breakdown ── */}
-      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}`, marginBottom: '1.5rem' }}>
         <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
           Booking Status Breakdown
         </h3>
@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="analytics-bottom-row">
 
         {/* Top Tutors */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
               <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.1rem' }}>Top Tutors</h3>
@@ -244,7 +244,7 @@ export default function AnalyticsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               {(data?.topTutors ?? []).map((tutor, i) => (
                 <div key={`${tutor.name}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: i === 0 ? '#fbbf24' : i === 1 ? '#9ca3af' : i === 2 ? '#d97706' : C.gray50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: i < 3 ? 'white' : C.gray500, flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: i === 0 ? C.gold : i === 1 ? C.gray500 : i === 2 ? STATUS_COLORS.warning.color : C.gray50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800', color: i < 3 ? 'white' : C.gray500, flexShrink: 0 }}>
                     {i + 1}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
                       Rs. {tutor.revenue.toLocaleString()} earned
                     </p>
                   </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.accent, backgroundColor: '#EEF5FF', padding: '0.2rem 0.6rem', borderRadius: '999px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: C.accent, backgroundColor: C.accentLight, padding: '0.2rem 0.6rem', borderRadius: '999px', flexShrink: 0 }}>
                     {tutor.count} {tutor.count === 1 ? 'booking' : 'bookings'}
                   </span>
                 </div>
@@ -265,7 +265,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Recent Payments */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
               <h3 style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem', marginBottom: '0.1rem' }}>Recent Payments</h3>
@@ -278,7 +278,7 @@ export default function AnalyticsPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {(data?.recentPayments ?? []).map((payment, idx) => (
-                <div key={payment._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: idx < (data?.recentPayments.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none', gap: '0.5rem' }}>
+                <div key={payment._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: idx < (data?.recentPayments.length ?? 0) - 1 ? `1px solid ${C.border}` : 'none', gap: '0.5rem' }}>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: '600', color: C.primary, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {payment.student?.name} → {payment.tutor?.name}
@@ -287,7 +287,7 @@ export default function AnalyticsPage() {
                       {new Date(payment.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
                     </p>
                   </div>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '800', color: '#16a34a', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: '800', color: C.success, flexShrink: 0 }}>
                     Rs. {(payment.amount || 0).toLocaleString()}
                   </span>
                 </div>
