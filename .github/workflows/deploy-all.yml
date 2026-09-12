@@ -103,32 +103,35 @@ jobs:
     needs: build-frontend
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-frontend.result == 'success'
+    defaults:
+      run:
+        working-directory: tutorera-frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
+      - name: Install dependencies
+        run: npm install --ignore-scripts
 
-      - name: Deploy to Vercel
-        id: vercel
-        run: |
-          URL=$(vercel deploy --prod \
-            --token=${{ secrets.VERCEL_TOKEN }} \
-            --yes 2>&1 | grep -oP 'https://[^\s]+' | tail -1)
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "✅ Frontend deployed: $URL"
+      - name: Deploy to Cloudflare
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Verify deployment
         run: |
+          FRONTEND_URL="https://tutorera.ac.pk"
           for i in {1..20}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.vercel.outputs.url }}" || echo "000")
-            [ "$STATUS" = "200" ] && echo "✅ Frontend is live" && exit 0
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" || echo "000")
+            [ "$STATUS" = "200" ] && echo "✅ Frontend is live at $FRONTEND_URL" && exit 0
             echo "Attempt $i: Status $STATUS"
             sleep 5
           done
+          echo "⚠️ Deployment completed (health check timed out)"
 
   deploy-cloudflare:
     needs: build-cloudflare
@@ -207,11 +210,11 @@ jobs:
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Status | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend (Render) | ${{ needs.deploy-backend.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend (Vercel) | ${{ needs.deploy-frontend.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Worker (Cloudflare) | ${{ needs.deploy-cloudflare.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-cloudflare.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Result | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|--------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Render) | ${{ needs.deploy-backend.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-backend.result }} | https://tutorera-backend.onrender.com |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Cloudflare) | ${{ needs.deploy-frontend.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-frontend.result }} | https://tutorera.ac.pk |" >> $GITHUB_STEP_SUMMARY
+          echo "| Worker (Cloudflare) | ${{ needs.deploy-cloudflare.result == 'success' && '✅' || '❌' }} | ${{ needs.deploy-cloudflare.result }} | Workers |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
           echo "**Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
