@@ -84,6 +84,15 @@ export default function VerificationsPage() {
     }
   };
 
+  const handleViewDocument = async (profileId: string, field: string) => {
+    try {
+      const res = await api.get(`/admin/tutors/${profileId}/document/${field}`);
+      window.open(res.data.url, "_blank");
+    } catch (err) {
+      showError(err, "Failed to load document");
+    }
+  };
+
   const handleComponentReject = async (appId: string, component: keyof typeof componentMap) => {
     if (!rejectReason.trim()) {
       showError("Please provide a rejection reason.");
@@ -287,10 +296,10 @@ export default function VerificationsPage() {
                       <h3 style={{ fontSize: '0.85rem', fontWeight: '700', color: C.primary, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📄 Documents</h3>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {[
-                          { label: "CNIC Front", url: app.profile.cnicFront },
-                          { label: "CNIC Back", url: app.profile.cnicBack },
-                          { label: "Demo Video", url: app.profile.videoIntro },
-                          { label: "Police Cert", url: app.profile.policeCertificate, required: app.profile.teachingMode === "in-person" || app.profile.teachingMode === "both" },
+                          { label: "CNIC Front", url: app.profile.cnicFront, field: "cnicFront" },
+                          { label: "CNIC Back", url: app.profile.cnicBack, field: "cnicBack" },
+                          { label: "Demo Video", url: app.profile.videoIntro, field: null },
+                          { label: "Police Cert", url: app.profile.policeCertificate, field: "policeCertificate", required: app.profile.teachingMode === "in-person" || app.profile.teachingMode === "both" },
                         ].map(doc => (
                           <div key={doc.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.8rem', color: C.gray600 }}>
@@ -298,9 +307,19 @@ export default function VerificationsPage() {
                               {"required" in doc && doc.required && <span style={{ color: STATUS_COLORS.danger.color, marginLeft: '3px' }}>*</span>}
                             </span>
                             {doc.url ? (
-                              <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
-                                <Download size={12} /> View
-                              </a>
+                              doc.field ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewDocument(app.profile._id, doc.field as string)}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                >
+                                  <Download size={12} /> View
+                                </button>
+                              ) : (
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: C.accent, fontSize: '0.75rem', fontWeight: '600', textDecoration: 'none' }}>
+                                  <Download size={12} /> View
+                                </a>
+                              )
                             ) : (
                               <span style={{ fontSize: '0.75rem', color: "required" in doc && doc.required ? STATUS_COLORS.danger.color : C.gray500, fontWeight: "required" in doc && doc.required ? '600' : '400' }}>
                                 {"required" in doc && doc.required ? "Missing ⚠" : "—"}

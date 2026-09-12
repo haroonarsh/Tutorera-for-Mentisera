@@ -1739,34 +1739,39 @@ export const getGlobalAnalytics = async (_req: AuthRequest, res: Response): Prom
 // @route   GET /api/admin/tutors/:id/document/:field
 // @access  Private (admin)
 export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { id, field } = req.params as { id: string; field: string };
-  const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
+  try {
+    const { id, field } = req.params as { id: string; field: string };
+    const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
 
-  if (!allowedFields.includes(field)) {
-    res.status(400).json({ success: false, message: "Invalid document field" });
-    return;
+    if (!allowedFields.includes(field)) {
+      res.status(400).json({ success: false, message: "Invalid document field" });
+      return;
+    }
+
+    const profile = await TutorProfile.findById(id);
+    if (!profile) {
+      res.status(404).json({ success: false, message: "Tutor profile not found" });
+      return;
+    }
+
+    let publicId: string | undefined;
+    if (field === "degreeDoc") {
+      publicId = profile.education?.[0]?.degreeDocPublicId;
+    } else {
+      publicId = (profile as any)[`${field}PublicId`];
+    }
+
+    if (!publicId) {
+      res.status(404).json({ success: false, message: "This document was uploaded before signed-URL tracking was added, or was never submitted, so it has no viewable copy on file." });
+      return;
+    }
+
+    const signedUrl = getSignedViewUrl(publicId, "image", 300);
+    res.status(200).json({ success: true, url: signedUrl });
+  } catch (error: any) {
+    console.error("Failed to generate tutor document view URL:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to generate document URL." });
   }
-
-  const profile = await TutorProfile.findById(id);
-  if (!profile) {
-    res.status(404).json({ success: false, message: "Tutor profile not found" });
-    return;
-  }
-
-  let publicId: string | undefined;
-  if (field === "degreeDoc") {
-    publicId = profile.education?.[0]?.degreeDocPublicId;
-  } else {
-    publicId = (profile as any)[`${field}PublicId`];
-  }
-
-  if (!publicId) {
-    res.status(404).json({ success: false, message: "Document not found" });
-    return;
-  }
-
-  const signedUrl = getSignedViewUrl(publicId, "image", 300);
-  res.status(200).json({ success: true, url: signedUrl });
 };
 
 // @desc    Download tutor payout report as PDF (admin)

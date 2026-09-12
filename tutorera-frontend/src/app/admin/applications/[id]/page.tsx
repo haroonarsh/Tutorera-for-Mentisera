@@ -141,8 +141,8 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
     try {
       const res = await api.get(`/admin/tutors/${id}/document/${field}`);
       window.open(res.data.url, "_blank");
-    } catch {
-      showError("Failed to load document");
+    } catch (err) {
+      showError(err, "Failed to load document");
     }
   };
 
