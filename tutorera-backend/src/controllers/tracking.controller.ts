@@ -305,6 +305,11 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
 };
 
 function computeSimpleProgress(profile: any): number {
+  // Once a profile has cleared marketplace approval, every document below
+  // has necessarily already passed review - report 100% rather than
+  // letting raw field-presence checks keep the admin list showing a
+  // partially-complete bar for an already-approved application.
+  if (isMarketplaceEligible(profile)) return 100;
   let done = 0;
   let total = 5;
   if (profile.fullName && profile.fullName.trim() !== "") done++;

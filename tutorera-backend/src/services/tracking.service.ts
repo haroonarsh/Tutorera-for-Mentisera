@@ -237,6 +237,14 @@ export function isHomeTuitionEligible(profile: ITutorProfile): boolean {
 }
 
 export function computeProgress(profile: ITutorProfile): { completed: number; total: number; percent: number } {
+  // Once a profile has cleared marketplace approval, every step below has
+  // necessarily already passed review - show 100% rather than letting
+  // unrelated profile-completeness fields (bio, hourly rate, availability,
+  // date of birth, etc.) that were never part of what admins actually
+  // verify keep the bar stuck below 100 after approval.
+  if (isMarketplaceEligible(profile)) {
+    return { completed: 100, total: 100, percent: 100 };
+  }
   const steps: { done: boolean; weight: number }[] = [
     { done: hasPersonalInfo(profile), weight: 10 },
     { done: hasEducation(profile), weight: 20 },
