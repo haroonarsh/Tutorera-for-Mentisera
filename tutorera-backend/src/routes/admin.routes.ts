@@ -33,6 +33,7 @@ import {
 } from "../controllers/refundRequest.controller";
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
+import { getAllTutorRatings, getTutorRatingsForAdmin } from "../controllers/review.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
 import { enforceCountryScope } from "../middlewares/countryScope.middleware";
@@ -165,5 +166,7 @@ router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateR
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
+router.get("/tutor-ratings", requirePermission("tutor.quality_manage"), getAllTutorRatings);
+router.get("/tutor-ratings/:tutorId", requirePermission("tutor.quality_manage"), getTutorRatingsForAdmin);
 
 export default router;

@@ -85,3 +85,32 @@ export const getTutorReviews = async (req: AuthRequest, res: Response): Promise<
     },
   });
 };
+
+// @desc    Get all tutor ratings (admin only)
+// @route   GET /api/admin/tutor-ratings
+// @access  Private (admin)
+export const getAllTutorRatings = async (req: AuthRequest, res: Response): Promise<void> => {
+  const ratings = await Review.find()
+    .populate("tutor", "name email avatar")
+    .populate("student", "name email")
+    .populate("booking", "amount schedule createdAt")
+    .sort("-createdAt");
+
+  res.status(200).json({ success: true, total: ratings.length, ratings });
+};
+
+// @desc    Get ratings for a specific tutor (admin)
+// @route   GET /api/admin/tutor-ratings/:tutorId
+// @access  Private (admin)
+export const getTutorRatingsForAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  const ratings = await Review.find({ tutor: req.params.tutorId })
+    .populate("student", "name email avatar")
+    .populate("booking", "amount schedule createdAt")
+    .sort("-createdAt");
+
+  const avgRating = ratings.length > 0
+    ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10
+    : 0;
+
+  res.status(200).json({ success: true, total: ratings.length, avgRating, ratings });
+};
