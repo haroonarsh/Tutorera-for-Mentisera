@@ -30,7 +30,7 @@ export default function FeatureFlagsPage() {
 
   const fetchFlags = async () => {
     try {
-      const res = await api.get("/api/feature-flags/admin/list");
+      const res = await api.get("/feature-flags/admin/list");
       setFlags(res.data.flags || []);
     } catch (err) {
       showError("Failed to load feature flags");
@@ -56,7 +56,7 @@ export default function FeatureFlagsPage() {
 
     setSaving(true);
     try {
-      await api.put(`/api/feature-flags/admin/${form.key.toUpperCase()}`, {
+      await api.put(`/feature-flags/admin/${form.key.toUpperCase()}`, {
         enabled: form.enabled,
         scope: form.scope,
         countryCodes: form.countryCodes,
@@ -95,7 +95,7 @@ export default function FeatureFlagsPage() {
 
   const toggleFlag = async (flag: FeatureFlag) => {
     try {
-      await api.put(`/api/feature-flags/admin/${flag.key}`, {
+      await api.put(`/feature-flags/admin/${flag.key}`, {
         enabled: !flag.enabled,
         scope: flag.scope,
         countryCodes: flag.countryCodes,

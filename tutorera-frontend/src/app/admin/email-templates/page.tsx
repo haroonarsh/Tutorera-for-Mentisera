@@ -42,7 +42,7 @@ export default function EmailTemplatesPage() {
       if (filter.category) params.append("category", filter.category);
       params.append("isActive", String(filter.isActive));
 
-      const res = await api.get(`/api/admin/email-templates?${params.toString()}`);
+      const res = await api.get(`/admin/email-templates?${params.toString()}`);
       setTemplates(res.data.templates || []);
     } catch (err) {
       showError("Failed to load email templates");
@@ -52,7 +52,7 @@ export default function EmailTemplatesPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get("/api/admin/email-templates/categories");
+      const res = await api.get("/admin/email-templates/categories");
       setCategories(res.data.categories || []);
     } catch (err) {
       console.error("Failed to load categories:", err);
@@ -78,10 +78,10 @@ export default function EmailTemplatesPage() {
     setSaving(true);
     try {
       if (editingId) {
-        await api.put(`/api/admin/email-templates/${editingId}`, form);
+        await api.put(`/admin/email-templates/${editingId}`, form);
         showSuccess("Email template updated successfully");
       } else {
-        await api.post("/api/admin/email-templates", form);
+        await api.post("/admin/email-templates", form);
         showSuccess("Email template created successfully");
       }
       setShowForm(false);
@@ -122,7 +122,7 @@ export default function EmailTemplatesPage() {
     if (!confirm("Are you sure you want to delete this email template?")) return;
 
     try {
-      await api.delete(`/api/admin/email-templates/${id}`);
+      await api.delete(`/admin/email-templates/${id}`);
       showSuccess("Email template deleted successfully");
       fetchTemplates();
     } catch (err) {

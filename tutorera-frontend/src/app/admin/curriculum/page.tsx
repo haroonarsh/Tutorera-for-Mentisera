@@ -39,7 +39,7 @@ export default function CurriculumPage() {
       if (filter.category) params.append("category", filter.category);
       params.append("isActive", String(filter.isActive));
 
-      const res = await api.get(`/api/admin/subjects?${params.toString()}`);
+      const res = await api.get(`/admin/subjects?${params.toString()}`);
       setSubjects(res.data.subjects || []);
     } catch (err) {
       showError("Failed to load subjects");
@@ -49,7 +49,7 @@ export default function CurriculumPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get("/api/admin/subjects/categories");
+      const res = await api.get("/admin/subjects/categories");
       setCategories(res.data.categories || []);
     } catch (err) {
       console.error("Failed to load categories:", err);
@@ -75,10 +75,10 @@ export default function CurriculumPage() {
     setSaving(true);
     try {
       if (editingId) {
-        await api.put(`/api/admin/subjects/${editingId}`, form);
+        await api.put(`/admin/subjects/${editingId}`, form);
         showSuccess("Subject updated successfully");
       } else {
-        await api.post("/api/admin/subjects", form);
+        await api.post("/admin/subjects", form);
         showSuccess("Subject created successfully");
       }
       setShowForm(false);
@@ -109,7 +109,7 @@ export default function CurriculumPage() {
     if (!confirm("Are you sure you want to delete this subject?")) return;
 
     try {
-      await api.delete(`/api/admin/subjects/${id}`);
+      await api.delete(`/admin/subjects/${id}`);
       showSuccess("Subject deleted successfully");
       fetchSubjects();
     } catch (err) {
