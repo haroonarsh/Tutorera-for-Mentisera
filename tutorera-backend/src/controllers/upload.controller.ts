@@ -10,6 +10,7 @@ import { recordStatusEvent } from "../services/tracking.service";
 import { logAudit } from "../utils/logAudit";
 import { sendNotification } from "../utils/socket";
 import { setAccountStatus } from "../services/accountLifecycle.service";
+import { syncReviewQueueForProfile } from "../services/verification.service";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -57,18 +58,19 @@ export const uploadVerificationDocs = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  try {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-  if (!files || Object.keys(files).length === 0) {
-    res.status(400).json({ success: false, message: "No files uploaded" });
-    return;
-  }
+    if (!files || Object.keys(files).length === 0) {
+      res.status(400).json({ success: false, message: "No files uploaded" });
+      return;
+    }
 
-  const existingProfile = await TutorProfile.findOne({ user: req.user?._id });
-  if (!existingProfile) {
-    res.status(404).json({ success: false, message: "Tutor profile not found. Please complete onboarding first." });
-    return;
-  }
+    const existingProfile = await TutorProfile.findOne({ user: req.user?._id });
+    if (!existingProfile) {
+      res.status(404).json({ success: false, message: "Tutor profile not found. Please complete onboarding first." });
+      return;
+    }
 
   const updateData: Record<string, any> = {};
   const resubmittedDocs: string[] = [];
@@ -278,15 +280,26 @@ export const uploadVerificationDocs = async (
             type: "verification", link: "/tutor/application-status",
           });
         }
+        
+        await syncReviewQueueForProfile(updated._id.toString());
       } catch (postUploadErr) {
         console.error("Failed to execute post-upload operations (emails/logs/notifications):", postUploadErr);
+        // Continue despite post-upload errors - documents are already saved
       }
     }
   }
 
-  res.status(200).json({
-    success: true,
-    message: "Documents uploaded successfully. Pending admin review.",
-    uploadedFields: Object.keys(updateData),
-  });
+    res.status(200).json({
+      success: true,
+      message: "Documents uploaded successfully. Pending admin review.",
+      uploadedFields: Object.keys(updateData),
+    });
+  } catch (error: any) {
+    console.error("Document upload error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to upload documents. Please try again.",
+      error: process.env.NODE_ENV === "development" ? error.toString() : undefined,
+    });
+  }
 };

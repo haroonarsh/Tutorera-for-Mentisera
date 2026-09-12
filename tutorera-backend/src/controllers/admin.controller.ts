@@ -442,25 +442,26 @@ export const uploadTutorDocsAdmin = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  const tutorId = req.params.id; // This is the user _id, not profile _id
+  try {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const tutorId = req.params.id; // This is the user _id, not profile _id
 
-  if (!files || Object.keys(files).length === 0) {
-    res.status(400).json({ success: false, message: "No files uploaded" });
-    return;
-  }
+    if (!files || Object.keys(files).length === 0) {
+      res.status(400).json({ success: false, message: "No files uploaded" });
+      return;
+    }
 
-  const existingProfile = await TutorProfile.findOne({ user: tutorId });
-  if (!existingProfile) {
-    res.status(404).json({ success: false, message: "Tutor profile not found." });
-    return;
-  }
+    const existingProfile = await TutorProfile.findOne({ user: tutorId });
+    if (!existingProfile) {
+      res.status(404).json({ success: false, message: "Tutor profile not found." });
+      return;
+    }
 
-  const tutorUser = await User.findById(tutorId);
-  if (!tutorUser) {
-    res.status(404).json({ success: false, message: "User not found." });
-    return;
-  }
+    const tutorUser = await User.findById(tutorId);
+    if (!tutorUser) {
+      res.status(404).json({ success: false, message: "User not found." });
+      return;
+    }
 
   const { verifyFileSignature } = await import("../middlewares/upload.middleware");
   const { uploadToCloudinary, deleteFromCloudinary } = await import("../utils/uploadToCloudinary");
@@ -569,21 +570,29 @@ export const uploadTutorDocsAdmin = async (
     deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
   ));
 
-  await logAudit({
-    action: "admin_override_documents",
-    actor: req.user?.name || "Admin",
-    actorId: req.user?._id?.toString(),
-    entity: "TutorProfile",
-    targetId: existingProfile._id.toString(),
-    targetName: tutorUser.name,
-    metadata: { uploadedFields: Object.keys(updateData) },
-  });
+    await logAudit({
+      action: "admin_override_documents",
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "TutorProfile",
+      targetId: existingProfile._id.toString(),
+      targetName: tutorUser.name,
+      metadata: { uploadedFields: Object.keys(updateData) },
+    });
 
-  res.status(200).json({
-    success: true,
-    message: "Documents forcibly uploaded and approved.",
-    profile: updated,
-  });
+    res.status(200).json({
+      success: true,
+      message: "Documents forcibly uploaded and approved.",
+      profile: updated,
+    });
+  } catch (error: any) {
+    console.error("Admin document upload error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to upload documents. Please try again.",
+      error: process.env.NODE_ENV === "development" ? error.toString() : undefined,
+    });
+  }
 };
 
 // @desc    Get all users
