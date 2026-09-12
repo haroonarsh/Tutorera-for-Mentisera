@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen,
+  LayoutDashboard, Users, LogOut, BookOpen,
   CreditCard, MessageSquare, Menu, FileText, Shield, Gift,
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
@@ -76,7 +76,6 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/tutors", label: "Tutors Directory", icon: <BookOpen size={17} />, permission: "tutor.read" },
       { href: "/admin/applications", label: "Applications", icon: <ClipboardList size={17} />, permission: "tutor.read" },
-      { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={17} />, permission: "tutor.verify" },
       { href: "/admin/tutor-ratings", label: "Tutor Ratings", icon: <Star size={17} />, permission: "tutor.quality_manage" },
       { href: "/admin/supply-gaps", label: "Supply Gaps", icon: <TrendingDown size={17} />, permission: "analytics.read" },
       { href: "/admin/liquidity", label: "Liquidity Scores", icon: <ActivitySquare size={17} />, permission: "analytics.read" },
