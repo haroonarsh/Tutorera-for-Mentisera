@@ -514,33 +514,38 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
     return;
   }
   const { user, profile } = data;
-  profile.policeVerificationStatus = status;
-  profile.policeRejectionReason = status === "rejected" ? (reason || "") : "";
-  profile.policeReviewedAt = new Date();
-  profile.lastStatusChangeAt = new Date();
-  await profile.save({ validateModifiedOnly: true });
+  try {
+    profile.policeVerificationStatus = status;
+    profile.policeRejectionReason = status === "rejected" ? (reason || "") : "";
+    profile.policeReviewedAt = new Date();
+    profile.lastStatusChangeAt = new Date();
+    await profile.save({ validateModifiedOnly: true });
 
-  const actor = actorFromReq(req);
-  if (status === "approved") {
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_APPROVED", message: "Police verification approved", statusAfter: "approved" });
-    await NotificationService.publishEvent(user._id.toString(), "home_tuition.eligibility_granted", {
-      document: "Police", ctaArgs: ctaArgs(user), title: "Police verification approved 🛡️", message: "You can now offer Home and In-Person Tuition.", link: "/tutor/application-status", type: "verification"
-    });
-  } else if (status === "rejected") {
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_REJECTED", message: `Police verification rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
-    await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
-      document: "Police", reason: reason || "", ctaArgs: ctaArgs(user), title: "Action required: Police verification", message: reason || "Please re-submit your police certificate.", link: "/tutor/application-status", type: "verification"
-    });
-    await setAccountStatus(user._id.toString(), "submitted");
-  } else if (status === "pending") {
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_PENDING", message: `Police verification marked as pending for review`, statusAfter: "pending" });
-    await NotificationService.publishEvent(user._id.toString(), "verification.pending", { 
-      title: "👮 Verification Pending", message: "Your police certificate has been reset to pending review.", link: "/tutor/application-status", type: "verification"
-    });
+    const actor = actorFromReq(req);
+    if (status === "approved") {
+      await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_APPROVED", message: "Police verification approved", statusAfter: "approved" });
+      await NotificationService.publishEvent(user._id.toString(), "home_tuition.eligibility_granted", {
+        document: "Police", ctaArgs: ctaArgs(user), title: "Police verification approved 🛡️", message: "You can now offer Home and In-Person Tuition.", link: "/tutor/application-status", type: "verification"
+      });
+    } else if (status === "rejected") {
+      await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_REJECTED", message: `Police verification rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
+      await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
+        document: "Police", reason: reason || "", ctaArgs: ctaArgs(user), title: "Action required: Police verification", message: reason || "Please re-submit your police certificate.", link: "/tutor/application-status", type: "verification"
+      });
+      await setAccountStatus(user._id.toString(), "submitted");
+    } else if (status === "pending") {
+      await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_PENDING", message: `Police verification marked as pending for review`, statusAfter: "pending" });
+      await NotificationService.publishEvent(user._id.toString(), "verification.pending", {
+        title: "👮 Verification Pending", message: "Your police certificate has been reset to pending review.", link: "/tutor/application-status", type: "verification"
+      });
+    }
+    await logAudit({ action: `police_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
+    await syncMarketplaceAndHomeTuition(req, user, profile);
+    res.status(200).json({ success: true, profile });
+  } catch (error: any) {
+    console.error("[updatePolice] Failed:", error);
+    res.status(500).json({ success: false, message: `[DEBUG] ${error?.name || "Error"}: ${error?.message || "unknown"}` });
   }
-  await logAudit({ action: `police_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
-  await syncMarketplaceAndHomeTuition(req, user, profile);
-  res.status(200).json({ success: true, profile });
 };
 
 export const setMarketplaceEligibility = async (req: AuthRequest, res: Response): Promise<void> => {
