@@ -263,6 +263,17 @@ tutorProfileSchema.pre("validate", function () {
   if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
     p.levels = normalizeEducationLevels(p.levels) as any;
   }
+  // location.type defaults to "Point" whenever the location subdocument
+  // exists at all, even if coordinates was never populated (e.g. an
+  // online-only tutor who never went through geocoding). MongoDB's
+  // 2dsphere index on `location` then rejects EVERY save of that document
+  // with "Can't extract geo keys" - not just location updates - because it
+  // can't build an index entry from an incomplete GeoJSON Point. Strip an
+  // invalid location out before validation so any save can proceed and
+  // self-heals previously-corrupted documents.
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
 });
 
 tutorProfileSchema.pre("save", function () {

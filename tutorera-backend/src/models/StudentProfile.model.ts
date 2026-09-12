@@ -83,4 +83,16 @@ studentProfileSchema.index({ countryCode: 1, currency: 1, teachingModePreference
 studentProfileSchema.index({ user: 1 });
 studentProfileSchema.index({ location: "2dsphere" });
 
+// location.type defaults to "Point" whenever the location subdocument exists
+// at all, even if coordinates was never populated. MongoDB's 2dsphere index
+// then rejects EVERY save of that document with "Can't extract geo keys" -
+// not just location updates - because it can't build an index entry from an
+// incomplete GeoJSON Point. Strip an invalid location out before validation.
+studentProfileSchema.pre("validate", function () {
+  const p = this as any;
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
+});
+
 export default mongoose.model<IStudentProfile>("StudentProfile", studentProfileSchema);

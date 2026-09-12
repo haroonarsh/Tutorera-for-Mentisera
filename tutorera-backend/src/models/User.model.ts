@@ -146,4 +146,16 @@ userSchema.methods.comparePassword = async function (
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// location.type defaults to "Point" whenever the location subdocument exists
+// at all, even if coordinates was never populated. MongoDB's 2dsphere index
+// then rejects EVERY save of that document with "Can't extract geo keys" -
+// not just location updates - because it can't build an index entry from an
+// incomplete GeoJSON Point. Strip an invalid location out before validation.
+userSchema.pre("validate", function () {
+  const p = this as any;
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
+});
+
 export default mongoose.model<IUser>("User", userSchema);
