@@ -56,8 +56,8 @@ export default function ContactsPage() {
         prev.map(c => c._id === id ? { ...c, status: newStatus } : c)
       );
       showSuccess("Status updated.");
-    } catch {
-      showError("Failed to update status.");
+    } catch (err) {
+      showError(err, "Failed to update status.");
     } finally {
       setStatusLoading(null);
     }

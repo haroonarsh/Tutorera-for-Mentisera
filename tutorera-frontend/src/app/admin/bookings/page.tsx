@@ -63,8 +63,8 @@ export default function BookingsPage() {
   try {
     await api.patch(`/admin/bookings/${bookingId}/status`, { status: newStatus });
     setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
-  } catch {
-    showError("Failed to update status.");
+  } catch (err) {
+    showError(err, "Failed to update status.");
   } finally {
     setUpdatingStatus(null);
   }

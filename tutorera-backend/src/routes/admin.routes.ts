@@ -156,8 +156,11 @@ const verificationFields = uploadVerificationMulter.fields([
 import { uploadTutorDocsAdmin } from "../controllers/admin.controller";
 router.post("/tutors/:id/upload-docs", requirePermission("tutor.verify"), verificationFields, uploadTutorDocsAdmin);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
+router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);
 // The controller applies payment.manage or payout.process according to the field being changed.
 router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
+router.get("/contacts", requirePermission("student.read"), getAllContacts);
+router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
 router.get("/reports", requirePermission("analytics.read"), generateReport);
 router.get("/guarantee-claims", requirePermission("claims.read"), getAllClaims);
 router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), validateGuarantee(updateClaimStatusSchema), updateClaimStatus);
