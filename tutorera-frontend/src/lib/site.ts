@@ -14,6 +14,8 @@ export const LEGAL_CONTACT_EMAIL = "hello@mentisera.pk";
 export const PRIVACY_CONTACT_EMAIL = "hello@mentisera.pk";
 export const SAFETY_CONTACT_EMAIL = "hello@mentisera.pk";
 export const SUPPORT_PHONE = "+92 334 8880859";
+// wa.me requires digits only, no "+" or spaces.
+export const SUPPORT_WHATSAPP_NUMBER = "923348880859";
 
 // Versioning constants
 export const TERMS_VERSION = "2026.2-GLOBAL";

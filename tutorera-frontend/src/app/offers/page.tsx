@@ -17,6 +17,7 @@ import {
   CreditCard
 } from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 
 type History = { 
   _id: string; 
@@ -469,6 +470,12 @@ function OffersContent() {
                     >
                       <MessageSquare size={16} /> Message
                     </Link>
+
+                    <WhatsAppChatButton
+                      variant="outline"
+                      label="WhatsApp"
+                      message={`Hi TUTORERA, I have a question about my ${o.request.subject} offer from ${o.tutor.name} (offer ${o._id}).`}
+                    />
 
                     <button
                       onClick={() => action(o, user?.role === "tutor" ? "withdraw" : "decline")}

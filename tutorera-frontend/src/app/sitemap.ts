@@ -96,24 +96,47 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
   }
 
   if (id === 'local') {
-    const localResults = await Promise.all(
-      PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
-        LOCAL_SUBJECT_SLUGS.map(async (subjectSlug) => {
-          const city = CITIES[citySlug];
-          const subject = SUBJECTS[subjectSlug];
-          const { total } = await fetchTutors({ city, subject }, 1);
-          return total > 0
-            ? {
-                url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`,
-                lastModified,
-                changeFrequency: "daily" as const,
-                priority: 0.85,
-              }
-            : null;
-        })
-      )
-    );
-    return localResults.filter((page): page is NonNullable<typeof page> => page !== null);
+    const TOP_LEVEL_SLUGS = ["primary", "matric", "o-level", "igcse", "a-level"] as const;
+    const [cityResults, levelResults] = await Promise.all([
+      Promise.all(
+        PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
+          LOCAL_SUBJECT_SLUGS.map(async (subjectSlug) => {
+            const city = CITIES[citySlug];
+            const subject = SUBJECTS[subjectSlug];
+            const { total } = await fetchTutors({ city, subject }, 1);
+            return total > 0
+              ? {
+                  url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`,
+                  lastModified,
+                  changeFrequency: "daily" as const,
+                  priority: 0.85,
+                }
+              : null;
+          })
+        )
+      ),
+      Promise.all(
+        PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
+          LOCAL_SUBJECT_SLUGS.slice(0, 5).flatMap((subjectSlug) =>
+            TOP_LEVEL_SLUGS.map(async (levelSlug) => {
+              const city = CITIES[citySlug];
+              const subject = SUBJECTS[subjectSlug];
+              const level = LEVELS[levelSlug];
+              const { total } = await fetchTutors({ city, subject, level }, 1);
+              return total > 0
+                ? {
+                    url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}/${levelSlug}`,
+                    lastModified,
+                    changeFrequency: "daily" as const,
+                    priority: 0.8,
+                  }
+                : null;
+            })
+          )
+        )
+      ),
+    ]);
+    return [...cityResults, ...levelResults].filter((page): page is NonNullable<typeof page> => page !== null);
   }
 
   if (id === 'demand') {

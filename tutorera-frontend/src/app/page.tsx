@@ -6,6 +6,7 @@ import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCa
 import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import TopRequestsSection from "@/components/TopRequestsSection";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
+import PaymentTrustSteps from "@/components/marketplace/PaymentTrustSteps";
 import AdBanner from "@/components/AdBanner";
 import GlobalTutoringIndex from "@/components/SEO/GlobalTutoringIndex";
 import { ArrowRight, Star, MapPin } from "lucide-react";
@@ -85,6 +86,9 @@ export default function Home() {
 
       {/* 6. Side-by-Side Offer Comparison Showcase */}
       <OfferComparisonDemo />
+
+      {/* 6b. Payment Trust / How Your Money Is Protected */}
+      <PaymentTrustSteps />
 
       {/* 7. Popular Academic Subjects */}
       <section style={{ padding: "4rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0" }}>
