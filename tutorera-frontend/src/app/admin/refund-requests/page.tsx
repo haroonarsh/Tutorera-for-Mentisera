@@ -28,6 +28,7 @@ interface RefundRequestItem {
     _id: string;
     amount: number;
     studentTotal: number;
+    currency?: string;
     schedule?: string;
     teachingMode?: string;
     createdAt?: string;
@@ -124,9 +125,15 @@ function RefundRequestsContent() {
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const approvedCount = requests.filter((r) => r.status === "approved" || r.status === "processed").length;
   const rejectedCount = requests.filter((r) => r.status === "rejected").length;
-  const pendingValue = requests
+  // Bucketed per currency - PK/AE/US/SA/IN settle in different currencies, so pending
+  // refund exposure can't be summed together into one meaningful PKR figure.
+  const pendingValueByCurrency = requests
     .filter((r) => r.status === "pending")
-    .reduce((acc, r) => acc + (r.amount || r.booking?.studentTotal || 0), 0);
+    .reduce((acc, r) => {
+      const currency = r.booking?.currency || "PKR";
+      acc[currency] = (acc[currency] || 0) + (r.amount || r.booking?.studentTotal || 0);
+      return acc;
+    }, {} as Record<string, number>);
 
   const filtered = requests.filter((r) => {
     if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
@@ -203,8 +210,12 @@ function RefundRequestsContent() {
             <span style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Pending Exposure</span>
             <span style={{ padding: "0.3rem", borderRadius: "0.4rem", background: STATUS_COLORS.danger.bg, color: STATUS_COLORS.danger.color }}><CreditCard size={16} /></span>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 900, color: STATUS_COLORS.danger.color }}>
-            {loading ? "..." : `PKR ${pendingValue.toLocaleString()}`}
+          <div style={{ fontSize: loading || Object.keys(pendingValueByCurrency).length <= 1 ? "1.75rem" : "1.1rem", fontWeight: 900, color: STATUS_COLORS.danger.color }}>
+            {loading
+              ? "..."
+              : Object.keys(pendingValueByCurrency).length === 0
+              ? "PKR 0"
+              : Object.entries(pendingValueByCurrency).map(([currency, amount]) => `${currency} ${amount.toLocaleString()}`).join(" · ")}
           </div>
           <div style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, marginTop: "0.2rem" }}>Disputed customer funds</div>
         </div>
@@ -338,7 +349,7 @@ function RefundRequestsContent() {
                         <div style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>{r.tutor?.email}</div>
                       </td>
                       <td style={{ padding: "0.85rem 1rem" }}>
-                        <div style={{ fontWeight: 800, color: TEXT_COLORS.body }}>PKR {amount.toLocaleString()}</div>
+                        <div style={{ fontWeight: 800, color: TEXT_COLORS.body }}>{r.booking?.currency || "PKR"} {amount.toLocaleString()}</div>
                         {r.booking?._id && (
                           <div style={{ fontSize: "0.7rem", color: TEXT_COLORS.muted }}>
                             Booking #{r.booking._id.slice(-6).toUpperCase()}
@@ -472,7 +483,7 @@ function RefundRequestsContent() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
                 <span style={{ color: TEXT_COLORS.muted }}>Claim Amount:</span>
-                <span style={{ fontWeight: 900, color: UI_COLORS.error }}>PKR {(selectedRequest.amount || selectedRequest.booking?.studentTotal || 0).toLocaleString()}</span>
+                <span style={{ fontWeight: 900, color: UI_COLORS.error }}>{selectedRequest.booking?.currency || "PKR"} {(selectedRequest.amount || selectedRequest.booking?.studentTotal || 0).toLocaleString()}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
                 <span style={{ color: TEXT_COLORS.muted }}>Reason:</span>
