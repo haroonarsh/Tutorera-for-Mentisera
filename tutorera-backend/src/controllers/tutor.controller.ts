@@ -501,6 +501,10 @@ export const saveOnboardingStep = async (
           tutorEmail: tutorUser.email,
           applicationId: tutorUser.applicationId,
           documentLabel: "Educational documents",
+          title: "Document resubmitted",
+          message: `${tutorUser.name} resubmitted their educational documents for re-review.`,
+          type: "verification",
+          link: "/admin/applications",
         }).catch((err) => console.error("[TutorApplicationTracking] Admin degree-resubmission alert failed:", err));
       }
     }
@@ -692,6 +696,10 @@ export const saveOnboardingStep = async (
             tutorEmail: tutorUser.email,
             applicationId: tutorUser.applicationId,
             documentLabel,
+            title: "Document resubmitted",
+            message: `${tutorUser.name} resubmitted their ${documentLabel.toLowerCase()} for re-review.`,
+            type: "verification",
+            link: "/admin/applications",
           }).catch((err) => console.error(`[TutorApplicationTracking] Admin ${documentLabel} resubmission alert failed:`, err));
 
         if (resubmitCnic) {
@@ -829,6 +837,10 @@ export const saveOnboardingStep = async (
               tutorEmail: tutorUser.email,
               applicationId: tutorUser.applicationId,
               teachingMode: updated?.teachingMode,
+              title: "New tutor application",
+              message: `${tutorUser.name} completed onboarding and is ready for review.`,
+              type: "verification",
+              link: "/admin/applications",
             });
           } catch (adminAlertErr) {
             console.error("[TutorApplicationTracking] Failed to send admin new-application alert:", adminAlertErr);

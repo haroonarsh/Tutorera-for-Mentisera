@@ -7,9 +7,10 @@ import {
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity, MapPin, X, HeartHandshake, RotateCcw, Flag, Settings,
+  KeyRound, Activity, MapPin, X, HeartHandshake, RotateCcw, Flag, Settings, Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
@@ -151,6 +152,7 @@ const navSections: NavSection[] = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const { unreadCount } = useSocket();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -203,6 +205,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             v2.6 RBAC
           </span>
         </div>
+        <Link
+          href="/admin/notifications"
+          onClick={() => setSidebarOpen(false)}
+          style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.85rem", padding: "0.5rem 0.65rem", borderRadius: "0.5rem", background: "rgba(255,255,255,0.06)", textDecoration: "none", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 600 }}
+        >
+          <span style={{ position: "relative", display: "flex" }}>
+            <Bell size={16} />
+            {unreadCount > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -5, minWidth: 14, height: 14, padding: "0 3px", borderRadius: "999px", background: STATUS_COLORS.danger.color, color: "white", fontSize: "0.58rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </span>
+          Notifications
+        </Link>
       </div>
 
       {/* Navigation Sections */}
