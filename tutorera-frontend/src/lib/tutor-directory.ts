@@ -40,8 +40,8 @@ export interface TutorDirectoryResponse {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
 
-export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24): Promise<TutorDirectoryResponse> {
-  const params = new URLSearchParams({ limit: String(limit), page: "1" });
+export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24, page = 1): Promise<TutorDirectoryResponse> {
+  const params = new URLSearchParams({ limit: String(limit), page: String(page) });
   Object.entries(filters).forEach(([key, value]) => value && params.set(key, value));
 
   try {

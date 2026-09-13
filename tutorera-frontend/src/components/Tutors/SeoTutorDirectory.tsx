@@ -24,10 +24,49 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
       { "@type": "ListItem", position: 3, name: title, item: `https://tutorera.ac.pk${canonicalPath}` },
     ],
   };
+  // Course schema only makes sense for subject pages ("Mathematics Tutoring"), not
+  // city or level pages, which describe a location/tier rather than a taught subject.
+  const ratedTutors = result.tutors.filter((t) => (t.totalReviews || 0) > 0);
+  const totalReviewCount = ratedTutors.reduce((sum, t) => sum + (t.totalReviews || 0), 0);
+  const weightedRating = totalReviewCount
+    ? ratedTutors.reduce((sum, t) => sum + (t.averageRating || 0) * (t.totalReviews || 0), 0) / totalReviewCount
+    : 0;
+  const courseSchema = kind === "subject" ? {
+    "@type": "Course",
+    "@id": `https://tutorera.ac.pk${canonicalPath}#course`,
+    name: `${value} Tutoring`,
+    description,
+    provider: { "@type": "Organization", name: "TUTORERA", "@id": "https://tutorera.ac.pk/#organization" },
+    ...(rates.length ? {
+      offers: {
+        "@type": "AggregateOffer",
+        priceCurrency: displayCurrency,
+        lowPrice: Math.min(...rates),
+        highPrice: Math.max(...rates),
+        offerCount: rates.length,
+      },
+    } : {}),
+    // Only emitted when real reviews exist behind it - never a placeholder rating.
+    ...(totalReviewCount ? {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: Math.round(weightedRating * 10) / 10,
+        reviewCount: totalReviewCount,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    } : {}),
+    hasCourseInstance: [
+      { "@type": "CourseInstance", courseMode: "online", courseWorkload: "Flexible, scheduled with tutor" },
+      { "@type": "CourseInstance", courseMode: "onsite", courseWorkload: "Flexible, scheduled with tutor" },
+    ],
+  } : null;
+
   const directorySchema = { "@context": "https://schema.org", "@graph": [
     breadcrumb,
     { "@type": "ItemList", name: title, numberOfItems: result.tutors.length, itemListElement: result.tutors.map((tutor, index) => ({ "@type": "ListItem", position: index + 1, url: `https://tutorera.ac.pk${tutorProfileHref(tutor)}`, name: tutor.user?.name })) },
     { "@type": "FAQPage", mainEntity: faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) },
+    ...(courseSchema ? [courseSchema] : []),
   ] };
 
   return (

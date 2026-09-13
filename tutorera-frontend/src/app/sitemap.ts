@@ -16,12 +16,22 @@ const routes = [
 const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 
+// A single sitemap file supports up to 50,000 URLs (the sitemaps.org / Google limit).
+// Splitting the tutors sitemap into multiple generateSitemaps() ids beyond the original
+// 4 was tried and hits a reproducible crash in this Next.js version's multi-sitemap
+// route matcher (a bare `a.startsWith is not a function` inside the framework's compiled
+// [__metadata_id__] route, independent of id naming/count) - confirmed by bisecting back
+// to the unmodified 4-id baseline, which builds cleanly every time. Rather than fight a
+// framework bug, we raise the single tutors-sitemap cap well below the real 50k ceiling,
+// which comfortably covers realistic near-term growth without hitting that bug at all.
+const TUTOR_SITEMAP_CAP = 20000;
+
 export async function generateSitemaps() {
   return [
     { id: 'core' },
     { id: 'local' },
     { id: 'demand' },
-    { id: 'tutors' }
+    { id: 'tutors' },
   ];
 }
 
@@ -122,15 +132,17 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
   }
 
   if (id === 'tutors') {
-    // Note: We might want to segment this further in the future as tutor count grows > 50k
-    const { tutors } = await fetchTutors({}, 500);
+    // See the TUTOR_SITEMAP_CAP comment above generateSitemaps() for why this is one
+    // large shard rather than several - re-attempt splitting once tutor count approaches
+    // this cap AND a Next.js version upgrade is confirmed to have fixed the matcher bug.
+    const { tutors } = await fetchTutors({}, TUTOR_SITEMAP_CAP);
     const profiles: MetadataRoute.Sitemap = tutors.map((tutor) => ({
       url: `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`,
       lastModified: tutor.lastActiveAt ? new Date(tutor.lastActiveAt) : lastModified,
       changeFrequency: "weekly",
       priority: 0.7,
     }));
-    
+
     return profiles;
   }
 
