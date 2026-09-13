@@ -2,6 +2,7 @@
 import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
@@ -396,6 +397,9 @@ export default function ProfilePage() {
                 <div>
                   <p style={{ fontWeight: '700', color: '#92400e', fontSize: '0.9rem' }}>Verification Pending</p>
                   <p style={{ color: '#a16207', fontSize: '0.8rem' }}>Upload your CNIC and degree from the dashboard to speed up verification.</p>
+                  <Link href="/tutor/application-status" style={{ color: '#92400e', fontSize: '0.8rem', fontWeight: '700', textDecoration: 'underline' }}>
+                    View detailed status of each check
+                  </Link>
                 </div>
               </div>
             )}

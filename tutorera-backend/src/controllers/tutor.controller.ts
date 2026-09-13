@@ -309,7 +309,7 @@ export const getAllTutors = async (
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
-    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus")
+    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus bio experience videoIntro degreeVerificationStatus policeVerificationStatus")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
     .sort(safeSort)
     .skip(skip)

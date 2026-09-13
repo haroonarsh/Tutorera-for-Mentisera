@@ -72,7 +72,7 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
           </span>
         )}
 
-        {tutor.isVerified && (
+        {tutor.isVerified ? (
           <span className={styles.verifiedBadge} aria-label="Verified tutor">
             <svg
               width={10}
@@ -89,6 +89,22 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
             </svg>
             Verified
           </span>
+        ) : (
+          // Full verification requires every check to pass, but a tutor who has
+          // cleared some checks still deserves visible credit for them rather
+          // than showing no badge at all until every check clears.
+          <>
+            {tutor.degreeVerificationStatus === "approved" && (
+              <span className={styles.videoBadge} title="Degree document verified">
+                Degree Verified
+              </span>
+            )}
+            {tutor.policeVerificationStatus === "approved" && (
+              <span className={styles.videoBadge} title="Background/police check verified">
+                Background Checked
+              </span>
+            )}
+          </>
         )}
 
         {typeof matchScore === "number" && (
