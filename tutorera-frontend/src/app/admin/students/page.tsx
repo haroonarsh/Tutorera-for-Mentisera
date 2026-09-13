@@ -24,7 +24,7 @@ interface Student360Data {
   phone?: string;
   city?: string;
   countryName?: string;
-  lifetimeSpend: number;
+  lifetimeSpendByCurrency: { currency: string; amount: number }[];
   totalRequestsCount: number;
   completedBookingsCount: number;
   requests: any[];
@@ -223,7 +223,11 @@ export default function StudentsDirectoryPage() {
                     </div>
                     <div style={{ backgroundColor: UI_COLORS.surface, padding: "0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, textAlign: "center" }}>
                       <span style={{ fontSize: "0.68rem", color: TEXT_COLORS.muted, fontWeight: 700 }}>Lifetime Spend</span>
-                      <strong style={{ display: "block", fontSize: "1.1rem", color: UI_COLORS.accent }}>PKR {student360.lifetimeSpend.toLocaleString()}</strong>
+                      <strong style={{ display: "block", fontSize: "1.1rem", color: UI_COLORS.accent }}>
+                        {student360.lifetimeSpendByCurrency.length === 0
+                          ? "—"
+                          : student360.lifetimeSpendByCurrency.map((s) => `${s.currency} ${s.amount.toLocaleString()}`).join(" · ")}
+                      </strong>
                     </div>
                   </div>
                 </div>
@@ -256,7 +260,7 @@ export default function StudentsDirectoryPage() {
                       <div key={b._id} style={{ padding: "0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.5rem", fontSize: "0.8rem" }}>
                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                           <strong>Tutor: {b.tutor?.name || "Tutor"}</strong>
-                          <span style={{ fontWeight: 700, color: UI_COLORS.accent }}>PKR {b.studentTotal || b.amount}</span>
+                          <span style={{ fontWeight: 700, color: UI_COLORS.accent }}>{b.currency || "PKR"} {b.studentTotal || b.amount}</span>
                         </div>
                         <span style={{ color: TEXT_COLORS.muted }}>Status: {b.status} · Payment: {b.paymentStatus}</span>
                       </div>

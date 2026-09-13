@@ -716,9 +716,15 @@ export const getStudent360 = async (req: AuthRequest, res: Response): Promise<vo
     Booking.find({ student: id }).populate("tutor", "name email").sort("-createdAt").lean(),
   ]);
 
-  const totalSpent = bookings
-    .filter((b) => ["received", "confirmed"].includes(b.paymentStatus))
-    .reduce((s, b) => s + (b.studentTotal || b.subtotal || 0), 0);
+  // Bucketed per currency - a student who booked in more than one market shouldn't have
+  // PKR and AED (etc.) amounts silently added together into one meaningless total.
+  const spendByCurrency: Record<string, number> = {};
+  for (const b of bookings) {
+    if (["received", "confirmed"].includes(b.paymentStatus)) {
+      const currency = b.currency || "PKR";
+      spendByCurrency[currency] = (spendByCurrency[currency] || 0) + (b.studentTotal || b.subtotal || 0);
+    }
+  }
 
   res.json({
     success: true,
@@ -726,7 +732,7 @@ export const getStudent360 = async (req: AuthRequest, res: Response): Promise<vo
       ...user,
       requests,
       bookings,
-      lifetimeSpend: totalSpent,
+      lifetimeSpendByCurrency: Object.entries(spendByCurrency).map(([currency, amount]) => ({ currency, amount })),
       totalRequestsCount: requests.length,
       completedBookingsCount: bookings.filter((b) => b.status === "completed").length,
     },
@@ -748,9 +754,14 @@ export const getTutor360 = async (req: AuthRequest, res: Response): Promise<void
 
   const acceptedBids = bids.filter((b) => b.status === "accepted").length;
   const winRate = bids.length ? Math.round((acceptedBids / bids.length) * 100) : 0;
-  const totalEarnings = bookings
-    .filter((b) => ["received", "confirmed"].includes(b.paymentStatus))
-    .reduce((s, b) => s + (b.tutorNet || b.tutorPayout || 0), 0);
+  // Bucketed per currency - see the matching note in getStudent360 above.
+  const earningsByCurrency: Record<string, number> = {};
+  for (const b of bookings) {
+    if (["received", "confirmed"].includes(b.paymentStatus)) {
+      const currency = b.currency || "PKR";
+      earningsByCurrency[currency] = (earningsByCurrency[currency] || 0) + (b.tutorNet || b.tutorPayout || 0);
+    }
+  }
 
   res.json({
     success: true,
@@ -759,7 +770,7 @@ export const getTutor360 = async (req: AuthRequest, res: Response): Promise<void
       bids,
       bookings,
       winRate,
-      totalEarnings,
+      totalEarningsByCurrency: Object.entries(earningsByCurrency).map(([currency, amount]) => ({ currency, amount })),
       offersSubmittedCount: bids.length,
       completedBookingsCount: bookings.filter((b) => b.status === "completed").length,
     },

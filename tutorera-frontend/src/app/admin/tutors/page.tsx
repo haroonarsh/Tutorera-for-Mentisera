@@ -34,7 +34,7 @@ interface Tutor360Data {
   averageRating: number;
   totalReviews: number;
   winRate: number;
-  totalEarnings: number;
+  totalEarningsByCurrency: { currency: string; amount: number }[];
   offersSubmittedCount: number;
   completedBookingsCount: number;
   user: { name: string; email: string; phone?: string; avatar?: string };
@@ -323,7 +323,11 @@ export default function TutorsDirectoryPage() {
                     </div>
                     <div style={{ backgroundColor: "white", padding: "0.6rem", borderRadius: "0.5rem", border: `1px solid ${UI_COLORS.border}`, textAlign: "center" }}>
                       <span style={{ fontSize: "0.68rem", color: UI_COLORS.gray500, fontWeight: 700 }}>Earnings</span>
-                      <strong style={{ display: "block", fontSize: "1.1rem", color: STATUS_COLORS.success.color }}>PKR {tutor360.totalEarnings.toLocaleString()}</strong>
+                      <strong style={{ display: "block", fontSize: "1.1rem", color: STATUS_COLORS.success.color }}>
+                        {tutor360.totalEarningsByCurrency.length === 0
+                          ? "—"
+                          : tutor360.totalEarningsByCurrency.map((s) => `${s.currency} ${s.amount.toLocaleString()}`).join(" · ")}
+                      </strong>
                     </div>
                   </div>
                 </div>
@@ -352,7 +356,7 @@ export default function TutorsDirectoryPage() {
                           <strong>{b.request?.subject || "Subject"}</strong>
                           <span style={{ fontWeight: 700, color: b.status === "accepted" ? STATUS_COLORS.success.color : UI_COLORS.gray500 }}>{b.status}</span>
                         </div>
-                        <span style={{ color: UI_COLORS.gray500 }}>Offered: PKR {b.amount} · Date: {new Date(b.createdAt).toLocaleDateString()}</span>
+                        <span style={{ color: UI_COLORS.gray500 }}>Offered: {b.currency || "PKR"} {b.amount} · Date: {new Date(b.createdAt).toLocaleDateString()}</span>
                       </div>
                     ))}
                   </div>
