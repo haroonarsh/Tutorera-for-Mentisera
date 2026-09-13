@@ -554,7 +554,9 @@ export const reviewRequestEmail = (studentName: string, tutorName: string, subje
     firstName: studentName,
     openingMessage: `Your ${subject} session with ${tutorName} has concluded. We hope it was an engaging and productive learning experience!`,
     mainMessage: "Your feedback helps maintain exceptional teaching standards on and guides other students finding the right mentor. It takes less than 2 minutes to leave a review.",
-    cta: { label: "Leave a Review", url: `https://tutorera.ac.pk/reviews/${bookingId}` },
+    // Reviews are submitted inline from the dashboard's booking list, not a
+    // standalone page - there is no /reviews/:bookingId route.
+    cta: { label: "Rate Your Session", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: true,
     deliverability: "This notification was sent because you completed a tutoring lesson on.",
   });

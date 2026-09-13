@@ -138,6 +138,8 @@ export class NotificationService {
       "payment_abandoned_48h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 2, payload.tutorName, payload.amount),
       "payment_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 3, payload.tutorName, payload.amount),
       "payment_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 7, payload.tutorName, payload.amount),
+
+      "review_requested": (name: string, payload: any) => templates.reviewRequestEmail(name, payload.tutorName, payload.subject, payload.bookingId),
     };
     return map[templateId];
   }

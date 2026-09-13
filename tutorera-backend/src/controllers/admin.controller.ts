@@ -954,7 +954,11 @@ export const updateBookingStatus = async (
          await NotificationService.publishEvent(studentUser._id.toString(), "review.requested", {
            tutorName: tutorUser.name,
            subject: requestSubject,
-           bookingId: booking._id.toString()
+           bookingId: booking._id.toString(),
+           title: "How was your session?",
+           message: `Your ${requestSubject} session with ${tutorUser.name} is complete. Leave a quick review to help other students.`,
+           type: "review",
+           link: "/dashboard",
          });
        }
      } catch (err) {
