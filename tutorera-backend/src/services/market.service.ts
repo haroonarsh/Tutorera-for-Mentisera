@@ -97,7 +97,7 @@ export async function assertAcceptanceAvailable(countryCode?: string): Promise<I
     error.code = "MARKET_DISCOVERY_ONLY";
     throw error;
   }
-  if (market.countryCode !== "PK" || market.paymentProvider !== "safepay") {
+  if (market.paymentProvider !== "safepay") {
     const error = new Error("No compliant payment provider is configured for this market.") as Error & { statusCode: number; code: string };
     error.statusCode = 409;
     error.code = "PAYMENT_PROVIDER_UNAVAILABLE";

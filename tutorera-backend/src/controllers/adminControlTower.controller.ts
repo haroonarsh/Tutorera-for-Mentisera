@@ -621,74 +621,11 @@ export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<
 export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise<void> => {
   const { ensureLaunchMarkets } = await import("../services/market.service");
   await ensureLaunchMarkets();
-  let markets = await MarketConfig.find(req.countryScopeCode ? { countryCode: req.countryScopeCode } : {}).sort("countryCode").lean();
-  // Launch markets are seeded by ensureLaunchMarkets. Never create legacy markets for a scoped administrator.
-  if (markets.length === 0 && !req.countryScopeCode) {
-    // Seed standard initial markets
-    await MarketConfig.create([
-      {
-        countryCode: "PK",
-        countryName: "Pakistan",
-        currency: "PKR",
-        currencySymbol: "Rs",
-        timezone: "Asia/Karachi",
-        onlineEnabled: true,
-        homeTuitionEnabled: true,
-        backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 0,
-        isActive: true,
-        launchStatus: "live",
-        supportedCities: ["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad"],
-      },
-      {
-        countryCode: "SA",
-        countryName: "Kingdom of Saudi Arabia",
-        currency: "SAR",
-        currencySymbol: "SR",
-        timezone: "Asia/Riyadh",
-        onlineEnabled: true,
-        homeTuitionEnabled: true,
-        backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 15,
-        isActive: true,
-        launchStatus: "live",
-        supportedCities: ["Riyadh", "Jeddah", "Dammam", "Mecca", "Medina"],
-      },
-      {
-        countryCode: "AE",
-        countryName: "United Arab Emirates",
-        currency: "AED",
-        currencySymbol: "AED",
-        timezone: "Asia/Dubai",
-        onlineEnabled: true,
-        homeTuitionEnabled: true,
-        backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 5,
-        isActive: true,
-        launchStatus: "live",
-        supportedCities: ["Dubai", "Abu Dhabi", "Sharjah"],
-      },
-      {
-        countryCode: "GB",
-        countryName: "United Kingdom",
-        currency: "GBP",
-        currencySymbol: "£",
-        timezone: "Europe/London",
-        onlineEnabled: true,
-        homeTuitionEnabled: false,
-        backgroundCheckRequired: true,
-        platformFeePercent: 12,
-        taxPercent: 20,
-        isActive: true,
-        launchStatus: "beta",
-        supportedCities: ["London", "Manchester", "Birmingham"],
-      },
-    ]);
-    markets = await MarketConfig.find().sort("countryCode").lean();
-  }
+  // ensureLaunchMarkets() upserts every LAUNCH_MARKETS entry (PK, AE, GB, US, SA, IN), so
+  // markets is never actually empty here - a legacy fallback seed that only created 4 of
+  // the 6 markets (and would default to the wrong paymentProvider) used to live in this
+  // branch and has been removed.
+  const markets = await MarketConfig.find(req.countryScopeCode ? { countryCode: req.countryScopeCode } : {}).sort("countryCode").lean();
   res.json({ success: true, markets });
 };
 
@@ -708,7 +645,8 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
     return;
   }
   // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
-  if (["AE", "GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
+  // AE, US, SA, IN are launched on RapidPay (see LAUNCH_MARKETS in market.service.ts) and are exempt from this lock.
+  if (["GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
   const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
   if (updated) {
     await Country.updateOne(
