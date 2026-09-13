@@ -51,6 +51,43 @@ export const uploadAvatar = async (
   });
 };
 
+// @desc    Upload a blog post cover image
+// @route   POST /api/upload/blog-cover
+// @access  Private (admin)
+// Deliberately just uploads and returns a URL rather than writing to a Blog
+// document directly - the admin editor calls this before a post has an id
+// (new post) as easily as when editing an existing one, and sets the
+// returned URL into its own form state either way.
+export const uploadBlogCoverImage = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ success: false, message: "No file uploaded" });
+    return;
+  }
+
+  const { valid, detectedType } = await verifyFileSignature(req.file.buffer, IMAGE_TYPES);
+  if (!valid) {
+    res.status(400).json({
+      success: false,
+      message: `File content is not a valid image (detected: ${detectedType || "unknown"})`,
+    });
+    return;
+  }
+
+  try {
+    const result = await uploadToCloudinary(req.file.buffer, "tutorera/blog-covers");
+    res.status(200).json({ success: true, message: "Cover image uploaded successfully", url: result.secure_url });
+  } catch (err: any) {
+    if (err.message?.includes("content policy")) {
+      res.status(400).json({ success: false, message: "Image contains prohibited content and could not be uploaded." });
+      return;
+    }
+    throw err;
+  }
+};
+
 // @desc    Upload tutor verification docs
 // @route   POST /api/upload/verification
 // @access  Private (tutor only)
