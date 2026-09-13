@@ -463,7 +463,11 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       cta: { label: "Re-submit police verification", href: RESUBMIT_URL },
     });
   }
-  if (policeIsRequired(profile) && profile.policeVerificationStatus === "not_submitted") {
+  if (policeIsRequired(profile) && profile.policeVerificationStatus !== "approved" && profile.policeVerificationStatus !== "pending" && profile.policeVerificationStatus !== "rejected") {
+    // Covers both the normal "not_submitted" case and the (should no longer
+    // happen going forward, but defensively handled) "not_required" case a
+    // profile could be stuck in if teachingMode changed to in-person/both
+    // before the write-paths that reset this were fixed.
     reasons.push({
       key: "policeMissing",
       title: "Background and safety verification required",

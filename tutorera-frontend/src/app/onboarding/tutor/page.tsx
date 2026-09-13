@@ -236,7 +236,7 @@ export default function TutorOnboardingPage() {
   };
 
   // Whether teaching mode mandates the selected market's safety verification.
-  const isHomeTuitionMandatory = step4.teachingMode === "in-person";
+  const isHomeTuitionMandatory = step4.teachingMode === "in-person" || step4.teachingMode === "both";
   const isOnlineOnly = step4.teachingMode === "online";
 
   const handleNext = async () => {

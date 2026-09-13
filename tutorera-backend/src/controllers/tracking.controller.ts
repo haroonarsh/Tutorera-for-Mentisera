@@ -413,7 +413,7 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
     targetName: user.name,
     metadata: reason ? { reason } : undefined,
   });
-  await syncMarketplaceAndHomeTuition(req, user, profile);
+  await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
   res.status(200).json({ success: true, profile });
 };
 
@@ -455,7 +455,7 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     });
   }
   await logAudit({ action: `degree_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
-  await syncMarketplaceAndHomeTuition(req, user, profile);
+  await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
   res.status(200).json({ success: true, profile });
 };
 
@@ -497,7 +497,7 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
     });
   }
   await logAudit({ action: `demo_video_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
-  await syncMarketplaceAndHomeTuition(req, user, profile);
+  await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
   res.status(200).json({ success: true, profile });
 };
 
@@ -539,7 +539,7 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
     });
   }
   await logAudit({ action: `police_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
-  await syncMarketplaceAndHomeTuition(req, user, profile);
+  await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
   res.status(200).json({ success: true, profile });
 };
 
@@ -690,8 +690,7 @@ export const getApplicationHistory = async (req: AuthRequest, res: Response): Pr
   res.status(200).json({ success: true, history });
 };
 
-async function syncMarketplaceAndHomeTuition(req: AuthRequest, user: any, profile: any) {
-  const actor = actorFromReq(req);
+export async function syncMarketplaceAndHomeTuition(actor: { name: string; role: "system" | "tutor" | "admin"; id?: string }, user: any, profile: any) {
   const now = new Date();
   const mpEligible = isMarketplaceEligible(profile);
   const htEligible = isHomeTuitionEligible(profile);
@@ -892,7 +891,7 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
       metadata: { documentType, autoApprove, secureUrl },
     });
 
-    await syncMarketplaceAndHomeTuition(req, user, profile);
+    await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
 
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", { // Fallback, just for the in-app notif
       title: "Document updated by Administration",

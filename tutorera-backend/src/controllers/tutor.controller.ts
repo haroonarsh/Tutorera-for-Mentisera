@@ -18,9 +18,26 @@ import { normalizeEducationLevels } from "../config/educationLevels";
 import { resolveLocationReferences } from "../services/locationReference.service";
 import { resolveMarket } from "../services/market.service";
 import { syncReviewQueueForProfile } from "../services/verification.service";
+import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
+
+// Online tuition never needs a police check; in-person and both do. Reused
+// wherever teachingMode can change (initial onboarding step 4 and later
+// self-service profile edits) so the two paths can't drift out of sync.
+function computeNextPoliceStatus(
+  currentStatus: string | undefined,
+  hasPoliceCertificateOnFile: boolean,
+  teachingMode: string | undefined
+): "not_required" | "not_submitted" | "pending" | "approved" | "rejected" {
+  if (teachingMode === "online") return "not_required";
+  if (!hasPoliceCertificateOnFile) return "not_submitted";
+  // A certificate is already on file - keep its current review status unless
+  // it was previously marked not_required (switching away from online with
+  // an old certificate on file still needs a fresh review).
+  return currentStatus && currentStatus !== "not_required" ? (currentStatus as any) : "pending";
+}
 
 // @desc    Create or update tutor profile
 // @route   POST /api/tutors/profile
@@ -45,12 +62,37 @@ export const createOrUpdateProfile = async (
       updateData.location = { type: "Point", coordinates: [updateData.lng, updateData.lat] };
     }
 
+    // teachingMode drives whether a police check is required at all - unlike
+    // every other field here, it's a business-rule trigger, not an inert
+    // value. Changing it without recomputing policeVerificationStatus is how
+    // a tutor could switch to "online" and keep home-tuition eligibility
+    // (or switch to "in-person"/"both" and get stuck with no way to submit
+    // the now-required certificate).
+    if (updateData.teachingMode && updateData.teachingMode !== profile.teachingMode) {
+      updateData.policeVerificationStatus = computeNextPoliceStatus(
+        profile.policeVerificationStatus,
+        Boolean(profile.policeCertificate),
+        updateData.teachingMode
+      );
+    }
+
     // Update existing profile
     profile = await TutorProfile.findOneAndUpdate(
       { user: userId },
       updateData,
       { new: true, runValidators: true }
     ).populate("user", "name email avatar phone city countryCode countryName timezone currency");
+
+    if (updateData.teachingMode && profile) {
+      const tutorUser = await User.findById(userId);
+      if (tutorUser) {
+        await syncMarketplaceAndHomeTuition(
+          { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+          tutorUser,
+          profile
+        );
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -396,6 +438,11 @@ export const saveOnboardingStep = async (
 
   else if (stepNum === 2) {
     // Education
+    if (!String(parsedData.degree || "").trim() || !String(parsedData.institution || "").trim() || !Number.isInteger(parseInt(parsedData.year))) {
+      res.status(400).json({ success: false, message: "Degree, institution, and graduation year are required." });
+      return;
+    }
+
     let degreeDocUrl = "";
     let degreeDocPublicId = "";
 
@@ -467,12 +514,11 @@ export const saveOnboardingStep = async (
   else if (stepNum === 4) {
     // Online Tuition: No Police Verification required.
     // In-Person / Both: Police report required for home tuition.
-    const isOnlineOnly = parsedData.teachingMode === "online";
-    const nextPoliceStatus = isOnlineOnly
-      ? ("not_required" as const)
-      : profile.policeCertificate
-        ? (profile.policeVerificationStatus && profile.policeVerificationStatus !== "not_required" ? profile.policeVerificationStatus : ("pending" as const))
-        : ("not_submitted" as const);
+    const nextPoliceStatus = computeNextPoliceStatus(
+      profile.policeVerificationStatus,
+      Boolean(profile.policeCertificate),
+      parsedData.teachingMode
+    );
 
     updateData = {
       bio: parsedData.bio,
@@ -574,10 +620,23 @@ export const saveOnboardingStep = async (
       policeCertificatePublicId = result.public_id;
     }
 
-    // Validation: Home tuition (in-person) tutors MUST provide a Police Verification Report.
-    // For online-only tutors, NO police verification is required.
+    // Validation: CNIC front and back are always mandatory for marketplace approval,
+    // regardless of teaching mode - enforce final presence (either just uploaded or
+    // already on file from a prior submission), not just this request's files.
+    const finalCnicFront = cnicFrontUrl || profile.cnicFront;
+    const finalCnicBack = cnicBackUrl || profile.cnicBack;
+    if (!finalCnicFront || !finalCnicBack) {
+      res.status(400).json({
+        success: false,
+        message: "CNIC front and back images are required to complete your application.",
+      });
+      return;
+    }
+
+    // Validation: Home tuition (in-person or both) tutors MUST provide a Police
+    // Verification Report. For online-only tutors, NO police verification is required.
     const teachingMode = profile.teachingMode;
-    if (teachingMode === "in-person" && !policeCertificateUrl && !profile.policeCertificate) {
+    if ((teachingMode === "in-person" || teachingMode === "both") && !policeCertificateUrl && !profile.policeCertificate) {
       res.status(400).json({
         success: false,
         message: "Police Verification Report is mandatory to offer Home Tuition.",
@@ -664,6 +723,23 @@ export const saveOnboardingStep = async (
   if (!updated) {
     res.status(404).json({ success: false, message: "Tutor profile no longer exists. Please refresh and try again." });
     return;
+  }
+
+  // The verificationResubmitted block above only catches transitions *to*
+  // "pending" - switching teachingMode to "online" sets police status to
+  // "not_required" instead, which that check misses entirely. Recompute
+  // marketplace/home-tuition eligibility from the actual current state
+  // (isMarketplaceEligible/isHomeTuitionEligible) rather than pattern-matching
+  // on which field just changed, so every step keeps eligibility flags honest.
+  if (stepNum === 4 || stepNum === 5) {
+    const tutorUserForSync = await User.findById(req.user?._id);
+    if (tutorUserForSync) {
+      await syncMarketplaceAndHomeTuition(
+        { name: tutorUserForSync.name, role: "tutor", id: tutorUserForSync._id.toString() },
+        tutorUserForSync,
+        updated
+      );
+    }
   }
 
   // Sync verification review queue for any newly submitted documents
