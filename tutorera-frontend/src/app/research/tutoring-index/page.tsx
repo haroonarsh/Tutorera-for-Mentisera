@@ -39,7 +39,10 @@ export default async function TutoringIndexPage({ searchParams }: { searchParams
   const selected = markets.find((market) => market.country === String(query.country || "PK").toUpperCase()) || markets[0];
   const period = ["3m", "6m", "12m"].includes(query.period || "") ? String(query.period) : "6m";
   const index = await getIndex(selected.country, selected.currency, period);
-  const schema = { "@context": "https://schema.org", "@type": "Dataset", name: `TUTORERA Tutoring Index — ${selected.label}`, description: `Anonymized ${selected.currency} tutoring marketplace aggregates for ${selected.label}.`, url: `https://tutorera.ac.pk${path}?country=${selected.country}`, creator: { "@id": "https://tutorera.ac.pk/#organization" }, temporalCoverage: index ? `${index.period.from}/${index.period.to}` : undefined, isAccessibleForFree: true };
+  // dateModified uses the end of the covered data period (not "now") - it's the
+  // honest answer to "as of when is this true", which is what AI/search provenance
+  // signals actually want, rather than a render timestamp that outpaces the real data.
+  const schema = { "@context": "https://schema.org", "@type": "Dataset", name: `TUTORERA Tutoring Index — ${selected.label}`, description: `Anonymized ${selected.currency} tutoring marketplace aggregates for ${selected.label}.`, url: `https://tutorera.ac.pk${path}?country=${selected.country}`, creator: { "@id": "https://tutorera.ac.pk/#organization" }, temporalCoverage: index ? `${index.period.from}/${index.period.to}` : undefined, dateModified: index?.period.to, isAccessibleForFree: true };
 
   return <main className={styles.main}>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />

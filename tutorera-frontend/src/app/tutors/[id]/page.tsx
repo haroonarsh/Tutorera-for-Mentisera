@@ -183,6 +183,9 @@ export default async function TutorProfilePage({ params }: Props) {
         image: avatarUrl || undefined,
         jobTitle: `${tutor.subjects?.[0] || "Academic"} Tutor`,
         description: tutor.bio || undefined,
+        // Links this tutor into the sitewide entity graph (Organization <-> Service <->
+        // Person <-> Course) instead of leaving Person as an isolated node.
+        worksFor: { "@id": `${SITE_URL}/#organization` },
         address: {
           "@type": "PostalAddress",
           addressLocality: city,

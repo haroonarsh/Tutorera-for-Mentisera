@@ -69,6 +69,11 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
       { "@type": "CourseInstance", courseMode: "online", courseWorkload: "Flexible, scheduled with tutor" },
       { "@type": "CourseInstance", courseMode: "onsite", courseWorkload: "Flexible, scheduled with tutor" },
     ],
+    // References the same Person @id fragments emitted on each tutor's own profile
+    // page, turning this Course into a real graph edge rather than an isolated node.
+    ...(result.tutors.length ? {
+      instructor: result.tutors.slice(0, 20).map((t) => ({ "@id": `https://tutorera.ac.pk${tutorProfileHref(t)}#person` })),
+    } : {}),
   } : null;
 
   const directorySchema = { "@context": "https://schema.org", "@graph": [
