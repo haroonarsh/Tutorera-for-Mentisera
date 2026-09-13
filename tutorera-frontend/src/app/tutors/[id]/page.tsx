@@ -21,7 +21,8 @@ import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
 import AvatarImage from "@/components/Common/AvatarImage";
 import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
 import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
-import { fetchTutor, tutorProfileHref } from "@/lib/tutor-directory";
+import { fetchTutor, fetchTutors, tutorProfileHref } from "@/lib/tutor-directory";
+import TutorCard from "@/components/Tutors/TutorCard";
 import { SITE_URL } from "@/lib/site";
 import type { Review } from "@/types/tutor";
 
@@ -141,6 +142,12 @@ export default async function TutorProfilePage({ params }: Props) {
   const tutorUserId = tutor.user?._id || String(tutor.user || tutor._id);
 
   const { reviews, slots } = await extras(tutorUserId);
+
+  const primarySubject = tutor.subjects?.[0];
+  const similarTutorsResult = primarySubject
+    ? await fetchTutors({ subject: primarySubject, countryCode }, 5)
+    : { tutors: [] };
+  const similarTutors = similarTutorsResult.tutors.filter((t) => t._id !== tutor._id).slice(0, 4);
 
   const hasVideo = Boolean(tutor.videoIntro);
   const isHomeTutor = tutor.teachingMode === "in-person" || tutor.teachingMode === "both";
@@ -1193,6 +1200,19 @@ export default async function TutorProfilePage({ params }: Props) {
           </div>
         </aside>
       </div>
+
+      {similarTutors.length > 0 && (
+        <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 1.5rem 3rem" }}>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
+            More {primarySubject} tutors {city ? `near ${city}` : ""}
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1.25rem" }}>
+            {similarTutors.map((t) => (
+              <TutorCard key={t._id} tutor={t} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Sticky Bottom CTA for Mobile */}
       <StickyTutorProfileCTA
