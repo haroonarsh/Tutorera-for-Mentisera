@@ -9,7 +9,7 @@ export interface IFeeConfig extends Document {
   tutorFeePercent: number;
   minimumFee: number;
   maximumFee: number;
-  // Payment gateway processing cost (e.g. Safepay/RapidPay's own cut) - a
+  // Payment gateway processing cost (RapidPay's own cut) - a
   // real cost of accepting the payment, distinct from TutorEra's own
   // commission (studentFeePercent/tutorFeePercent) and from government tax
   // (TaxConfig, per country). Modeled the standard way gateways price

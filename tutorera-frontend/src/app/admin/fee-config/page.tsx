@@ -280,7 +280,7 @@ export default function FeeConfigPage() {
                   />
                   <Percent size={14} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", color: UI_COLORS.gray500 }} />
                 </div>
-                <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>Match your Safepay/RapidPay merchant agreement rate</span>
+                <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>Match your RapidPay merchant agreement rate</span>
               </div>
 
               <div>

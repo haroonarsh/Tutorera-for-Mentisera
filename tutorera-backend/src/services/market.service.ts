@@ -3,13 +3,13 @@ import MarketConfig, { IMarketConfig } from "../models/MarketConfig.model";
 export const LAUNCH_MARKETS = {
   PK: {
     countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "PKR", currencySymbol: "Rs.",
-    timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "safepay",
+    timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   AE: {
     countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "AED", currencySymbol: "AED",
-    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "safepay",
+    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
@@ -21,19 +21,19 @@ export const LAUNCH_MARKETS = {
   },
   US: {
     countryName: "United States", iso3: "USA", dialCode: "+1", currency: "USD", currencySymbol: "$",
-    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "safepay",
+    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   SA: {
     countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "SAR", currencySymbol: "SAR",
-    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "safepay",
+    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   IN: {
     countryName: "India", iso3: "IND", dialCode: "+91", currency: "INR", currencySymbol: "₹",
-    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "safepay",
+    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
@@ -42,9 +42,9 @@ export const LAUNCH_MARKETS = {
 export async function ensureLaunchMarkets(): Promise<void> {
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
     const safetyLock = countryCode === "PK"
-      ? { paymentProvider: "safepay", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", featureFlags: config.featureFlags }
+      ? { paymentProvider: "rapidpay", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", featureFlags: config.featureFlags }
       : ["AE", "US", "SA", "IN"].includes(countryCode)
-      ? { paymentProvider: "safepay", paymentsEnabled: true, payoutsEnabled: true, launchStatus: "live", featureFlags: config.featureFlags }
+      ? { paymentProvider: "rapidpay", paymentsEnabled: true, payoutsEnabled: true, launchStatus: "live", featureFlags: config.featureFlags }
       : { paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false, launchStatus: "beta", featureFlags: config.featureFlags };
     return MarketConfig.updateOne(
       { countryCode },
@@ -97,7 +97,7 @@ export async function assertAcceptanceAvailable(countryCode?: string): Promise<I
     error.code = "MARKET_DISCOVERY_ONLY";
     throw error;
   }
-  if (market.paymentProvider !== "safepay") {
+  if (market.paymentProvider !== "rapidpay") {
     const error = new Error("No compliant payment provider is configured for this market.") as Error & { statusCode: number; code: string };
     error.statusCode = 409;
     error.code = "PAYMENT_PROVIDER_UNAVAILABLE";

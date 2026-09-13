@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
-import { safepayProvider } from "./safepayProvider.service";
+import { rapidpayProvider } from "./rapidpayProvider.service";
 
-export type PaymentProviderName = "safepay";
+export type PaymentProviderName = "rapidpay";
 export type LedgerProviderName = PaymentProviderName | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
@@ -41,10 +41,10 @@ export interface ProviderWebhookEvent {
 }
 
 export const paymentProvider = {
-  name: "safepay" as PaymentProviderName,
+  name: "rapidpay" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
-    const checkoutUrl = await safepayProvider.createCheckout({
+    const checkoutUrl = await rapidpayProvider.createCheckout({
       amount: params.amount,
       currency: params.currency,
       reference: params.basketId,
@@ -79,7 +79,7 @@ export const paymentProvider = {
     return checkoutUrl;
   },
 
-  verifyWebhookSignature: safepayProvider.verifyWebhookSignature,
+  verifyWebhookSignature: rapidpayProvider.verifyWebhookSignature,
 
   normalizeWebhook(body: {
     eventId: string;
@@ -90,7 +90,7 @@ export const paymentProvider = {
     currency?: string;
   }): ProviderWebhookEvent {
     return {
-      provider: "safepay",
+      provider: "rapidpay",
       eventId: body.eventId,
       eventType: body.eventType,
       merchantTransactionId: body.merchantTransactionId,
