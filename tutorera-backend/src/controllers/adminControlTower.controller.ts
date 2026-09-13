@@ -395,6 +395,11 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
   const filter: Record<string, unknown> = {};
   if (status) filter.paymentStatus = status;
 
+  const activeFeeConfig = await FeeConfig.findOne({ isActive: true }).sort("-updatedAt").lean();
+  const gatewayFeePercent = activeFeeConfig?.gatewayFeePercent ?? 2.9;
+  const gatewayFixedFee = activeFeeConfig?.gatewayFixedFee ?? 0;
+  const estimateGatewayFee = (gmv: number) => gmv * (gatewayFeePercent / 100) + gatewayFixedFee;
+
   const [total, bookings, ledgerStatusRows, recentLedgerRows] = await Promise.all([
     Booking.countDocuments(filter),
     Booking.find(filter)
@@ -405,8 +410,10 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       .skip(skip)
       .limit(limitNum)
       .lean(),
+    // Grouped by currency as well as status - summing grossAmount/platformNet across
+    // different currencies (PKR + AED + USD + SAR + INR) would produce a meaningless total.
     PaymentLedger.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 }, grossAmount: { $sum: "$grossAmount" }, platformNet: { $sum: "$platformNet" }, tutorPayable: { $sum: "$tutorPayable" } } },
+      { $group: { _id: { status: "$status", currency: "$currency" }, count: { $sum: 1 }, grossAmount: { $sum: "$grossAmount" }, platformNet: { $sum: "$platformNet" }, tutorPayable: { $sum: "$tutorPayable" } } },
     ]),
     PaymentLedger.find()
       .populate("student", "name email")
@@ -416,49 +423,52 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       .lean(),
   ]);
 
-  // Reconciliation summary
-  const allBookings = await Booking.find().select("studentTotal subtotal tutorFee studentFee platformFee tax paymentStatus").lean();
-  let totalGMV = 0;
-  let totalTutorNet = 0;
-  let totalPlatformGross = 0;
-  let totalEstimatedGatewayFees = 0;
+  // Reconciliation summary, broken down per currency - see note above on why these can't be summed together.
+  const allBookings = await Booking.find().select("studentTotal subtotal tutorFee studentFee platformFee tax paymentStatus currency").lean();
+  const byCurrency: Record<string, { currency: string; count: number; totalGMV: number; totalTutorNet: number; totalPlatformGross: number; totalEstimatedGatewayFees: number; netPlatformSettlement: number }> = {};
 
   for (const b of allBookings) {
     if (["received", "confirmed"].includes(b.paymentStatus)) {
+      const currency = b.currency || "PKR";
+      const bucket = byCurrency[currency] || (byCurrency[currency] = { currency, count: 0, totalGMV: 0, totalTutorNet: 0, totalPlatformGross: 0, totalEstimatedGatewayFees: 0, netPlatformSettlement: 0 });
       const gmv = b.studentTotal || b.subtotal || 0;
-      totalGMV += gmv;
-      totalTutorNet += (b.subtotal || 0) - (b.tutorFee || 0);
-      totalPlatformGross += (b.studentFee || 0) + (b.tutorFee || b.platformFee || 0);
-      totalEstimatedGatewayFees += gmv * 0.029 + 30; // 2.9% + PKR 30
+      bucket.count += 1;
+      bucket.totalGMV += gmv;
+      bucket.totalTutorNet += (b.subtotal || 0) - (b.tutorFee || 0);
+      bucket.totalPlatformGross += (b.studentFee || 0) + (b.tutorFee || b.platformFee || 0);
+      bucket.totalEstimatedGatewayFees += estimateGatewayFee(gmv);
     }
+  }
+  for (const bucket of Object.values(byCurrency)) {
+    bucket.netPlatformSettlement = bucket.totalPlatformGross - bucket.totalEstimatedGatewayFees;
   }
 
   res.json({
     success: true,
     summary: {
-      totalGMV,
-      totalTutorNet,
-      totalPlatformGross,
-      totalEstimatedGatewayFees,
-      netPlatformSettlement: totalPlatformGross - totalEstimatedGatewayFees,
+      gatewayFeePercent,
+      gatewayFixedFee,
+      byCurrency: Object.values(byCurrency),
       ledger: ledgerStatusRows.reduce((acc, row) => {
-        acc[row._id || "unknown"] = {
+        const status = row._id?.status || "unknown";
+        const currency = row._id?.currency || "PKR";
+        (acc[status] ||= {})[currency] = {
           count: row.count,
           grossAmount: row.grossAmount,
           platformNet: row.platformNet,
           tutorPayable: row.tutorPayable,
         };
         return acc;
-      }, {} as Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>),
+      }, {} as Record<string, Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>>),
     },
     ledger: recentLedgerRows,
     bookings: bookings.map((b) => {
       const gmv = b.studentTotal || b.subtotal || 0;
-      const expectedSettlement = gmv - (gmv * 0.029 + 30);
+      const estimatedGatewayFee = estimateGatewayFee(gmv);
       return {
         ...b,
-        estimatedGatewayFee: Math.round(gmv * 0.029 + 30),
-        expectedSettlement: Math.round(expectedSettlement),
+        estimatedGatewayFee: Math.round(estimatedGatewayFee),
+        expectedSettlement: Math.round(gmv - estimatedGatewayFee),
         settlementDiscrepancy: (b as any).gatewaySettlementStatus === "discrepancy",
       };
     }),
