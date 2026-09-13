@@ -12,18 +12,23 @@ interface Blog {
   title: string;
   slug: string;
   excerpt: string;
+  category?: string;
+  featured?: boolean;
   isPublished: boolean;
   createdAt: string;
   author: { name: string };
 }
+
+const emptyForm = { title: '', slug: '', excerpt: '', metaDescription: '', content: '', tags: '', category: 'Guides', featured: false, coverImage: '', coverImageAlt: '' };
 
 export default function AdminBlogsPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editBlog, setEditBlog] = useState<Blog | null>(null);
-  const [form, setForm] = useState({ title: '', slug: '', excerpt: '', content: '', tags: '' });
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
 
   const fetchBlogs = async () => {
     try {
@@ -49,8 +54,13 @@ export default function AdminBlogsPage() {
         title: form.title,
         slug: form.slug || generateSlug(form.title),
         excerpt: form.excerpt,
+        metaDescription: form.metaDescription,
         content: form.content,
         tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+        category: form.category || 'Guides',
+        featured: form.featured,
+        coverImage: form.coverImage,
+        coverImageAlt: form.coverImageAlt,
         isPublished: true,
       };
       if (editBlog) {
@@ -60,7 +70,7 @@ export default function AdminBlogsPage() {
       }
       setShowForm(false);
       setEditBlog(null);
-      setForm({ title: '', slug: '', excerpt: '', content: '', tags: '' });
+      setForm(emptyForm);
       fetchBlogs();
       showSuccess(editBlog ? 'Blog post updated successfully.' : 'Blog post created successfully.');
     } catch (err: unknown) {
@@ -78,16 +88,35 @@ export default function AdminBlogsPage() {
     } catch { showError('Failed to delete blog post.'); }
   };
 
-  const handleEdit = (blog: Blog) => {
+  const handleEdit = async (blog: Blog) => {
+    // The list endpoint never includes content (or a reliable tags array), so the
+    // full post must be fetched by slug first - otherwise saving this form back
+    // would silently wipe the post's content and tags.
     setEditBlog(blog);
-    setForm({
-      title: blog.title,
-      slug: blog.slug,
-      excerpt: blog.excerpt,
-      content: '',
-      tags: '',
-    });
     setShowForm(true);
+    setLoadingEdit(true);
+    try {
+      const res = await api.get(`/blogs/${blog.slug}`);
+      const full = res.data.blog;
+      setForm({
+        title: full.title,
+        slug: full.slug,
+        excerpt: full.excerpt,
+        metaDescription: full.metaDescription || '',
+        content: full.content,
+        tags: (full.tags || []).join(', '),
+        category: full.category || 'Guides',
+        featured: Boolean(full.featured),
+        coverImage: full.coverImage || '',
+        coverImageAlt: full.coverImageAlt || '',
+      });
+    } catch {
+      showError('Failed to load full post for editing.');
+      setShowForm(false);
+      setEditBlog(null);
+    } finally {
+      setLoadingEdit(false);
+    }
   };
 
   return (
@@ -97,7 +126,7 @@ export default function AdminBlogsPage() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Blog Posts</h1>
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Manage blog content for TUTORERA®</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditBlog(null); setForm({ title: '', slug: '', excerpt: '', content: '', tags: '' }); }}
+        <button onClick={() => { setShowForm(true); setEditBlog(null); setForm(emptyForm); }}
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', backgroundColor: C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
           <Plus size={16} /> New Post
         </button>
@@ -137,6 +166,48 @@ export default function AdminBlogsPage() {
                 onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
             </div>
             <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Meta Description (SEO, optional)</label>
+              <textarea value={form.metaDescription} onChange={e => setForm({ ...form, metaDescription: e.target.value })}
+                rows={2} placeholder="Falls back to the excerpt above if left blank"
+                style={{ width: '100%', padding: '0.75rem 1rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+                onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Category</label>
+                <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                  placeholder="e.g. Parents, Safety, Comparisons"
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.6rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: '600', color: C.primary, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} />
+                  Featured
+                </label>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Cover Image URL</label>
+                <input value={form.coverImage} onChange={e => setForm({ ...form, coverImage: e.target.value })}
+                  placeholder="https://..."
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Cover Image Alt Text</label>
+                <input value={form.coverImageAlt} onChange={e => setForm({ ...form, coverImageAlt: e.target.value })}
+                  placeholder="Describe the image for screen readers"
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
+              </div>
+            </div>
+            <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
                 Content * (use **bold text** for headings)
               </label>
@@ -158,9 +229,9 @@ export default function AdminBlogsPage() {
                 onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
             </div>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={handleSubmit} disabled={saving}
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: saving ? C.accentLight : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
-                {saving ? 'Saving...' : editBlog ? 'Update Post' : 'Publish Post'}
+              <button onClick={handleSubmit} disabled={saving || loadingEdit}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: (saving || loadingEdit) ? C.accentLight : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: (saving || loadingEdit) ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
+                {loadingEdit ? 'Loading post...' : saving ? 'Saving...' : editBlog ? 'Update Post' : 'Publish Post'}
               </button>
               <button onClick={() => { setShowForm(false); setEditBlog(null); }}
                 style={{ padding: '0.75rem 1.5rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: C.surface, color: C.primary }}>
@@ -195,6 +266,16 @@ export default function AdminBlogsPage() {
                   <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.15rem 0.5rem', borderRadius: '999px', backgroundColor: blog.isPublished ? STATUS_COLORS.success.bg : STATUS_COLORS.neutral.bg, color: blog.isPublished ? STATUS_COLORS.success.color : STATUS_COLORS.neutral.color }}>
                     {blog.isPublished ? 'Published' : 'Draft'}
                   </span>
+                  {blog.category && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.15rem 0.5rem', borderRadius: '999px', backgroundColor: C.accentLight, color: C.accent }}>
+                      {blog.category}
+                    </span>
+                  )}
+                  {blog.featured && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.15rem 0.5rem', borderRadius: '999px', backgroundColor: '#fffbeb', color: '#b45309' }}>
+                      ★ Featured
+                    </span>
+                  )}
                 </div>
                 <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '0.3rem' }}>{blog.excerpt?.substring(0, 100)}...</p>
                 <p style={{ color: C.gray500, fontSize: '0.75rem' }}>

@@ -6,7 +6,7 @@ import Blog from "../models/Blog.model";
 // @route   POST /api/blogs
 // @access  Private (admin)
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { title, slug, content, excerpt, coverImage, tags } = req.body;
+  const { title, slug, content, excerpt, metaDescription, coverImage, coverImageAlt, tags, category, featured } = req.body;
 
   const existing = await Blog.findOne({ slug });
   if (existing) {
@@ -15,8 +15,8 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
   }
 
   const blog = await Blog.create({
-    title, slug, content, excerpt,
-    coverImage, tags,
+    title, slug, content, excerpt, metaDescription,
+    coverImage, coverImageAlt, tags, category, featured,
     author: req.user?._id,
   });
 
@@ -26,10 +26,14 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
 // @desc    Get all published blogs
 // @route   GET /api/blogs
 // @access  Public
+const WORDS_PER_MINUTE = 200;
+
 export const getAllBlogs = async (req: Request, res: Response): Promise<void> => {
-  const { page = "1", limit = "9", tag } = req.query;
+  const { page = "1", limit = "9", tag, category, featured } = req.query;
   const filter: Record<string, unknown> = { isPublished: true };
   if (tag) filter.tags = { $in: [tag] };
+  if (category) filter.category = category;
+  if (featured === "true") filter.featured = true;
 
   const pageNum = parseInt(page as string);
   const limitNum = parseInt(limit as string);
@@ -40,10 +44,36 @@ export const getAllBlogs = async (req: Request, res: Response): Promise<void> =>
     .populate("author", "name avatar")
     .sort("-createdAt")
     .skip(skip)
-    .limit(limitNum)
-    .select("-content");
+    .limit(limitNum);
 
-  res.status(200).json({ success: true, total, page: pageNum, pages: Math.ceil(total / limitNum), blogs });
+  // Reading time is derived from content length, then content itself is dropped
+  // from the response - the index page never needs full post bodies, only the
+  // single-post endpoint (getBlogBySlug) does.
+  const withReadingTime = blogs.map((blog) => {
+    const wordCount = blog.content.trim().split(/\s+/).filter(Boolean).length;
+    const readingTime = `${Math.max(1, Math.round(wordCount / WORDS_PER_MINUTE))} min read`;
+    const obj = blog.toObject() as unknown as Record<string, unknown>;
+    delete obj.content;
+    return { ...obj, readingTime };
+  });
+
+  res.status(200).json({ success: true, total, page: pageNum, pages: Math.ceil(total / limitNum), blogs: withReadingTime });
+};
+
+// @desc    Get distinct categories with published post counts
+// @route   GET /api/blogs/categories
+// @access  Public
+export const getBlogCategories = async (_req: Request, res: Response): Promise<void> => {
+  const categories = await Blog.aggregate([
+    { $match: { isPublished: true } },
+    { $group: { _id: "$category", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]);
+
+  res.status(200).json({
+    success: true,
+    categories: categories.map((c) => ({ category: c._id, count: c.count })),
+  });
 };
 
 // @desc    Get single blog by slug
@@ -58,7 +88,10 @@ export const getBlogBySlug = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  res.status(200).json({ success: true, blog });
+  const wordCount = blog.content.trim().split(/\s+/).filter(Boolean).length;
+  const readingTime = `${Math.max(1, Math.round(wordCount / WORDS_PER_MINUTE))} min read`;
+
+  res.status(200).json({ success: true, blog: { ...blog.toObject(), readingTime } });
 };
 
 // @desc    Update blog
