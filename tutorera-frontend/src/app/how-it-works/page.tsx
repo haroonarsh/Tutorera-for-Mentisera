@@ -5,7 +5,7 @@ import s from "../compliance-pages.module.css";
 import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
-  title: "How TUTORERA Works",
+  title: "How It Works",
   description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
   alternates: { canonical: "/how-it-works" },
 };

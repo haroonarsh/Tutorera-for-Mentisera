@@ -4,7 +4,7 @@ import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
 
 export const metadata: Metadata = {
-  title: "Find Verified Tutors Online & In-Person | TUTORERA",
+  title: "Find Verified Tutors Online & In-Person",
   description: "Search verified tutors worldwide and locally by subject, curriculum, country, teaching mode, rating, availability, and transparent hourly rates.",
   alternates: { canonical: "/tutors" },
 };

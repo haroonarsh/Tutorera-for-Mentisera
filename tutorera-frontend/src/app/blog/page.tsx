@@ -5,7 +5,7 @@ import AdBanner from "@/components/AdBanner";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tutoring Guides & Research | TUTORERA Blog",
+  title: "Tutoring Guides & Research",
   description:
     "Evidence-conscious, operationally reviewed guides for students, parents, and tutors covering tutor selection, tutor vs home tuition, rates, safety, and learning strategies.",
   alternates: { canonical: "/blog" },

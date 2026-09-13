@@ -24,7 +24,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Global Privacy Policy | TUTORERA",
+  title: "Global Privacy Policy",
   description: "Comprehensive privacy policy explaining data collection, lawful bases, international data transfers, child data protection, and self-serve user rights.",
 };
 

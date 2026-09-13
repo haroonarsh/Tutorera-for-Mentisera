@@ -3,7 +3,7 @@ import { BRAND_NAME, LEGAL_OPERATOR } from "@/lib/site";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "TUTORERA Business Model",
+  title: "Business Model",
   description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
   alternates: { canonical: "/business-model" },
 };

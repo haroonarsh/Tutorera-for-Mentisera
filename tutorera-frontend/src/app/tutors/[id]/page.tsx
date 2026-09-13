@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tutor = await fetchTutor(id);
   if (!tutor) {
     return {
-      title: "Tutor Profile | TUTORERA",
+      title: "Tutor Profile",
       robots: { index: false, follow: true },
     };
   }
@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${tutor.currency || "Market currency"} ${tutor.hourlyRate.toLocaleString("en-US")}/hr`
     : "Competitive rates";
 
-  const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText}) | TUTORERA`;
+  const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText})`;
   const description = `${name} is an approved, verified ${primarySubject} educator serving students in ${city} and worldwide (${modeText}). Offering ${
     tutor.subjects?.slice(0, 3).join(", ") || primarySubject
   } across ${tutor.levels?.slice(0, 3).join(", ") || "standard curricula"} at ${rateText}.`;

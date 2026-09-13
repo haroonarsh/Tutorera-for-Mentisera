@@ -22,7 +22,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Global Terms of Service | TUTORERA",
+  title: "Global Terms of Service",
   description: "Master contractual terms and conditions governing the TUTORERA global tutoring marketplace for students, parents, and tutors.",
 };
 

@@ -21,7 +21,7 @@ function formatName(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode, state, city } = await params;
   const country = await resolveCountry(countryCode);
-  if (!country) return { title: "TUTORERA" };
+  if (!country) return { title: "Country Not Found" };
 
   const cityName = formatName(city);
   const stateName = formatName(state);

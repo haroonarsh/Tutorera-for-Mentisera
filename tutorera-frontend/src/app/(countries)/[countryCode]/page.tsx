@@ -18,7 +18,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode } = await params;
   const country = await resolveCountry(countryCode);
-  if (!country) return { title: "TUTORERA" };
+  if (!country) return { title: "Country Not Found" };
 
   const title = `Find Tutors & Teaching Opportunities in ${country.name} | TUTORERA`;
   const description = `Connect with verified tutors and students in ${country.name}. Post your requirements or find teaching jobs in ${country.currency}.`;

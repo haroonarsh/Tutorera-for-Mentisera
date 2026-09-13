@@ -6,7 +6,7 @@ import { BUSINESS_ADDRESS, LEGAL_OPERATOR, SUPPORT_EMAIL, SUPPORT_PHONE } from "
 import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
-  title: "About TUTORERA",
+  title: "About Us",
   description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
   alternates: { canonical: "/about" },
 };

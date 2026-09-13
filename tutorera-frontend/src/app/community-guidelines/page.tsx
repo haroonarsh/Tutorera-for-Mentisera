@@ -18,7 +18,7 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Community Guidelines & Code of Conduct | TUTORERA",
+  title: "Community Guidelines & Code of Conduct",
   description:
     "Standards of mutual respect, professionalism, safety, and non-discrimination expected of all students, parents, and tutors on TUTORERA.",
   alternates: {

@@ -18,7 +18,7 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Authorized Subprocessors Directory | Privacy & Data Processing | TUTORERA",
+  title: "Authorized Subprocessors Directory | Privacy & Data Processing",
   description:
     "Official directory of third-party subprocessors utilized by TUTORERA to process personal data, deliver cloud infrastructure, payments, and messaging.",
   alternates: {

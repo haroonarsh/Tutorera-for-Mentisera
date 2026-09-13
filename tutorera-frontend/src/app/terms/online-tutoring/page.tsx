@@ -22,7 +22,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Online Tutoring Master Terms | TUTORERA",
+  title: "Online Tutoring Master Terms",
   description: "Terms governing cross-border 1-on-1 live interactive online tutoring, video protocols, technical failure rescheduling, and digital child safeguarding.",
 };
 

@@ -20,7 +20,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Student & Parent Platform Terms | TUTORERA",
+  title: "Student & Parent Platform Terms",
   description: "Terms governing student tuition requests, parent account authorization, booking commitments, academic integrity, and quality protections on TUTORERA®.",
 };
 
