@@ -359,7 +359,7 @@ function OffersContent() {
                 {/* Tutor Earnings Box for Tutor View */}
                 {user?.role === "tutor" && (
                   <div style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "0.75rem 1rem", borderRadius: "0.5rem", fontSize: "0.825rem", color: "#92400e", marginBottom: "1rem" }}>
-                    Platform fee PKR {fees.tutorFee.toLocaleString()} + Tax PKR {fees.tax.toLocaleString()} · Estimated net payout: <strong>PKR {fees.tutorNet.toLocaleString()}</strong>
+                    Platform fee {offerMoney(o, fees.tutorFee)} + Tax {offerMoney(o, fees.tax)} · Estimated net payout: <strong>{offerMoney(o, fees.tutorNet)}</strong>
                   </div>
                 )}
 
@@ -395,7 +395,7 @@ function OffersContent() {
                   </ol>
                   {isAccepted && (
                     <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#ecfdf5", borderRadius: "0.375rem", color: "#065f46", fontSize: "0.85rem", fontWeight: 700 }}>
-                      ✓ Final agreed rate locked: PKR {o.amount.toLocaleString()}/{o.pricingUnit}
+                      ✓ Final agreed rate locked: {offerMoney(o, o.amount)}/{o.pricingUnit}
                     </div>
                   )}
                 </details>
