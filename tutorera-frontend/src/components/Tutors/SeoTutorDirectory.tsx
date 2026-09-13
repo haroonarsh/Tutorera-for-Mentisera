@@ -78,7 +78,23 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
 
   const directorySchema = { "@context": "https://schema.org", "@graph": [
     breadcrumb,
-    { "@type": "ItemList", name: title, numberOfItems: result.tutors.length, itemListElement: result.tutors.map((tutor, index) => ({ "@type": "ListItem", position: index + 1, url: `https://tutorera.ac.pk${tutorProfileHref(tutor)}`, name: tutor.user?.name })) },
+    {
+      "@type": "ItemList",
+      name: title,
+      numberOfItems: result.tutors.length,
+      itemListElement: result.tutors.map((tutor, index) => ({ "@type": "ListItem", position: index + 1, url: `https://tutorera.ac.pk${tutorProfileHref(tutor)}`, name: tutor.user?.name })),
+      // Applies to every directory kind (city/subject/level), not just subject
+      // pages' Course schema below - only emitted when real reviews back it.
+      ...(totalReviewCount ? {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: Math.round(weightedRating * 10) / 10,
+          reviewCount: totalReviewCount,
+          bestRating: 5,
+          worstRating: 1,
+        },
+      } : {}),
+    },
     { "@type": "FAQPage", mainEntity: faq.map((item) => ({ "@type": "Question", name: item.q, acceptedAnswer: { "@type": "Answer", text: item.a } })) },
     ...(courseSchema ? [courseSchema] : []),
   ] };

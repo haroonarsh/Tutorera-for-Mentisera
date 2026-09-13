@@ -41,6 +41,8 @@ const footerColumns = [
       { label: "Child Safeguarding", href: "/child-safety" },
       { label: "Tutor Verification Standards", href: "/verification-policy" },
       { label: "Background Check Policy", href: "/background-check-policy" },
+      { label: "First-Session Guarantee", href: "/first-session-guarantee" },
+      { label: "How Payments Work", href: "/payment-process" },
       { label: "Academic Integrity Code", href: "/academic-integrity" },
       { label: "Dispute & Complaint Process", href: "/complaint-process" },
     ],
