@@ -190,12 +190,39 @@ export default async function TutorProfilePage({ params }: Props) {
           "@type": "EducationalOrganization",
           name: edu.institution,
         })),
-        offers: {
+        makesOffer: {
           "@type": "Offer",
           price: tutor.hourlyRate || 0,
           priceCurrency: tutor.currency || undefined,
           availability: "https://schema.org/InStock",
         },
+        ...(tutor.totalReviews
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: tutor.averageRating || 5,
+                reviewCount: tutor.totalReviews,
+                bestRating: 5,
+                worstRating: 1,
+              },
+            }
+          : {}),
+        ...(reviews.length
+          ? {
+              review: reviews.slice(0, 10).map((r) => ({
+                "@type": "Review",
+                author: { "@type": "Person", name: r.student?.name || "TutorEra student" },
+                datePublished: r.createdAt,
+                reviewBody: r.comment,
+                reviewRating: {
+                  "@type": "Rating",
+                  ratingValue: r.rating,
+                  bestRating: 5,
+                  worstRating: 1,
+                },
+              })),
+            }
+          : {}),
       },
     ],
   };
