@@ -43,6 +43,10 @@ export interface IRequest extends Document {
   lossClassifiedAt?: Date;
   acceptedOffer?: Types.ObjectId;
   finalAgreedRate?: number;
+  // Captured when a student's accept-offer attempt is redirected into
+  // parent-approval before a checkout could be created, so the code they
+  // intended to use is still applied once the parent later approves.
+  pendingPromoCode?: string;
   targetTutor?: Types.ObjectId;       // set only for direct booking requests
   isDirect: boolean;                  // flags this as a direct booking, not open bidding
   selectedDate?: string;
@@ -130,6 +134,7 @@ const requestSchema = new Schema<IRequest>(
     lossClassifiedAt: { type: Date },
     acceptedOffer: { type: Schema.Types.ObjectId, ref: "Bid" },
     finalAgreedRate: { type: Number, min: 0 },
+    pendingPromoCode: { type: String, trim: true, uppercase: true },
     targetTutor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     isDirect: { type: Boolean, default: false }, 
     selectedDate: { type: String, default: "" },

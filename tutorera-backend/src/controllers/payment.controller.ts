@@ -12,6 +12,7 @@ import { NotificationService } from "../services/notification.service";
 import logger from "../config/logger";
 import { calculateMarketplaceFees } from "../config/constants";
 import { assertAcceptanceAvailable } from "../services/market.service";
+import { getAppliedPromoForBasket, previewPromoDiscount, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
@@ -60,6 +61,19 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
   const basketId = booking._id.toString();
 
   try {
+    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+    const originalStudentTotal = booking.studentTotal || booking.amount;
+    const promoCodeInput = req.body?.promoCode;
+    if (promoCodeInput) {
+      appliedPromo = await previewPromoDiscount(booking.student.toString(), req.user?.role, promoCodeInput, originalStudentTotal);
+      // Persist the discount straight onto the booking - unlike the
+      // bid-acceptance flow, this booking already exists, so there's no
+      // separate finalization step to apply it to later.
+      booking.studentFee = Math.max(0, (booking.studentFee || 0) - appliedPromo.discountAmount);
+      booking.studentTotal = booking.subtotal + booking.studentFee;
+      await booking.save();
+    }
+
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: booking.studentTotal || booking.amount,
       currency: booking.currency || "PKR",
@@ -83,10 +97,15 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
       failureUrl: `${FRONTEND_URL}/dashboard?payment=failed&booking=${basketId}`,
       checkoutUrl: `${FRONTEND_URL}/dashboard?payment=processing&booking=${basketId}`,
+      ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
     res.status(200).json({ success: true, checkoutUrl });
   } catch (err: any) {
+    if (err instanceof PromoCodeError) {
+      res.status(err.statusCode).json({ success: false, message: err.message });
+      return;
+    }
     logger.error({ requestId: req.id, err }, "Failed to create payment checkout session");
     const statusCode = err?.statusCode || 502;
     res.status(statusCode).json({ success: false, message: "Unable to start payment. Please try again." });
@@ -130,7 +149,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const bid = await Bid.findById(bidId);
         const request = bid ? await RequestModel.findById(bid.request).select("student currency") : null;
-        const expectedAmount = bid ? calculateMarketplaceFees(bid.amount).studentTotal : undefined;
+        // A promo code applied at checkout reduces the amount actually
+        // charged below the full computed fee - without this, every
+        // discounted payment would fail this check and never be finalized.
+        const appliedPromo = await getAppliedPromoForBasket(event.merchantTransactionId);
+        const baseExpectedAmount = bid ? calculateMarketplaceFees(bid.amount).studentTotal : undefined;
+        const expectedAmount = baseExpectedAmount !== undefined && appliedPromo
+          ? Math.round((baseExpectedAmount - appliedPromo.discountAmount) * 100) / 100
+          : baseExpectedAmount;
         const expectedCurrency = (bid?.currency || request?.currency || "PKR").toUpperCase();
         if (!bid || !request || event.amount !== expectedAmount || event.currency.toUpperCase() !== expectedCurrency) {
           logger.error({ requestId: (req as any).id, bidId, expectedAmount, receivedAmount: event.amount, expectedCurrency, receivedCurrency: event.currency }, "Payment webhook amount or currency did not match the accepted offer");
@@ -201,6 +227,13 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
           booking.paymentStatus = "confirmed";
           booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
           await booking.save();
+
+          const appliedPromo = await getAppliedPromoForBasket(event.merchantTransactionId);
+          if (appliedPromo) {
+            await finalizePromoRedemption(appliedPromo.promoCodeId, booking.student.toString(), booking._id.toString(), appliedPromo.originalAmount, appliedPromo.discountAmount).catch((err) =>
+              logger.error({ err, bookingId: booking._id }, "Failed to record promo code redemption for booking checkout")
+            );
+          }
         }
         await recordPaymentLedger({
           providerTransactionId: event.merchantTransactionId,

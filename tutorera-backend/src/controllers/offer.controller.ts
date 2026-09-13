@@ -18,7 +18,7 @@ import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { releaseExpiredPaymentHold } from "./request.controller";
-import { previewPromoDiscount, PromoCodeError } from "../services/promoCode.service";
+import { previewPromoDiscount, getAppliedPromoForBasket, PromoCodeError } from "../services/promoCode.service";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
@@ -186,7 +186,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       if (approvalProfile) {
         const reserved = await Request.findOneAndUpdate(
           { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
-          { status: "awaiting_parent_approval", acceptedOffer: offer._id, finalAgreedRate: offer.amount },
+          { status: "awaiting_parent_approval", acceptedOffer: offer._id, finalAgreedRate: offer.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) },
           { new: true }
         );
         if (!reserved) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
@@ -349,6 +349,24 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
   try {
     const student = await User.findById(request.student).select("name email phone");
     const fees = calculateMarketplaceFees(offer.amount);
+
+    // Carry forward whatever promo code was applied on the original attempt
+    // (if any) rather than asking the student to re-enter it - re-validate
+    // it since limits/expiry could have changed between attempts, and
+    // silently drop it rather than blocking the retry if it's no longer valid.
+    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+    const originalStudentTotal = fees.studentTotal;
+    const previousPromo = await getAppliedPromoForBasket(`BID-${offer._id.toString()}`);
+    if (previousPromo) {
+      try {
+        appliedPromo = await previewPromoDiscount(request.student.toString(), req.user?.role, previousPromo.code, fees.studentTotal);
+        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+        fees.studentTotal = fees.subtotal + fees.studentFee;
+      } catch (promoErr) {
+        console.warn(`Promo code ${previousPromo.code} no longer valid on retry for offer ${offer._id}:`, promoErr);
+      }
+    }
+
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
       currency: offer.currency || request.currency || "PKR",
@@ -363,6 +381,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
       failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
       checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
+      ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
     res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });

@@ -638,7 +638,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   if (isOwner && !isDirectTutorAccept) {
     const approvalProfile = await ParentProfile.findOne({ "children.studentUser": request.student, approvalRequiredForBookings: true }).select("user").lean();
     if (approvalProfile) {
-      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount }, { new: true });
+      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) }, { new: true });
       if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
       await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
       await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString() } });

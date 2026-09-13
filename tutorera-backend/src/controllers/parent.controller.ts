@@ -17,6 +17,7 @@ import { calculateMarketplaceFees } from "../config/constants";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import { paymentProvider } from "../services/paymentProvider.service";
+import { previewPromoDiscount } from "../services/promoCode.service";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
 const MAX_LINK_ATTEMPTS = 5;
@@ -350,7 +351,24 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   let checkoutUrl: string;
   try {
     const fees = calculateMarketplaceFees(bid.amount);
-    checkoutUrl = await paymentProvider.createCheckout({ amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax }, description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}` });
+
+    // A promo code the student entered when they originally selected this
+    // offer (before being redirected into parent approval) was stashed on
+    // the Request document since no checkout existed yet to attach it to -
+    // apply it now that the parent has approved and a checkout is created.
+    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+    const originalStudentTotal = fees.studentTotal;
+    if (request.pendingPromoCode) {
+      try {
+        appliedPromo = await previewPromoDiscount(request.student.toString(), "student", request.pendingPromoCode, fees.studentTotal);
+        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+        fees.studentTotal = fees.subtotal + fees.studentFee;
+      } catch (promoErr) {
+        console.warn(`Pending promo code ${request.pendingPromoCode} no longer valid on parent approval for request ${request._id}:`, promoErr);
+      }
+    }
+
+    checkoutUrl = await paymentProvider.createCheckout({ amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax }, description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`, ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }) });
   } catch {
     await Promise.all([Request.updateOne({ _id: request._id, status: "awaiting_payment" }, { status: "awaiting_parent_approval" }), Bid.updateOne({ _id: bid._id, status: "payment_pending" }, { status: bid.status, $unset: { paymentPendingExpiresAt: "" } })]);
     await logAudit({ action: "parent_booking_checkout_failed", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });
