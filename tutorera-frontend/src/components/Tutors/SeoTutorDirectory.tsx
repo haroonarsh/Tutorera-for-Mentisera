@@ -9,12 +9,21 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
   const result = await fetchTutors(filters ?? { [kind]: value });
   const rates = result.tutors.map((tutor) => tutor.hourlyRate).filter(Boolean);
   const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
+  const minRate = rates.length ? Math.min(...rates) : 0;
+  const maxRate = rates.length ? Math.max(...rates) : 0;
   const displayCurrency = currency || result.tutors.find((t) => t.currency)?.currency || "PKR";
   const context = filters?.city && filters?.subject ? `${filters.subject} tutoring in ${filters.city}` : `${value} tutoring`;
+  const verifiedCount = result.tutors.filter((t) => t.isVerified).length;
+  // A direct, numeric opening statement - the shape both AI Overviews and chat answer
+  // engines tend to lift verbatim - built only from real, currently-listed data.
+  const directAnswer = result.total
+    ? `TutorEra currently lists ${result.total} verified ${value} ${result.total === 1 ? "tutor" : "tutors"}${filters?.city ? ` in ${filters.city}` : ""}${rates.length ? `, with hourly rates ranging from ${displayCurrency} ${minRate.toLocaleString()} to ${displayCurrency} ${maxRate.toLocaleString()} (average ${displayCurrency} ${averageRate.toLocaleString()}/hour)` : ""}.`
+    : `TutorEra doesn't have an approved ${value} tutor listed for this search yet - post your requirement and matching tutors can send you a direct offer instead.`;
   const faq = [
     { q: `How do I choose a ${value} tutor?`, a: `Compare verified profiles by relevant subjects, teaching levels, experience, lesson mode, availability, completed-booking reviews, and hourly rate. Discuss learning goals before confirming a booking.` },
     { q: `Can I book ${context} online?`, a: `Yes. Use the teaching-mode information on each profile to find tutors offering online lessons, in-person lessons, or both.` },
-    { q: `How much does ${context} cost?`, a: averageRate ? `The currently displayed matching tutors average approximately ${displayCurrency} ${averageRate.toLocaleString()} per hour. Individual rates vary by experience, subject, level, and lesson mode.` : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.` },
+    { q: `How much does ${context} cost?`, a: averageRate ? `The currently displayed matching tutors average approximately ${displayCurrency} ${averageRate.toLocaleString()} per hour, ranging from ${displayCurrency} ${minRate.toLocaleString()} to ${displayCurrency} ${maxRate.toLocaleString()}. Individual rates vary by experience, subject, level, and lesson mode.` : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.` },
+    ...(verifiedCount > 0 ? [{ q: `Are TutorEra's ${value} tutors verified?`, a: `${verifiedCount} of the ${result.total} currently listed ${value} ${result.total === 1 ? "tutor is" : "tutors are"} marked as verified on TutorEra, meaning they've completed the platform's identity and screening checks. Look for the verification badge on each profile before booking.` }] : []),
   ];
   const breadcrumb = {
     "@context": "https://schema.org", "@type": "BreadcrumbList",
@@ -118,6 +127,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
         </div>
       </div>
       <main className={styles.main} style={{ maxWidth: 1180, margin: "0 auto", padding: "3rem 1.5rem" }}>
+        <p style={{ fontSize: "1.05rem", color: "#334155", lineHeight: 1.7, maxWidth: "70ch", marginBottom: "1.25rem" }}>{directAnswer}</p>
         <p className={styles.resultsCount}><span className={styles.resultsCountAccent}>{result.total}</span> verified tutors found</p>
         {result.tutors.length ? (
           <div className={styles.grid}>{result.tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} />)}</div>
