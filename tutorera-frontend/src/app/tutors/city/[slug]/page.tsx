@@ -2,14 +2,21 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
-import { CITIES, LOCAL_SUBJECT_SLUGS, SUBJECTS } from "@/lib/tutor-directory";
+import { CITIES, LOCAL_SUBJECT_SLUGS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
+import { SeoEligibilityService } from "@/lib/seo-eligibility";
 
 type Props = { params: Promise<{ slug: string }> };
 export function generateStaticParams() { return Object.keys(CITIES).map((slug) => ({ slug })); }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params; const city = CITIES[slug as keyof typeof CITIES]; if (!city) return {};
   const path = `/tutors/city/${slug}`;
-  return { title: `Online & Home Tutors in ${city}`, description: `Find verified online and home tutors in ${city}. Compare subjects, teaching experience, ratings, availability, and hourly rates.`, alternates: { canonical: path }, openGraph: { title: `Tutors in ${city} | TUTORERA®`, description: `Browse verified tutors serving ${city}.`, url: path } };
+  // Every city in CITIES gets a static page regardless of whether TUTORERA
+  // actually has tutors there yet - gate indexability on real supply so
+  // near-empty cities don't get indexed as if they were useful clusters.
+  const { total } = await fetchTutors({ city }, 1);
+  const eligibility = SeoEligibilityService.evaluatePage({ activeApprovedTutors: total, homeTuitionEnabled: true });
+  const robotsString = eligibility === "INDEX" ? "index, follow" : "noindex, follow";
+  return { title: `Online & Home Tutors in ${city}`, description: `Find verified online and home tutors in ${city}. Compare subjects, teaching experience, ratings, availability, and hourly rates.`, alternates: { canonical: path }, robots: robotsString, openGraph: { title: `Tutors in ${city} | TUTORERA®`, description: `Browse verified tutors serving ${city}.`, url: path } };
 }
 export default async function Page({ params }: Props) {
   const { slug } = await params; const city = CITIES[slug as keyof typeof CITIES]; if (!city) notFound();

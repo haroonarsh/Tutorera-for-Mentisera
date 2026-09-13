@@ -37,16 +37,19 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
         <div className={styles.heroInner}>
           <h1 className={styles.heroTitle}>{title}</h1>
           <p className={styles.heroSubtitle}>{description}</p>
+          <p style={{ fontSize: "1rem", fontWeight: 800, color: "white", background: "rgba(255,255,255,0.15)", display: "inline-block", padding: "0.5rem 1.1rem", borderRadius: "999px", margin: "1rem 0 0" }}>
+            Post your requirement — tutors compete with offers
+          </p>
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.25rem", flexWrap: "wrap" }}>
             <Link
               href="/post-tuition-request"
               style={{
                 background: "white",
                 color: "#021550",
-                padding: "0.75rem 1.5rem",
+                padding: "0.85rem 1.75rem",
                 borderRadius: "0.625rem",
                 fontWeight: 800,
-                fontSize: "0.9rem",
+                fontSize: "1rem",
                 textDecoration: "none",
                 display: "inline-flex",
                 alignItems: "center",
@@ -56,6 +59,23 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
               + Post Tuition Request & Receive Offers
             </Link>
           </div>
+        </div>
+      </div>
+      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+          {[
+            { step: "1", label: "Post your requirement", desc: "Subject, level, budget, schedule" },
+            { step: "2", label: "Tutors send competing offers", desc: "Compare rates, experience, verification" },
+            { step: "3", label: "Choose & book with confidence", desc: "You pick the best-fit offer, not us" },
+          ].map((s) => (
+            <div key={s.step} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#0329B2", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.85rem", flexShrink: 0 }}>{s.step}</span>
+              <div>
+                <p style={{ fontWeight: 700, color: "#021550", margin: 0, fontSize: "0.9rem" }}>{s.label}</p>
+                <p style={{ color: "#64748b", margin: "0.15rem 0 0", fontSize: "0.8rem" }}>{s.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       <main className={styles.main} style={{ maxWidth: 1180, margin: "0 auto", padding: "3rem 1.5rem" }}>

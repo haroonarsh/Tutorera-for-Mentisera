@@ -6,6 +6,7 @@ import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
 import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
 import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
 import TopRequestsSection from "@/components/TopRequestsSection";
+import { fetchTutors } from "@/lib/tutor-directory";
 
 interface Props {
   params: Promise<{ countryCode: string }>;
@@ -41,6 +42,19 @@ export default async function CountryLandingPage({ params }: Props) {
   const country = await resolveCountry(countryCode);
   if (!country) notFound();
 
+  // Only surface cities where TUTORERA actually has tutor supply - the geo
+  // dataset lists every city in the country regardless of whether anyone
+  // teaches there yet, and linking to an empty filtered search is a thin,
+  // untrustworthy page for both users and crawlers.
+  const candidateCities = (country.cities || []).slice(0, 15);
+  const cityCounts = await Promise.all(
+    candidateCities.map((city) => fetchTutors({ city: city.name, countryCode: country.code }, 1).then((r) => r.total))
+  );
+  const citiesWithSupply = candidateCities
+    .map((city, i) => ({ city, total: cityCounts[i] }))
+    .filter((c) => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+
   return (
     <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
       <div style={{
@@ -63,30 +77,27 @@ export default async function CountryLandingPage({ params }: Props) {
           Explore Popular Areas in {country.name}
         </h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-          {country.cities && country.cities.length > 0 ? (
-            country.cities.map((city) => {
-              const citySlug = city.name.toLowerCase().replace(/\s+/g, "-");
-              return (
-                <Link
-                  key={city.id || city.name}
-                  href={`/${country.code.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`}
-                  style={{
-                    background: "white",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "999px",
-                    padding: "0.5rem 1.25rem",
-                    fontSize: "0.9rem",
-                    fontWeight: 600,
-                    color: "#0329b2",
-                    textDecoration: "none",
-                  }}
-                >
-                  Tutors in {city.name}
-                </Link>
-              );
-            })
+          {citiesWithSupply.length > 0 ? (
+            citiesWithSupply.map(({ city, total }) => (
+              <Link
+                key={city.id || city.name}
+                href={`/${country.code.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`}
+                style={{
+                  background: "white",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "999px",
+                  padding: "0.5rem 1.25rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  color: "#0329b2",
+                  textDecoration: "none",
+                }}
+              >
+                Tutors in {city.name} ({total})
+              </Link>
+            ))
           ) : (
-            <p style={{ color: "#64748b" }}>Available nationwide online.</p>
+            <p style={{ color: "#64748b" }}>Available nationwide online. Local in-person tutors are onboarding in {country.name} - check back soon.</p>
           )}
         </div>
       </section>
