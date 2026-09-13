@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Sliders, ArrowLeft, RefreshCw, Save, CheckCircle, History, AlertCircle, Percent, DollarSign } from "lucide-react";
 import api from "@/lib/axios";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import InfoTooltip from "@/components/admin/InfoTooltip";
 
 interface FeeConfigData {
   _id?: string;
@@ -15,7 +16,8 @@ interface FeeConfigData {
   tutorFeePercent: number;
   minimumFee: number;
   maximumFee: number;
-  taxPercent: number;
+  gatewayFeePercent: number;
+  gatewayFixedFee: number;
   notes?: string;
   isActive: boolean;
   createdAt: string;
@@ -34,7 +36,8 @@ export default function FeeConfigPage() {
   const [tutorFee, setTutorFee] = useState<number>(15);
   const [minFee, setMinFee] = useState<number>(100);
   const [maxFee, setMaxFee] = useState<number>(5000);
-  const [tax, setTax] = useState<number>(0);
+  const [gatewayFeePercent, setGatewayFeePercent] = useState<number>(2.9);
+  const [gatewayFixedFee, setGatewayFixedFee] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
 
   const fetchConfig = async () => {
@@ -50,7 +53,8 @@ export default function FeeConfigPage() {
         setTutorFee(active.tutorFeePercent);
         setMinFee(active.minimumFee);
         setMaxFee(active.maximumFee);
-        setTax(active.taxPercent);
+        setGatewayFeePercent(active.gatewayFeePercent);
+        setGatewayFixedFee(active.gatewayFixedFee);
         setNotes("");
       }
     } catch (err: unknown) {
@@ -78,7 +82,8 @@ export default function FeeConfigPage() {
         tutorFeePercent: tutorFee,
         minimumFee: minFee,
         maximumFee: maxFee,
-        taxPercent: tax,
+        gatewayFeePercent,
+        gatewayFixedFee,
         notes: notes || "Updated via Admin Console",
       });
 
@@ -94,13 +99,20 @@ export default function FeeConfigPage() {
     }
   };
 
-  // Live simulation calculation based on 10,000 PKR hypothetical booking
+  // Live simulation calculation based on 10,000 PKR hypothetical booking.
+  // Mirrors services/pricing.service.ts's calculateMarketplaceFees() exactly -
+  // gateway fee is charged on the student's total checkout amount and comes
+  // out of the platform's own margin, never the tutor's payout. Government
+  // tax (VAT/GST) is configured per-country in Tax Configuration, not here -
+  // this simulator shows TutorEra's own commission + gateway cost only.
   const sampleBookingGmv = 10000;
   const sampleStudentFeeAmount = (sampleBookingGmv * studentFee) / 100;
   const sampleTutorFeeAmount = (sampleBookingGmv * tutorFee) / 100;
   const sampleStudentTotal = sampleBookingGmv + sampleStudentFeeAmount;
   const sampleTutorPayout = sampleBookingGmv - sampleTutorFeeAmount;
-  const samplePlatformRevenue = sampleStudentFeeAmount + sampleTutorFeeAmount;
+  const sampleGatewayFeeAmount = (sampleStudentTotal * gatewayFeePercent) / 100 + gatewayFixedFee;
+  const samplePlatformGross = sampleStudentFeeAmount + sampleTutorFeeAmount;
+  const samplePlatformNet = samplePlatformGross - sampleGatewayFeeAmount;
 
   return (
     <div style={{ padding: "1.75rem 2rem" }}>
@@ -120,7 +132,8 @@ export default function FeeConfigPage() {
             <Sliders size={26} color={UI_COLORS.accent} /> Dynamic Fee & Commission Engine
           </h1>
           <p style={{ color: TEXT_COLORS.muted, margin: "0.25rem 0 0", fontSize: "0.88rem" }}>
-            Configure marketplace commission percentages, platform service fees, minimum/maximum fee bounds, and sales tax.
+            Configure TutorEra's own commission percentages, minimum/maximum fee bounds, and payment gateway processing cost. Government tax (VAT/GST) is configured per-country on the{" "}
+            <Link href="/admin/tax-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Tax Configuration</Link> page.
           </p>
         </div>
 
@@ -176,6 +189,7 @@ export default function FeeConfigPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Student Service Fee (%)
+                  <InfoTooltip text="Added on top of the agreed tuition rate at checkout. This is what the student pays beyond the tutor's rate - it does not affect what the tutor receives." />
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
@@ -196,6 +210,7 @@ export default function FeeConfigPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Tutor Commission (%)
+                  <InfoTooltip text="Deducted from the tutor's payout at settlement. This is TutorEra's take-rate on the tutor's side - the tutor never sees or pays this directly, it's subtracted before payout." />
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
@@ -218,6 +233,7 @@ export default function FeeConfigPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Minimum Fee Floor (PKR)
+                  <InfoTooltip text="Applies to both the student fee and tutor commission - if the percentage-based amount comes out below this, it's raised to this floor instead." />
                 </label>
                 <input
                   type="number"
@@ -232,6 +248,7 @@ export default function FeeConfigPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Maximum Fee Cap (PKR)
+                  <InfoTooltip text="Applies to both the student fee and tutor commission - if the percentage-based amount comes out above this, it's capped at this ceiling instead. Prevents runaway fees on very large bookings." />
                 </label>
                 <input
                   type="number"
@@ -244,20 +261,43 @@ export default function FeeConfigPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
-                Applicable Sales / Service Tax (%)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="30"
-                value={tax}
-                onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                style={{ width: "100%", padding: "0.55rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.9rem", color: TEXT_COLORS.body }}
-              />
-              <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>e.g. PRA/SRB provincial sales tax if legally applicable</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
+                  Gateway Processing Fee (%)
+                  <InfoTooltip text="Rapid Gateway's own processing cost, e.g. 2.9%. Charged on the student's full checkout amount and absorbed from TutorEra's margin - it never reduces the tutor's payout." />
+                </label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="15"
+                    value={gatewayFeePercent}
+                    onChange={(e) => setGatewayFeePercent(parseFloat(e.target.value) || 0)}
+                    required
+                    style={{ width: "100%", padding: "0.55rem 2rem 0.55rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.9rem", color: TEXT_COLORS.body }}
+                  />
+                  <Percent size={14} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", color: UI_COLORS.gray500 }} />
+                </div>
+                <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>Match your Safepay/RapidPay merchant agreement rate</span>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
+                  Gateway Fixed Fee (PKR)
+                  <InfoTooltip text="A flat amount the gateway charges per transaction, on top of the percentage fee, if your merchant agreement includes one. Leave at 0 if it doesn't." />
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={gatewayFixedFee}
+                  onChange={(e) => setGatewayFixedFee(parseFloat(e.target.value) || 0)}
+                  required
+                  style={{ width: "100%", padding: "0.55rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.9rem", color: TEXT_COLORS.body }}
+                />
+                <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.2rem", display: "block" }}>Per-transaction flat charge, if any</span>
+              </div>
             </div>
 
             <div style={{ marginBottom: "1.25rem" }}>
@@ -334,13 +374,21 @@ export default function FeeConfigPage() {
               <span style={{ fontSize: "1rem", fontWeight: 700, color: STATUS_COLORS.success.color }}>Rs {sampleTutorPayout.toLocaleString()}</span>
             </div>
 
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: UI_COLORS.surface, borderRadius: "8px", border: `1px solid ${UI_COLORS.border}` }}>
+              <span style={{ fontSize: "0.85rem", color: TEXT_COLORS.muted }}>Gateway Processing Cost ({gatewayFeePercent}%{gatewayFixedFee > 0 ? ` + Rs ${gatewayFixedFee}` : ""})</span>
+              <span style={{ fontSize: "0.95rem", fontWeight: 600, color: UI_COLORS.error }}>- Rs {sampleGatewayFeeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            </div>
+
             <div style={{ marginTop: "0.5rem", padding: "1rem", background: TEXT_COLORS.body, borderRadius: "8px", color: UI_COLORS.surface, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: "0.78rem", color: UI_COLORS.gray500, textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600 }}>
-                  Combined TUTORERA Platform Gross
+                  Platform Net (after gateway cost)
                 </div>
                 <div style={{ fontSize: "1.25rem", fontWeight: 800, color: UI_COLORS.accentBright, marginTop: "0.2rem" }}>
-                  Rs {samplePlatformRevenue.toLocaleString()}
+                  Rs {samplePlatformNet.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: "0.7rem", color: UI_COLORS.gray500, marginTop: "0.15rem" }}>
+                  Gross before gateway cost: Rs {samplePlatformGross.toLocaleString()}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -350,6 +398,9 @@ export default function FeeConfigPage() {
                 </div>
               </div>
             </div>
+            <p style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, margin: 0 }}>
+              Excludes government tax (VAT/GST), which is calculated separately per country in Tax Configuration and does not appear in this simulator.
+            </p>
           </div>
         </div>
       </div>
@@ -369,7 +420,7 @@ export default function FeeConfigPage() {
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Student Fee</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Tutor Fee</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Min / Max Limits</th>
-                <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Tax Rate</th>
+                <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Gateway Fee</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Status</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Published At</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Notes</th>
@@ -389,7 +440,7 @@ export default function FeeConfigPage() {
                     <td style={{ padding: "0.75rem 1rem", color: UI_COLORS.accent, fontWeight: 600 }}>{h.studentFeePercent}%</td>
                     <td style={{ padding: "0.75rem 1rem", color: UI_COLORS.error, fontWeight: 600 }}>{h.tutorFeePercent}%</td>
                     <td style={{ padding: "0.75rem 1rem", color: TEXT_COLORS.muted }}>Rs {h.minimumFee} – {h.maximumFee}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: TEXT_COLORS.muted }}>{h.taxPercent}%</td>
+                    <td style={{ padding: "0.75rem 1rem", color: TEXT_COLORS.muted }}>{h.gatewayFeePercent}%{h.gatewayFixedFee > 0 ? ` + Rs ${h.gatewayFixedFee}` : ""}</td>
                     <td style={{ padding: "0.75rem 1rem" }}>
                       {h.isActive ? (
                         <span style={{ background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, padding: "0.2rem 0.5rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700 }}>

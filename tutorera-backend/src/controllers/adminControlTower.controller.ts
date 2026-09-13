@@ -578,7 +578,8 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
       tutorFeePercent: 20,
       minimumFee: 0,
       maximumFee: 5000,
-      taxPercent: 15,
+      gatewayFeePercent: 2.9,
+      gatewayFixedFee: 0,
     });
   }
   const history = await FeeConfig.find().sort("-createdAt").limit(10).lean();
@@ -586,15 +587,16 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
 };
 
 export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { studentFeePercent, tutorFeePercent, minimumFee, maximumFee, taxPercent, notes } = req.body;
+  const { studentFeePercent, tutorFeePercent, minimumFee, maximumFee, gatewayFeePercent, gatewayFixedFee, notes } = req.body;
   const values = {
     studentFeePercent: Number(studentFeePercent ?? 0),
     tutorFeePercent: Number(tutorFeePercent ?? 20),
     minimumFee: Number(minimumFee ?? 0),
     maximumFee: Number(maximumFee ?? 5000),
-    taxPercent: Number(taxPercent ?? 15),
+    gatewayFeePercent: Number(gatewayFeePercent ?? 2.9),
+    gatewayFixedFee: Number(gatewayFixedFee ?? 0),
   };
-  if (!Object.values(values).every(Number.isFinite) || values.studentFeePercent < 0 || values.studentFeePercent > 100 || values.tutorFeePercent < 0 || values.tutorFeePercent > 100 || values.taxPercent < 0 || values.taxPercent > 100 || values.minimumFee < 0 || values.maximumFee < values.minimumFee) {
+  if (!Object.values(values).every(Number.isFinite) || values.studentFeePercent < 0 || values.studentFeePercent > 100 || values.tutorFeePercent < 0 || values.tutorFeePercent > 100 || values.gatewayFeePercent < 0 || values.gatewayFeePercent > 100 || values.gatewayFixedFee < 0 || values.minimumFee < 0 || values.maximumFee < values.minimumFee) {
     res.status(400).json({ success: false, message: "Provide valid fee percentages and a maximum fee greater than or equal to the minimum fee." });
     return;
   }

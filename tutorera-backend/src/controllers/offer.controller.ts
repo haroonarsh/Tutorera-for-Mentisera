@@ -7,7 +7,7 @@ import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
 import { containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
@@ -240,7 +240,11 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     try {
       const student = await User.findById(request.student).select("name email phone");
-      const fees = calculateMarketplaceFees(offer.amount);
+      const fees = await calculateMarketplaceFees(offer.amount, {
+        currency: offer.currency || request.currency,
+        countryCode: request.countryCode,
+        teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+      });
 
       let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
       const originalStudentTotal = fees.studentTotal;
@@ -251,6 +255,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         // never the tutor's payout - tutorNet/tutorFee/tax are untouched.
         fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
         fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
       }
 
       const checkoutUrl = await paymentProvider.createCheckout({
@@ -348,7 +353,11 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const fees = calculateMarketplaceFees(offer.amount);
+    const fees = await calculateMarketplaceFees(offer.amount, {
+      currency: offer.currency || request.currency,
+      countryCode: request.countryCode,
+      teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+    });
 
     // Carry forward whatever promo code was applied on the original attempt
     // (if any) rather than asking the student to re-enter it - re-validate
@@ -362,6 +371,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
         appliedPromo = await previewPromoDiscount(request.student.toString(), req.user?.role, previousPromo.code, fees.studentTotal);
         fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
         fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
       } catch (promoErr) {
         console.warn(`Promo code ${previousPromo.code} no longer valid on retry for offer ${offer._id}:`, promoErr);
       }

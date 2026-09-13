@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { safepayProvider } from "./safepayProvider.service";
 
@@ -8,6 +8,7 @@ export type LedgerProviderName = PaymentProviderName | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
   studentTotal: number; tutorNet: number; platformFee: number;
+  gatewayFee?: number;
   feeConfig?: Record<string, unknown>;
 };
 
@@ -116,19 +117,23 @@ export async function recordPaymentLedger(args: {
   settlementStatus?: "unsettled" | "expected" | "settled" | "reconciled" | "exception";
   metadata?: Record<string, unknown>;
 }) {
-  const fees = calculateMarketplaceFees(args.amount);
   const snapshot = args.feeSnapshot;
-  const accounting = snapshot || {
-    subtotal: args.amount,
-    studentFee: fees.studentFee,
-    tutorFee: fees.tutorFee,
-    tax: fees.tax,
-    studentTotal: fees.studentTotal,
-    tutorNet: fees.tutorNet,
-    platformFee: fees.tutorFee + fees.tax,
-  };
+  const accounting = snapshot || await (async () => {
+    const fees = await calculateMarketplaceFees(args.amount, { currency: args.currency });
+    return {
+      subtotal: args.amount,
+      studentFee: fees.studentFee,
+      tutorFee: fees.tutorFee,
+      tax: fees.tax,
+      studentTotal: fees.studentTotal,
+      tutorNet: fees.tutorNet,
+      platformFee: fees.tutorFee + fees.tax,
+      gatewayFee: fees.gatewayFee,
+    };
+  })();
   const provider = args.provider || paymentProvider.name;
   const settlementStatus = args.settlementStatus || (args.status === "succeeded" ? "expected" : "unsettled");
+  const gatewayFee = accounting.gatewayFee || 0;
   const doc = {
     provider,
     providerEventId: args.providerEventId,
@@ -141,10 +146,12 @@ export async function recordPaymentLedger(args: {
     studentFee: accounting.studentFee,
     tutorFee: accounting.tutorFee,
     tax: accounting.tax,
-    gatewayFee: 0,
+    gatewayFee,
     refundAmount: args.eventType === "payment.refunded" ? args.amount : 0,
     tutorPayable: accounting.tutorNet,
-    platformNet: accounting.platformFee,
+    // The gateway's own processing cost is absorbed from the platform's
+    // margin - never deducted from the tutor's payout (tutorPayable above).
+    platformNet: accounting.platformFee - gatewayFee,
     settlementStatus,
     feeSnapshot: snapshot || {},
     booking: args.bookingId ? new Types.ObjectId(args.bookingId) : undefined,

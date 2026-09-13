@@ -8,7 +8,7 @@ import Booking from "../models/Booking.model";
 import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import { containsContactInfo } from "../utils/contentFilter";
 import { logAudit } from "../utils/logAudit";
@@ -713,7 +713,11 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const fees = calculateMarketplaceFees(bid.amount);
+    const fees = await calculateMarketplaceFees(bid.amount, {
+      currency: bid.currency || request.currency,
+      countryCode: request.countryCode,
+      teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+    });
 
     let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
     const originalStudentTotal = fees.studentTotal;
@@ -724,6 +728,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       // never the tutor's payout - tutorNet/tutorFee/tax are untouched.
       fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
       fees.studentTotal = fees.subtotal + fees.studentFee;
+      recomputeGatewayFee(fees);
     }
 
     const checkoutUrl = await paymentProvider.createCheckout({
@@ -821,7 +826,11 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         tutor: bid.tutor,
       }).session(session);
 
-      const fees = calculateMarketplaceFees(bid.amount);
+      const fees = await calculateMarketplaceFees(bid.amount, {
+        currency: bid.currency || request.currency,
+        countryCode: request.countryCode,
+        teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+      });
       const appliedPromo = await getAppliedPromoForBasket(`BID-${bidId}`);
       if (appliedPromo) {
         // Mirror the same discount applied at checkout time (initiateAcceptBid)
@@ -830,6 +839,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         // payout is untouched.
         fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
         fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
         appliedPromoForRedemption = appliedPromo;
       }
       const linkedParent = await resolveLinkedBookingParent(request.student as Types.ObjectId, session);
@@ -842,8 +852,6 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         bid: bid._id,
         amount: bid.amount,
         finalAgreedRate: bid.amount,
-        currency: bid.currency || request.currency,
-        countryCode: request.countryCode,
         timezone: request.timezone,
         scheduleTimezone: request.scheduleTimezone || request.timezone,
         scheduledStartAt: request.scheduledStartAt,
@@ -851,6 +859,8 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         pricingUnit: bid.pricingUnit || "hour",
         sessionCount: 1,
         ...fees,
+        currency: bid.currency || request.currency,
+        countryCode: request.countryCode,
         platformFee: fees.tutorFee + fees.tax,
         tutorPayout: fees.tutorNet,
         schedule: request.schedule,

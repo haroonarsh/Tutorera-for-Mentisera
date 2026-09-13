@@ -13,7 +13,7 @@ import { escapeHtml } from "../utils/escapeHtml";
 import { logAudit } from "../utils/logAudit";
 import { assertAcceptanceAvailable, resolveMarket } from "../services/market.service";
 import { resolveLocationReferences } from "../services/locationReference.service";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import { paymentProvider } from "../services/paymentProvider.service";
@@ -350,7 +350,11 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   const student = await User.findById(request.student).select("email phone");
   let checkoutUrl: string;
   try {
-    const fees = calculateMarketplaceFees(bid.amount);
+    const fees = await calculateMarketplaceFees(bid.amount, {
+      currency: bid.currency || request.currency,
+      countryCode: request.countryCode,
+      teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+    });
 
     // A promo code the student entered when they originally selected this
     // offer (before being redirected into parent approval) was stashed on
@@ -363,6 +367,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
         appliedPromo = await previewPromoDiscount(request.student.toString(), "student", request.pendingPromoCode, fees.studentTotal);
         fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
         fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
       } catch (promoErr) {
         console.warn(`Pending promo code ${request.pendingPromoCode} no longer valid on parent approval for request ${request._id}:`, promoErr);
       }

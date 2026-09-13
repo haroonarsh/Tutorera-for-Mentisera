@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+import InfoTooltip from "@/components/admin/InfoTooltip";
 
 interface TaxConfig {
   _id: string;
@@ -27,6 +28,15 @@ const TAX_TYPE_COLORS: Record<string, string> = {
   service_tax: STATUS_COLORS.success.color,
   DST: STATUS_COLORS.danger.color,
   none: STATUS_COLORS.neutral.color,
+};
+
+const CHECKBOX_HELP: Record<string, string> = {
+  platformCollects: "If checked, tax is calculated and included on the booking automatically. If unchecked, no tax is added here - the tutor is expected to remit tax independently (see 'Tutor Liable').",
+  tutorLiable: "Marks that the tutor, not TutorEra, is responsible for remitting this tax to the government. Informational only - does not change what's calculated or charged.",
+  invoiceRequired: "Flags that a formal tax invoice must be generated for bookings in this country. Informational only for now - does not currently trigger invoice generation.",
+  appliesOnlineServices: "Whether this tax applies to online tutoring sessions. Uncheck if online sessions are exempt in this jurisdiction.",
+  appliesHomeTuition: "Whether this tax applies to in-person/home tuition sessions. Uncheck if home tuition is exempt in this jurisdiction.",
+  isActive: "Inactive configs are ignored - bookings for this country fall back to 0% tax (no VAT/GST applied) until reactivated.",
 };
 
 const BLANK_CONFIG: Omit<TaxConfig, "_id" | "updatedAt"> = {
@@ -109,7 +119,10 @@ export default function TaxConfigPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 12 }}>🌐 Tax Configuration</h2>
-          <p style={{ margin: "4px 0 0", color: UI_COLORS.gray500, fontSize: "0.875rem" }}>Manage VAT, GST, and service tax rates per country</p>
+          <p style={{ margin: "4px 0 0", color: UI_COLORS.gray500, fontSize: "0.875rem" }}>
+            Manage VAT, GST, and service tax rates per country. Applied automatically to every booking based on the student&apos;s country, alongside TutorEra&apos;s own commission set in{" "}
+            <a href="/admin/fee-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Fee Configuration</a>.
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={fetchConfigs} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: UI_COLORS.gray50, cursor: "pointer", fontWeight: 600, fontSize: "0.875rem" }}>↻ Refresh</button>
@@ -176,6 +189,7 @@ export default function TaxConfigPage() {
 
               <label style={{ fontSize: "0.85rem", color: UI_COLORS.gray500 }}>
                 Tax Type
+                <InfoTooltip text="Which regulatory regime this is - purely a display/reporting label. The actual tax math only ever uses the Rate field below, regardless of which type is selected." />
                 <select value={editForm.taxType} onChange={(e) => setEditForm({ ...editForm, taxType: e.target.value })} style={{ display: "block", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: UI_COLORS.sidebar, color: UI_COLORS.gray50, marginTop: 4 }}>
                   <option value="none">None</option>
                   <option value="VAT">VAT</option>
@@ -187,6 +201,7 @@ export default function TaxConfigPage() {
 
               <label style={{ fontSize: "0.85rem", color: UI_COLORS.gray500 }}>
                 Rate (%)
+                <InfoTooltip text="Applied to the tutor commission amount (not the full booking value) for every booking in this country, e.g. 15% VAT on a Rs 2,000 commission adds Rs 300 tax. Only takes effect if 'Platform Collects' is checked below." />
                 <input type="number" value={editForm.rate} onChange={(e) => setEditForm({ ...editForm, rate: parseFloat(e.target.value) || 0 })} min={0} max={100} step={0.5} style={{ display: "block", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: UI_COLORS.sidebar, color: UI_COLORS.gray50, marginTop: 4 }} />
               </label>
 
@@ -200,6 +215,7 @@ export default function TaxConfigPage() {
                   <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem", color: UI_COLORS.gray50, cursor: "pointer" }}>
                     <input type="checkbox" checked={editForm[key]} onChange={(e) => setEditForm({ ...editForm, [key]: e.target.checked })} />
                     {key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
+                    <InfoTooltip text={CHECKBOX_HELP[key]} />
                   </label>
                 ))}
               </div>

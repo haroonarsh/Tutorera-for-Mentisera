@@ -10,7 +10,7 @@ import { paymentProvider, recordPaymentLedger } from "../services/paymentProvide
 import { finalizeBidAcceptance } from "./request.controller";
 import { NotificationService } from "../services/notification.service";
 import logger from "../config/logger";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees } from "../services/pricing.service";
 import { assertAcceptanceAvailable } from "../services/market.service";
 import { getAppliedPromoForBasket, previewPromoDiscount, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 
@@ -74,6 +74,15 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       await booking.save();
     }
 
+    // This booking's commission/tax were already fixed at creation time, but
+    // gateway fee depends on the amount actually charged right now (which a
+    // promo discount above may have just changed) - look up the current
+    // active gateway rate and compute it fresh rather than assuming 0.
+    const currentFeeConfig = await calculateMarketplaceFees(booking.subtotal, { currency: booking.currency, countryCode: booking.countryCode });
+    const gatewayFee = Math.round(
+      (booking.studentTotal || booking.amount) * currentFeeConfig.feeConfig.gatewayFeePercent / 100 + currentFeeConfig.feeConfig.gatewayFixedFee
+    );
+
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: booking.studentTotal || booking.amount,
       currency: booking.currency || "PKR",
@@ -91,6 +100,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
         studentTotal: booking.studentTotal,
         tutorNet: booking.tutorNet,
         platformFee: booking.platformFee,
+        gatewayFee,
         feeConfig: booking.feeConfig,
       },
       description: `TUTORERA booking ${basketId}`,
@@ -148,12 +158,18 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
       if (event.merchantTransactionId.startsWith("BID-")) {
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const bid = await Bid.findById(bidId);
-        const request = bid ? await RequestModel.findById(bid.request).select("student currency") : null;
+        const request = bid ? await RequestModel.findById(bid.request).select("student currency countryCode teachingMode") : null;
         // A promo code applied at checkout reduces the amount actually
         // charged below the full computed fee - without this, every
         // discounted payment would fail this check and never be finalized.
         const appliedPromo = await getAppliedPromoForBasket(event.merchantTransactionId);
-        const baseExpectedAmount = bid ? calculateMarketplaceFees(bid.amount).studentTotal : undefined;
+        const baseExpectedAmount = bid
+          ? (await calculateMarketplaceFees(bid.amount, {
+              currency: bid.currency || request?.currency,
+              countryCode: request?.countryCode,
+              teachingMode: request?.teachingMode as "online" | "in-person" | "both" | undefined,
+            })).studentTotal
+          : undefined;
         const expectedAmount = baseExpectedAmount !== undefined && appliedPromo
           ? Math.round((baseExpectedAmount - appliedPromo.discountAmount) * 100) / 100
           : baseExpectedAmount;
