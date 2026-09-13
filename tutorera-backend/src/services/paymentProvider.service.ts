@@ -3,7 +3,7 @@ import { calculateMarketplaceFees } from "../config/constants";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { safepayProvider } from "./safepayProvider.service";
 
-export type PaymentProviderName = "safepay" | "stripe";
+export type PaymentProviderName = "safepay";
 export type LedgerProviderName = PaymentProviderName | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
@@ -43,12 +43,6 @@ export const paymentProvider = {
   name: "safepay" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
-    const currency = (params.currency || "PKR").toUpperCase();
-    if (currency !== "PKR") {
-      const { stripeProvider } = await import("./stripeProvider.service");
-      return stripeProvider.createCheckout({ ...params, currency });
-    }
-
     const checkoutUrl = await safepayProvider.createCheckout({
       amount: params.amount,
       currency: params.currency,

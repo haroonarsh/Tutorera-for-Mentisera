@@ -9,7 +9,7 @@ export const LAUNCH_MARKETS = {
   },
   AE: {
     countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "AED", currencySymbol: "AED",
-    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "stripe",
+    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "safepay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
@@ -21,19 +21,19 @@ export const LAUNCH_MARKETS = {
   },
   US: {
     countryName: "United States", iso3: "USA", dialCode: "+1", currency: "USD", currencySymbol: "$",
-    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "stripe",
+    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "safepay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   SA: {
     countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "SAR", currencySymbol: "SAR",
-    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "stripe",
+    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "safepay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   IN: {
     countryName: "India", iso3: "IND", dialCode: "+91", currency: "INR", currencySymbol: "₹",
-    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "stripe",
+    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "safepay",
     paymentsEnabled: true, payoutsEnabled: true, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
@@ -44,7 +44,7 @@ export async function ensureLaunchMarkets(): Promise<void> {
     const safetyLock = countryCode === "PK"
       ? { paymentProvider: "safepay", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", featureFlags: config.featureFlags }
       : ["AE", "US", "SA", "IN"].includes(countryCode)
-      ? { paymentProvider: "stripe", paymentsEnabled: true, payoutsEnabled: true, launchStatus: "live", featureFlags: config.featureFlags }
+      ? { paymentProvider: "safepay", paymentsEnabled: true, payoutsEnabled: true, launchStatus: "live", featureFlags: config.featureFlags }
       : { paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false, launchStatus: "beta", featureFlags: config.featureFlags };
     return MarketConfig.updateOne(
       { countryCode },

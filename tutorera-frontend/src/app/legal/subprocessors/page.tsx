@@ -50,13 +50,6 @@ const SUBPROCESSORS: SubprocessorItem[] = [
     safeguard: "EU GDPR Compliance, AES-256 Encryption at Rest, SOC 2 Type II",
   },
   {
-    name: "Stripe Inc. / Stripe Payments Europe",
-    purpose: "Global credit/debit card processing, 3D-Secure 2 authentication, fraud scoring, and international payouts.",
-    category: "Payment Processing",
-    location: "United States, Ireland (EU), United Kingdom",
-    safeguard: "PCI-DSS Level 1 Service Provider, GDPR DPA with SCCs",
-  },
-  {
     name: "PayFast (APPS Pvt Ltd)",
     purpose: "State Bank of Pakistan (SBP) regulated payment gateway processing domestic card and bank transfers.",
     category: "Payment Processing",
