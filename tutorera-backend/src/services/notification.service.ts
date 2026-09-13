@@ -18,45 +18,56 @@ export class NotificationService {
     }
 
     try {
-      const user = await User.findById(userId).select("email name role");
-      if (!user) {
-         console.error(`[NotificationService] User ${userId} not found for event ${eventName}.`);
+      // "system_admin" is a pseudo-recipient meaning "every admin", not a real
+      // user id - User.findById(userId) below would throw a CastError on it
+      // and get silently swallowed, which is why every admin alert routed
+      // through here (new signups included) has never actually been sent.
+      const recipients = userId === "system_admin"
+        ? await User.find({ role: "admin" }).select("email name role")
+        : await (async () => {
+            const single = await User.findById(userId).select("email name role");
+            return single ? [single] : [];
+          })();
+
+      if (recipients.length === 0) {
+         console.error(`[NotificationService] No recipient(s) found for user "${userId}" / event ${eventName}.`);
          return;
       }
 
-      // Check channels
       const { channels } = registryEntry;
 
-      // 1. IN-APP CHANNEL
-      if (channels.inApp) {
-        // We map the payload directly to a notification
-        // For standard events, payload should have { title, message, link, type }
-        const notificationPayload = {
-          title: payload.title || "Notification",
-          message: payload.message || registryEntry.description,
-          type: payload.type || "general",
-          link: payload.link,
-        };
-        await sendNotification(ioInstance, userId, notificationPayload as any);
-      }
+      for (const user of recipients) {
+        // 1. IN-APP CHANNEL
+        if (channels.inApp) {
+          // We map the payload directly to a notification
+          // For standard events, payload should have { title, message, link, type }
+          const notificationPayload = {
+            title: payload.title || "Notification",
+            message: payload.message || registryEntry.description,
+            type: payload.type || "general",
+            link: payload.link,
+          };
+          await sendNotification(ioInstance, user._id.toString(), notificationPayload as any);
+        }
 
-      // 2. EMAIL CHANNEL
-      if (channels.email) {
-        if (registryEntry.templateId) {
-          // Find template function from templates files based on templateId mapping.
-          // Since the legacy functions are scattered across 3 files, we'll map them manually or generically.
-          // For now, let's map commonly used events.
-          const emailBuilder = this.getEmailBuilder(registryEntry.templateId);
-          if (emailBuilder) {
-             const { subject, html } = emailBuilder(user.name, payload);
-             await sendEmail({ to: user.email, subject, html, eventType: eventName });
+        // 2. EMAIL CHANNEL
+        if (channels.email) {
+          if (registryEntry.templateId) {
+            // Find template function from templates files based on templateId mapping.
+            // Since the legacy functions are scattered across 3 files, we'll map them manually or generically.
+            // For now, let's map commonly used events.
+            const emailBuilder = this.getEmailBuilder(registryEntry.templateId);
+            if (emailBuilder) {
+               const { subject, html } = emailBuilder(user.name, payload);
+               await sendEmail({ to: user.email, subject, html, eventType: eventName });
+            } else {
+               console.warn(`[NotificationService] No email template mapped for ${registryEntry.templateId}`);
+            }
           } else {
-             console.warn(`[NotificationService] No email template mapped for ${registryEntry.templateId}`);
-          }
-        } else {
-          // Direct fallback if no explicit templateId but email is true
-          if (payload.subject && payload.html) {
-             await sendEmail({ to: user.email, subject: payload.subject, html: payload.html, eventType: eventName });
+            // Direct fallback if no explicit templateId but email is true
+            if (payload.subject && payload.html) {
+               await sendEmail({ to: user.email, subject: payload.subject, html: payload.html, eventType: eventName });
+            }
           }
         }
       }
@@ -87,6 +98,8 @@ export class NotificationService {
       "auth_otp_code": () => { return {subject: "OTP", html: "..."} }, // Placeholder
       "password_reset_code": (name: string, payload: any) => templates.passwordResetOtpEmail(name, payload.otp),
       "admin_new_user": (name: string, payload: any) => templates.adminNewUserSignupEmail(payload),
+      "admin_tutor_application_submitted": (name: string, payload: any) => templates.adminTutorApplicationSubmittedEmail(payload),
+      "admin_tutor_document_resubmitted": (name: string, payload: any) => templates.adminTutorDocumentResubmittedEmail(payload),
       // Mappings for tracking
       "tutor_approved": (name: string, payload: any) => {
           if (payload.document === "CNIC") return trackingTemplates.cnicVerifiedEmail(name, payload.ctaArgs);

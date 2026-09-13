@@ -14,6 +14,7 @@ import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from 
 import sendEmail from "../utils/sendEmail";
 import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/trackingEmails";
 import { sendNotification } from "../utils/socket";
+import { NotificationService } from "../services/notification.service";
 import { normalizeEducationLevels } from "../config/educationLevels";
 import { resolveLocationReferences } from "../services/locationReference.service";
 import { resolveMarket } from "../services/market.service";
@@ -495,6 +496,12 @@ export const saveOnboardingStep = async (
         await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
           console.error("[TutorApplicationTracking] Degree resubmission email failed:", emailErr);
         });
+        await NotificationService.publishEvent("system_admin", "admin.tutor_document_resubmitted", {
+          tutorName: tutorUser.name,
+          tutorEmail: tutorUser.email,
+          applicationId: tutorUser.applicationId,
+          documentLabel: "Educational documents",
+        }).catch((err) => console.error("[TutorApplicationTracking] Admin degree-resubmission alert failed:", err));
       }
     }
   }
@@ -679,23 +686,34 @@ export const saveOnboardingStep = async (
           applicationId: tutorUser.applicationId || "TUT-PENDING",
           statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
         };
+        const notifyAdminOfResubmission = (documentLabel: string) =>
+          NotificationService.publishEvent("system_admin", "admin.tutor_document_resubmitted", {
+            tutorName: tutorUser.name,
+            tutorEmail: tutorUser.email,
+            applicationId: tutorUser.applicationId,
+            documentLabel,
+          }).catch((err) => console.error(`[TutorApplicationTracking] Admin ${documentLabel} resubmission alert failed:`, err));
+
         if (resubmitCnic) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "CNIC", cta);
           await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
             console.error("[TutorApplicationTracking] CNIC resubmission email failed:", emailErr);
           });
+          await notifyAdminOfResubmission("CNIC");
         }
         if (resubmitDemo) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "Demo video", cta);
           await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
             console.error("[TutorApplicationTracking] Demo resubmission email failed:", emailErr);
           });
+          await notifyAdminOfResubmission("Demo video");
         }
         if (resubmitPolice) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "Police verification", cta);
           await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
             console.error("[TutorApplicationTracking] Police-document resubmission email failed:", emailErr);
           });
+          await notifyAdminOfResubmission("Police verification");
         }
       }
     }
@@ -804,6 +822,16 @@ export const saveOnboardingStep = async (
             });
           } catch (notificationErr) {
             console.error("[TutorApplicationTracking] Failed to send application submitted notification:", notificationErr);
+          }
+          try {
+            await NotificationService.publishEvent("system_admin", "admin.tutor_application_submitted", {
+              tutorName: tutorUser.name,
+              tutorEmail: tutorUser.email,
+              applicationId: tutorUser.applicationId,
+              teachingMode: updated?.teachingMode,
+            });
+          } catch (adminAlertErr) {
+            console.error("[TutorApplicationTracking] Failed to send admin new-application alert:", adminAlertErr);
           }
         }
         const profileForEvents = updated;

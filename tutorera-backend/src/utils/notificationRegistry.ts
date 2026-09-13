@@ -129,6 +129,26 @@ export const NOTIFICATION_EVENT_REGISTRY: Record<string, EventRegistryEntry> = {
     isTransactional: true,
     description: "Platform admin notification of new signup",
   },
+  "admin.tutor_application_submitted": {
+    event: "admin.tutor_application_submitted",
+    category: "admin",
+    audience: ["admin"],
+    channels: { inApp: false, push: false, email: true, sms: false },
+    priority: "high",
+    templateId: "admin_tutor_application_submitted",
+    isTransactional: true,
+    description: "A tutor completed onboarding and is ready for review",
+  },
+  "admin.tutor_document_resubmitted": {
+    event: "admin.tutor_document_resubmitted",
+    category: "admin",
+    audience: ["admin"],
+    channels: { inApp: false, push: false, email: true, sms: false },
+    priority: "high",
+    templateId: "admin_tutor_document_resubmitted",
+    isTransactional: true,
+    description: "A tutor resubmitted a previously-rejected document",
+  },
 
   // ── 2. Student Tuition Requests ──────────────────────────────────────────
   "request.created": {

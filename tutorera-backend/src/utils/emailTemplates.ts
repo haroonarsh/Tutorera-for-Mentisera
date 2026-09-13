@@ -169,6 +169,66 @@ export const adminNewUserSignupEmail = (data: {
   return { subject: `New ${roleLabel} Registered: ${data.name}  - TUTORERA`, html };
 };
 
+export const adminTutorApplicationSubmittedEmail = (data: {
+  tutorName: string;
+  tutorEmail: string;
+  applicationId?: string;
+  teachingMode?: string;
+}) => {
+  const rows = [
+    { label: "Tutor Name", value: data.tutorName, highlight: true },
+    { label: "Email Address", value: data.tutorEmail },
+    { label: "Application ID", value: data.applicationId || "TUT-PENDING", highlight: true },
+    { label: "Teaching Mode", value: (data.teachingMode || "not specified").replace(/\b\w/g, (c) => c.toUpperCase()) },
+  ];
+
+  const html = renderTransactionalEmail({
+    subject: `Tutor Application Ready for Review: ${data.tutorName}`,
+    emailCategory: "Admin Alert",
+    emailHeading: "Tutor Application Submitted",
+    emailSubheading: `${data.tutorName} completed onboarding and is awaiting document review.`,
+    firstName: "Admin Team",
+    openingMessage: "A tutor has finished the onboarding wizard and submitted all required documents.",
+    mainMessage: "Review the submitted CNIC, degree, demo video, and (if applicable) police verification to approve or reject each component.",
+    detailsCard: { title: "Application Overview", rows },
+    cta: { label: "Review Application", url: "https://tutorera.ac.pk/admin/applications" },
+    additionalInformation: "Dispatched automatically to all admin accounts.",
+    includeSecurityNotice: false,
+  });
+
+  return { subject: `Tutor Application Ready for Review: ${data.tutorName} - TUTORERA`, html };
+};
+
+export const adminTutorDocumentResubmittedEmail = (data: {
+  tutorName: string;
+  tutorEmail: string;
+  applicationId?: string;
+  documentLabel: string;
+}) => {
+  const rows = [
+    { label: "Tutor Name", value: data.tutorName, highlight: true },
+    { label: "Email Address", value: data.tutorEmail },
+    { label: "Application ID", value: data.applicationId || "TUT-PENDING", highlight: true },
+    { label: "Document Resubmitted", value: data.documentLabel, isStatus: true, statusVariant: "warning" as const },
+  ];
+
+  const html = renderTransactionalEmail({
+    subject: `Document Resubmitted: ${data.tutorName} — ${data.documentLabel}`,
+    emailCategory: "Admin Alert",
+    emailHeading: "Tutor Resubmitted a Document",
+    emailSubheading: `${data.tutorName} corrected a previously-rejected document and needs re-review.`,
+    firstName: "Admin Team",
+    openingMessage: `${data.tutorName} resubmitted their ${data.documentLabel.toLowerCase()} after a prior rejection.`,
+    mainMessage: "This component is back in the review queue as \"pending\" - approve or reject it to keep the application moving.",
+    detailsCard: { title: "Resubmission Overview", rows },
+    cta: { label: "Review Application", url: "https://tutorera.ac.pk/admin/applications" },
+    additionalInformation: "Dispatched automatically to all admin accounts.",
+    includeSecurityNotice: false,
+  });
+
+  return { subject: `Document Resubmitted: ${data.tutorName} — ${data.documentLabel} - TUTORERA`, html };
+};
+
 export const adminNewTuitionRequestEmail = (data: {
   studentName: string;
   studentEmail: string;
