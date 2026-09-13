@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
+import { getEditorialArticles, getEditorialCategories, categoryToSlug } from "@/lib/editorial-content";
 
 const routes = [
   "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
@@ -9,8 +10,6 @@ const routes = [
   "tutor-verification-standards", "in-person-home-tuition-terms", "review-policy", "editorial-policy", "academic-standards",
   "content-review-policy", "research-methodology", "tutor-screening-policy", "governance",
   "tuition-requests", "tuition-requests/pk", "tuition-requests/pk/lahore", "tuition-requests/pk/islamabad", "tuition-requests/pk/karachi",
-  "blog/how-to-find-a-trusted-tutor-in-pakistan", "blog/online-vs-home-tuition-in-pakistan",
-  "blog/what-to-look-for-before-hiring-a-tutor-pakistan",
 ];
 
 const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
@@ -86,12 +85,32 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
     ];
 
+    const [{ articles: blogPosts }, blogCategories] = await Promise.all([
+      getEditorialArticles({ limit: 200 }),
+      getEditorialCategories(),
+    ]);
+    const blog: MetadataRoute.Sitemap = [
+      ...blogPosts.map((post) => ({
+        url: `${SITE_URL}/blog/${post.slug}`,
+        lastModified: new Date(post.updatedAt),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      })),
+      ...blogCategories.map((cat) => ({
+        url: `${SITE_URL}/blog/category/${categoryToSlug(cat.category)}`,
+        lastModified,
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      })),
+    ];
+
     return [
       ...staticPages,
       ...directories,
       ...countryHubResults.filter((page): page is NonNullable<typeof page> => page !== null),
       ...homeTutorResults.filter((page): page is NonNullable<typeof page> => page !== null),
-      ...research
+      ...research,
+      ...blog,
     ];
   }
 

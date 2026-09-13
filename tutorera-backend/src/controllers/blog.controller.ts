@@ -32,7 +32,12 @@ export const getAllBlogs = async (req: Request, res: Response): Promise<void> =>
   const { page = "1", limit = "9", tag, category, featured } = req.query;
   const filter: Record<string, unknown> = { isPublished: true };
   if (tag) filter.tags = { $in: [tag] };
-  if (category) filter.category = category;
+  // "Guides" is both the schema default for new posts AND how the categories
+  // aggregation buckets legacy posts with no stored category (see $ifNull
+  // above) - matching only category:"Guides" would miss those legacy posts,
+  // since a genuinely absent field never equals a string value in MongoDB.
+  if (category === "Guides") filter.$or = [{ category: "Guides" }, { category: { $exists: false } }, { category: null }];
+  else if (category) filter.category = category;
   if (featured === "true") filter.featured = true;
 
   const pageNum = parseInt(page as string);
@@ -66,7 +71,12 @@ export const getAllBlogs = async (req: Request, res: Response): Promise<void> =>
 export const getBlogCategories = async (_req: Request, res: Response): Promise<void> => {
   const categories = await Blog.aggregate([
     { $match: { isPublished: true } },
-    { $group: { _id: "$category", count: { $sum: 1 } } },
+    // Posts published before the category field existed have no value stored
+    // (a Mongoose schema default only applies to new documents, never
+    // retroactively) - $ifNull buckets those under "Guides" instead of
+    // grouping them under a null id, which would otherwise crash any
+    // consumer that slugifies the category name.
+    { $group: { _id: { $ifNull: ["$category", "Guides"] }, count: { $sum: 1 } } },
     { $sort: { count: -1 } },
   ]);
 

@@ -1,0 +1,56 @@
+.body {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+}
+
+/* Clear spacing between every paragraph and list item - no cramped blocks. */
+.body p {
+  color: #475569;
+  font-size: 1.02rem;
+  line-height: 1.85;
+  margin: 0 0 1.15rem;
+}
+
+.body h2 {
+  color: #021550;
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 2.25rem 0 0.85rem;
+}
+
+.body h3 {
+  color: #021550;
+  font-size: 1.08rem;
+  font-weight: 800;
+  margin: 1.75rem 0 0.65rem;
+}
+
+.body ul,
+.body ol {
+  margin: 0 0 1.15rem;
+  padding-left: 1.4rem;
+}
+
+.body li {
+  color: #475569;
+  font-size: 1.02rem;
+  line-height: 1.85;
+  margin-bottom: 0.6rem;
+}
+
+.body strong {
+  color: #021550;
+}
+
+.body a {
+  color: #0329B2;
+}
+
+.body > *:first-child {
+  margin-top: 0;
+}
+.body > *:last-child {
+  margin-bottom: 0;
+}

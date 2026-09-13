@@ -62,6 +62,27 @@ describe("Blog listing and categories", () => {
     expect(safety.count).toBe(2); // the unpublished draft must not be counted
   });
 
+  it("buckets legacy posts with no stored category under 'Guides' instead of null", async () => {
+    // Simulates a post published before the category field existed - Mongoose
+    // schema defaults only apply to new documents, so a raw insert with the
+    // field omitted reproduces a real legacy document (this crashed
+    // categoryToSlug(null) on the frontend before the $ifNull fix).
+    const author = await makeAuthor();
+    await Blog.collection.insertOne({
+      title: "Legacy Post", slug: "legacy-post", content: "content", excerpt: "e",
+      author: author._id, isPublished: true, tags: [], featured: false,
+      createdAt: new Date(), updatedAt: new Date(),
+    });
+
+    const categoriesRes = await request(app).get("/api/v1/blogs/categories").expect(200);
+    expect(categoriesRes.body.categories.some((c: { category: string | null }) => c.category === null)).toBe(false);
+    const guides = categoriesRes.body.categories.find((c: { category: string }) => c.category === "Guides");
+    expect(guides?.count).toBeGreaterThanOrEqual(1);
+
+    const listRes = await request(app).get("/api/v1/blogs?category=Guides").expect(200);
+    expect(listRes.body.blogs.some((b: { slug: string }) => b.slug === "legacy-post")).toBe(true);
+  });
+
   it("single-post endpoint still returns full content plus readingTime", async () => {
     const author = await makeAuthor();
     await Blog.create({
