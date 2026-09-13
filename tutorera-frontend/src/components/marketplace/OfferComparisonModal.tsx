@@ -200,8 +200,9 @@ export default function OfferComparisonModal({
                   const isCountering = counteringOfferId === offer._id;
                   const isPoliceVerified = offer.tutor?.policeVerificationStatus === "approved";
                   const isDegreeVerified = offer.tutor?.degreeVerificationStatus === "approved";
-                  const rating = offer.tutor?.rating || 4.9;
+                  const rating = offer.tutor?.rating || 0;
                   const reviewsCount = offer.tutor?.reviewsCount || 0;
+                  const hasRating = reviewsCount > 0 && rating > 0;
                   const experience = offer.tutor?.experience ?? 0;
                   const matchScore = offer.matchScore;
 
@@ -262,13 +263,19 @@ export default function OfferComparisonModal({
                           )}
                         </td>
                         <td style={cellStyle}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#f59e0b", fontSize: "0.8rem", fontWeight: 700 }}>
-                            <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                            <span>{rating.toFixed(1)}</span>
-                          </div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.15rem" }}>
-                            {reviewsCount} reviews
-                          </div>
+                          {hasRating ? (
+                            <>
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#f59e0b", fontSize: "0.8rem", fontWeight: 700 }}>
+                                <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                                <span>{rating.toFixed(1)}</span>
+                              </div>
+                              <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.15rem" }}>
+                                {reviewsCount} review{reviewsCount === 1 ? "" : "s"}
+                              </div>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>No ratings yet</span>
+                          )}
                         </td>
                         <td style={cellStyle}>
                           <span style={{ fontWeight: 700, color: "#021550" }}>
