@@ -69,7 +69,10 @@ export default async function CountryLandingPage({ params }: Props) {
         fontSize: "0.85rem",
         fontWeight: 700
       }}>
-        You are viewing TUTORERA for {country.name}
+        You are viewing TUTORERA for {country.name} · {country.currency} ({country.currencySymbol})
+        {/* Never let a market page imply checkout works before it actually
+            does - only say so when paymentsEnabled is actually true. */}
+        {country.paymentsEnabled === false && " · Online payment isn't live in this market yet"}
       </div>
 
       <HeroMarketplace />

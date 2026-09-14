@@ -22,6 +22,14 @@ export interface CountryData {
   cities: CityData[];
   homeTuitionEnabled: boolean;
   onlineEnabled: boolean;
+  // Already returned by GET /geo/countries (see geo.controller.ts) but not
+  // previously declared here, so callers had to reach past the type to use
+  // them. Optional because the bundled static fallback list (used when the
+  // live API is unreachable) doesn't set these.
+  launchStatus?: "live" | "beta" | "coming_soon" | "disabled";
+  paymentsEnabled?: boolean;
+  languages?: string[];
+  featureFlags?: Record<string, boolean>;
 }
 
 export type Country = CountryData;
