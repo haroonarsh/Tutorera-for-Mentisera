@@ -8,7 +8,7 @@ import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
-import { acceptBid, rejectBid } from "../controllers/request.controller";
+import { acceptBid, rejectBid, finalizeBidAcceptance } from "../controllers/request.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
 
@@ -68,6 +68,8 @@ describe("BE-01: cross-request bid substitution", () => {
       request: otherRequest._id,
       tutor: tutor._id,
       amount: 2000,
+      initialStudentRate: 2000,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       message: "I can help",
     });
 
@@ -89,9 +91,10 @@ describe("BE-01: cross-request bid substitution", () => {
     const bookingCount = await Booking.countDocuments({});
     expect(bookingCount).toBe(0);
 
-    // The unrelated bid must remain untouched (still pending).
+    // The unrelated bid must remain untouched (still its initial "submitted"
+    // status - Bid.status now defaults to "submitted", not "pending").
     const unchangedBid = await Bid.findById(otherBid._id);
-    expect(unchangedBid?.status).toBe("pending");
+    expect(unchangedBid?.status).toBe("submitted");
   });
 
   it("rejectBid rejects a bid that belongs to a different request", async () => {
@@ -122,6 +125,8 @@ describe("BE-01: cross-request bid substitution", () => {
       request: otherRequest._id,
       tutor: tutor._id,
       amount: 1800,
+      initialStudentRate: 1800,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       message: "I can help",
     });
 
@@ -139,10 +144,17 @@ describe("BE-01: cross-request bid substitution", () => {
     );
 
     const unchangedBid = await Bid.findById(otherBid._id);
-    expect(unchangedBid?.status).toBe("pending");
+    expect(unchangedBid?.status).toBe("submitted");
   });
 
   it("acceptBid succeeds for a legitimately matching request/bid pair", async () => {
+    // Offer acceptance is now a two-phase, payment-gated flow (see
+    // request.controller.ts): acceptBid/initiateAcceptBid only reserves the
+    // request/bid and returns a payment checkout URL - it no longer creates
+    // a Booking synchronously. The booking is created by
+    // finalizeBidAcceptance(), called only once the payment gateway's
+    // webhook confirms payment. This test drives both phases to cover the
+    // full real acceptance path end to end.
     const student = await User.create({ name: "Student C", email: "c@test.com", password: "password123", role: "student" });
     const tutor = await User.create({ name: "Tutor C", email: "tutorC@test.com", password: "password123", role: "tutor" });
 
@@ -159,6 +171,8 @@ describe("BE-01: cross-request bid substitution", () => {
       request: request._id,
       tutor: tutor._id,
       amount: 1200,
+      initialStudentRate: 1200,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       message: "I can help",
     });
 
@@ -171,6 +185,19 @@ describe("BE-01: cross-request bid substitution", () => {
     await acceptBid(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, checkoutUrl: expect.stringContaining("checkout") })
+    );
+
+    const reservedBid = await Bid.findById(bid._id);
+    expect(reservedBid?.status).toBe("payment_pending");
+    const reservedRequest = await Request.findById(request._id);
+    expect(reservedRequest?.status).toBe("awaiting_payment");
+    // No booking exists yet - payment hasn't been confirmed.
+    expect(await Booking.countDocuments({ request: request._id })).toBe(0);
+
+    // Simulate the payment gateway's webhook confirming payment.
+    await finalizeBidAcceptance(bid._id.toString(), { to: () => ({ emit: jest.fn() }) });
 
     const booking = await Booking.findOne({ request: request._id });
     expect(booking).not.toBeNull();

@@ -256,22 +256,30 @@ function policeIsRequired(profile: ITutorProfile): boolean {
   return inPerson && homeCountries.includes(country);
 }
 
+// location.type defaults to "Point" whenever the location subdocument exists
+// at all, even if coordinates was never populated (e.g. an online-only tutor
+// who never went through geocoding). MongoDB's 2dsphere index on `location`
+// then rejects EVERY save of that document with "Can't extract geo keys" -
+// not just location updates - because it can't build an index entry from an
+// incomplete GeoJSON Point. Strip an invalid location out so any save can
+// proceed and self-heals previously-corrupted documents. This must run from
+// pre("save"), not just pre("validate") - callers that intentionally skip
+// validation (profile.save({ validateBeforeSave: false }), e.g. admin
+// verification decisions that shouldn't revalidate legacy application data)
+// still always run pre("save"), so putting this fix only in pre("validate")
+// left every such save able to trip the same index error again.
+function repairInvalidLocation(p: any) {
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
+}
+
 tutorProfileSchema.pre("validate", function () {
   const p = this as any;
   if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
     p.levels = normalizeEducationLevels(p.levels) as any;
   }
-  // location.type defaults to "Point" whenever the location subdocument
-  // exists at all, even if coordinates was never populated (e.g. an
-  // online-only tutor who never went through geocoding). MongoDB's
-  // 2dsphere index on `location` then rejects EVERY save of that document
-  // with "Can't extract geo keys" - not just location updates - because it
-  // can't build an index entry from an incomplete GeoJSON Point. Strip an
-  // invalid location out before validation so any save can proceed and
-  // self-heals previously-corrupted documents.
-  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
-    p.location = undefined;
-  }
+  repairInvalidLocation(p);
 });
 
 tutorProfileSchema.pre("save", function () {
@@ -279,6 +287,7 @@ tutorProfileSchema.pre("save", function () {
   if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
     p.levels = normalizeEducationLevels(p.levels) as any;
   }
+  repairInvalidLocation(p);
   const allApproved =
     p.cnicVerificationStatus === "approved" &&
     p.degreeVerificationStatus === "approved" &&

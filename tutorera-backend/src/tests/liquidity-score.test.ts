@@ -31,9 +31,14 @@ describe("liquidity scoring contracts", () => {
       { name: "Physics Tutor", email: "liquidity-physics@test.com", password: "password123", role: "tutor" },
     ]);
     await createRequest(student, {});
+    // verificationStatus is derived by TutorProfile's pre("save") hook from
+    // the four individual component statuses - setting it directly without
+    // also approving cnic/degree/demoVideo gets silently overwritten back to
+    // "pending" on save, so approve those too to get a real "approved" tutor.
+    const approvedComponents = { cnicVerificationStatus: "approved" as const, degreeVerificationStatus: "approved" as const, demoVideoStatus: "approved" as const };
     await TutorProfile.create([
-      { user: mathTutor._id, fullName: mathTutor.name, countryCode: "PK", city: "Lahore", subjects: ["Mathematics"], teachingMode: "online", verificationStatus: "approved", marketplaceEligible: true },
-      { user: physicsTutor._id, fullName: physicsTutor.name, countryCode: "PK", city: "Lahore", subjects: ["Physics"], teachingMode: "online", verificationStatus: "approved", marketplaceEligible: true },
+      { user: mathTutor._id, fullName: mathTutor.name, countryCode: "PK", city: "Lahore", subjects: ["Mathematics"], teachingMode: "online", ...approvedComponents, marketplaceEligible: true },
+      { user: physicsTutor._id, fullName: physicsTutor.name, countryCode: "PK", city: "Lahore", subjects: ["Physics"], teachingMode: "online", ...approvedComponents, marketplaceEligible: true },
     ]);
 
     const result = await computeLiquidityScore({ countryCode: "PK", city: "Lahore", subject: "Mathematics", teachingMode: "online" });
