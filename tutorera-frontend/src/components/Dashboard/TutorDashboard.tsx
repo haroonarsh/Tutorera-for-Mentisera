@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import AvailabilityManager from "./AvailabilityManager";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
-import { formatMoney, formatPKR } from "@/lib/site";
+import { formatMoney } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import CommissionCalculator from "./CommissionCalculator";
@@ -314,7 +314,7 @@ function OpenRequestCard({
             <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
             </svg>
-            Student proposed: PKR {request.budget.toLocaleString()}/{request.pricingUnit || "hour"}
+            Student proposed: {formatMoney(request.budget, request.currency || "PKR", request.pricingUnit || "hour")}
           </span>
           <span className={s.infoChip}>{request.teachingMode}</span>
           <span className={s.infoChip}>{request.schedule}</span>
@@ -427,7 +427,7 @@ function DirectRequestCard({
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          {formatPKR(request.budget, "hour")} <span style={{ opacity: 0.6, marginLeft: 4 }}>(your rate)</span>
+          {formatMoney(request.budget, request.currency || "PKR", "hour")} <span style={{ opacity: 0.6, marginLeft: 4 }}>(your rate)</span>
         </span>
         <span className={s.infoChip}>{request.teachingMode}</span>
         <span className={s.infoChip}>{request.schedule}</span>

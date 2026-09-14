@@ -26,7 +26,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonical = `/${countryCode.toLowerCase()}`;
 
   return {
-    title,
+    // The root layout's title template ("%s | TUTORERA") already appends the
+    // suffix - a plain `title` string here that also ends in "| TUTORERA"
+    // renders as "...| TUTORERA | TUTORERA". `absolute` opts out of the
+    // template so this page controls its own exact <title> text.
+    title: { absolute: title },
     description,
     alternates: { canonical },
     openGraph: {

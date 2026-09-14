@@ -541,7 +541,20 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     console.error("Failed to send new bid email:", err);
   }
 
-  res.status(201).json({ success: true, message: "Offer sent successfully", bid });
+  res.status(201).json({
+    success: true,
+    message: "Offer sent successfully",
+    bid,
+    // The offer amount is always labeled with the REQUEST's currency (never
+    // the tutor's own currency) - but nothing stops a tutor from typing a
+    // number sized for a different currency by mistake (e.g. typing "3000"
+    // meaning PKR on a GBP request). moderationReasons already flags amounts
+    // far outside a plausible range for the request's budget; surface that
+    // as an immediate warning instead of only a silent admin-moderation flag.
+    ...(moderationReasons.includes("unusual_price") && {
+      warning: `Your offer of ${currency} ${req.body.amount.toLocaleString()} looks unusually different from the student's budget of ${currency} ${request.budget.toLocaleString()}. Please double check you entered the amount in ${currency}.`,
+    }),
+  });
 };
 
 // @desc    Get all bids for a request

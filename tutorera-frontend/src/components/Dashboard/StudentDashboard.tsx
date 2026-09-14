@@ -12,7 +12,7 @@ import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award } from
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
-import { SUPPORT_EMAIL, formatMoney, formatPKR } from "@/lib/site";
+import { SUPPORT_EMAIL, formatMoney } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
@@ -411,7 +411,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
           <Avatar name={tutor.user.name} avatar={tutor.user.avatar} />
           <div>
             <p className={s.personName}>{tutor.user.name}</p>
-            <p className={s.personSub}>{tutor.city} · {formatPKR(tutor.hourlyRate, "hour")}</p>
+            <p className={s.personSub}>{tutor.city} · {formatMoney(tutor.hourlyRate, tutor.currency || "PKR", "hour")}</p>
           </div>
         </Link>
         <button type="button" className={s.btnIcon} onClick={handleRemove} disabled={removing}
@@ -534,6 +534,13 @@ function RequestCard({
       console.error("Failed to accept bid:", err);
       if (promoCodeToApply) {
         setPromoError(err?.response?.data?.message || "That promo code couldn't be applied.");
+      } else if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
+        // Payments aren't live yet in this offer's market - the Accept
+        // button otherwise just silently resets with no feedback, which
+        // looks like a broken/fake Pay button.
+        showError(err, "Online payment isn't available in this market yet. This offer can't be accepted for checkout right now.");
+      } else {
+        showError(err, "Failed to accept this offer. Please try again.");
       }
       setAccepting(null);
     }
@@ -548,10 +555,16 @@ function RequestCard({
         window.location.assign(checkoutUrl); // reuses the same useEffect-based redirect from acceptBid
       } else {
         console.error("Retry-payment response had no checkoutUrl:", res.data);
+        showError("Unable to resume checkout. Please try again.");
         setAccepting(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to retry payment:", err);
+      if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
+        showError(err, "Online payment isn't available in this market yet.");
+      } else {
+        showError(err, "Failed to resume payment. Please try again.");
+      }
       setAccepting(null);
     }
   }

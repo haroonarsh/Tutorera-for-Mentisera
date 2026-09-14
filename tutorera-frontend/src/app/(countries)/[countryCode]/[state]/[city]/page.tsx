@@ -35,7 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const robots = eligibility === "INDEX" ? "index, follow" : "noindex, follow";
 
   return {
-    title,
+    // See (countries)/[countryCode]/page.tsx - `absolute` opts out of the
+    // root layout's "%s | TUTORERA" template so it doesn't double up with
+    // the "| TUTORERA" already in this title.
+    title: { absolute: title },
     description,
     robots,
     alternates: { canonical },

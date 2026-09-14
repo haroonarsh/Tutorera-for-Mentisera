@@ -50,13 +50,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
+    // Must match the real (countries)/[countryCode] route segments
+    // (lowercase ISO 3166-1 alpha-2, per LAUNCH_MARKETS) - "/usa" was never
+    // a real route (the actual route is "/us"), so that hreflang entry
+    // pointed Google at a 404.
     languages: {
       "en-GB": "/gb",
       "en-AE": "/ae",
       "en-SA": "/sa",
       "en-PK": "/pk",
       "en-IN": "/in",
-      "en-US": "/usa",
+      "en-US": "/us",
       "x-default": "/",
     },
   },

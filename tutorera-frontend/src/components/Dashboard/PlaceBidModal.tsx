@@ -41,11 +41,17 @@ export default function PlaceBidModal({ request, onClose, onSuccess }: Props) {
 
     setLoading(true);
     try {
-      await api.post(`/requests/${request._id}/bids`, {
+      const res = await api.post(`/requests/${request._id}/bids`, {
         amount: value,
         message: message || "I am available for this tuition request.",
         availability,
       });
+      // Backend flags amounts wildly inconsistent with the request's
+      // currency/budget (e.g. a number sized for a different currency) -
+      // surface that before closing so the tutor can catch a mistake.
+      if (res.data?.warning) {
+        window.alert(res.data.warning);
+      }
       onSuccess();
       onClose();
     } catch (e: unknown) {
