@@ -6,7 +6,16 @@ export const uploadToCloudinary = async (
   folder: string,
   resourceType: "image" | "raw" | "video" | "auto" = "image",
   isPrivate: boolean = false,
-  moderationType: "cloudinary" | "aws_rek" | "metascan" | null = "cloudinary"
+  // Defaulting this to "cloudinary" made every upload in the app request the
+  // paid Cloudinary AI-moderation add-on, even though no CLOUDINARY_MODERATION
+  // env var is set and the add-on was never provisioned on the account. An
+  // unconfigured add-on makes Cloudinary reject the upload_stream call
+  // outright, which bubbles up as an uncaught error and surfaces to users as
+  // a generic "Something went wrong" on every document/image/video submission
+  // (degree docs, CNIC, police certs, avatars, blog covers, etc). Default to
+  // no moderation; callers that actually have the add-on enabled can opt in
+  // explicitly, and CLOUDINARY_MODERATION still works as a global opt-in.
+  moderationType: "cloudinary" | "aws_rek" | "metascan" | null = null
 ): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
     const moderationSetting = moderationType

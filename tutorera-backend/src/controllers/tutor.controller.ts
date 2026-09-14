@@ -24,6 +24,21 @@ import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
 
+// Cloudinary outages/misconfig used to bubble up as an uncaught rejection,
+// which the global error handler renders as an opaque "Something went wrong"
+// with no indication a file upload was the cause. Give onboarding submitters
+// a clear, actionable message instead.
+async function safeUploadToCloudinary(
+  ...args: Parameters<typeof uploadToCloudinary>
+): Promise<ReturnType<typeof uploadToCloudinary>> {
+  try {
+    return await uploadToCloudinary(...args);
+  } catch (err) {
+    console.error("[TutorOnboarding] Cloudinary upload failed:", err);
+    throw Object.assign(new Error("We couldn't upload your file right now. Please try again in a moment."), { statusCode: 502 });
+  }
+}
+
 // Online tuition never needs a police check; in-person and both do. Reused
 // wherever teachingMode can change (initial onboarding step 4 and later
 // self-service profile edits) so the two paths can't drift out of sync.
@@ -459,7 +474,7 @@ export const saveOnboardingStep = async (
         await deleteFromCloudinary(oldPublicId).catch(() => {});
       }
 
-      const result = await uploadToCloudinary(
+      const result = await safeUploadToCloudinary(
         files.degreeDoc[0].buffer,
         "tutorera/degrees",
         "auto",
@@ -531,10 +546,17 @@ export const saveOnboardingStep = async (
       parsedData.teachingMode
     );
 
+    // Step 1 already set the correct market-derived currency (e.g. AED for a
+    // UAE tutor). This step's rate-setting form doesn't necessarily resubmit
+    // currency, so `parsedData.currency || "PKR"` was silently clobbering a
+    // correctly-set non-PKR currency back to PKR whenever it wasn't
+    // resubmitted - falling back to the profile's own already-set currency
+    // instead of a hardcoded PKR default.
+    const nextCurrency = parsedData.currency || profile.currency || "PKR";
     updateData = {
       bio: parsedData.bio,
       hourlyRate: parseInt(parsedData.hourlyRate),
-      currency: parsedData.currency || "PKR",
+      currency: nextCurrency,
       teachingMode: parsedData.teachingMode,
       policeVerificationStatus: nextPoliceStatus,
       serviceAreas: parsedData.serviceAreas || [],
@@ -542,7 +564,7 @@ export const saveOnboardingStep = async (
       availability: parsedData.availability || [],
       onboardingStep: 5,
     };
-    await User.findByIdAndUpdate(req.user?._id, { currency: parsedData.currency || "PKR" });
+    await User.findByIdAndUpdate(req.user?._id, { currency: nextCurrency });
 
     if (parsedData.availability?.length > 0) {
       const weeklySlots = (parsedData.availability as { day: string; slots: string[] }[])
@@ -592,7 +614,7 @@ export const saveOnboardingStep = async (
       if (profile.cnicFrontPublicId) {
         await deleteFromCloudinary(profile.cnicFrontPublicId).catch(() => {});
       }
-      const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic", "auto", true);
+      const result = await safeUploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic", "auto", true);
       cnicFrontUrl = result.secure_url;
       cnicFrontPublicId = result.public_id;
     }
@@ -606,7 +628,7 @@ export const saveOnboardingStep = async (
       if (profile.cnicBackPublicId) {
         await deleteFromCloudinary(profile.cnicBackPublicId).catch(() => {});
       }
-      const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic", "auto", true);
+      const result = await safeUploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic", "auto", true);
       cnicBackUrl = result.secure_url;
       cnicBackPublicId = result.public_id;
     }
@@ -626,7 +648,7 @@ export const saveOnboardingStep = async (
       if (profile.policeCertificatePublicId) {
         await deleteFromCloudinary(profile.policeCertificatePublicId).catch(() => {});
       }
-      const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/police-certificates", "auto", true);
+      const result = await safeUploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/police-certificates", "auto", true);
       policeCertificateUrl = result.secure_url;
       policeCertificatePublicId = result.public_id;
     }
