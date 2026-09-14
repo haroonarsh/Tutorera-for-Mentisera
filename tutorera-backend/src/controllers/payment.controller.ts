@@ -297,9 +297,19 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         // a delayed failure after a successful event; that must never produce
         // a contradictory failure notification or ledger entry.
         if (bid?.status === "payment_pending") {
-        const request = await RequestModel.findById(bid.request).select("student subject");
+        const request = await RequestModel.findById(bid.request).select("student subject countryCode teachingMode");
           const student = request ? await User.findById(request.student).select("name email") : null;
           const tutor = await User.findById(bid.tutor).select("name email");
+          // No Booking exists yet at this point (failed payments never reach
+          // finalizeBidAcceptance), so fees must be computed fresh - with the
+          // real country/teaching mode, not the ledger's fallback recompute
+          // (which has neither and silently applies Pakistan's tax config to
+          // every country's failed-payment records).
+          const fees = await calculateMarketplaceFees(bid.amount, {
+            currency: bid.currency || event.currency,
+            countryCode: request?.countryCode,
+            teachingMode: request?.teachingMode as "online" | "in-person" | "both" | undefined,
+          });
           await recordPaymentLedger({
             providerTransactionId: event.merchantTransactionId,
             providerEventId: event.eventId,
@@ -310,6 +320,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
             bidId,
             studentId: request?.student?.toString(),
             tutorId: bid.tutor.toString(),
+            feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
             metadata: { gatewayStatus: event.status },
           });
           const bookingDetails = { bookingId: `BID-${bidId}`, subject: request?.subject };
@@ -348,6 +359,16 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
             bookingId: booking._id.toString(),
             studentId: booking.student.toString(),
             tutorId: booking.tutor.toString(),
+            // Reuse the booking's own already-computed fees, same as the
+            // payment.succeeded branch above - without this, the ledger
+            // fallback recomputes fees with no countryCode/teachingMode and
+            // silently applies Pakistan's tax config to every country's
+            // failed-payment records.
+            feeSnapshot: {
+              subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
+              tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet,
+              platformFee: booking.platformFee, feeConfig: booking.feeConfig,
+            },
             metadata: { gatewayStatus: event.status },
           });
           const requestDoc = booking.request ? await RequestModel.findById(booking.request).select("subject") : null;

@@ -94,8 +94,18 @@ export async function calculateMarketplaceFees(
   );
   const studentTotal = subtotal + studentFee;
 
+  // "both" used to silently alias to "online" here, checking only
+  // appliesOnlineServices and ignoring appliesHomeTuition entirely - a mixed
+  // booking was taxed as 100% online (or 0% if only home tuition were
+  // taxable in that country) with no regard for the in-person component it
+  // actually contains. A "both" booking is taxable if either service type
+  // is taxable in that country - it isn't a proportional split (this engine
+  // has no way to know the online/in-person mix of a "both" booking), but
+  // that's a strictly more correct default than ignoring one component.
   const taxApplies = teachingMode === "in-person"
     ? taxCfg.appliesHomeTuition !== false
+    : teachingMode === "both"
+    ? taxCfg.appliesOnlineServices !== false || taxCfg.appliesHomeTuition !== false
     : taxCfg.appliesOnlineServices !== false;
   const tax = taxApplies && taxCfg.platformCollects !== false
     ? Math.round(tutorFee * (taxCfg.rate || 0) / 100)

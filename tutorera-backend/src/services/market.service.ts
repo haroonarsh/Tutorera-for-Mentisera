@@ -1,4 +1,5 @@
 import MarketConfig, { IMarketConfig } from "../models/MarketConfig.model";
+import { seedTaxConfigs } from "./pricing.service";
 
 export const LAUNCH_MARKETS = {
   PK: {
@@ -41,24 +42,53 @@ export const LAUNCH_MARKETS = {
 
 export async function ensureLaunchMarkets(): Promise<void> {
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
-    const safetyLock = countryCode === "PK"
-      ? { paymentProvider: "rapidpay", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", featureFlags: config.featureFlags }
-      : ["AE", "US", "SA", "IN"].includes(countryCode)
-      ? { paymentProvider: "rapidpay", paymentsEnabled: true, payoutsEnabled: true, launchStatus: "live", featureFlags: config.featureFlags }
-      : { paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false, launchStatus: "beta", featureFlags: config.featureFlags };
+    // GB has no real payment gateway integration, so its payment fields are
+    // re-enforced on every call as a safety net against it ever being turned
+    // on for payments via a generic admin edit (matching the same GB-only
+    // lock in adminControlTower.controller.ts's updateMarketConfig).
+    //
+    // Everything else - including launchStatus and featureFlags - is seeded
+    // on INSERT ONLY. This used to be a blanket $set applied on every call
+    // (this function runs on nearly every admin market-rules page load and
+    // every public country-list request), which silently reverted any
+    // deliberate admin change - e.g. pausing a market during an incident, or
+    // disabling a feature flag - back to the hardcoded default within
+    // seconds of it being made.
+    const gbPaymentSafety = countryCode === "GB"
+      ? { paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false }
+      : {};
+    // MongoDB rejects an update that touches the same field path in both
+    // $set and $setOnInsert - "would create a conflict" - regardless of
+    // whether the document is being inserted or matched. Any field forced
+    // via $set (GB's payment lock) must therefore be left out of
+    // $setOnInsert entirely; $set already covers seeding it on insert too.
+    const setOnInsert: Record<string, unknown> = {
+      countryCode, countryName: config.countryName, iso3: config.iso3, dialCode: config.dialCode,
+      currency: config.currency, currencySymbol: config.currencySymbol, timezone: config.timezone,
+      timezones: config.timezones, supportedLanguages: ["en"], defaultLanguage: "en",
+      studentRegistration: true, tutorRegistration: true, isActive: true,
+      onlineEnabled: config.onlineEnabled, homeTuitionEnabled: config.homeTuitionEnabled,
+      backgroundCheckRequired: true,
+      launchStatus: config.launchStatus, featureFlags: config.featureFlags,
+      paymentProvider: config.paymentProvider, paymentsEnabled: config.paymentsEnabled, payoutsEnabled: config.payoutsEnabled,
+    };
+    for (const key of Object.keys(gbPaymentSafety)) delete setOnInsert[key];
     return MarketConfig.updateOne(
       { countryCode },
-      { $setOnInsert: {
-        countryCode, countryName: config.countryName, iso3: config.iso3, dialCode: config.dialCode,
-        currency: config.currency, currencySymbol: config.currencySymbol, timezone: config.timezone,
-        timezones: config.timezones, supportedLanguages: ["en"], defaultLanguage: "en",
-        studentRegistration: true, tutorRegistration: true, isActive: true,
-        onlineEnabled: config.onlineEnabled, homeTuitionEnabled: config.homeTuitionEnabled,
-        backgroundCheckRequired: true, platformFeePercent: 20, taxPercent: countryCode === "PK" ? 15 : 0,
-      }, $set: safetyLock },
+      {
+        $setOnInsert: setOnInsert,
+        ...(Object.keys(gbPaymentSafety).length ? { $set: gbPaymentSafety } : {}),
+      },
       { upsert: true },
     );
   }));
+
+  // Guarantees TaxConfig rows exist for every launch market - this was
+  // previously a defined-but-never-called function, meaning tax could be
+  // silently 0% for every booking in every country if TaxConfig was ever
+  // empty in production. Upsert-only ($setOnInsert), so it can never
+  // overwrite a rate an admin has already configured.
+  await seedTaxConfigs();
 }
 
 export async function resolveMarket(countryCode?: string): Promise<IMarketConfig | null> {

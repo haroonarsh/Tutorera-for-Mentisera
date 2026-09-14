@@ -644,7 +644,7 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   const current = await MarketConfig.findById(id);
   if (!current) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
   if (req.countryScopeCode && current.countryCode !== req.countryScopeCode) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
-  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "launchStatus", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
+  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "isActive", "launchStatus", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
   const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
   if (changes.defaultLanguage && changes.defaultLanguage !== "en") {
     res.status(400).json({ success: false, message: "English is the only reviewed interface locale currently available." });
@@ -659,9 +659,17 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   if (["GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
   const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
   if (updated) {
+    // upsert:true - previously a plain updateOne, which silently no-oped if
+    // no Country document existed yet for this code (e.g. not seeded by the
+    // GeoNames importer), leaving MarketConfig and Country out of sync with
+    // no error surfaced anywhere.
     await Country.updateOne(
       { iso2: updated.countryCode },
-      { $set: { enabled: updated.isActive, launchStatus: updated.launchStatus } },
+      {
+        $set: { enabled: updated.isActive, launchStatus: updated.launchStatus },
+        $setOnInsert: { iso2: updated.countryCode, name: updated.countryName },
+      },
+      { upsert: true },
     );
   }
   await logAudit({ action: "market_config_updated", actor: req.user?.name || "Administrator", actorId: req.user?._id?.toString(), entity: "MarketConfig", targetId: id as string, metadata: { countryCode: current.countryCode, changes } });

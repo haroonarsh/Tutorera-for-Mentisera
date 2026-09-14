@@ -763,7 +763,9 @@ export class MatchingService {
 
       const ranked = await this.rankTutors(request, eligibleTutors);
       const tier1Matches = ranked.filter((m) => m.matchScore >= 80).slice(0, 15);
-      const currencySymbol = request.currency || "PKR";
+      // This is the ISO currency code (e.g. "AED", "USD"), not a symbol -
+      // was misleadingly named currencySymbol despite never holding one.
+      const currencyCode = request.currency || "PKR";
 
       const notifyList = tier1Matches.length >= 3 ? tier1Matches : ranked.slice(0, 10);
 
@@ -795,7 +797,7 @@ export class MatchingService {
           if (io) {
             sendNotification(io, tutorUserId.toString(), {
               title: `New ${m.matchScore}% Match: Tuition Opportunity`,
-              message: `${request.subject} (${request.level}) · Proposed ${currencySymbol} ${request.budget.toLocaleString()}/${request.pricingUnit} · ${request.teachingMode === "online" ? "Online" : request.city || "In-person"}`,
+              message: `${request.subject} (${request.level}) · Proposed ${currencyCode} ${request.budget.toLocaleString()}/${request.pricingUnit} · ${request.teachingMode === "online" ? "Online" : request.city || "In-person"}`,
               type: "bid",
               link: "/dashboard?tab=browse",
             });

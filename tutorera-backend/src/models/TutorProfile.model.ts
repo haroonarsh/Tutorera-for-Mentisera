@@ -46,7 +46,6 @@ export interface ITutorProfile extends Document {
   bio: string;
   hourlyRate: number;
   currency: string;
-  currencySymbol?: string;           // resolved from SUPPORTED_CURRENCIES at save
   sessionRate?: number;              // rate per session (optional override)
   monthlyRate?: number;              // rate per month (optional override)
   teachingMode: "online" | "in-person" | "both";
@@ -174,7 +173,6 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     bio: { type: String, trim: true, default: "" },
     hourlyRate: { type: Number, default: 0 },
     currency: { type: String, uppercase: true, trim: true },
-    currencySymbol: { type: String, trim: true, default: "" },
     sessionRate: { type: Number, min: 0 },
     monthlyRate: { type: Number, min: 0 },
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },

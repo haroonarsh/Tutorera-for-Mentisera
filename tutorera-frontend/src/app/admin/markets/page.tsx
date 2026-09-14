@@ -22,8 +22,6 @@ interface MarketConfig {
   onlineEnabled: boolean;
   homeTuitionEnabled: boolean;
   backgroundCheckRequired: boolean;
-  platformFeePercent: number;
-  taxPercent: number;
   isActive: boolean;
   launchStatus: "coming_soon" | "beta" | "live" | "paused";
   supportedCities: string[];
@@ -89,6 +87,11 @@ export default function MarketsPage() {
 
   const liveCount = markets.filter((m) => m.launchStatus === "live").length;
   const betaCount = markets.filter((m) => m.launchStatus === "beta").length;
+  const paymentAvailability = (market: MarketConfig) => {
+    if (market.paymentsEnabled && market.paymentProvider === "rapid_gateway") return "Rapid Gateway checkout";
+    if (market.paymentsEnabled) return "Configured checkout";
+    return "Discovery only — checkout disabled";
+  };
 
   return (
     <div style={{ padding: "1.75rem 2rem" }}>
@@ -224,7 +227,7 @@ export default function MarketsPage() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem" }}>
                   <DollarSign size={16} color={UI_COLORS.accent} />
-                  <span style={{ color: TEXT_COLORS.body, fontWeight: 600 }}>{market.paymentsEnabled ? `${market.paymentProvider || "Configured"} payments` : "Discovery only"}</span>
+                  <span style={{ color: TEXT_COLORS.body, fontWeight: 600 }}>{paymentAvailability(market)}</span>
                 </div>
               </div>
 
@@ -318,7 +321,7 @@ export default function MarketsPage() {
                 </label>
                 <select
                   value={editingMarket.launchStatus}
-                  disabled={["AE", "GB"].includes(editingMarket.countryCode)}
+                  disabled={editingMarket.countryCode === "GB"}
                   onChange={(e) => setEditingMarket({ ...editingMarket, launchStatus: e.target.value as "coming_soon" | "beta" | "live" | "paused" })}
                   style={{ width: "100%", padding: "0.55rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.88rem" }}
                 >
@@ -327,36 +330,13 @@ export default function MarketsPage() {
                   <option value="coming_soon">Coming soon</option>
                   <option value="paused">Paused / Temporarily Suspended</option>
                 </select>
-                {["AE", "GB"].includes(editingMarket.countryCode) && <p style={{ fontSize: ".78rem", color: STATUS_COLORS.warning.color, margin: ".4rem 0 0" }}>This discovery market is locked to beta until a compliant payment provider is configured.</p>}
+                {editingMarket.countryCode === "GB" && <p style={{ fontSize: ".78rem", color: STATUS_COLORS.warning.color, margin: ".4rem 0 0" }}>This discovery market is locked to beta until a compliant payment provider is configured.</p>}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
-                    Platform Fee (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="50"
-                    value={editingMarket.platformFeePercent}
-                    onChange={(e) => setEditingMarket({ ...editingMarket, platformFeePercent: parseFloat(e.target.value) || 0 })}
-                    style={{ width: "100%", padding: "0.55rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.88rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
-                    Sales Tax / VAT (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="50"
-                    value={editingMarket.taxPercent}
-                    onChange={(e) => setEditingMarket({ ...editingMarket, taxPercent: parseFloat(e.target.value) || 0 })}
-                    style={{ width: "100%", padding: "0.55rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.88rem" }}
-                  />
-                </div>
+              <div style={{ marginBottom: "1.25rem", padding: "0.75rem 1rem", background: UI_COLORS.card, borderRadius: "8px", fontSize: "0.82rem", color: TEXT_COLORS.secondary }}>
+                Platform commission, gateway cost, and per-country tax are configured on{" "}
+                <Link href="/admin/fee-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Fee Configuration</Link>{" "}
+                and <Link href="/admin/tax-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Tax Configuration</Link> — not here.
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.25rem", background: UI_COLORS.card, padding: "0.75rem", borderRadius: "8px" }}>
