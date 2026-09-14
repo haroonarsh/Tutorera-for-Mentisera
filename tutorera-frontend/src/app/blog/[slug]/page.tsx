@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, Clock, ShieldCheck, User } from "lucide-react";
 import { getEditorialArticle, getEditorialArticles, getBlogSidebarData, categoryToSlug, STATIC_ARTICLES } from "@/lib/editorial-content";
-import { renderBlogContent } from "@/lib/blog-markdown";
+import { renderBlogContent, extractHeadings } from "@/lib/blog-markdown";
 import AdBanner from "@/components/AdBanner";
 import BlogLayout from "@/components/Blog/BlogLayout";
 import BlogSidebar from "@/components/Blog/BlogSidebar";
+import BlogTableOfContents from "@/components/Blog/BlogTableOfContents";
 import PostRequirementCTA from "@/components/marketplace/PostRequirementCTA";
 import styles from "./BlogArticle.module.css";
 
@@ -27,6 +28,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   }
 
   const html = renderBlogContent(blog.content);
+  const headings = extractHeadings(blog.content);
   const updatedLabel = new Date(blog.updatedAt).toLocaleDateString("en-PK", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
@@ -64,6 +66,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 <p style={{ margin: "0.4rem 0 0", fontWeight: 700, fontSize: "0.85rem" }}>Last updated {updatedLabel}</p>
               </div>
             </aside>
+
+            <BlogTableOfContents headings={headings} />
 
             <article className={styles.body} dangerouslySetInnerHTML={{ __html: html }} />
 

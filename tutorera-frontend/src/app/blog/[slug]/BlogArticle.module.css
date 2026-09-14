@@ -18,6 +18,7 @@
   font-size: 1.3rem;
   font-weight: 800;
   margin: 2.25rem 0 0.85rem;
+  scroll-margin-top: 90px;
 }
 
 .body h3 {
@@ -25,6 +26,7 @@
   font-size: 1.08rem;
   font-weight: 800;
   margin: 1.75rem 0 0.65rem;
+  scroll-margin-top: 90px;
 }
 
 .body ul,

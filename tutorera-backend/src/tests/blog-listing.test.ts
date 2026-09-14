@@ -99,4 +99,16 @@ describe("Blog listing and categories", () => {
     expect(res.body.blog.content).toContain("word");
     expect(res.body.blog.readingTime).toBe("1 min read");
   });
+
+  it("doesn't crash on garbage pagination params and caps an oversized limit", async () => {
+    const author = await makeAuthor();
+    await Blog.create({ title: "P", slug: "p-pagination", content: "content", excerpt: "e", author: author._id, isPublished: true });
+
+    // ?page=abc&limit=xyz used to reach Mongoose as NaN/NaN before the fix.
+    const garbage = await request(app).get("/api/v1/blogs?page=abc&limit=xyz").expect(200);
+    expect(garbage.body.page).toBe(1);
+
+    const oversized = await request(app).get("/api/v1/blogs?limit=999999").expect(200);
+    expect(oversized.body.blogs.length).toBeLessThanOrEqual(200);
+  });
 });

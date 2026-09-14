@@ -3,7 +3,9 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
+import { visit } from "unist-util-visit";
 import type { Root, Paragraph, Heading, PhrasingContent, Text } from "mdast";
+import type { Root as HastRoot, Element as HastElement, Text as HastText } from "hast";
 
 // TutorEra's blog body content uses a non-standard convention: a section
 // heading is written as a standalone paragraph containing nothing but a
@@ -43,10 +45,45 @@ function remarkBoldHeadings() {
   };
 }
 
-const processor = unified().use(remarkParse).use(remarkBoldHeadings).use(remarkRehype).use(rehypeSlug).use(rehypeStringify);
+// A separate processor that stops right after rehype-slug (no stringify),
+// so extractHeadings() below reads the exact same hast tree - and therefore
+// the exact same generated `id` attributes - that renderBlogContent()
+// eventually serializes to HTML. Running two independently-configured
+// pipelines risks the ids silently drifting apart (e.g. a slug library
+// version bump), which would break every TOC anchor link at once.
+const headingProcessor = unified().use(remarkParse).use(remarkBoldHeadings).use(remarkRehype).use(rehypeSlug);
+const processor = headingProcessor().use(rehypeStringify);
 
 export function renderBlogContent(markdown: string): string {
   return String(processor.processSync(markdown));
+}
+
+export interface BlogHeading {
+  id: string;
+  text: string;
+  depth: 2 | 3;
+}
+
+function textContent(node: HastElement): string {
+  let text = "";
+  visit(node, "text", (textNode: HastText) => { text += textNode.value; });
+  return text;
+}
+
+// Powers the post page's table of contents - only top-level sections (h2)
+// are listed, since h3 is reserved for FAQ sub-questions (already surfaced
+// in their own "Frequently asked questions" block) rather than TOC-worthy
+// structural sections.
+export function extractHeadings(markdown: string): BlogHeading[] {
+  const hast = headingProcessor().runSync(headingProcessor().parse(markdown)) as HastRoot;
+  const headings: BlogHeading[] = [];
+  visit(hast, "element", (node: HastElement) => {
+    if (node.tagName !== "h2") return;
+    const id = typeof node.properties?.id === "string" ? node.properties.id : "";
+    const text = textContent(node);
+    if (id && text) headings.push({ id, text, depth: 2 });
+  });
+  return headings;
 }
 
 export interface FaqPair {

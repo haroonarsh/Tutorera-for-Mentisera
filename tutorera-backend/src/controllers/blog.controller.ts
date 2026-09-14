@@ -40,8 +40,15 @@ export const getAllBlogs = async (req: Request, res: Response): Promise<void> =>
   else if (category) filter.category = category;
   if (featured === "true") filter.featured = true;
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  // Unguarded parseInt on a query string is a real footgun: ?page=abc yields
+  // NaN, and NaN propagating into .skip()/.limit() throws a raw driver error
+  // rather than a clean response - guard the same way the rest of the
+  // codebase's paginated endpoints do (e.g. tutor.controller.ts).
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  // Capped at 200 rather than the more typical 50 - the sitemap generator
+  // (sitemap.ts) fetches up to 200 posts in one call to build the blog
+  // section, so a tighter cap would silently truncate it.
+  const limitNum = Math.min(200, Math.max(1, parseInt(limit as string, 10) || 9));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Blog.countDocuments(filter);
@@ -107,10 +114,32 @@ export const getBlogBySlug = async (req: Request, res: Response): Promise<void> 
 // @desc    Update blog
 // @route   PUT /api/blogs/:id
 // @access  Private (admin)
+// Only these fields are ever admin-editable through this route. Spreading
+// req.body directly would let a request also set author, isPublished's
+// underlying sibling fields, _id, createdAt, etc. - a classic mass-assignment
+// bug that happens to be behind admin-only auth today, but there's no reason
+// to leave the door open for it.
+const BLOG_UPDATABLE_FIELDS = [
+  "title", "slug", "content", "excerpt", "metaDescription",
+  "coverImage", "coverImageAlt", "tags", "category", "featured", "isPublished",
+] as const;
+
 export const updateBlog = async (req: AuthRequest, res: Response): Promise<void> => {
+  const changes = Object.fromEntries(
+    BLOG_UPDATABLE_FIELDS.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]])
+  );
+
+  if (changes.slug) {
+    const existing = await Blog.findOne({ slug: changes.slug, _id: { $ne: req.params.id } });
+    if (existing) {
+      res.status(400).json({ success: false, message: "Slug already exists" });
+      return;
+    }
+  }
+
   const blog = await Blog.findByIdAndUpdate(
     req.params.id,
-    { ...req.body },
+    { $set: changes },
     { new: true, runValidators: true }
   );
 
