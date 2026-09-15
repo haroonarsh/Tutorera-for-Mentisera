@@ -223,7 +223,7 @@ export default function Navbar() {
         <div className={s.desktopActions}>
           {/* Anonymous-visitor role picker - routes to the matching primary CTA.
               Hidden once signed in, since the account's role already determines it. */}
-          {!user && (
+          {/* {!user && (
             <div
               role="group"
               aria-label="Choose your role"
@@ -265,7 +265,7 @@ export default function Navbar() {
                 I&apos;m a Tutor
               </Link>
             </div>
-          )}
+          )} */}
 
           {/* Marketplace Hero CTA in Navbar */}
           {user?.role === "tutor" ? (
