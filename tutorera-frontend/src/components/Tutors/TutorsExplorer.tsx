@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import type { FiltersState, PaginationMeta, TutorProfile } from "@/types/tutor";
@@ -77,7 +78,6 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       <aside className={styles.sidebar} aria-label="Filter tutors"><FilterSidebar {...sidebarProps} /></aside>
       <MobileFilterSidebar {...sidebarProps} isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <section className={styles.main} aria-label="Tutor search results">
-        {/* Marketplace Demand Banner */}
         <div style={{
           background: "linear-gradient(135deg, #eef5ff 0%, #ffffff 100%)",
           border: "1.5px solid #bfdbfe",
@@ -98,7 +98,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
               Post your requirement and preferred budget. Let verified matching tutors send offers to you.
             </span>
           </div>
-          <a
+          <Link
             href="/post-tuition-request"
             style={{
               background: "#0329b2",
@@ -115,7 +115,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
             }}
           >
             + Post Tuition Request
-          </a>
+          </Link>
         </div>
 
         <div className={styles.resultsHeader}>
