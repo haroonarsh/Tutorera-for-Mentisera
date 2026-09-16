@@ -68,10 +68,83 @@ jobs:
             exit 1
           fi
 
-          # This workflow is a one-off conflict resolver and must not remain in the PR.
+      - name: Fix blocking lint errors inherited from upstream main
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"Expected text not found in {path}: {old[:100]!r}")
+              p.write_text(text.replace(old, new))
+
+          # Next.js internal navigation must use next/link.
+          payments = "tutorera-frontend/src/app/admin/payments/page.tsx"
+          replace(
+              payments,
+              'import { useSearchParams } from "next/navigation";\n',
+              'import { useSearchParams } from "next/navigation";\nimport Link from "next/link";\n',
+          )
+          replace(
+              payments,
+              '''<a\n                              href="/admin/payouts"\n                              style={{ padding: '0.5rem', backgroundColor: STATUS_COLORS.success.color, color: UI_COLORS.surface, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: '600', textAlign: 'center', textDecoration: 'none' }}>\n                              Open payout operations\n                            </a>''',
+              '''<Link\n                              href="/admin/payouts"\n                              style={{ padding: '0.5rem', backgroundColor: STATUS_COLORS.success.color, color: UI_COLORS.surface, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: '600', textAlign: 'center', textDecoration: 'none' }}>\n                              Open payout operations\n                            </Link>''',
+          )
+
+          tax = "tutorera-frontend/src/app/admin/tax-config/page.tsx"
+          replace(
+              tax,
+              'import { useEffect, useState } from "react";\n',
+              'import { useEffect, useState } from "react";\nimport Link from "next/link";\n',
+          )
+          replace(
+              tax,
+              '<a href="/admin/fee-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Fee Configuration</a>',
+              '<Link href="/admin/fee-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Fee Configuration</Link>',
+          )
+
+          # Avoid direct mutation of window.location under React's immutability lint rule.
+          for guide in (
+              "tutorera-frontend/src/app/student/guidebook/page.tsx",
+              "tutorera-frontend/src/app/tutor/guidebook/page.tsx",
+          ):
+              replace(
+                  guide,
+                  "    window.location.hash = anchor;",
+                  '    window.history.replaceState(null, "", `#${anchor}`);',
+              )
+
+          comparison = "tutorera-frontend/src/components/marketplace/OfferComparisonModal.tsx"
+          replace(
+              comparison,
+              '<a href="/terms" style={{ color: "#0329b2" }}>Terms of Service</a>',
+              '<Link href="/terms" style={{ color: "#0329b2" }}>Terms of Service</Link>',
+          )
+          replace(
+              comparison,
+              '<a href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</a>',
+              '<Link href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</Link>',
+          )
+
+          quick = "tutorera-frontend/src/components/marketplace/QuickRequestComposer.tsx"
+          replace(
+              quick,
+              'import { useRouter } from "next/navigation";\n',
+              'import { useRouter } from "next/navigation";\nimport Link from "next/link";\n',
+          )
+          replace(
+              quick,
+              '<a href="/opportunities" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "underline" }}>Find students who need what you teach</a>',
+              '<Link href="/opportunities" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "underline" }}>Find students who need what you teach</Link>',
+          )
+          PY
+
+          # This workflow is a one-off resolver and must not remain in the PR.
           rm -f .github/workflows/resolve-upstream-main.yml
           git add -A
-          git commit -m "Merge upstream main into SEO cleanup branch"
+          git commit -m "Merge upstream main and resolve stale SEO conflicts"
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
