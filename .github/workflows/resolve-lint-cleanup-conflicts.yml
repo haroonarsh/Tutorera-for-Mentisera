@@ -1,0 +1,86 @@
+name: Resolve Lint Cleanup Conflicts
+
+on:
+  push:
+    branches: [chore/lint-warning-cleanup]
+    paths:
+      - ".github/workflows/resolve-lint-cleanup-conflicts.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout lint cleanup branch
+        uses: actions/checkout@v5
+        with:
+          ref: chore/lint-warning-cleanup
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge current upstream main safely
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/haroonarsh/Tutorera-for-Mentisera.git
+          git fetch upstream main
+
+          if git merge --no-commit --no-ff upstream/main; then
+            echo "Upstream main merged without content conflicts."
+          else
+            mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+            printf 'Conflicts detected:\n%s\n' "${conflicts[*]}"
+
+            for file in "${conflicts[@]}"; do
+              # This is a stale lint-only branch. Preserve the current upstream
+              # implementation for every conflicted application file so old
+              # cleanup edits cannot overwrite newer production logic.
+              if git cat-file -e "upstream/main:$file" 2>/dev/null; then
+                git checkout --theirs -- "$file"
+                git add "$file"
+              else
+                git rm -- "$file"
+              fi
+            done
+          fi
+
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Unresolved conflicts remain:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          rm -f .github/workflows/resolve-lint-cleanup-conflicts.yml
+          git add -A
+          git commit -m "Merge upstream main into lint cleanup branch"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tutorera-frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: tutorera-frontend
+        run: npm run lint
+
+      - name: Build Next.js
+        working-directory: tutorera-frontend
+        run: npm run build
+
+      - name: Build Cloudflare Worker
+        working-directory: tutorera-frontend
+        run: npx opennextjs-cloudflare build
+
+      - name: Push validated merge commit
+        run: git push origin HEAD:chore/lint-warning-cleanup
