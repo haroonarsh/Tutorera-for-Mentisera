@@ -32,7 +32,6 @@ export default function TuitionRequestsExplorer({ initialRequests, initialPagina
   const [pagination, setPagination] = useState(initialPagination);
   const [filters, setFilters] = useState<RequestFilters>(initialFilters);
   const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
 
   const fetchFiltered = useCallback(async (newFilters: RequestFilters, page = "1") => {
     setLoading(true);

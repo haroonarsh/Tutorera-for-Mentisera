@@ -17,8 +17,6 @@ function RegisterForm() {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "", countryCode: "PK", preferredLanguage: "en" });
   const [citySuggestions, setCitySuggestions] = useState<Array<{ _id?: string; name: string }>>([]);
   const [referralCode, setReferralCode] = useState("");
-  const [referralApplied, setReferralApplied] = useState(false);
-  const [referralMsg, setReferralMsg] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,8 +56,7 @@ function RegisterForm() {
     // Apply referral code after registration if provided
       if (referralCode.trim()) {
         try {
-          const res = await api.post("/referral/apply", { code: referralCode.trim() });
-          setReferralMsg(res.data.message);
+          await api.post("/referral/apply", { code: referralCode.trim() });
         } catch {
           // Referral code invalid — don't block registration, just ignore
         }
@@ -216,9 +213,9 @@ function RegisterForm() {
               onChange={e => setReferralCode(e.target.value.toUpperCase())}
               placeholder="e.g. AHMAD3F2A"
               maxLength={12}
-              style={{ width: '100%', padding: '0.75rem 1rem', border: `1.5px solid ${referralApplied ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, letterSpacing: '0.05em', fontWeight: 600 }}
+              style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, letterSpacing: '0.05em', fontWeight: 600 }}
               onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-              onBlur={e => (e.currentTarget.style.borderColor = referralApplied ? '#bbf7d0' : '#e5e7eb')} />
+              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
             {referralCode && (
               <p style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.3rem', fontWeight: 600 }}>
                 🎁 You'll get Rs. 200 credit on your first booking!

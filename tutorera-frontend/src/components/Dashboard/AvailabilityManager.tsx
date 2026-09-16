@@ -93,8 +93,7 @@ export default function AvailabilityManager() {
                 <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: 0 }}>No slots — unavailable this day</p>
               )}
 
-              {daySlots.map((slot, globalIndex) => {
-                const index = slots.findIndex((s, i) => s.day === day && slots.filter((ss, ii) => ss.day === day && ii < i).length === daySlots.indexOf(slot));
+              {daySlots.map((slot) => {
                 const realIndex = slots.indexOf(slot);
                 return (
                   <div key={realIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>

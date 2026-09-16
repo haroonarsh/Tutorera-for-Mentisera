@@ -6,7 +6,7 @@ import { UI_COLORS } from "@/lib/brand";
 import { convertToPKR,useGeoData } from "@/lib/geoService";
 import { BookOpen,Camera,Mail,MapPin,Phone,Save,User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect,useState } from "react";
+import { useEffect,useMemo,useState } from "react";
 
 const C = UI_COLORS;
 
@@ -18,8 +18,8 @@ export default function ProfilePage() {
 
   const userCountryCode = user?.countryCode || "PK";
   const cities = (geo.countries?.find(c => c.code === userCountryCode)?.cities?.map(ct => ct.name)) || ["Other"];
-  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
-  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
+  const subjects = useMemo(() => geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"], [geo.subjects]);
+  const levels = useMemo(() => geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"], [geo.levels]);
 
   const [activeTab, setActiveTab] = useState<"personal" | "tutor">("personal");
   const [saving, setSaving] = useState(false);
@@ -85,7 +85,7 @@ export default function ProfilePage() {
           }).catch(() => {});
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, subjects, levels]);
 
     // ← ADD: block pending/rejected tutors + show spinner while checking
   if (guardStatus !== "ok") return null;

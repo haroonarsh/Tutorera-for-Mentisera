@@ -43,12 +43,6 @@ export default function CountryCitySelector({
     const found = list.find((c) => c.code === countryCode);
     return found || list[0];
   }, [countryCode, countriesProp]);
-  const availableCities = useMemo(() => {
-    const list = countriesProp || COUNTRIES;
-    const country = list.find((c) => c.code === currentCountry.code);
-    return country ? country.cities.map((ct) => ct.name) : [];
-  }, [currentCountry.code, countriesProp]);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"country_and_city" | "country_only" | "city_only">("country_and_city");
 

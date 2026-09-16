@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import BrandLogo from "@/components/BrandLogo";
 import { SUPPORT_EMAIL } from "@/lib/site";
 import { BookOpen,Mail } from "lucide-react";

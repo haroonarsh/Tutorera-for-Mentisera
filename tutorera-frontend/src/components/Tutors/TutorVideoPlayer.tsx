@@ -40,9 +40,6 @@ export default function TutorVideoPlayer({
   tutorName,
   posterUrl,
   subjects = [],
-  city = "Pakistan",
-  hourlyRate,
-  currency = "PKR",
 }: TutorVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -50,7 +47,6 @@ export default function TutorVideoPlayer({
   const youtubeUrl = getYouTubeEmbedUrl(cleanUrl);
   const vimeoUrl = getVimeoEmbedUrl(cleanUrl);
   const loomUrl = getLoomEmbedUrl(cleanUrl);
-  const hasEmbed = Boolean(youtubeUrl || vimeoUrl || loomUrl);
   const hasVideo = Boolean(cleanUrl);
 
   const scrollToBooking = () => {

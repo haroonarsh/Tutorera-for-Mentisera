@@ -80,7 +80,7 @@ export default function PrivacyCenterPage() {
       });
       setConsentSuccess(true);
       setTimeout(() => setConsentSuccess(false), 4000);
-    } catch (err) {
+    } catch {
       // Handled gracefully
     } finally {
       setIsUpdatingConsent(false);

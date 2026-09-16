@@ -210,7 +210,8 @@ export default function TutorOnboardingPage() {
   }, [currentStep, step1.city, selectedSubjects]);
 
   const toggleItem = (arr: string[], item: string, setter: (v: string[]) => void) => {
-    arr.includes(item) ? setter(arr.filter(i => i !== item)) : setter([...arr, item]);
+    if (arr.includes(item)) setter(arr.filter(i => i !== item));
+    else setter([...arr, item]);
   };
 
   const toggleAvailability = (day: string, slot: string) => {

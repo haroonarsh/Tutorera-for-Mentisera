@@ -472,7 +472,6 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
 
 function RequestCard({
   request,
-  onBidAccepted,
   onRefresh,
 }: {
   request: DashRequest;

@@ -29,7 +29,6 @@ export default function CounterOfferSheet({
   pricingUnit = "hour",
   currency = "PKR",
   tutorName,
-  role = "student",
 }: CounterOfferSheetProps) {
   const [amount, setAmount] = useState(String(currentAmount));
   const [message, setMessage] = useState("");

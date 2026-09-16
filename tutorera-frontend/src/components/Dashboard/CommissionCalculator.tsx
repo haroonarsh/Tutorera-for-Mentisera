@@ -150,12 +150,6 @@ export default function CommissionCalculator() {
     setInputValue(String(num));
   }, []);
 
-  const quickRates: Array<{ label: string; value: number }> = [
-    { label: "1 session", value: rate },
-    { label: "4 sessions/week", value: rate * 4 },
-    { label: "20 sessions/month", value: rate * 20 },
-  ];
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 

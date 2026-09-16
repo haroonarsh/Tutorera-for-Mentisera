@@ -8,7 +8,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect,useState } from "react";
+import { useCallback,useEffect,useState } from "react";
 
 interface SafetyCaseItem {
   _id: string;
@@ -33,7 +33,7 @@ export default function SafetyCasesPage() {
   const [resolutionSummary, setResolutionSummary] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchCases = async () => {
+  const fetchCases = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/admin/safety/cases${filterStatus !== "all" ? `?status=${filterStatus}` : ""}`);
@@ -43,11 +43,11 @@ export default function SafetyCasesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus]);
 
   useEffect(() => {
     fetchCases();
-  }, [filterStatus]);
+  }, [fetchCases]);
 
   const handleResolveCase = async () => {
     if (!selectedCase) return;

@@ -75,7 +75,7 @@ export default function AIChatWidget() {
       }
       setHasGreeted(true);
     }
-  }, [hasGreeted, open, user?.name, persistedLoaded]);
+  }, [hasGreeted, open, user?.name, persistedLoaded, messages.length]);
 
   // Reset on logout — clear storage and state
   useEffect(() => {

@@ -1,7 +1,6 @@
 "use client";
 
 import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
-import { useAuth } from "@/context/AuthContext";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 import api from "@/lib/axios";
 import { timeAgo } from "@/lib/site";
@@ -18,7 +17,6 @@ import {
   Sparkles
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter,useSearchParams } from "next/navigation";
 import { useCallback,useEffect,useState } from "react";
 
 interface RequestItem {
@@ -60,10 +58,7 @@ export default function TuitionRequestsClient({
   cityName,
   subjectName,
 }: TuitionRequestsClientProps) {
-  const { user } = useAuth();
   const now = useCurrentTime();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [level, setLevel] = useState("");
@@ -115,14 +110,6 @@ export default function TuitionRequestsClient({
   }, [page, fetchRequests]);
 
   const LEVELS = ["Primary", "Middle", "Matric", "Intermediate", "O-Level", "A-Level", "University", "Other"];
-
-  const getPageTitle = () => {
-    const parts: string[] = [];
-    if (subjectName) parts.push(subjectName);
-    if (cityName) parts.push(cityName);
-    parts.push(countryName);
-    return parts.join(" Tuition in ") + " | TUTORERA";
-  };
 
   const getPageDescription = () => {
     let desc = `Browse active tuition requests from students in ${countryName}`;
