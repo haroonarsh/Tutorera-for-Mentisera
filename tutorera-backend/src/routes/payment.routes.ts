@@ -29,6 +29,18 @@ const normalizeRapidGatewayHeaders: express.RequestHandler = (req, _res, next) =
 
   if (signature) req.headers["x-sfpy-signature"] = signature;
   if (timestamp) req.headers["x-sfpy-timestamp"] = timestamp;
+
+  const reference = typeof req.query.reference === "string" ? req.query.reference.trim() : "";
+  if (
+    reference &&
+    req.body &&
+    typeof req.body === "object" &&
+    !Array.isArray(req.body) &&
+    !req.body.merchantTransactionId
+  ) {
+    req.body.merchantTransactionId = reference;
+  }
+
   next();
 };
 

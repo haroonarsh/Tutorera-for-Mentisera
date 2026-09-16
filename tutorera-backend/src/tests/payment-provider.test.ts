@@ -62,7 +62,7 @@ describe("Rapid Gateway direct integration", () => {
           phone: "+923001234567",
         },
         return_url: "https://example.test/success",
-        webhook_url: "https://api.example.test/api/v1/payments/webhook",
+        webhook_url: "https://api.example.test/api/v1/payments/webhook?reference=BOOKING-1001",
       }),
       expect.objectContaining({
         headers: expect.objectContaining({
