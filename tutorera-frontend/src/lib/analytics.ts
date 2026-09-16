@@ -45,7 +45,7 @@ export function trackMarketplaceEvent(
     if (process.env.NODE_ENV === "development") {
       console.log(`[Marketplace Telemetry] ${event}:`, properties);
     }
-  } catch (err) {
+  } catch {
     // Fail silent to never disrupt user experience
   }
 }
