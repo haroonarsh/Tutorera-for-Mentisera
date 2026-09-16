@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { MARKETS, getMarketByRoute } from "@/lib/markets";
 import { getCountryByCode } from "@/lib/location";
+import { CITIES, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
 import { SITE_URL } from "@/lib/site";
 
 interface Props { params: Promise<{ countryCode: string }> }
@@ -35,6 +36,13 @@ export default async function MarketPage({ params }: Props) {
   const country = getCountryByCode(market.isoCountryCode);
   if (!country) notFound();
 
+  const isPakistan = market.route === "pk";
+  const pakistanInventory = isPakistan ? await Promise.all(PRIMARY_CITY_SLUGS.map(async (citySlug) => {
+    const city = CITIES[citySlug];
+    const { total } = await fetchTutors({ countryCode: "PK", city }, 1);
+    return { citySlug, city, total };
+  })) : [];
+
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -63,6 +71,30 @@ export default async function MarketPage({ params }: Props) {
         <Link href="/post-request" style={{ padding: "0.8rem 1.2rem", borderRadius: 10, background: "#0329b2", color: "white", textDecoration: "none", fontWeight: 700 }}>Post a Tuition Request</Link>
         <Link href={`/${market.route}/tutors`} style={{ padding: "0.8rem 1.2rem", borderRadius: 10, border: "1px solid #0329b2", color: "#0329b2", textDecoration: "none", fontWeight: 700 }}>Browse Tutors</Link>
       </div>
+
+      {isPakistan && (
+        <section style={{ margin: "2.5rem 0", padding: "1.5rem", border: "1px solid #dbeafe", borderRadius: 16, background: "#f8fbff" }}>
+          <h2 style={{ color: "#021550", marginTop: 0 }}>Find tutors across Pakistan</h2>
+          <p>Explore live tutor inventory by city, then narrow by subject. City pages with no matching tutors remain discoverable to users but are kept out of the search index until supply is available.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", margin: "1rem 0 1.5rem" }}>
+            {pakistanInventory.map(({ citySlug, city, total }) => (
+              <Link key={citySlug} href={`/tutors/city/${citySlug}`} style={{ padding: "0.9rem", background: "white", border: "1px solid #e2e8f0", borderRadius: 10, color: "#0329b2", textDecoration: "none", fontWeight: 700 }}>
+                {city} tutors{total > 0 ? ` (${total})` : ""}
+              </Link>
+            ))}
+          </div>
+          <h3 style={{ color: "#021550" }}>Popular subjects</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
+            {LOCAL_SUBJECT_SLUGS.map((subjectSlug) => (
+              <Link key={subjectSlug} href={`/tutors/subject/${subjectSlug}`} style={{ padding: "0.55rem 0.8rem", borderRadius: 999, border: "1px solid #bfdbfe", color: "#0329b2", textDecoration: "none", fontWeight: 600 }}>
+                {SUBJECTS[subjectSlug]}
+              </Link>
+            ))}
+          </div>
+          <p style={{ marginBottom: 0, marginTop: "1.5rem" }}><Link href="/tuition-requests/pk">Browse tuition requests in Pakistan</Link> · <Link href="/pk/home-tutors/lahore">Home tutors in Lahore</Link> · <Link href="/pk/home-tutors/islamabad">Home tutors in Islamabad</Link> · <Link href="/pk/home-tutors/karachi">Home tutors in Karachi</Link></p>
+        </section>
+      )}
+
       <section>
         <h2>How this market works</h2>
         <p><strong>Currency:</strong> Student budgets and market offers use {market.currency} ({market.currencySymbol}). Existing bookings retain their original transaction currency even if the user later changes market.</p>
