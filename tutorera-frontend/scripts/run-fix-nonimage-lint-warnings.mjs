@@ -56,6 +56,12 @@ const newVariableHelper = `function removeVariableStatement(file, name) {
 
 if (!source.includes(oldFunctionHelper)) throw new Error("Expected non-recursive function helper not found");
 if (!source.includes(oldVariableHelper)) throw new Error("Expected non-recursive variable helper not found");
-source = source.replace(oldFunctionHelper, newFunctionHelper).replace(oldVariableHelper, newVariableHelper);
+source = source
+  .replace(oldFunctionHelper, newFunctionHelper)
+  .replace(oldVariableHelper, newVariableHelper)
+  .replace(
+    'removeFunction("src/app/tuition-requests/[country]/TuitionRequestsClient.tsx", "getPageTitle");',
+    'removeVariableStatement("src/app/tuition-requests/[country]/TuitionRequestsClient.tsx", "getPageTitle");',
+  );
 fs.writeFileSync(scriptPath, source);
 await import(scriptUrl.href + `?run=${Date.now()}`);
