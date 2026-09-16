@@ -6,6 +6,7 @@ on:
     paths:
       - "tutorera-frontend/scripts/remove-unused-imports.mjs"
       - "tutorera-frontend/scripts/fix-nonimage-lint-warnings.mjs"
+      - "tutorera-frontend/scripts/run-fix-nonimage-lint-warnings.mjs"
       - ".github/workflows/lint-cleanup-codemod.yml"
 
 permissions:
@@ -35,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Fix targeted non-image warnings
-        run: node scripts/fix-nonimage-lint-warnings.mjs
+        run: node scripts/run-fix-nonimage-lint-warnings.mjs
 
       - name: Remove unused imports
         run: node scripts/remove-unused-imports.mjs
