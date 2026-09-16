@@ -1,14 +1,13 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
-import { useAuth } from "@/context/AuthContext";
 import GoogleButton from "@/components/GoogleButton";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
-import { Suspense } from "react";
+import { UI_COLORS } from "@/lib/brand";
+import { Eye,EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter,useSearchParams } from "next/navigation";
+import { Suspense,useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

@@ -1,27 +1,25 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import {
-  MapPin,
-  BookOpen,
-  Clock,
-  Send,
-  PlusCircle,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  ArrowLeft,
-} from "lucide-react";
-import api from "@/lib/axios";
-import { timeAgo } from "@/lib/site";
-import { useCurrentTime } from "@/hooks/useCurrentTime";
 import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
 import { useAuth } from "@/context/AuthContext";
+import { useCurrentTime } from "@/hooks/useCurrentTime";
+import api from "@/lib/axios";
+import { timeAgo } from "@/lib/site";
+import {
+  ArrowLeft,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  MapPin,
+  PlusCircle,
+  Send,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter,useSearchParams } from "next/navigation";
+import { useCallback,useEffect,useState } from "react";
 
 interface RequestItem {
   _id: string;

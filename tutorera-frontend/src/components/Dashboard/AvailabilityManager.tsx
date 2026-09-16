@@ -1,8 +1,8 @@
 "use client";
 // components/dashboard/AvailabilityManager.tsx
-import { useState, useEffect } from "react";
 import axiosInstance from "@/lib/axios";
-import { showSuccess, showError } from "@/lib/toast";
+import { showError,showSuccess } from "@/lib/toast";
+import { useEffect,useState } from "react";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 

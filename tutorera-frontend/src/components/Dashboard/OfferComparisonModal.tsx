@@ -1,10 +1,10 @@
 "use client";
-import React from "react";
-import Link from "next/link";
-import { DashBid } from "@/types/dashboard";
-import { formatPKR } from "@/lib/site";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { formatPKR } from "@/lib/site";
+import { DashBid } from "@/types/dashboard";
+import Link from "next/link";
+import React from "react";
 
 interface OfferComparisonModalProps {
   offers: DashBid[];

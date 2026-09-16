@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Play, ShieldCheck, Film, Sparkles, Calendar, CheckCircle2, MessageSquare, Video } from "lucide-react";
 import AvatarImage from "@/components/Common/AvatarImage";
+import { Calendar,CheckCircle2,Film,Play,ShieldCheck,Sparkles,Video } from "lucide-react";
+import { useState } from "react";
 
 interface TutorVideoPlayerProps {
   videoUrl?: string | null;

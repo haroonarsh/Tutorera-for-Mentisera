@@ -1,11 +1,10 @@
 "use client";
-import { useState, useCallback } from "react";
 import {
-  PLATFORM_FEE_PERCENT,
   GST_ON_PLATFORM_FEE_PERCENT,
-  TOTAL_FEE_PERCENT,
-  MARKETPLACE_FEES,
+  PLATFORM_FEE_PERCENT,
+  TOTAL_FEE_PERCENT
 } from "@/lib/site";
+import { useCallback,useState } from "react";
 
 const C = {
   primary: "#021550",

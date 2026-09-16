@@ -1,12 +1,12 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
-import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
-import { useGeoData, convertToPKR } from "@/lib/geoService";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { convertToPKR,useGeoData } from "@/lib/geoService";
+import { BookOpen,Camera,Mail,MapPin,Phone,Save,User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

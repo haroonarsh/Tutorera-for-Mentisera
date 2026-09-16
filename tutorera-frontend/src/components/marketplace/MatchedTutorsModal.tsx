@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { X, Sparkles, ShieldCheck, MapPin, BookOpen, Clock, MessageSquare, Check, ThumbsUp, ThumbsDown, ExternalLink } from "lucide-react";
-import axiosInstance from "@/lib/axios";
-import MatchScoreBadge from "./MatchScoreBadge";
-import { tutorProfileHref } from "@/lib/tutor-directory";
-import { showSuccess, showError } from "@/lib/toast";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import axiosInstance from "@/lib/axios";
+import { showError,showSuccess } from "@/lib/toast";
+import { tutorProfileHref } from "@/lib/tutor-directory";
+import { Check,ExternalLink,MessageSquare,ShieldCheck,Sparkles,ThumbsDown,ThumbsUp,X } from "lucide-react";
+import Link from "next/link";
+import { useEffect,useState } from "react";
+import MatchScoreBadge from "./MatchScoreBadge";
 
 interface MatchedTutor {
   tutor: {

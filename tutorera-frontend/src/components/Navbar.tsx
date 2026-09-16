@@ -1,27 +1,27 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { 
-  Bell, 
-  BriefcaseBusiness, 
-  ChevronDown, 
-  GraduationCap, 
-  LayoutDashboard, 
-  LogOut, 
-  Menu, 
-  MessageSquare, 
-  PlusCircle, 
-  ShieldCheck, 
-  User, 
-  X,
-  Briefcase
-} from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
-import BrandLogo from "@/components/BrandLogo";
+import {
+  Bell,
+  Briefcase,
+  BriefcaseBusiness,
+  ChevronDown,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  PlusCircle,
+  ShieldCheck,
+  User,
+  X
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect,useRef,useState } from "react";
 import s from "./Navbar.module.css";
 
 type MegaKey = "students" | "tutors" | "resources" | null;

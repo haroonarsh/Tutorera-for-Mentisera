@@ -1,13 +1,13 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import { Camera, Save, Shield, Monitor, Smartphone } from "lucide-react";
-import api from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 import { useAppGuard } from "@/hooks/useAppGuard";
+import api from "@/lib/axios";
+import { Camera,Monitor,Save,Shield,Smartphone } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 

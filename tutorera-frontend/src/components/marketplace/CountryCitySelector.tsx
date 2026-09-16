@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Globe, MapPin, ChevronDown, Sparkles } from "lucide-react";
-import { COUNTRIES, Country } from "@/lib/location";
+import { COUNTRIES,Country } from "@/lib/location";
+import { ChevronDown,Globe,MapPin } from "lucide-react";
+import { useMemo,useState } from "react";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 interface CountryCitySelectorProps {

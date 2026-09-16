@@ -1,22 +1,22 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import api from "@/lib/axios";
-import { useAuth } from "@/context/AuthContext";
-import { showError, showSuccess } from "@/lib/toast";
-import { calculateMarketplaceFees } from "@/lib/site";
-import { 
-  CheckCircle, 
-  Clock, 
-  MessageSquare, 
-  Sparkles, 
-  ArrowRight, 
-  RotateCcw,
-  CreditCard
-} from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/axios";
+import { calculateMarketplaceFees } from "@/lib/site";
+import { showError,showSuccess } from "@/lib/toast";
+import {
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  MessageSquare,
+  RotateCcw,
+  Sparkles
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter,useSearchParams } from "next/navigation";
+import { Suspense,useCallback,useEffect,useState } from "react";
 
 type History = { 
   _id: string; 

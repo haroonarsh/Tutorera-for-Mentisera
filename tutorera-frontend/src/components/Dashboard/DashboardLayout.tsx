@@ -1,15 +1,24 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
+import { useAuth } from "@/context/AuthContext";
+import { UI_COLORS } from "@/lib/brand";
 import {
-  LayoutDashboard, Bell, Settings, LogOut,
-  ChevronLeft, ChevronRight, MessageSquare,
-  CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness,
+  Bell,
+  BriefcaseBusiness,
+  ChevronLeft,ChevronRight,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Search,
+  Settings,
+  TrendingUp,
+  User,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname,useRouter } from "next/navigation";
+import { useState } from "react";
 
 const C = UI_COLORS;
 
