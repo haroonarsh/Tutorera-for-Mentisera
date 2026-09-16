@@ -205,7 +205,9 @@ function hasCnic(profile: ITutorProfile): boolean {
 }
 
 function hasDemoVideo(profile: ITutorProfile): boolean {
-  return Boolean(profile.videoIntro && profile.videoIntroPublicId);
+  // The onboarding flow also permits a validated hosted demo URL, which has no
+  // Cloudinary public ID. Visibility is still controlled by admin approval.
+  return Boolean(profile.videoIntro);
 }
 
 export function policeIsRequired(profile: ITutorProfile): boolean {
@@ -235,6 +237,14 @@ export function isHomeTuitionEligible(profile: ITutorProfile): boolean {
 }
 
 export function computeProgress(profile: ITutorProfile): { completed: number; total: number; percent: number } {
+  // Once a profile has cleared marketplace approval, every step below has
+  // necessarily already passed review - show 100% rather than letting
+  // unrelated profile-completeness fields (bio, hourly rate, availability,
+  // date of birth, etc.) that were never part of what admins actually
+  // verify keep the bar stuck below 100 after approval.
+  if (isMarketplaceEligible(profile)) {
+    return { completed: 100, total: 100, percent: 100 };
+  }
   const steps: { done: boolean; weight: number }[] = [
     { done: hasPersonalInfo(profile), weight: 10 },
     { done: hasEducation(profile), weight: 20 },
@@ -453,7 +463,11 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       cta: { label: "Re-submit police verification", href: RESUBMIT_URL },
     });
   }
-  if (policeIsRequired(profile) && profile.policeVerificationStatus === "not_submitted") {
+  if (policeIsRequired(profile) && profile.policeVerificationStatus !== "approved" && profile.policeVerificationStatus !== "pending" && profile.policeVerificationStatus !== "rejected") {
+    // Covers both the normal "not_submitted" case and the (should no longer
+    // happen going forward, but defensively handled) "not_required" case a
+    // profile could be stuck in if teachingMode changed to in-person/both
+    // before the write-paths that reset this were fixed.
     reasons.push({
       key: "policeMissing",
       title: "Background and safety verification required",

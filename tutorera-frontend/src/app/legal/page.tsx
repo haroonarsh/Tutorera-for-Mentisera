@@ -19,7 +19,7 @@ import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Global Legal & Compliance Center | TUTORERA",
+  title: "Global Legal & Compliance Center",
   description: "Official legal frameworks, marketplace terms, privacy policies, safety standards, and country-specific regulatory schedules for TUTORERA by MENTISERA.",
 };
 

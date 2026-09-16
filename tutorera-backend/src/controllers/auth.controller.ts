@@ -5,8 +5,14 @@ import { logAudit } from "../utils/logAudit";
 import { sendTokenResponse } from "../utils/generateToken";
 import { AuthRequest } from "../types";
 import crypto from "crypto";
-import sendEmail from "../utils/sendEmail";
-import { welcomeEmail, tutorPendingEmail, adminNewUserSignupEmail } from "../utils/emailTemplates";
+import { NotificationService } from "../services/notification.service";
+import {
+  studentWelcomeEmail,
+  parentWelcomeEmail,
+  tutorWelcomeApplicationEmail,
+  adminNewUserSignupEmail,
+  passwordResetOtpEmail,
+} from "../utils/emailTemplates";
 import StudentProfile from "../models/StudentProfile.model";
 import TutorProfile from "../models/TutorProfile.model";
 import ParentProfile from "../models/ParentProfile.model";
@@ -88,31 +94,26 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    const payload: any = { role: user.role };
     if (user.role === "tutor") {
-      const { subject, html } = tutorPendingEmail(user.name);
-      await sendEmail({ to: user.email, subject, html });
-      if (user.applicationId && trackingToken) {
-        const trackingUrl = `${TRACKING_BASE_URL}/track/tutor/${trackingToken}`;
-        const welcome = trackingWelcomeEmail(user.name, { applicationId: user.applicationId, trackingUrl, statusUrl: `${TRACKING_BASE_URL}/tutor/application-status` });
-        await sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html });
-      }
-    } else {
-      const { subject, html } = welcomeEmail(user.name);
-      await sendEmail({ to: user.email, subject, html });
+      const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
+      payload.applicationId = user.applicationId;
+      payload.trackingUrl = trackingUrl;
     }
+    await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
 
     try {
       // Platform admin notification to mentiserapk@gmail.com
-      const adminEmail = adminNewUserSignupEmail({
+      await NotificationService.publishEvent("system_admin", "admin.user_registered", {
         name: user.name,
         email: user.email,
         role: user.role,
         phone: user.phone,
         city: user.city,
+        country: user.countryName,
         authProvider: "local",
         applicationId: user.applicationId,
       });
-      await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html });
     } catch (adminErr) {
       console.error("Failed to send admin signup alert email:", adminErr);
     }
@@ -246,28 +247,29 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     }
 
     try {
+      const payload: any = { role: user.role };
       if (user.role === "tutor") {
-        const { subject, html } = tutorPendingEmail(user.name);
-        await sendEmail({ to: user.email, subject, html });
-        if (user.applicationId && trackingToken) {
-          const trackingUrl = `${TRACKING_BASE_URL}/track/tutor/${trackingToken}`;
-          const welcome = trackingWelcomeEmail(user.name, { applicationId: user.applicationId, trackingUrl, statusUrl: `${TRACKING_BASE_URL}/tutor/application-status` });
-          await sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html });
-        }
-      } else if (user.role === "student") {
-        const { subject, html } = welcomeEmail(user.name);
-        await sendEmail({ to: user.email, subject, html });
+        const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
+        payload.applicationId = user.applicationId;
+        payload.trackingUrl = trackingUrl;
       }
+      await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
 
-      // Platform admin notification to mentiserapk@gmail.com
-      const adminEmail = adminNewUserSignupEmail({
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        authProvider: "google",
-        applicationId: user.applicationId,
-      });
-      await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html });
+      try {
+        // Platform admin notification to mentiserapk@gmail.com
+        await NotificationService.publishEvent("system_admin", "admin.user_registered", {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone || "N/A",
+          city: user.city || "Unknown",
+          country: user.countryName || "Unknown",
+          authProvider: "google",
+          applicationId: user.applicationId,
+        });
+      } catch (adminErr) {
+        console.error("Failed to send admin signup alert email:", adminErr);
+      }
     } catch (err) {
       console.error("Failed to send Google signup email:", err);
     }
@@ -350,39 +352,33 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
       message: "Tutor application created",
       isPublic: true,
     });
-    try {
-      const { subject, html } = tutorPendingEmail(user.name);
-      await sendEmail({ to: user.email, subject, html });
-      if (user.applicationId && trackingToken) {
-        const trackingUrl = `${TRACKING_BASE_URL}/track/tutor/${trackingToken}`;
-        const welcome = trackingWelcomeEmail(user.name, { applicationId: user.applicationId, trackingUrl, statusUrl: `${TRACKING_BASE_URL}/tutor/application-status` });
-        await sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html });
-      }
-    } catch (err) {
-      console.error("Failed to send tutor welcome email:", err);
-    }
-  } else if (role === "student" || role === "parent") {
-    try {
-      const { subject, html } = welcomeEmail(user.name);
-      await sendEmail({ to: user.email, subject, html });
-    } catch (err) {
-      console.error("Failed to send welcome email:", err);
-    }
   }
 
   try {
-    const adminEmail = adminNewUserSignupEmail({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      city: user.city,
-      authProvider: user.authProvider || "google",
-      applicationId: user.applicationId,
-    });
-    await sendEmail({ to: "mentiserapk@gmail.com", subject: adminEmail.subject, html: adminEmail.html });
-  } catch (adminErr) {
-    console.error("Failed to send admin role selection alert email:", adminErr);
+    const payload: any = { role: user.role };
+    if (user.role === "tutor") {
+      const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
+      payload.applicationId = user.applicationId;
+      payload.trackingUrl = trackingUrl;
+    }
+    await NotificationService.publishEvent(user._id.toString(), "auth.registered", payload);
+
+    try {
+      await NotificationService.publishEvent("system_admin", "admin.user_registered", {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone || "N/A",
+        city: user.city || "Unknown",
+        country: user.countryName || "Unknown",
+        authProvider: "google",
+        applicationId: user.applicationId,
+      });
+    } catch (adminErr) {
+      console.error("Failed to send admin role selection alert email:", adminErr);
+    }
+  } catch (err) {
+    console.error("Failed to send registration email:", err);
   }
 
   sendTokenResponse(user, 200, res);
@@ -406,17 +402,53 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 // @route   PATCH /api/auth/update-profile
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { name, phone, city } = req.body;
+  const { name, phone, city, address, countryCode, countryName, preferredLanguage, postalCode, lat, lng } = req.body;
+  const updates: any = {};
+
+  for (const [key, value] of Object.entries({ name, phone, city, address, countryCode, countryName, postalCode })) {
+    if (typeof value === "string") updates[key] = value.trim();
+  }
+
+  if (typeof lat === "number" && typeof lng === "number") {
+    updates.location = { type: "Point", coordinates: [lng, lat] };
+  }
+
+  // English is the sole reviewed UI locale at launch.  Persisting an
+  // arbitrary language here previously caused the client to render an
+  // incomplete translation resource.  Additional locales can be enabled
+  // deliberately once their copy and accessibility review are complete.
+  if (preferredLanguage !== undefined) {
+    if (preferredLanguage !== "en") {
+      res.status(400).json({ success: false, message: "That interface language is not available yet." });
+      return;
+    }
+    updates.preferredLanguage = "en";
+  }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { name, phone, city },
+    { $set: updates },
     { new: true, runValidators: true }
   );
 
   if (!user) {
     res.status(404).json({ success: false, message: "User not found" });
     return;
+  }
+
+  // Sync spatial and location fields to TutorProfile and StudentProfile
+  const profileUpdates: any = {};
+  if (updates.city) profileUpdates.city = updates.city;
+  if (updates.countryCode) profileUpdates.countryCode = updates.countryCode;
+  if (updates.countryName) profileUpdates.countryName = updates.countryName;
+  if (updates.postalCode) profileUpdates.postalCode = updates.postalCode;
+  if (updates.location) profileUpdates.location = updates.location;
+
+  if (Object.keys(profileUpdates).length > 0) {
+    await Promise.all([
+      TutorProfile.findOneAndUpdate({ user: user._id }, { $set: profileUpdates }),
+      StudentProfile.findOneAndUpdate({ user: user._id }, { $set: profileUpdates }),
+    ]);
   }
 
   res.status(200).json({
@@ -491,21 +523,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   await user.save();
 
   try {
-    await sendEmail({
-      to: user.email,
-      subject: "TUTORERA® — Password Reset Code",
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-          <h2 style="color: #1a1a2e;">Password Reset Code</h2>
-          <p style="color: #374151;">Hi ${user.name},</p>
-          <p style="color: #374151;">Use the code below to reset your TUTORERA® password. This code expires in 10 minutes.</p>
-          <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
-            <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #1a1a2e;">${otp}</span>
-          </div>
-          <p style="color: #6b7280; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
+    await NotificationService.publishEvent(user._id.toString(), "auth.password.reset_requested", { otp });
   } catch (err) {
     // Roll back the OTP if email fails, so a stale unusable OTP doesn't linger
     user.resetPasswordToken = undefined;

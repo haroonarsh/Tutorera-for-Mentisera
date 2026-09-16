@@ -2,10 +2,11 @@ import { GST_EFFECTIVE_PERCENT,PLATFORM_FEE_PERCENT,SUPPORT_EMAIL } from "@/lib/
 import type { Metadata } from "next";
 import Link from "next/link";
 import s from "../compliance-pages.module.css";
+import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
-  title: "How TUTORERA Works",
-  description: "Complete student-led customer journey from request posting to tutor offers, checkout, payment verification, booking confirmation, delivery, and support.",
+  title: "How It Works",
+  description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -34,15 +35,19 @@ export default function HowItWorksPage() {
     <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works</h1>
-        <p>A complete public walkthrough of how students post requirements, receive tutor offers, lock a final rate in the request currency, and complete tutoring services.</p>
+        <p>TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.</p>
       </section>
 
       <section className={s.container}>
         <h2 className={s.sectionTitle}>Customer journey diagram</h2>
         <div className={s.flow}>{customerJourney.map((step) => <span key={step}>{step}</span>)}</div>
-      </section>
+  </section>
 
-      <section className={s.soft}>
+  <section className={s.container} style={{ padding: "2rem 0", textAlign: "center" }}>
+    <AdBanner slot="7346189519" format="auto" label="Advertisement" />
+  </section>
+
+  <section className={s.soft}>
         <div className={s.container}>
           <div className={s.grid}>
             <article className={s.card}>

@@ -1,7 +1,7 @@
 // src/scripts/backfillRequestExpiry.ts
 // Migration script to backfill expiresAt and handle legacy request records safely.
-// Run dry-run: ts-node src/scripts/backfillRequestExpiry.ts --dry-run
-// Apply:       ts-node src/scripts/backfillRequestExpiry.ts --apply
+// Run dry-run: npx tsx src/scripts/backfillRequestExpiry.ts --dry-run
+// Apply:       npx tsx src/scripts/backfillRequestExpiry.ts --apply
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";

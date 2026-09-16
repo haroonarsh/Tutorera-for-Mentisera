@@ -10,7 +10,7 @@ import Link from "next/link";
 import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Home & In-Person Tuition Terms | TUTORERA",
+  title: "Home & In-Person Tuition Terms",
   description: "Contractual safety standards, address privacy, background verification, travel rules, and safeguarding policies for in-person home tutoring.",
 };
 

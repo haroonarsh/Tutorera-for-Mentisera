@@ -19,7 +19,8 @@ import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
-import sendEmail from "../utils/sendEmail";
+import MarketConfig from "../models/MarketConfig.model";
+import { NotificationService } from "../services/notification.service";
 import { EMAIL_EVENTS } from "../utils/emailEvents";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail, reviewRequestEmail } from "../utils/emailTemplates";
 import { getSignedViewUrl } from "../utils/uploadToCloudinary";
@@ -35,6 +36,7 @@ import {
   homeTuitionDeactivatedEmail,
 } from "../utils/trackingEmails";
 import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
+import { recordPaymentLedger } from "../services/paymentProvider.service";
 
 
 // @desc    Get dashboard stats
@@ -188,10 +190,11 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   });
 
   try {
-    const { subject, html } = status === "approved"
-      ? tutorApprovedEmail(tutorUser.name)
-      : tutorRejectedEmail(tutorUser.name, reason);
-    await sendEmail({ to: tutorUser.email, subject, html });
+    if (status === "approved") {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    } else {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    }
   } catch (err) {
     console.error("Failed to send tutor verification email:", err);
   }
@@ -227,8 +230,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
     try {
-      const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
     } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/tutor/application-status" });
   } else if (!mpEligible && profile.marketplaceEligible) {
@@ -237,8 +239,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
     try {
-      const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: cta });
     } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
@@ -248,8 +249,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
     try {
-      const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "home_tuition_approved", { ctaArgs: cta });
     } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
   } else if (!htEligible && profile.homeTuitionEligible) {
@@ -258,8 +258,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
     try {
-      const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
-      await sendEmail({ to: tutorUser.email, subject, html });
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "HomeTuition", reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: cta });
     } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
@@ -346,10 +345,11 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       });
 
       try {
-        const { subject, html } = status === "approved"
-          ? tutorApprovedEmail(tutorUser.name)
-          : tutorRejectedEmail(tutorUser.name, reason);
-        await sendEmail({ to: tutorUser.email, subject, html });
+        if (status === "approved") {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    } else {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    }
       } catch (err) {
         console.error(`Failed to send verification email to ${tutorUser.email}:`, err);
       }
@@ -383,8 +383,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
         try {
-          const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
         } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/tutor/application-status" });
       } else if (!mpEligible && profile.marketplaceEligible) {
@@ -393,8 +392,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
         try {
-          const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: cta });
         } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
       }
@@ -404,8 +402,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
         try {
-          const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "home_tuition_approved", { ctaArgs: cta });
         } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
       } else if (!htEligible && profile.homeTuitionEligible) {
@@ -414,8 +411,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
         try {
-          const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
-          await sendEmail({ to: tutorUser.email, subject, html });
+          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "HomeTuition", reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: cta });
         } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
       }
@@ -437,6 +433,166 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
     message: `Bulk verification complete: ${results.approved} approved, ${results.rejected} rejected, ${results.failed} failed`,
     results,
   });
+};
+
+// @desc    Admin forceful upload of tutor docs
+// @route   POST /api/admin/tutors/:id/upload-docs
+// @access  Private (admin)
+export const uploadTutorDocsAdmin = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const tutorId = req.params.id; // This is the user _id, not profile _id
+
+    if (!files || Object.keys(files).length === 0) {
+      res.status(400).json({ success: false, message: "No files uploaded" });
+      return;
+    }
+
+    const existingProfile = await TutorProfile.findOne({ user: tutorId });
+    if (!existingProfile) {
+      res.status(404).json({ success: false, message: "Tutor profile not found." });
+      return;
+    }
+
+    const tutorUser = await User.findById(tutorId);
+    if (!tutorUser) {
+      res.status(404).json({ success: false, message: "User not found." });
+      return;
+    }
+
+  const { verifyFileSignature } = await import("../middlewares/upload.middleware");
+  const { uploadToCloudinary, deleteFromCloudinary } = await import("../utils/uploadToCloudinary");
+  
+  const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+  const VIDEO_TYPES = ["video/mp4"];
+
+  const updateData: Record<string, any> = {};
+  const replacedAssets: { publicId: string; resourceType?: "video" }[] = [];
+
+  // CNIC Front
+  if (files.cnicFront?.[0]) {
+    const { valid } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid CNIC front file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
+    updateData.cnicFront = result.secure_url;
+    updateData.cnicFrontPublicId = result.public_id;
+    updateData.cnicVerificationStatus = "approved";
+    updateData.cnicRejectionReason = "";
+    if (existingProfile.cnicFrontPublicId) replacedAssets.push({ publicId: existingProfile.cnicFrontPublicId });
+  }
+
+  // CNIC Back
+  if (files.cnicBack?.[0]) {
+    const { valid } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid CNIC back file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
+    updateData.cnicBack = result.secure_url;
+    updateData.cnicBackPublicId = result.public_id;
+    updateData.cnicVerificationStatus = "approved";
+    updateData.cnicRejectionReason = "";
+    if (existingProfile.cnicBackPublicId) replacedAssets.push({ publicId: existingProfile.cnicBackPublicId });
+  }
+
+  // Degree
+  if (files.degree?.[0]) {
+    const { valid } = await verifyFileSignature(files.degree[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid degree file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
+    const rawEducation = Array.isArray(existingProfile.education) ? existingProfile.education : [];
+    const education: Array<Record<string, unknown>> = rawEducation.map((entry) =>
+      typeof (entry as any).toObject === "function" ? (entry as any).toObject() : { ...entry }
+    );
+    if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
+    const previousPublicId = String(education[0].degreeDocPublicId || "");
+    education[0].degreeDoc = result.secure_url;
+    education[0].degreeDocPublicId = result.public_id;
+    updateData.education = education;
+    updateData.degreeVerificationStatus = "approved";
+    updateData.degreeRejectionReason = "";
+    if (previousPublicId) replacedAssets.push({ publicId: previousPublicId });
+  }
+
+  // Police Certificate
+  if (files.policeCertificate?.[0]) {
+    const { valid } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid police certificate file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
+    updateData.policeCertificate = result.secure_url;
+    updateData.policeCertificatePublicId = result.public_id;
+    updateData.policeVerificationStatus = "approved";
+    updateData.policeRejectionReason = "";
+    if (existingProfile.policeCertificatePublicId) replacedAssets.push({ publicId: existingProfile.policeCertificatePublicId });
+  }
+
+  // Video Intro
+  if (files.videoIntro?.[0]) {
+    const { valid } = await verifyFileSignature(files.videoIntro[0].buffer, VIDEO_TYPES);
+    if (!valid) {
+      res.status(400).json({ success: false, message: "Invalid video file format" });
+      return;
+    }
+    const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/verification/videos", "video", false);
+    updateData.videoIntro = result.secure_url;
+    updateData.videoIntroPublicId = result.public_id;
+    updateData.demoVideoStatus = "approved";
+    updateData.demoVideoRejectionReason = "";
+    if (existingProfile.videoIntroPublicId) replacedAssets.push({ publicId: existingProfile.videoIntroPublicId, resourceType: "video" });
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ success: false, message: "No valid files were uploaded." });
+    return;
+  }
+
+  // Automatically approve the profile if admin uploads it
+  updateData.verificationStatus = "approved";
+  updateData.isVerified = true;
+  updateData.lastStatusChangeAt = new Date();
+
+  const updated = await TutorProfile.findByIdAndUpdate(existingProfile._id, updateData, { new: true });
+
+  await Promise.all(replacedAssets.map(({ publicId, resourceType }) =>
+    deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
+  ));
+
+    await logAudit({
+      action: "admin_override_documents",
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "TutorProfile",
+      targetId: existingProfile._id.toString(),
+      targetName: tutorUser.name,
+      metadata: { uploadedFields: Object.keys(updateData) },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Documents forcibly uploaded and approved.",
+      profile: updated,
+    });
+  } catch (error: any) {
+    console.error("Admin document upload error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to upload documents. Please try again.",
+      error: process.env.NODE_ENV === "development" ? error.toString() : undefined,
+    });
+  }
 };
 
 // @desc    Get all users
@@ -592,18 +748,70 @@ export const updatePaymentStatus = async (
     try {
       const studentUser = await User.findById(booking.student).select("email");
       if (studentUser) {
-        const { subject, html } = paymentConfirmedEmail(
-          (booking.student as any)?.name || "Student",
-          (booking.tutor as any)?.name || "Tutor",
-          booking.amount
-        );
-        await sendEmail({ to: studentUser.email, subject, html });
+        await NotificationService.publishEvent(studentUser._id.toString(), "payment_receipt", {
+          tutorName: (booking.tutor as any)?.name || "Tutor",
+          amount: booking.amount,
+          bookingId: booking._id.toString()
+        });
       }
     } catch (err) {
       console.error("Failed to send payment confirmation email:", err);
     }
   }
+  if (payoutStatus !== undefined && payoutStatus !== "paid") {
+    await recordPaymentLedger({
+      provider: "manual",
+      providerTransactionId: `booking-${booking._id.toString()}`,
+      providerEventId: `payout-${payoutStatus}-${booking._id.toString()}`,
+      eventType: "manual.adjustment",
+      status: payoutStatus === "processing" ? "processing" : payoutStatus === "failed" ? "failed" : "pending",
+      amount: booking.subtotal || booking.amount,
+      currency: booking.currency || "PKR",
+      bookingId: booking._id.toString(),
+      bidId: booking.bid?.toString(),
+      studentId: booking.student._id?.toString() || booking.student.toString(),
+      tutorId: booking.tutor._id?.toString() || booking.tutor.toString(),
+      feeSnapshot: {
+        subtotal: booking.subtotal,
+        studentFee: booking.studentFee,
+        tutorFee: booking.tutorFee,
+        tax: booking.tax,
+        studentTotal: booking.studentTotal,
+        tutorNet: booking.tutorNet,
+        platformFee: booking.platformFee,
+        feeConfig: booking.feeConfig,
+      },
+      settlementStatus: ["failed", "held"].includes(payoutStatus) ? "exception" : "expected",
+      metadata: { payoutStatus, payoutNote: booking.payoutNote || "" },
+    });
+  }
+
   if (payoutStatus === "paid") {
+    await recordPaymentLedger({
+      provider: "manual",
+      providerTransactionId: `booking-${booking._id.toString()}`,
+      providerEventId: `payout-completed-${booking._id.toString()}`,
+      eventType: "payout.completed",
+      status: "succeeded",
+      amount: booking.subtotal || booking.amount,
+      currency: booking.currency || "PKR",
+      bookingId: booking._id.toString(),
+      bidId: booking.bid?.toString(),
+      studentId: booking.student._id?.toString() || booking.student.toString(),
+      tutorId: booking.tutor._id?.toString() || booking.tutor.toString(),
+      feeSnapshot: {
+        subtotal: booking.subtotal,
+        studentFee: booking.studentFee,
+        tutorFee: booking.tutorFee,
+        tax: booking.tax,
+        studentTotal: booking.studentTotal,
+        tutorNet: booking.tutorNet,
+        platformFee: booking.platformFee,
+        feeConfig: booking.feeConfig,
+      },
+      settlementStatus: "settled",
+      metadata: { payoutStatus: "paid", paidAt: booking.payoutPaidAt?.toISOString(), payoutNote: booking.payoutNote || "" },
+    });
     await logAudit({
       action: "payout_marked_paid",
       actor: req.user?.name || "Admin",
@@ -612,6 +820,16 @@ export const updatePaymentStatus = async (
       targetId: booking._id.toString(),
       targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
       metadata: { tutorPayout: booking.tutorPayout },
+    });
+  } else if (payoutStatus !== undefined) {
+    await logAudit({
+      action: `payout_${payoutStatus}`,
+      actor: req.user?.name || "Admin",
+      actorId: req.user?._id?.toString(),
+      entity: "Booking",
+      targetId: booking._id.toString(),
+      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      metadata: { tutorPayout: booking.tutorPayout, payoutNote: booking.payoutNote || "" },
     });
   }
 
@@ -733,8 +951,15 @@ export const updateBookingStatus = async (
        const tutorUser = await User.findById(booking.tutor).select("name email");
        const requestSubject = (booking.request as any)?.subject || "your session";
        if (studentUser && tutorUser) {
-         const reviewMail = reviewRequestEmail(studentUser.name, tutorUser.name, requestSubject, booking._id.toString());
-         await sendEmail({ to: studentUser.email, subject: reviewMail.subject, html: reviewMail.html, eventType: "review_requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
+         await NotificationService.publishEvent(studentUser._id.toString(), "review.requested", {
+           tutorName: tutorUser.name,
+           subject: requestSubject,
+           bookingId: booking._id.toString(),
+           title: "How was your session?",
+           message: `Your ${requestSubject} session with ${tutorUser.name} is complete. Leave a quick review to help other students.`,
+           type: "review",
+           link: "/dashboard",
+         });
        }
      } catch (err) {
        console.error("Failed to send review request email:", err);
@@ -793,20 +1018,25 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
     .sort("-createdAt");
 
   // ── Summary stats across ALL confirmed bookings (ignore status filter for stats) ──
-  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" });
+  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" }).select("payoutStatus tutorPayout currency");
   const pendingOnes  = allConfirmed.filter(b => b.payoutStatus === "pending");
   const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
 
-  const totalPendingAmount = pendingOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
-  const totalPaidAmount    = paidOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const currencyTotals = Object.values(allConfirmed.reduce((totals, booking) => {
+    const currency = booking.currency || "PKR";
+    const current = totals[currency] || { currency, pendingAmount: 0, paidAmount: 0 };
+    if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.pendingAmount += booking.tutorPayout || 0;
+    if (booking.payoutStatus === "paid") current.paidAmount += booking.tutorPayout || 0;
+    totals[currency] = current;
+    return totals;
+  }, {} as Record<string, { currency: string; pendingAmount: number; paidAmount: number }>));
 
   res.status(200).json({
     success: true,
     stats: {
       pendingCount:        pendingOnes.length,
       paidCount:           paidOnes.length,
-      totalPendingAmount,
-      totalPaidAmount,
+      currencyTotals,
     },
     total: bookings.length,
     bookings,
@@ -1498,38 +1728,54 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   res.status(400).json({ success: false, message: "Invalid format. Use pdf or excel." });
 };
 
+export const getGlobalAnalytics = async (_req: AuthRequest, res: Response): Promise<void> => {
+  const markets = await MarketConfig.find({ isActive: true }).select("countryCode countryName launchStatus").lean();
+  const countries = await Promise.all(markets.map(async (market) => {
+    const [totalTutors, verifiedTutors, totalStudents, totalRequests, activeRequests, totalBookings] = await Promise.all([
+      User.countDocuments({ role: "tutor", countryCode: market.countryCode }), TutorProfile.countDocuments({ countryCode: market.countryCode, verificationStatus: "approved" }), User.countDocuments({ role: "student", countryCode: market.countryCode }), Request.countDocuments({ countryCode: market.countryCode }), Request.countDocuments({ countryCode: market.countryCode, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }), Booking.countDocuments({ countryCode: market.countryCode }),
+    ]);
+    return { countryCode: market.countryCode, countryName: market.countryName, launchStatus: market.launchStatus, totalTutors, verifiedTutors, totalStudents, totalRequests, activeRequests, totalBookings, totalRevenueUSD: 0, avgRating: 0, matchRate: totalRequests ? Math.round((totalBookings / totalRequests) * 100) : 0, avgResponseMin: 0 };
+  }));
+  res.json({ totalCountries: countries.length, liveCountries: countries.filter((item) => item.launchStatus === "live").length, totalTutors: countries.reduce((sum, item) => sum + item.totalTutors, 0), totalStudents: countries.reduce((sum, item) => sum + item.totalStudents, 0), totalBookings: countries.reduce((sum, item) => sum + item.totalBookings, 0), totalRevenueUSD: 0, countries });
+};
+
 // @desc    Get a short-lived signed URL to view a tutor's private verification document
 // @route   GET /api/admin/tutors/:id/document/:field
 // @access  Private (admin)
 export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { id, field } = req.params as { id: string; field: string };
-  const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
+  try {
+    const { id, field } = req.params as { id: string; field: string };
+    const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
 
-  if (!allowedFields.includes(field)) {
-    res.status(400).json({ success: false, message: "Invalid document field" });
-    return;
+    if (!allowedFields.includes(field)) {
+      res.status(400).json({ success: false, message: "Invalid document field" });
+      return;
+    }
+
+    const profile = await TutorProfile.findById(id);
+    if (!profile) {
+      res.status(404).json({ success: false, message: "Tutor profile not found" });
+      return;
+    }
+
+    let publicId: string | undefined;
+    if (field === "degreeDoc") {
+      publicId = profile.education?.[0]?.degreeDocPublicId;
+    } else {
+      publicId = (profile as any)[`${field}PublicId`];
+    }
+
+    if (!publicId) {
+      res.status(404).json({ success: false, message: "This document was uploaded before signed-URL tracking was added, or was never submitted, so it has no viewable copy on file." });
+      return;
+    }
+
+    const signedUrl = getSignedViewUrl(publicId, "image", 300);
+    res.status(200).json({ success: true, url: signedUrl });
+  } catch (error: any) {
+    console.error("Failed to generate tutor document view URL:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to generate document URL." });
   }
-
-  const profile = await TutorProfile.findById(id);
-  if (!profile) {
-    res.status(404).json({ success: false, message: "Tutor profile not found" });
-    return;
-  }
-
-  let publicId: string | undefined;
-  if (field === "degreeDoc") {
-    publicId = profile.education?.[0]?.degreeDocPublicId;
-  } else {
-    publicId = (profile as any)[`${field}PublicId`];
-  }
-
-  if (!publicId) {
-    res.status(404).json({ success: false, message: "Document not found" });
-    return;
-  }
-
-  const signedUrl = getSignedViewUrl(publicId, "image", 300);
-  res.status(200).json({ success: true, url: signedUrl });
 };
 
 // @desc    Download tutor payout report as PDF (admin)
@@ -1541,7 +1787,7 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
   try {
     const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" });
+    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" }, req.query.currency as string | undefined);
 
     const filename = `tutorera-payout-report-${data.reportReference}.pdf`;
     res.setHeader("Content-Type", "application/pdf");

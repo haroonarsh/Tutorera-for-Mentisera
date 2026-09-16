@@ -175,7 +175,7 @@ export class MatchingService {
     options: { limit?: number; skip?: number } = {}
   ): Promise<ITutorProfile[]> {
     const isOnline = request.teachingMode === "online";
-    const isHome = request.teachingMode === "in-person" || (request.teachingMode as string) === "home";
+    const isHome = request.teachingMode === "in-person"; // home tuition uses "in-person" enum value
 
     const query: Record<string, any> = {
       isVerified: true,
@@ -195,27 +195,45 @@ export class MatchingService {
         query.countryCode = { $in: request.preferredTutorCountries };
       }
     } else if (isHome) {
-      query.teachingMode = { $in: ["in-person", "both", "home"] };
+      query.teachingMode = { $in: ["in-person", "both"] };
       query.policeVerificationStatus = "approved";
       if (request.countryCode) {
         query.countryCode = request.countryCode;
       }
-      if (request.city) {
+      if (request.location && request.location.coordinates && request.location.coordinates.length === 2) {
+        query.location = {
+          $near: {
+            $geometry: request.location,
+            $maxDistance: (request.travelRadiusKm || 20) * 1000,
+          }
+        };
+      } else if (request.city) {
         query.city = new RegExp(`^${request.city.trim()}$`, "i");
       }
     } else {
       // "both" mode: show online-capable tutors everywhere, and in-person tutors only where police + location match
+      const homeSubQuery: any = {
+        teachingMode: { $in: ["in-person", "both"] },
+        policeVerificationStatus: "approved",
+      };
+      if (request.countryCode) homeSubQuery.countryCode = request.countryCode;
+      if (request.location && request.location.coordinates && request.location.coordinates.length === 2) {
+        homeSubQuery.location = {
+          $near: {
+            $geometry: request.location,
+            $maxDistance: (request.travelRadiusKm || 20) * 1000,
+          }
+        };
+      } else if (request.city) {
+        homeSubQuery.city = new RegExp(`^${request.city.trim()}$`, "i");
+      }
+
       query.$or = [
         {
           teachingMode: { $in: ["online", "both"] },
           ...(request.preferredTutorCountries ? { countryCode: { $in: request.preferredTutorCountries } } : {}),
         },
-        {
-          teachingMode: { $in: ["in-person", "both", "home"] },
-          policeVerificationStatus: "approved",
-          ...(request.countryCode ? { countryCode: request.countryCode } : {}),
-          ...(request.city ? { city: new RegExp(`^${request.city.trim()}$`, "i") } : {}),
-        },
+        homeSubQuery,
       ];
     }
 
@@ -745,7 +763,9 @@ export class MatchingService {
 
       const ranked = await this.rankTutors(request, eligibleTutors);
       const tier1Matches = ranked.filter((m) => m.matchScore >= 80).slice(0, 15);
-      const currencySymbol = request.currency || "PKR";
+      // This is the ISO currency code (e.g. "AED", "USD"), not a symbol -
+      // was misleadingly named currencySymbol despite never holding one.
+      const currencyCode = request.currency || "PKR";
 
       const notifyList = tier1Matches.length >= 3 ? tier1Matches : ranked.slice(0, 10);
 
@@ -777,7 +797,7 @@ export class MatchingService {
           if (io) {
             sendNotification(io, tutorUserId.toString(), {
               title: `New ${m.matchScore}% Match: Tuition Opportunity`,
-              message: `${request.subject} (${request.level}) · Proposed ${currencySymbol} ${request.budget.toLocaleString()}/${request.pricingUnit} · ${request.teachingMode === "online" ? "Online" : request.city || "In-person"}`,
+              message: `${request.subject} (${request.level}) · Proposed ${currencyCode} ${request.budget.toLocaleString()}/${request.pricingUnit} · ${request.teachingMode === "online" ? "Online" : request.city || "In-person"}`,
               type: "bid",
               link: "/dashboard?tab=browse",
             });

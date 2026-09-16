@@ -1,12 +1,21 @@
 "use client";
-import { useAuth } from "@/context/AuthContext";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { CheckCircle, Clock, AlertCircle, XCircle } from "lucide-react";
 import api from "@/lib/axios";
-import { UI_COLORS } from "@/lib/brand";
-import { showError,showSuccess } from "@/lib/toast";
-import { AlertCircle,CheckCircle,Clock } from "lucide-react";
-import { useEffect,useState } from "react";
+import { showSuccess, showError } from "@/lib/toast";
+import { useAuth } from "@/context/AuthContext";
+import { displayAmount } from "@/lib/currency";
 
 const C = UI_COLORS;
+const PAYMENT_TRANSITIONS: Record<string, string[]> = {
+  pending: ["received", "failed", "disputed"], received: ["confirmed", "failed", "disputed"],
+  confirmed: ["partially_refunded", "refunded", "chargeback", "disputed"], failed: ["pending"],
+  partially_refunded: ["refunded", "chargeback", "disputed"], disputed: ["confirmed", "refunded", "chargeback"],
+  refunded: [], chargeback: [],
+};
 
 interface Booking {
   _id: string;
@@ -25,14 +34,24 @@ interface Booking {
   createdAt: string;
 }
 
-export default function PaymentsPage() {
+function PaymentsContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status") || "all";
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"payments" | "payouts">("payments");
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [updating, setUpdating] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
-  const canManagePayments = user?.adminRole === "super_admin" || user?.adminRole === "finance" || user?.adminPermissions?.includes("*") || user?.adminPermissions?.includes("payment.manage");
+  const [selectedStatus, setSelectedStatus] = useState<Record<string, string>>({});
+  const canManagePayments = user?.adminRole === "super_admin" || user?.adminPermissions?.includes("*") || user?.adminPermissions?.includes("payment.manage");
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    if (s) setStatusFilter(s);
+  }, [searchParams]);
 
   useEffect(() => {
     api.get("/admin/bookings")
@@ -49,6 +68,7 @@ export default function PaymentsPage() {
         paymentNote: note[id] || "",
       });
       setBookings(prev => prev.map(b => b._id === id ? { ...b, paymentStatus } : b));
+      setSelectedStatus(prev => { const next = { ...prev }; delete next[id]; return next; });
       showSuccess("Payment status updated.");
     } catch {
       showError("Update failed.");
@@ -58,28 +78,30 @@ export default function PaymentsPage() {
   };
 
   // Summary stats
+  const formatTotals = (items: Booking[], amount: (booking: Booking) => number) => Object.entries(items.reduce((totals, booking) => {
+    const currency = booking.currency || "PKR";
+    totals[currency] = (totals[currency] || 0) + amount(booking);
+    return totals;
+  }, {} as Record<string, number>)).map(([currency, value]) => displayAmount(value, currency)).join(" · ") || "—";
   const confirmedBookings = bookings.filter(b => b.paymentStatus === "confirmed");
-  const totalReceived     = confirmedBookings.reduce((sum, b) => sum + b.amount, 0);
-  const totalPending      = bookings.filter(b => b.paymentStatus === "pending").reduce((sum, b) => sum + b.amount, 0);
-  const totalPlatformFees = confirmedBookings.reduce((sum, booking) => sum + (booking.platformFee || 0), 0);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '100%', overflowX: 'hidden' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-          Track student payments and tutor payouts. Payments are processed automatically via Rapid Gateway.
+          Review recorded student payments. Rapid Gateway checkout is available only for enabled Pakistan-market bookings; payout settlement is managed separately.
         </p>
       </div>
 
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: "Total Confirmed",  value: `PKR ${totalReceived.toLocaleString()}`,     icon: <CheckCircle size={20} color="#16a34a" />, bg: '#f0fdf4' },
-          { label: "Pending Payments", value: `PKR ${totalPending.toLocaleString()}`,       icon: <Clock size={20} color="#d97706" />,        bg: '#fffbeb' },
-          { label: "Platform Revenue", value: `PKR ${totalPlatformFees.toLocaleString()}`,  icon: <AlertCircle size={20} color={C.accent} />, bg: '#EEF5FF' },
+          { label: "Total Confirmed",  value: formatTotals(confirmedBookings, b => b.amount), icon: <CheckCircle size={20} color={STATUS_COLORS.success.color} />, bg: STATUS_COLORS.success.bg },
+          { label: "Pending Payments", value: formatTotals(bookings.filter(b => b.paymentStatus === "pending"), b => b.amount), icon: <Clock size={20} color={STATUS_COLORS.warning.color} />, bg: STATUS_COLORS.warning.bg },
+          { label: "Platform Revenue", value: formatTotals(confirmedBookings, b => b.platformFee || 0), icon: <AlertCircle size={20} color={C.accent} />, bg: UI_COLORS.accentLight },
         ].map(card => (
-          <div key={card.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem', border: '1px solid #e5e7eb', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div key={card.label} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.25rem', border: `1px solid ${UI_COLORS.border}`, display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', backgroundColor: card.bg, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {card.icon}
             </div>
@@ -92,19 +114,49 @@ export default function PaymentsPage() {
       </div>
 
       {/* Fee info banner */}
-      <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: '#166534' }}>
+      <div style={{ backgroundColor: STATUS_COLORS.success.bg, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: '0.75rem', padding: '0.875rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: STATUS_COLORS.success.color }}>
         💡 <strong>Tutor fee: 20% plus 15% tax on that fee (23% effective tutor deduction).</strong> Students currently pay the agreed amount without a marketplace fee.
         Example: agreed PKR 1,000 → student pays PKR 1,000 → estimated tutor net PKR 770.
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0', backgroundColor: 'white', borderRadius: '0.75rem', padding: '0.3rem', marginBottom: '1.5rem', border: '1px solid #e5e7eb', width: 'fit-content' }}>
-        {(["payments", "payouts"] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500 }}>
-            {tab === "payments" ? "💳 Student Payments" : "💸 Tutor Payouts"}
-          </button>
-        ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '0', backgroundColor: UI_COLORS.surface, borderRadius: '0.75rem', padding: '0.3rem', border: `1px solid ${UI_COLORS.border}`, width: 'fit-content' }}>
+          {(["payments", "payouts"] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              style={{ padding: '0.6rem 1.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize', backgroundColor: activeTab === tab ? C.accent : 'transparent', color: activeTab === tab ? 'white' : C.gray500 }}>
+              {tab === "payments" ? "💳 Student Payments" : "💸 Tutor Payouts"}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "payments" && (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {["all", "pending", "failed", "confirmed", "disputed", "refunded"].map(status => {
+              const active = statusFilter === status;
+              const count = status === "all" ? bookings.length : bookings.filter(b => b.paymentStatus === status).length;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '999px',
+                    fontSize: '0.75rem',
+                    fontWeight: active ? 800 : 600,
+                    border: active ? `1px solid ${UI_COLORS.accent}` : `1px solid ${UI_COLORS.border}`,
+                    background: active ? UI_COLORS.accent : UI_COLORS.surface,
+                    color: active ? UI_COLORS.surface : TEXT_COLORS.muted,
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {status} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -119,39 +171,39 @@ export default function PaymentsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {bookings.map(booking => {
+          {bookings.filter(b => activeTab !== "payments" || statusFilter === "all" || b.paymentStatus === statusFilter).map(booking => {
             const platformFee = booking.platformFee || 0;
             const tutorPayout = booking.tutorPayout || 0;
             const curr = booking.currency || "PKR";
             return (
-              <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+              <div key={booking._id} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${UI_COLORS.border}` }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
 
                   {/* Person Info */}
                   <div>
                     {activeTab === "payments" ? (
                       <>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Student</p>
+                        <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.3rem' }}>Student</p>
                         <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>{booking.student?.name}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.student?.email}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.student?.phone}</p>
                       </>
                     ) : (
                       <>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.3rem' }}>Tutor</p>
+                        <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.3rem' }}>Tutor</p>
                         <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.95rem' }}>{booking.tutor?.name}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.tutor?.email}</p>
                         <p style={{ color: C.gray500, fontSize: '0.8rem' }}>{booking.tutor?.phone}</p>
                       </>
                     )}
-                    <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    <p style={{ color: TEXT_COLORS.muted, fontSize: '0.75rem', marginTop: '0.5rem' }}>
                       Booked: {new Date(booking.createdAt).toLocaleDateString()}
                     </p>
                   </div>
 
                   {/* Amount Breakdown */}
                   <div style={{ backgroundColor: C.gray50, borderRadius: '0.625rem', padding: '1rem' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem' }}>
                       {activeTab === "payments" ? "Amount to Receive from Student" : "Amount to Pay Tutor"}
                     </p>
                     <p style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary }}>
@@ -172,7 +224,7 @@ export default function PaymentsPage() {
 
                   {/* Status + Actions */}
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.5rem' }}>
                       {activeTab === "payments" ? "Payment Status" : "Payout Status"}
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -180,59 +232,52 @@ export default function PaymentsPage() {
                         <>
                           <select
                             title="Payment status"
-                            value={booking.paymentStatus}
+                            value={selectedStatus[booking._id] || booking.paymentStatus}
                             disabled={!canManagePayments}
-                            onChange={e => setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, paymentStatus: e.target.value } : b))}
-                            style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: 'white' }}>
-                            <option value="pending">Pending</option>
-                            <option value="received">Received (Unconfirmed)</option>
-                            <option value="confirmed">Confirmed ✅</option>
-                            <option value="refunded">Refunded</option>
+                            onChange={e => {
+                              const nextStatus = e.target.value;
+                              const allowed = PAYMENT_TRANSITIONS[booking.paymentStatus] || [];
+                              if (nextStatus !== booking.paymentStatus && !allowed.includes(nextStatus)) return;
+                              setSelectedStatus(prev => ({ ...prev, [booking._id]: nextStatus }));
+                            }}
+                            style={{ padding: '0.5rem', border: `1px solid ${UI_COLORS.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none', backgroundColor: UI_COLORS.surface }}>
+                            <option value="pending" disabled={booking.paymentStatus !== "pending" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("pending")}>Pending</option>
+                            <option value="received" disabled={booking.paymentStatus !== "received" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("received")}>Received (Unconfirmed)</option>
+                            <option value="confirmed" disabled={booking.paymentStatus !== "confirmed" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("confirmed")}>Confirmed ✅</option>
+                            <option value="refunded" disabled={booking.paymentStatus !== "refunded" && !(PAYMENT_TRANSITIONS[booking.paymentStatus] || []).includes("refunded")}>Refunded</option>
+                            {(PAYMENT_TRANSITIONS[booking.paymentStatus] || [])
+                              .filter(status => !["pending", "received", "confirmed", "refunded"].includes(status))
+                              .map(status => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
                           </select>
                           <input
                             value={note[booking._id] || ""}
                             disabled={!canManagePayments}
                             onChange={e => setNote(prev => ({ ...prev, [booking._id]: e.target.value }))}
                             placeholder="Required change reason (8+ characters)"
-                            style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
+                            style={{ padding: '0.5rem', border: `1px solid ${UI_COLORS.border}`, borderRadius: '0.4rem', fontSize: '0.8rem', outline: 'none' }} />
                           <button
                             type="button"
-                            onClick={() => updatePayment(booking._id, booking.paymentStatus)}
-                            disabled={updating === booking._id || !canManagePayments || (note[booking._id] || "").trim().length < 8}
-                            style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+                            onClick={() => updatePayment(booking._id, selectedStatus[booking._id] || booking.paymentStatus)}
+                            disabled={updating === booking._id || !canManagePayments || !selectedStatus[booking._id] || (note[booking._id] || "").trim().length < 8}
+                            style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? UI_COLORS.accentBright : C.accent, color: UI_COLORS.surface, border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
                             {updating === booking._id ? "Saving..." : "Update Payment"}
                           </button>
                         </>
                       ) : (
                         <>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? '#f0fdf4' : '#fffbeb', color: booking.payoutStatus === 'paid' ? '#16a34a' : '#d97706', width: 'fit-content' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: booking.payoutStatus === 'paid' ? STATUS_COLORS.success.bg : STATUS_COLORS.warning.bg, color: booking.payoutStatus === 'paid' ? STATUS_COLORS.success.color : STATUS_COLORS.warning.color, width: 'fit-content' }}>
                             {booking.payoutStatus === 'paid' ? <CheckCircle size={13} /> : <Clock size={13} />}
                             {booking.payoutStatus === 'paid' ? 'Paid Out' : 'Payout Pending'}
                           </div>
                           {booking.payoutStatus !== 'paid' && booking.paymentStatus === 'confirmed' && (
-                            <button
-                              onClick={async () => {
-                                setUpdating(booking._id);
-                                try {
-                                  await api.patch(`/admin/bookings/${booking._id}/payment`, {
-                                    payoutStatus: 'paid',
-                                    payoutNote: `Paid ${curr} ${tutorPayout.toLocaleString()} to tutor on ${new Date().toLocaleDateString()}`,
-                                  });
-                                  setBookings(prev => prev.map(b => b._id === booking._id ? { ...b, payoutStatus: 'paid' } : b));
-                                  showSuccess("Payout status updated.");
-                                } catch {
-                                  showError("Failed to update payout status.");
-                                } finally {
-                                  setUpdating(null);
-                                }
-                              }}
-                              disabled={updating === booking._id}
-                              style={{ padding: '0.5rem', backgroundColor: updating === booking._id ? '#86efac' : '#16a34a', color: 'white', border: 'none', borderRadius: '0.4rem', cursor: updating === booking._id ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
-                              {updating === booking._id ? "Saving..." : "Mark as Paid Out"}
-                            </button>
+                            <Link
+                              href="/admin/payouts"
+                              style={{ padding: '0.5rem', backgroundColor: STATUS_COLORS.success.color, color: UI_COLORS.surface, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: '600', textAlign: 'center', textDecoration: 'none' }}>
+                              Open payout operations
+                            </Link>
                           )}
                           {booking.paymentStatus !== 'confirmed' && (
-                            <p style={{ fontSize: '0.75rem', color: '#9ca3af' }}>⚠️ Confirm student payment first</p>
+                            <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted }}>⚠️ Confirm student payment first</p>
                           )}
                         </>
                       )}
@@ -246,5 +291,13 @@ export default function PaymentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading Payments...</div>}>
+      <PaymentsContent />
+    </Suspense>
   );
 }

@@ -1,13 +1,14 @@
 "use client";
-import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
-import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
-import { COUNTRIES,getCitiesForCountry } from "@/lib/location";
-import { formatMoney } from "@/lib/site";
-import { DashRequest } from "@/types/dashboard";
-import { BookOpen,Clock,MapPin,Send } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import api from "@/lib/axios";
+import { MapPin, BookOpen, Clock, Send } from "lucide-react";
 import Link from "next/link";
-import { useCallback,useEffect,useState } from "react";
+import PlaceBidModal from "@/components/Dashboard/PlaceBidModal";
+import { DashRequest } from "@/types/dashboard";
+import { formatMoney } from "@/lib/site";
+import { COUNTRIES, getCitiesForCountry } from "@/lib/location";
+import { useGeoData } from "@/lib/geoService";
 
 const C = UI_COLORS;
 
@@ -39,11 +40,28 @@ export default function BrowseRequestsPage() {
   const [level, setLevel] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
+  const [teachingMode, setTeachingMode] = useState("");
+  const [curriculum, setCurriculum] = useState("");
+  const [language, setLanguage] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [bidModalRequest, setBidModalRequest] = useState<RequestItem | null>(null);
+  const geo = useGeoData();
 
-  const availableCities = country ? getCitiesForCountry(country) : [];
+  const [availableCities, setAvailableCities] = useState<{ id?: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (!country) { setAvailableCities([]); return; }
+    let cancelled = false;
+    api.get(`/geo/cities?country=${encodeURIComponent(country)}&limit=100`)
+      .then((res) => {
+        if (cancelled) return;
+        const remote = (res.data?.cities || []).map((c: { _id?: string; name: string }) => ({ id: c._id, name: c.name }));
+        setAvailableCities(remote.length > 0 ? remote : getCitiesForCountry(country));
+      })
+      .catch(() => { if (!cancelled) setAvailableCities(getCitiesForCountry(country)); });
+    return () => { cancelled = true; };
+  }, [country]);
 
   const fetchRequests = useCallback(async (pageNum: number) => {
     setLoading(true);
@@ -53,6 +71,9 @@ export default function BrowseRequestsPage() {
       if (level) params.level = level;
       if (country) params.country = country;
       if (city) params.city = city;
+      if (teachingMode) params.teachingMode = teachingMode;
+      if (curriculum) params.curriculum = curriculum;
+      if (language) params.language = language;
       const res = await api.get(`/requests?${new URLSearchParams(params).toString()}`);
       setRequests(res.data.requests);
       setTotalPages(Math.max(1, Math.ceil(res.data.total / 12)));
@@ -62,14 +83,16 @@ export default function BrowseRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [subject, level, country, city]);
+  }, [subject, level, country, city, teachingMode, curriculum, language]);
 
   useEffect(() => {
-    const timer = setTimeout(() => { setPage(1); fetchRequests(1); }, 400);
-    return () => clearTimeout(timer);
-  }, [subject, level, country, city, fetchRequests]);
+    setPage(1);
+  }, [subject, level, country, city, teachingMode, curriculum, language]);
 
-  useEffect(() => { fetchRequests(page); }, [page, fetchRequests]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void fetchRequests(page); }, 250);
+    return () => window.clearTimeout(timer);
+  }, [page, fetchRequests]);
 
   return (
     <div style={{ backgroundColor: C.gray50, minHeight: '100vh' }}>
@@ -107,7 +130,7 @@ export default function BrowseRequestsPage() {
             value={country} onChange={e => { setCountry(e.target.value); setCity(""); }}
             style={{ flex: '0 1 170px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: country ? C.primary : C.gray500, backgroundColor: 'white' }}>
             <option value="">All Countries</option>
-            {COUNTRIES.map(c => (
+            {(geo.countries.length ? geo.countries : COUNTRIES).map(c => (
               <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
             ))}
           </select>
@@ -127,6 +150,14 @@ export default function BrowseRequestsPage() {
               style={{ flex: '0 1 140px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary }}
             />
           )}
+          <select value={teachingMode} onChange={e => setTeachingMode(e.target.value)} aria-label="Teaching mode"
+            style={{ flex: '0 1 150px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', color: teachingMode ? C.primary : C.gray500, backgroundColor: 'white' }}>
+            <option value="">All modes</option><option value="online">Online</option><option value="in-person">In-person</option>
+          </select>
+          <input type="text" value={curriculum} onChange={e => setCurriculum(e.target.value)} placeholder="Curriculum..." aria-label="Filter by curriculum"
+            style={{ flex: '1 1 160px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary }} />
+          <input type="text" value={language} onChange={e => setLanguage(e.target.value)} placeholder="Lesson language..." aria-label="Filter by lesson language"
+            style={{ flex: '1 1 150px', padding: '0.65rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary }} />
         </div>
 
         {/* Grid */}
@@ -153,7 +184,7 @@ export default function BrowseRequestsPage() {
                     <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: C.primary, marginBottom: '0.2rem' }}>{r.subject}</h3>
                     <span style={{ fontSize: '0.75rem', fontWeight: '600', color: C.accent, backgroundColor: C.accentLight, padding: '0.15rem 0.6rem', borderRadius: '999px' }}>{r.level}</span>
                   </div>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{formatMoney(r.budget || 0, r.currency || "PKR", r.pricingUnit || "hour")}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '700', color: C.primary }}>{r.currency ? formatMoney(r.budget || 0, r.currency, r.pricingUnit || "hour") : `${(r.budget || 0).toLocaleString()}/${r.pricingUnit || "hour"}`}</span>
                 </div>
 
                 <p style={{ color: C.gray500, fontSize: '0.85rem', lineHeight: '1.5', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>

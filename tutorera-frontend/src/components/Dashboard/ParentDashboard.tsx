@@ -1,11 +1,12 @@
 "use client";
-import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS, SPACING } from "@/lib/brand";
+import { useState, useEffect } from "react";
+import { Link2, Plus, Trash2, Users, BookOpen, Clock } from "lucide-react";
 import api from "@/lib/axios";
-import { UI_COLORS } from "@/lib/brand";
-import { formatPKR } from "@/lib/site";
-import { showError,showSuccess } from "@/lib/toast";
-import { BookOpen,Clock,Plus,Trash2,Users } from "lucide-react";
-import { useEffect,useState } from "react";
+import { showSuccess, showError } from "@/lib/toast";
+import { formatMoney } from "@/lib/site";
+import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
+import { DashCard, DashButton, StatusBadge, EmptyState, StatTile, statusTone } from "./ui";
 
 const C = UI_COLORS;
 
@@ -30,6 +31,7 @@ interface RecentBooking {
   tutorName: string;
   subject: string;
   amount: number;
+  currency?: string;
   status: string;
   teachingMode: string;
   createdAt: string;
@@ -44,49 +46,16 @@ interface ParentProfileData {
     notificationsEnabled: boolean;
   };
   recentBookings: RecentBooking[];
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    completed: { label: "Completed", color: "#059669", bg: "#ecfdf5" },
-    upcoming: { label: "Upcoming", color: "#7c3aed", bg: "#f5f3ff" },
-    ongoing: { label: "Ongoing", color: "#d97706", bg: "#fffbeb" },
-    cancelled: { label: "Cancelled", color: "#dc2626", bg: "#fef2f2" },
-    open: { label: "Open", color: "#2563eb", bg: "#eff6ff" },
-  };
-  const b = map[status] ?? { label: status, color: "#6b7280", bg: "#f9fafb" };
-  return (
-    <span style={{ fontSize: "0.72rem", fontWeight: 700, color: b.color, backgroundColor: b.bg, padding: "0.2rem 0.6rem", borderRadius: "999px" }}>
-      {b.label}
-    </span>
-  );
+  pendingLinkRequests?: { _id: string; name: string; relationship: string; createdAt: string; expiresAt: string }[];
+  pendingApprovals?: { _id: string; subject: string; studentName: string; currency?: string; offer?: { amount: number; currency?: string; pricingUnit?: string } | null }[];
 }
 
 function TeachingModeBadge({ mode }: { mode: string }) {
   const label = mode === "online" ? "Online" : mode === "home" ? "Home" : "Hybrid";
   return (
-    <span style={{ fontSize: "0.72rem", fontWeight: 600, color: C.accent, backgroundColor: "#EEF5FF", padding: "0.2rem 0.5rem", borderRadius: "999px" }}>
+    <span style={{ fontSize: "0.72rem", fontWeight: 600, color: C.accent, backgroundColor: C.accentLight, padding: "0.2rem 0.5rem", borderRadius: "999px" }}>
       {label}
     </span>
-  );
-}
-
-function EmptyState({ onLink }: { onLink: () => void }) {
-  return (
-    <div style={{ textAlign: "center", padding: "4rem 2rem", backgroundColor: "white", borderRadius: "1rem", border: "1px solid #e5e7eb" }}>
-      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>👨‍👩‍👧‍👦</div>
-      <h3 style={{ fontWeight: 700, color: C.primary, fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-        No children linked yet
-      </h3>
-      <p style={{ color: C.gray500, fontSize: "0.875rem", maxWidth: "360px", margin: "0 auto 1.5rem" }}>
-        Link a student account to manage bookings, track progress, and approve sessions for your children.
-      </p>
-      <button onClick={onLink} style={{ backgroundColor: C.accent, color: "white", padding: "0.75rem 1.5rem", borderRadius: "0.5rem", border: "none", fontWeight: 700, fontSize: "0.875rem", cursor: "pointer" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-          <Plus size={16} /> Link Child Account
-        </span>
-      </button>
-    </div>
   );
 }
 
@@ -96,10 +65,11 @@ interface ParentDashboardProps {
   userAvatar?: string;
 }
 
-export default function ParentDashboard({ userId }: ParentDashboardProps) {
+export default function ParentDashboard({ userId, userName }: ParentDashboardProps) {
   const [data, setData] = useState<ParentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [pendingUnlink, setPendingUnlink] = useState<string | null>(null);
 
   const fetchProfile = () => {
     api.get("/parent/profile")
@@ -113,7 +83,6 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
   useEffect(() => { fetchProfile(); }, []);
 
   const handleUnlink = async (childId: string) => {
-    if (!confirm("Are you sure you want to unlink this child account?")) return;
     try {
       await api.delete(`/parent/children/${childId}`);
       showSuccess("Child account unlinked.");
@@ -121,65 +90,92 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
     } catch {
       showError("Failed to unlink child account.");
     }
+    finally { setPendingUnlink(null); }
   };
 
   const children = data?.profile?.children ?? [];
   const recentBookings = data?.recentBookings ?? [];
+  const pendingLinkRequests = data?.pendingLinkRequests ?? [];
+  const pendingApprovals = data?.pendingApprovals ?? [];
 
-  const parentUserIdDisplay = userId;
+  const cancelLinkRequest = async (requestId: string) => {
+    try {
+      await api.delete(`/parent/children/requests/${requestId}`);
+      showSuccess("Consent request cancelled.");
+      fetchProfile();
+    } catch {
+      showError("Unable to cancel the consent request.");
+    }
+  };
+  const decideApproval = async (requestId: string, decision: "approve" | "decline") => {
+    try {
+      const response = await api.post(`/parent/booking-approvals/${requestId}`, { decision });
+      if (decision === "approve" && response.data?.checkoutUrl) window.location.assign(response.data.checkoutUrl);
+      else { showSuccess(response.data?.message || "Decision recorded."); fetchProfile(); }
+    } catch (caught: unknown) {
+      showError((caught as { response?: { data?: { message?: string } } })?.response?.data?.message || "Unable to record this decision.");
+    }
+  };
 
   return (
     <div style={{ maxWidth: "960px" }}>
       {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary, marginBottom: "0.4rem" }}>
+      <div style={{ marginBottom: SPACING.space8 }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: TEXT_COLORS.primary, marginBottom: "0.4rem" }}>
           Parent Dashboard
         </h1>
-        <p style={{ color: C.gray500, fontSize: "0.875rem" }}>
+        <p style={{ color: TEXT_COLORS.muted, fontSize: "0.875rem" }}>
           Manage your children&apos;s tutoring accounts, track sessions, and oversee bookings.
         </p>
       </div>
 
-      {/* Parent ID share card */}
-      <div style={{ backgroundColor: "#EEF5FF", border: "1px solid #bfdbfe", borderRadius: "0.875rem", padding: "1.25rem 1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 700, color: C.accent, fontSize: "0.85rem", marginBottom: "0.2rem" }}>Your Parent ID</p>
-          <p style={{ fontSize: "0.78rem", color: C.gray500, marginBottom: "0.4rem" }}>Share this with your child so they can link you as guardian</p>
-          <code style={{ backgroundColor: "white", padding: "0.4rem 0.75rem", borderRadius: "0.375rem", fontSize: "0.875rem", fontWeight: 700, color: C.primary, letterSpacing: "0.05em", border: "1px solid #e5e7eb" }}>
-            {parentUserIdDisplay}
-          </code>
+      {/* Consent explainer */}
+      <DashCard padding="md" accent={C.accent} style={{ marginBottom: SPACING.space6, background: STATUS_COLORS.info.bg, borderColor: STATUS_COLORS.info.border }}>
+        <div style={{ display: "flex", alignItems: "center", gap: SPACING.space4, flexWrap: "wrap" }}>
+          <Link2 size={20} color={C.accent} style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <p style={{ fontWeight: 700, color: C.accent, fontSize: "0.85rem", marginBottom: "0.2rem" }}>Student consent protects both accounts</p>
+            <p style={{ fontSize: "0.85rem", color: TEXT_COLORS.muted, margin: 0 }}>Enter the student&apos;s registered email to send a time-limited consent code. Access starts only after confirmation.</p>
+          </div>
         </div>
-        <button
-          onClick={() => { navigator.clipboard.writeText(parentUserIdDisplay); showSuccess("Parent ID copied!"); }}
-          style={{ padding: "0.6rem 1rem", backgroundColor: C.accent, color: "white", border: "none", borderRadius: "0.5rem", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
-        >
-          Copy ID
-        </button>
-      </div>
+      </DashCard>
+
+      {pendingLinkRequests.length > 0 && (
+        <DashCard padding="md" accent={STATUS_COLORS.warning.color} style={{ marginBottom: SPACING.space6, background: STATUS_COLORS.warning.bg, borderColor: STATUS_COLORS.warning.border }}>
+          <section aria-labelledby="pending-consent-title">
+            <h2 id="pending-consent-title" style={{ margin: 0, color: TEXT_COLORS.primary, fontSize: "1rem" }}>Awaiting student consent</h2>
+            {pendingLinkRequests.map((item) => (
+              <div key={item._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: SPACING.space4, paddingTop: SPACING.space3, flexWrap: "wrap" }}>
+                <p style={{ margin: 0, color: TEXT_COLORS.secondary, fontSize: "0.875rem" }}><strong>{item.name}</strong> · {item.relationship} · expires {new Date(item.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                <DashButton variant="secondary" size="sm" onClick={() => cancelLinkRequest(item._id)} style={{ color: STATUS_COLORS.warning.color, borderColor: STATUS_COLORS.warning.color }}>Cancel request</DashButton>
+              </div>
+            ))}
+          </section>
+        </DashCard>
+      )}
+
+      {pendingApprovals.length > 0 && (
+        <DashCard padding="md" accent={C.accent} style={{ marginBottom: SPACING.space6, background: STATUS_COLORS.info.bg, borderColor: STATUS_COLORS.info.border }}>
+          <section aria-labelledby="pending-approval-title">
+            <h2 id="pending-approval-title" style={{ margin: 0, color: TEXT_COLORS.primary, fontSize: "1rem" }}>Booking approvals needed</h2>
+            {pendingApprovals.map((item) => (
+              <div key={item._id} style={{ display: "flex", justifyContent: "space-between", gap: SPACING.space4, alignItems: "center", paddingTop: SPACING.space3, flexWrap: "wrap" }}>
+                <p style={{ margin: 0, color: TEXT_COLORS.secondary, fontSize: "0.9rem" }}><strong>{item.studentName}</strong> selected a tutor offer for <strong>{item.subject}</strong>{item.offer ? ` — ${formatMoney(item.offer.amount, item.offer.currency || item.currency || "PKR", item.offer.pricingUnit)}` : ""}.</p>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <DashButton variant="danger" size="sm" onClick={() => decideApproval(item._id, "decline")}>Decline</DashButton>
+                  <DashButton variant="primary" size="sm" onClick={() => decideApproval(item._id, "approve")}>Approve & pay</DashButton>
+                </div>
+              </div>
+            ))}
+          </section>
+        </DashCard>
+      )}
 
       {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-        <div style={{ backgroundColor: "white", borderRadius: "0.875rem", padding: "1.25rem", border: "1px solid #e5e7eb", borderTop: `3px solid ${C.accent}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-            <Users size={18} color={C.accent} />
-            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: "0.05em" }}>Linked Children</p>
-          </div>
-          <p style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary }}>{children.length}</p>
-        </div>
-        <div style={{ backgroundColor: "white", borderRadius: "0.875rem", padding: "1.25rem", border: "1px solid #e5e7eb", borderTop: "3px solid #16a34a" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-            <BookOpen size={18} color="#16a34a" />
-            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Sessions</p>
-          </div>
-          <p style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary }}>{recentBookings.filter(b => b.status === "completed").length}</p>
-        </div>
-        <div style={{ backgroundColor: "white", borderRadius: "0.875rem", padding: "1.25rem", border: "1px solid #e5e7eb", borderTop: "3px solid #7c3aed" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-            <Clock size={18} color="#7c3aed" />
-            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em" }}>Upcoming</p>
-          </div>
-          <p style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary }}>{recentBookings.filter(b => b.status === "upcoming").length}</p>
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: SPACING.space4, marginBottom: SPACING.space6 }}>
+        <StatTile icon={<Users size={20} />} value={children.length} label="Linked children" tone="info" />
+        <StatTile icon={<BookOpen size={20} />} value={recentBookings.filter(b => b.status === "completed").length} label="Total sessions" tone="success" />
+        <StatTile icon={<Clock size={20} />} value={recentBookings.filter(b => b.status === "upcoming").length} label="Upcoming" tone="purple" />
       </div>
 
       {loading ? (
@@ -188,28 +184,31 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : children.length === 0 ? (
-        <EmptyState onLink={() => setShowLinkModal(true)} />
+        <EmptyState
+          icon="👨‍👩‍👧‍👦"
+          title="No children linked yet"
+          description="Link a student account to manage bookings, track progress, and approve sessions for your children."
+          action={{ label: "Link Child Account", icon: <Plus size={16} />, onClick: () => setShowLinkModal(true) }}
+        />
       ) : (
         <>
           {/* Children list */}
-          <div style={{ backgroundColor: "white", borderRadius: "0.875rem", border: "1px solid #e5e7eb", overflow: "hidden", marginBottom: "1.5rem" }}>
-            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ fontWeight: 700, color: C.primary, fontSize: "0.95rem", margin: 0 }}>Your Children</h3>
-              <button onClick={() => setShowLinkModal(true)} style={{ display: "flex", alignItems: "center", gap: "0.4rem", backgroundColor: C.accent, color: "white", padding: "0.55rem 1rem", borderRadius: "0.5rem", border: "none", fontWeight: 600, fontSize: "0.8rem", cursor: "pointer" }}>
-                <Plus size={14} /> Link Child
-              </button>
+          <DashCard padding="none" style={{ overflow: "hidden", marginBottom: SPACING.space6 }}>
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontWeight: 700, color: TEXT_COLORS.primary, fontSize: "0.95rem", margin: 0 }}>Your Children</h3>
+              <DashButton variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowLinkModal(true)}>Link Child</DashButton>
             </div>
             {children.map(child => (
-              <div key={child._id} style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f9fafb" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+              <div key={child._id} style={{ padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: SPACING.space4, flexWrap: "wrap" }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: SPACING.space3, marginBottom: "0.5rem" }}>
                       <div style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: C.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: "1rem", flexShrink: 0 }}>
                         {child.name.charAt(0)}
                       </div>
                       <div>
-                        <p style={{ fontWeight: 700, color: C.primary, fontSize: "0.95rem", margin: 0 }}>{child.name}</p>
-                        <p style={{ fontSize: "0.75rem", color: C.gray500, margin: 0 }}>
+                        <p style={{ fontWeight: 700, color: TEXT_COLORS.primary, fontSize: "0.95rem", margin: 0 }}>{child.name}</p>
+                        <p style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted, margin: 0 }}>
                           {child.studentProfile?.currentLevel || child.level || "Student"} •
                           {child.studentProfile?.city ? ` ${child.studentProfile.city}` : ""}
                         </p>
@@ -218,54 +217,66 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
                     {child.subjects.length > 0 && (
                       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                         {child.subjects.map(s => (
-                          <span key={s} style={{ fontSize: "0.72rem", fontWeight: 600, color: C.accent, backgroundColor: "#EEF5FF", padding: "0.2rem 0.5rem", borderRadius: "999px" }}>{s}</span>
+                          <span key={s} style={{ fontSize: "0.72rem", fontWeight: 600, color: C.accent, backgroundColor: C.accentLight, padding: "0.2rem 0.5rem", borderRadius: "999px" }}>{s}</span>
                         ))}
                       </div>
                     )}
-                    <p style={{ fontSize: "0.72rem", color: C.gray500, marginTop: "0.4rem" }}>
-                      Student ID: <code style={{ backgroundColor: "#f3f4f6", padding: "0.1rem 0.3rem", borderRadius: "0.25rem", fontSize: "0.7rem" }}>{child.studentUser}</code>
+                    <p style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted, marginTop: "0.4rem" }}>
+                      Student ID: <code style={{ backgroundColor: C.gray50, padding: "0.1rem 0.3rem", borderRadius: "0.25rem", fontSize: "0.7rem" }}>{child.studentUser}</code>
                     </p>
                   </div>
-                  <button onClick={() => handleUnlink(child._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: "0.4rem", borderRadius: "0.375rem" }} title="Unlink child">
+                  <button onClick={() => setPendingUnlink(child._id)} style={{ background: "none", border: "none", cursor: "pointer", color: STATUS_COLORS.danger.color, padding: "0.4rem", borderRadius: "0.375rem" }} title="Unlink child">
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
             ))}
-          </div>
+          </DashCard>
 
           {/* Recent bookings */}
           {recentBookings.length > 0 && (
-            <div style={{ backgroundColor: "white", borderRadius: "0.875rem", border: "1px solid #e5e7eb", overflow: "hidden" }}>
-              <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f3f4f6" }}>
-                <h3 style={{ fontWeight: 700, color: C.primary, fontSize: "0.95rem", margin: 0 }}>Recent Sessions Across All Children</h3>
+            <DashCard padding="none" style={{ overflow: "hidden" }}>
+              <div style={{ padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}` }}>
+                <h3 style={{ fontWeight: 700, color: TEXT_COLORS.primary, fontSize: "0.95rem", margin: 0 }}>Recent Sessions Across All Children</h3>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr", padding: "0.6rem 1.5rem", backgroundColor: C.gray50, borderBottom: "1px solid #e5e7eb" }} className="parent-table-header">
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr", padding: "0.6rem 1.5rem", backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="parent-table-header">
                 {["Child", "Tutor", "Subject", "Amount", "Status"].map(h => (
-                  <p key={h} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{h}</p>
+                  <p key={h} style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>{h}</p>
                 ))}
               </div>
               {recentBookings.map((b, idx) => (
                 <div key={b._id}>
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr", padding: "0.875rem 1.5rem", alignItems: "center", borderBottom: idx < recentBookings.length - 1 ? "1px solid #f9fafb" : "none" }} className="parent-table-row">
-                    <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: 0 }}>{b.studentName}</p>
-                    <p style={{ fontSize: "0.875rem", color: C.gray500, margin: 0 }}>{b.tutorName}</p>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "0.2rem 0.5rem", borderRadius: "999px", backgroundColor: "#EEF5FF", color: C.accent, width: "fit-content" }}>{b.subject}</span>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: C.primary, margin: 0 }}>{formatPKR(b.amount)}</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr", padding: "0.875rem 1.5rem", alignItems: "center", borderBottom: idx < recentBookings.length - 1 ? `1px solid ${C.border}` : "none" }} className="parent-table-row">
+                    <p style={{ fontWeight: 600, color: TEXT_COLORS.primary, fontSize: "0.875rem", margin: 0 }}>{b.studentName}</p>
+                    <p style={{ fontSize: "0.875rem", color: TEXT_COLORS.muted, margin: 0 }}>{b.tutorName}</p>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "0.2rem 0.5rem", borderRadius: "999px", backgroundColor: C.accentLight, color: C.accent, width: "fit-content" }}>{b.subject}</span>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: TEXT_COLORS.primary, margin: 0 }}>{formatMoney(b.amount, b.currency || "PKR")}</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                      <StatusBadge status={b.status} />
+                      <StatusBadge tone={statusTone(b.status)}>{b.status.charAt(0).toUpperCase() + b.status.slice(1)}</StatusBadge>
                       <TeachingModeBadge mode={b.teachingMode} />
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
+            </DashCard>
           )}
         </>
       )}
 
       {/* Link modal */}
       {showLinkModal && <ConsentLinkChildModal onClose={() => setShowLinkModal(false)} onLinked={fetchProfile} />}
+      {pendingUnlink && (
+        <div role="presentation" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: "1rem", background: "rgba(2,21,80,.62)" }}>
+          <section role="alertdialog" aria-modal="true" aria-labelledby="unlink-child-title" style={{ maxWidth: 440, background: "white", borderRadius: "1rem", padding: "1.5rem", color: TEXT_COLORS.primary }}>
+            <h2 id="unlink-child-title" style={{ marginTop: 0 }}>Unlink learner?</h2>
+            <p style={{ color: TEXT_COLORS.secondary, lineHeight: 1.5 }}>This removes your access to this learner&apos;s tutoring activity. You can send a new consent request later.</p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
+              <DashButton variant="secondary" size="sm" onClick={() => setPendingUnlink(null)}>Cancel</DashButton>
+              <DashButton variant="danger" size="sm" onClick={() => handleUnlink(pendingUnlink)}>Unlink</DashButton>
+            </div>
+          </section>
+        </div>
+      )}
 
       <style>{`
         @media (max-width: 640px) {

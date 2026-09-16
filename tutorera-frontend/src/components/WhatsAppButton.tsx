@@ -1,5 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
+import { SUPPORT_WHATSAPP_NUMBER } from "@/lib/site";
 
 export default function WhatsAppButton() {
   const pathname = usePathname();
@@ -11,7 +12,7 @@ export default function WhatsAppButton() {
   return (
     <>
       <a
-        href="https://wa.me/923348880859?text=Hi%20TUTORERA%20support%2C%20I%20need%20help..."
+        href={`https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=Hi%20TUTORERA%20support%2C%20I%20need%20help...`}
         target="_blank"
         rel="noopener noreferrer"
         style={{

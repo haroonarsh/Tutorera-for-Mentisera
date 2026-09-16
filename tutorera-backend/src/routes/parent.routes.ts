@@ -5,6 +5,8 @@ import {
   getMyParentProfile,
   addChildAccount,
   confirmChildAccount,
+  cancelChildLinkRequest,
+  decideBookingApproval,
   removeChildAccount,
   updateParentSettings,
   saveParentOnboarding,
@@ -15,6 +17,8 @@ const router = Router();
 router.get("/profile", protect, getMyParentProfile);
 router.post("/children", protect, otpRequestLimiter, addChildAccount);
 router.post("/children/confirm", protect, otpVerifyLimiter, confirmChildAccount);
+router.delete("/children/requests/:requestId", protect, cancelChildLinkRequest);
+router.post("/booking-approvals/:requestId", protect, decideBookingApproval);
 router.delete("/children/:childId", protect, removeChildAccount);
 router.patch("/settings", protect, updateParentSettings);
 router.post("/onboarding", protect, saveParentOnboarding);

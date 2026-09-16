@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../types";
 import Contact from "../models/Contact.model";
 import sendEmail from "../utils/sendEmail";
-import { escapeHtml } from "../utils/escapeHtml";
+import { renderTransactionalEmail } from "../utils/emailBrand";
 
 // @desc    Submit contact form
 // @route   POST /api/contact
@@ -14,43 +14,67 @@ export const submitContact = async (req: Request, res: Response): Promise<void> 
   const contact = await Contact.create({ name, email, phone, userType, bookingReference, transactionReference, subject, message });
 
   // Send email notification to admin
+  const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
+  const adminSubject = `[TUTORERA Contact] ${subject}`;
+  const adminHtml = renderTransactionalEmail({
+    subject: adminSubject,
+    emailCategory: "Contact Inquiry",
+    emailHeading: "New Contact Message",
+    emailSubheading: `From ${name} (${userType || "Visitor"})`,
+    firstName: "Support Team",
+    openingMessage: "A new inquiry was submitted through the TUTORERA public contact form.",
+    mainMessage: `Message Content:\n"${message}"`,
+    detailsCard: {
+      title: "Inquiry Details",
+      rows: [
+        { label: "Sender Name", value: name, highlight: true },
+        { label: "Email Address", value: email },
+        { label: "Phone", value: phone || "Not provided" },
+        { label: "User Category", value: userType || "General Visitor", isStatus: true, statusVariant: "neutral" },
+        ...(bookingReference ? [{ label: "Booking Reference", value: bookingReference }] : []),
+        ...(transactionReference ? [{ label: "Transaction Reference", value: transactionReference }] : []),
+      ],
+    },
+    cta: { label: "Open Admin Panel", url: "https://tutorera.ac.pk/admin" },
+    includeSecurityNotice: false,
+    deliverability: "This administrative notification was sent from the TUTORERA contact form.",
+  });
+
   await sendEmail({
-    to: process.env.EMAIL_USER as string,
-    subject: `New Contact Message: ${escapeHtml(subject)}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">New Contact Form Submission</h2>
-        <hr />
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(phone) || "Not provided"}</p>
-        <p><strong>User Type:</strong> ${escapeHtml(userType) || "Not provided"}</p>
-        <p><strong>Booking Reference:</strong> ${escapeHtml(bookingReference) || "Not provided"}</p>
-        <p><strong>Transaction Reference:</strong> ${escapeHtml(transactionReference) || "Not provided"}</p>
-        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
-        <p><strong>Message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
-        <hr />
-        <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Contact System</p>
-      </div>
-    `,
+    to: adminRecipient,
+    subject: adminSubject,
+    html: adminHtml,
+    eventType: "support.ticket_created",
   });
 
   // Send confirmation to user
+  const userSubject = "We Received Your Message — TUTORERA";
+  const userHtml = renderTransactionalEmail({
+    subject: userSubject,
+    emailCategory: "Support Update",
+    emailHeading: `Thank You, ${name}!`,
+    emailSubheading: "Our support team has received your message.",
+    firstName: name,
+    openingMessage: "Thank you for reaching out to TUTORERA. We have received your message and our team will review it promptly.",
+    mainMessage: `Your Message:\n"${message}"`,
+    detailsCard: {
+      title: "Ticket Overview",
+      rows: [
+        { label: "Subject", value: subject, highlight: true },
+        { label: "Status", value: "Received & Queued", isStatus: true, statusVariant: "info" },
+        { label: "Estimated Response", value: "Within 24 Hours" },
+      ],
+    },
+    cta: { label: "Visit Help Center", url: "https://tutorera.ac.pk/help" },
+    includeSecurityNotice: false,
+    deliverability: "This message was sent in confirmation of your inquiry to TUTORERA.",
+  });
+
   await sendEmail({
     to: email,
-    subject: "We received your message — TUTORERA®",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">Thank you, ${escapeHtml(name)}!</h2>
-        <p>We've received your message and will get back to you within 24 hours.</p>
-        <hr />
-        <p><strong>Your message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
-        <hr />
-        <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
-      </div>
-    `,
+    subject: userSubject,
+    html: userHtml,
+    eventType: "support.ticket_received",
   });
 
   res.status(201).json({
@@ -93,44 +117,73 @@ export const submitSupportRequest = async (req: AuthRequest, res: Response): Pro
     status: "open",
   });
 
+  const isUrgent = priority === "urgent";
+  const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
+
   // Email to admin — includes booking context for quick lookup
+  const adminSubject = `[TUTORERA Support${isUrgent ? " — URGENT" : ""}] ${subject}`;
+  const adminHtml = renderTransactionalEmail({
+    subject: adminSubject,
+    emailCategory: "Support Alert",
+    emailHeading: `In-Session Support${isUrgent ? " (URGENT)" : ""}`,
+    emailSubheading: `From ${user?.name} (${user?.role})`,
+    firstName: "Support Operations",
+    openingMessage: isUrgent
+      ? "An URGENT support request was filed during an active session requiring immediate attention."
+      : "A new support request was submitted by a platform user.",
+    mainMessage: `Issue Description:\n"${message}"`,
+    detailsCard: {
+      title: "Request Metadata",
+      rows: [
+        { label: "Submitted By", value: `${user?.name} (${user?.role})`, highlight: true },
+        { label: "Email", value: user?.email || "N/A" },
+        { label: "Phone", value: user?.phone || "Not provided" },
+        { label: "Priority", value: isUrgent ? "URGENT" : "Normal", isStatus: true, statusVariant: isUrgent ? "danger" : "info" },
+        ...(bookingId ? [{ label: "Booking ID", value: bookingId, highlight: true }] : []),
+      ],
+    },
+    cta: { label: "Review Ticket in Admin", url: "https://tutorera.ac.pk/admin" },
+    includeSecurityNotice: false,
+    deliverability: "Internal platform support dispatch.",
+  });
+
   await sendEmail({
-    to: process.env.EMAIL_USER as string,
-    subject: `🆘 Support Request${priority === "urgent" ? " — URGENT" : ""}: ${escapeHtml(subject)}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">New In-Session Support Request</h2>
-        ${priority === "urgent" ? `<p style="background:#fef2f2;color:#ef4444;padding:0.5rem 1rem;border-radius:0.5rem;font-weight:700;">⚠ Marked as URGENT</p>` : ""}
-        <hr />
-        <p><strong>From:</strong> ${escapeHtml(user?.name)} (${escapeHtml(user?.role)})</p>
-        <p><strong>Email:</strong> ${escapeHtml(user?.email)}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(user?.phone) || "Not provided"}</p>
-        <p><strong>Booking ID:</strong> ${escapeHtml(bookingId) || "Not linked"}</p>
-        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
-        <p><strong>Message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
-        <hr />
-        <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Support System</p>
-      </div>
-    `,
+    to: adminRecipient,
+    subject: adminSubject,
+    html: adminHtml,
+    eventType: isUrgent ? "safety.case_created" : "support.ticket_created",
   });
 
   // Confirmation to user
+  const userSubject = "Support Request Received — TUTORERA";
+  const userHtml = renderTransactionalEmail({
+    subject: userSubject,
+    emailCategory: "Support Update",
+    emailHeading: `We Received Your Request, ${user?.name}`,
+    emailSubheading: isUrgent ? "Marked as high priority." : "Our support team is on it.",
+    firstName: user?.name,
+    openingMessage: "Your support request has been logged and assigned to our active response queue.",
+    mainMessage: isUrgent
+      ? "Because your request involves an active session issue and was marked urgent, a support advisor has been notified for immediate review."
+      : "A support specialist will review your request and get in touch with you shortly. You can also view updates directly in your dashboard.",
+    detailsCard: {
+      title: "Ticket Details",
+      rows: [
+        { label: "Subject", value: subject, highlight: true },
+        { label: "Priority", value: isUrgent ? "Urgent" : "Normal", isStatus: true, statusVariant: isUrgent ? "danger" : "info" },
+        ...(bookingId ? [{ label: "Linked Booking", value: bookingId }] : []),
+      ],
+    },
+    cta: { label: "Open Dashboard", url: "https://tutorera.ac.pk/dashboard" },
+    includeSecurityNotice: false,
+    deliverability: "This message confirms receipt of your TUTORERA support ticket.",
+  });
+
   await sendEmail({
     to: user?.email as string,
-    subject: "We received your support request — TUTORERA®",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">Thanks, ${escapeHtml(user?.name)}!</h2>
-        <p>Our support team has received your request and will respond as soon as possible.</p>
-        ${priority === "urgent" ? `<p style="color:#ef4444;font-weight:600;">Since this is marked urgent, we'll prioritize it.</p>` : ""}
-        <hr />
-        <p><strong>Your message:</strong></p>
-        <p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(message)}</p>
-        <hr />
-        <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
-      </div>
-    `,
+    subject: userSubject,
+    html: userHtml,
+    eventType: "support.ticket_received",
   });
 
   res.status(201).json({

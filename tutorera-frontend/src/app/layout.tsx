@@ -1,16 +1,15 @@
-import ConditionalLayout from "@/components/ConditionalLayout";
-import LazyWidgets from "@/components/LazyWidgets";
-import LocaleBridge from "@/components/LocaleBridge";
-import SkipLink from "@/components/SkipLink";
-import { AuthProvider } from "@/context/AuthContext";
-import { SocketProvider } from "@/context/SocketContext";
-import { LEGAL_OPERATOR,PLATFORM_NAME,SITE_URL,SUPPORT_EMAIL,SUPPORT_PHONE } from "@/lib/site";
-import type { Metadata,Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
-import { Toaster } from "react-hot-toast";
 import "./globals.css";
-
+import { AuthProvider } from "@/context/AuthContext";
+import { SocketProvider } from "@/context/SocketContext";
+import ConditionalLayout from "@/components/ConditionalLayout";
+import LazyWidgets from "@/components/LazyWidgets";
+import { Toaster } from "react-hot-toast";
+import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
+import SkipLink from "@/components/SkipLink";
+import LocaleBridge from "@/components/LocaleBridge";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -18,10 +17,10 @@ export const metadata: Metadata = {
     default: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
     template: "%s | TUTORERA",
   },
-  description: "Post a tutoring requirement with your preferred budget and currency, receive offers from eligible tutors, compare profile information, and choose online or locally available in-person tuition.",
+  description: "Connect with verified tutors worldwide and locally. Post your tuition requirement with your preferred budget and currency, receive competitive tutor offers, and book with verified confidence.",
   keywords: [
     "online tutors worldwide",
-    "find tutors",
+    "find verified tutors",
     "student demand tutoring marketplace",
     "home tuition",
     "O Level tutor",
@@ -32,6 +31,7 @@ export const metadata: Metadata = {
     "private tutors",
     "tutors in UAE",
     "tutors in UK",
+    "tutors in USA",
     "tutors in Pakistan",
     "TUTORERA",
   ],
@@ -43,8 +43,27 @@ export const metadata: Metadata = {
       ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
       : undefined,
   },
+  other: {
+    "google-adsense-account": "ca-pub-2559940686225219",
+  },
   publisher: "TUTORERA",
   metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+    // Must match the real (countries)/[countryCode] route segments
+    // (lowercase ISO 3166-1 alpha-2, per LAUNCH_MARKETS) - "/usa" was never
+    // a real route (the actual route is "/us"), so that hreflang entry
+    // pointed Google at a 404.
+    languages: {
+      "en-GB": "/gb",
+      "en-AE": "/ae",
+      "en-SA": "/sa",
+      "en-PK": "/pk",
+      "en-IN": "/in",
+      "en-US": "/us",
+      "x-default": "/",
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -59,10 +78,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: SITE_URL,
+    url: "https://tutorera.ac.pk",
     siteName: "TUTORERA",
     title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
-    description: "Post your tuition requirement with your preferred budget and currency. Receive offers from eligible tutors locally or worldwide and compare before choosing.",
+    description: "Post your tuition requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide.",
     images: [
       {
         url: "/tutorera-logo-transparent.png",
@@ -75,7 +94,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
-    description: "Post your requirement, receive tutor offers, compare rates in the relevant currency, and choose the tutor that fits your needs.",
+    description: "Post your requirement, receive tutor offers, compare rates in your currency, and choose your verified tutor.",
     images: ["/tutorera-logo-transparent.png"],
   },
   robots: {
@@ -96,7 +115,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -107,7 +130,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         legalName: LEGAL_OPERATOR,
         url: SITE_URL,
         logo: `${SITE_URL}/tutorera-logo-transparent.png`,
-        description: "Global student-led demand marketplace for online and in-person tutoring. Students post requirements with preferred budgets and eligible tutors can respond with offers.",
+        description: "Global student-led demand marketplace for online and in-person tutoring. Students post requirements with preferred budgets; verified tutors compete with offers.",
         address: {
           "@type": "PostalAddress",
           streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town",
@@ -122,7 +145,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             telephone: SUPPORT_PHONE,
             contactType: "customer service",
             email: SUPPORT_EMAIL,
-            availableLanguage: ["English", "Urdu", "Arabic"],
+            availableLanguage: ["English"],
           },
         ],
         areaServed: [
@@ -131,15 +154,22 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           { "@type": "Country", name: "United Arab Emirates" },
           { "@type": "Country", name: "United Kingdom" },
         ],
-        sameAs: ["https://mentisera.com"],
+        sameAs: [
+          "https://mentisera.com",
+          "https://www.facebook.com/tutorerapk",
+          "https://www.instagram.com/tutorera.pk",
+          "https://www.linkedin.com/company/tutorera",
+        ],
       },
       {
         "@type": "WebSite",
         "@id": `${SITE_URL}/#website`,
         url: SITE_URL,
         name: PLATFORM_NAME,
-        description: "Global student-led tutoring marketplace connecting learners with tutor profiles and offers across supported markets.",
-        publisher: { "@id": `${SITE_URL}/#organization` },
+        description: "Global student-led tutoring marketplace connecting learners and verified educators worldwide and locally.",
+        publisher: {
+          "@id": `${SITE_URL}/#organization`,
+        },
         potentialAction: {
           "@type": "SearchAction",
           target: `${SITE_URL}/tutors?search={search_term_string}`,
@@ -150,17 +180,27 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         "@type": "Service",
         "@id": `${SITE_URL}/#service`,
         serviceType: "Online & In-Person Tutoring Marketplace",
-        provider: { "@id": `${SITE_URL}/#organization` },
-        description: "Student-led tutoring marketplace where students post requirements in the relevant market currency and eligible tutors can respond with customized offers.",
-        areaServed: { "@type": "Place", name: "Worldwide" },
+        provider: {
+          "@id": `${SITE_URL}/#organization`,
+        },
+        description: "Student-led tutoring marketplace where students post requirements in their local currency and verified tutors respond with customized offers.",
+        areaServed: {
+          "@type": "Place",
+          name: "Worldwide",
+        },
       },
     ],
   };
 
   return (
-    <html lang="en">
+     <html lang="en">
       <head>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+        <meta name="google-adsense-account" content="ca-pub-2559940686225219" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        {/* Google Tag Manager */}
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`
             (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -170,25 +210,48 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             })(window,document,'script','dataLayer','GTM-TDJ8C953');
           `}
         </Script>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-7NF2DR8MG6" strategy="afterInteractive" />
+        {/* Google tag (gtag.js) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-7NF2DR8MG6"
+          strategy="afterInteractive"
+        />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-7NF2DR8MG6');
+            gtag('config', 'G-7NF2DR8MG6', {
+              'cookie_domain': 'tutorera.ac.pk',
+              'cookie_expires': 43200,
+              'cookie_flags': 'SameSite=None;Secure'
+            });
           `}
         </Script>
+        {/* Google AdSense */}
+        <Script
+          id="google-adsense"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2559940686225219"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={inter.className}>
         <SkipLink />
+        {/* Google Tag Manager (noscript) */}
         <noscript>
-          <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TDJ8C953" height="0" width="0" style={{ display: "none", visibility: "hidden" }} />
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-TDJ8C953"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
         </noscript>
         <AuthProvider>
           <LocaleBridge>
             <SocketProvider>
-              <ConditionalLayout>{children}</ConditionalLayout>
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
               <LazyWidgets />
             </SocketProvider>
           </LocaleBridge>
@@ -198,13 +261,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           toastOptions={{
             duration: 4000,
             style: {
-              background: "#021550",
-              color: "white",
-              fontSize: "0.875rem",
-              borderRadius: "0.5rem",
+              background: '#021550',
+              color: 'white',
+              fontSize: '0.875rem',
+              borderRadius: '0.5rem',
             },
-            success: { iconTheme: { primary: "#16a34a", secondary: "white" } },
-            error: { iconTheme: { primary: "#ef4444", secondary: "white" } },
+            success: {
+              iconTheme: { primary: '#16a34a', secondary: 'white' },
+            },
+            error: {
+              iconTheme: { primary: '#ef4444', secondary: 'white' },
+            },
           }}
         />
       </body>

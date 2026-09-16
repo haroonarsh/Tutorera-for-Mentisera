@@ -5,18 +5,20 @@ import { AuthRequest } from "../types";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import { containsContactInfo } from "../utils/contentFilter";
 import { logAudit } from "../utils/logAudit";
 import BookedSlot from "../models/BookedSlot.model";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
-import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingAcceptedEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
+import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
 import { convertToPKR } from "../config/countries";
 import { paymentProvider } from "../services/paymentProvider.service";
+import { previewPromoDiscount, getAppliedPromoForBasket, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
@@ -24,6 +26,7 @@ import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service
 import { classifyRequestLoss } from "../services/requestLoss.service";
 import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from "../services/market.service";
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
+import { resolveLocationReferences } from "../services/locationReference.service";
 import { convertAmount } from "../services/exchangeRate.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
@@ -33,6 +36,18 @@ import {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * A booking may be paid for by a linked parent.  Legacy links can contain more
+ * than one guardian, so only attach a parent where the relationship is
+ * unambiguous; otherwise the student remains the checkout owner.
+ */
+async function resolveLinkedBookingParent(studentId: Types.ObjectId, session?: mongoose.ClientSession): Promise<Types.ObjectId | undefined> {
+  const query = ParentProfile.find({ "children.studentUser": studentId }).select("user").limit(2);
+  if (session) query.session(session);
+  const profiles = await query.lean();
+  return profiles.length === 1 ? profiles[0].user as Types.ObjectId : undefined;
 }
 
 // @desc    Create tuition request
@@ -61,11 +76,24 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(422).json({ success: false, code: "HOME_TUITION_UNAVAILABLE", message: "Home tuition is not available in the selected market." });
     return;
   }
+  let locationReferences: Record<string, unknown>;
+  try {
+    locationReferences = await resolveLocationReferences(req.body, market.countryCode);
+  } catch (error: any) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    return;
+  }
 
   // ── Create request ──
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-  const scheduleTimezone = isValidIanaTimezone(req.body.timezone) ? req.body.timezone : market.timezone;
+  if (req.body.timezone && !isValidIanaTimezone(req.body.timezone)) {
+    res.status(422).json({ success: false, code: "INVALID_TIMEZONE", message: "Please select a valid IANA timezone." });
+    return;
+  }
+  const scheduleTimezone = isValidIanaTimezone(req.body.timezone)
+    ? req.body.timezone
+    : (locationReferences.timezone as string | undefined) || market.timezone;
   let scheduledStartAt: Date | undefined;
   let scheduledEndAt: Date | undefined;
   if (req.body.selectedDate && req.body.selectedStartTime) {
@@ -74,9 +102,18 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       if (req.body.selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(req.body.selectedDate, req.body.selectedEndTime, scheduleTimezone);
     } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
   }
+  if (scheduledStartAt && scheduledEndAt && scheduledEndAt <= scheduledStartAt) {
+    res.status(422).json({ success: false, code: "INVALID_SCHEDULE_WINDOW", message: "Lesson end time must be after the start time." });
+    return;
+  }
+  const createData = { ...req.body };
+  if (typeof createData.lat === "number" && typeof createData.lng === "number") {
+    createData.location = { type: "Point", coordinates: [createData.lng, createData.lat] };
+  }
   const request = await Request.create({
     student: req.user?._id,
-    ...req.body,
+    ...createData,
+    ...locationReferences,
     countryCode: market.countryCode,
     countryName: market.countryName,
     currency: market.currency,
@@ -178,11 +215,12 @@ export const saveRequestDraftProgress = async (req: AuthRequest, res: Response):
 // @route   GET /api/requests
 // @access  Private
 export const getAllRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  let tutorProfile: any = null;
   // Block unapproved tutors
   if (req.user?.role === "tutor") {
     const TutorProfile = (await import("../models/TutorProfile.model")).default;
-    const profile = await TutorProfile.findOne({ user: req.user._id });
-    if (!profile || !isMarketplaceEligible(profile)) {
+    tutorProfile = await TutorProfile.findOne({ user: req.user._id });
+    if (!tutorProfile || !isMarketplaceEligible(tutorProfile)) {
       res.status(403).json({
         success: false,
         code: "TUTOR_NOT_APPROVED",
@@ -192,30 +230,48 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
     }
   }
 
-  const { subject, level, city, country, teachingMode, currency, page = "1", limit = "10" } = req.query;
+  const { subject, level, city, country, teachingMode, currency, curriculum, language, page = "1", limit = "10" } = req.query;
   const filter: Record<string, unknown> = {
     status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
     isDirect: { $ne: true },
     expiresAt: { $gt: new Date() },
   };
 
-  if (subject) filter.subject = new RegExp(subject as string, "i");
+  if (subject) filter.subject = new RegExp(escapeRegExp(String(subject).slice(0, 80)), "i");
   if (level) filter.level = level;
-  if (city) filter.city = new RegExp(city as string, "i");
+  if (city) filter.city = new RegExp(escapeRegExp(String(city).slice(0, 80)), "i");
   if (country) filter.countryCode = (country as string).toUpperCase();
+  if (curriculum) filter.curriculum = new RegExp(escapeRegExp(String(curriculum).slice(0, 80)), "i");
+  if (language) filter.lessonLanguage = new RegExp(escapeRegExp(String(language).slice(0, 80)), "i");
   if (teachingMode && teachingMode !== "all") {
     if (teachingMode === "online") {
       filter.teachingMode = { $in: ["online", "both"] };
-    } else if (teachingMode === "in_person" || teachingMode === "home") {
-      filter.teachingMode = { $in: ["in_person", "home", "both"] };
+    } else if (teachingMode === "in-person") {
+      filter.teachingMode = { $in: ["in-person", "both"] };
     } else {
       filter.teachingMode = teachingMode;
     }
   }
   if (currency) filter.currency = (currency as string).toUpperCase();
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  if (tutorProfile) {
+    const supportsOnline = ["online", "both"].includes(tutorProfile.teachingMode);
+    const supportsHome = ["in-person", "both"].includes(tutorProfile.teachingMode) && isHomeTuitionEligible(tutorProfile);
+    const localCities = [tutorProfile.city, ...(tutorProfile.serviceAreas || [])].filter(Boolean);
+    const eligibility: Record<string, unknown>[] = [];
+    if (supportsOnline) eligibility.push({ teachingMode: { $in: ["online", "both"] } });
+    if (supportsHome && tutorProfile.countryCode && localCities.length) {
+      eligibility.push({ teachingMode: { $in: ["in-person", "both"] }, countryCode: tutorProfile.countryCode, city: { $in: localCities.map((value: string) => new RegExp(`^${escapeRegExp(value)}$`, "i")) } });
+    }
+    if (!eligibility.length) {
+      res.status(200).json({ success: true, total: 0, page: 1, requests: [] });
+      return;
+    }
+    filter.$and = [...((filter.$and as Record<string, unknown>[]) || []), { $or: eligibility }];
+  }
+
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 10));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Request.countDocuments(filter);
@@ -339,15 +395,14 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   
   // Online tutoring uses standard identity, education and demo verification.
   // Home tuition additionally requires the market's approved safety verification.
-  if (requested.teachingMode === "in-person") {
-    if (tutorProfile.policeVerificationStatus !== "approved") {
-      res.status(403).json({
-        success: false,
-        code: "POLICE_VERIFICATION_REQUIRED",
-        message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
-      });
-      return;
-    }
+  const requiresPoliceVerification = requested.teachingMode === "in-person" || (requested.teachingMode === "both" && tutorProfile.policeVerificationStatus !== "approved");
+  if (requiresPoliceVerification && tutorProfile.policeVerificationStatus !== "approved") {
+    res.status(403).json({
+      success: false,
+      code: "POLICE_VERIFICATION_REQUIRED",
+      message: "Home tuition requests require an approved Police Verification Report. Please submit your police clearance certificate to offer in-person tuition.",
+    });
+    return;
   }
 
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
@@ -486,7 +541,20 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     console.error("Failed to send new bid email:", err);
   }
 
-  res.status(201).json({ success: true, message: "Offer sent successfully", bid });
+  res.status(201).json({
+    success: true,
+    message: "Offer sent successfully",
+    bid,
+    // The offer amount is always labeled with the REQUEST's currency (never
+    // the tutor's own currency) - but nothing stops a tutor from typing a
+    // number sized for a different currency by mistake (e.g. typing "3000"
+    // meaning PKR on a GBP request). moderationReasons already flags amounts
+    // far outside a plausible range for the request's budget; surface that
+    // as an immediate warning instead of only a silent admin-moderation flag.
+    ...(moderationReasons.includes("unusual_price") && {
+      warning: `Your offer of ${currency} ${req.body.amount.toLocaleString()} looks unusually different from the student's budget of ${currency} ${request.budget.toLocaleString()}. Please double check you entered the amount in ${currency}.`,
+    }),
+  });
 };
 
 // @desc    Get all bids for a request
@@ -580,113 +648,104 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
+  if (isOwner && !isDirectTutorAccept) {
+    const approvalProfile = await ParentProfile.findOne({ "children.studentUser": request.student, approvalRequiredForBookings: true }).select("user").lean();
+    if (approvalProfile) {
+      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) }, { new: true });
+      if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
+      await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
+      await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString() } });
+      res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "Your selected offer is awaiting parent approval before payment." });
+      return;
+    }
+  }
+
+  // A direct request is accepted by its target tutor, so enforce the linked
+  // guardian's approval requirement here rather than only in the student
+  // acceptance branch above.
   if (isDirectTutorAccept) {
-    const existingBookingsCount = await Booking.countDocuments({
-      student: request.student,
-      tutor: bid.tutor,
-    });
-    const fees = calculateMarketplaceFees(bid.amount);
-    const bookingArr = await Booking.create([{
-      student: request.student,
-      tutor: bid.tutor,
-      request: request._id,
-      bid: bid._id,
-      amount: bid.amount,
-      finalAgreedRate: bid.amount,
-      currency: bid.currency || request.currency,
-      countryCode: request.countryCode,
-      timezone: request.timezone,
-      scheduleTimezone: request.scheduleTimezone || request.timezone,
-      scheduledStartAt: request.scheduledStartAt,
-      scheduledEndAt: request.scheduledEndAt,
-      pricingUnit: bid.pricingUnit || "hour",
-      sessionCount: 1,
-      ...fees,
-      platformFee: fees.tutorFee + fees.tax,
-      tutorPayout: fees.tutorNet,
-      schedule: request.schedule,
-      teachingMode: request.teachingMode,
-      isFirstSession: existingBookingsCount === 0,
-      paymentStatus: "pending",
-      paymentNote: "Awaiting student checkout through authorized payment gateway",
-    }]);
-    const booking = bookingArr[0];
-    await syncStudentTutorRelationship(booking as any);
-
-    if (request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
-      await BookedSlot.create([{
-        tutor: bid.tutor,
-        student: request.student,
-        booking: booking._id,
-        date: new Date(request.selectedDate),
-        startTime: request.selectedStartTime,
-        endTime: request.selectedEndTime,
-        timezone: request.scheduleTimezone || request.timezone,
-        startAt: request.scheduledStartAt,
-        endAt: request.scheduledEndAt,
-      }]);
+    const approvalProfile = await ParentProfile.findOne({
+      "children.studentUser": request.student,
+      approvalRequiredForBookings: true,
+    }).select("user").lean();
+    if (approvalProfile) {
+      const reserved = await Request.findOneAndUpdate(
+        { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+        { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount },
+        { new: true }
+      );
+      if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
+      await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor booking before payment can begin.`, type: "booking", link: "/dashboard" });
+      await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString(), directBooking: true } });
+      res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "This booking is awaiting parent approval before payment." });
+      return;
     }
-
-    bid.status = "accepted";
-    request.status = "closed";
-    request.acceptedOffer = bid._id;
-    request.finalAgreedRate = bid.amount;
-    await Promise.all([bid.save(), request.save()]);
-
-    const io = req.app.get("io");
-    if (io) {
-      await sendNotification(io, request.student.toString(), {
-        title: "✅ Direct Booking Accepted!",
-        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment on your dashboard to confirm.`,
-        type: "booking",
-        link: "/dashboard",
-      });
-    }
-
-    try {
-      const studentUser = await User.findById(request.student).select("name email");
-      if (studentUser) {
-        const { subject: emailSubject, html } = directBookingAcceptedEmail(
-          studentUser.name,
-          req.user?.name || "Your tutor",
-          request.subject
-        );
-        await sendEmail({ to: studentUser.email, subject: emailSubject, html });
-      }
-    } catch (emailErr) {
-      console.error("[DirectBooking] Failed to send acceptance email to student:", emailErr);
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Direct booking accepted successfully. The booking has been scheduled and the student notified to pay.",
-      bookingId: booking._id,
-    });
-    return;
   }
 
   // Atomic guard — only one accept attempt can win this transition
-  const reservedRequest = await Request.findOneAndUpdate(
-    { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-    { status: "awaiting_payment" },
-    { new: true }
-  );
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const reservedRequest = await Request.findOneAndUpdate(
+        { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+        { status: "awaiting_payment" },
+        { new: true, session }
+      );
 
-  if (!reservedRequest) {
-    res.status(409).json({ success: false, message: "This request was just accepted or is no longer available." });
+      if (!reservedRequest) {
+        throw Object.assign(new Error("This request was just accepted or is no longer available."), { statusCode: 409 });
+      }
+
+      const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
+      await Bid.findOneAndUpdate(
+        { _id: bid._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } },
+        { status: "payment_pending", paymentPendingExpiresAt },
+        { new: true, session }
+      );
+    });
+  } catch (txError: any) {
+    if (txError.statusCode === 409) {
+      res.status(409).json({ success: false, message: txError.message });
+      await session.endSession();
+      return;
+    }
+    console.error("Failed to reserve request/bid for payment:", txError);
+    res.status(500).json({ success: false, message: "Unable to process acceptance. Please try again." });
+    await session.endSession();
+    return;
+  } finally {
+    await session.endSession();
+  }
+
+  // Reload bid to get updated status
+  const updatedBid = await Bid.findById(bid._id);
+  if (!updatedBid || updatedBid.status !== "payment_pending") {
+    res.status(409).json({ success: false, message: "This offer was already processed." });
     return;
   }
 
-  const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-  bid.status = "payment_pending";
-  bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
-  await bid.save();
-
   try {
     const student = await User.findById(request.student).select("name email phone");
+    const fees = await calculateMarketplaceFees(bid.amount, {
+      currency: bid.currency || request.currency,
+      countryCode: request.countryCode,
+      teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+    });
+
+    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+    const originalStudentTotal = fees.studentTotal;
+    const promoCodeInput = req.body?.promoCode;
+    if (promoCodeInput) {
+      appliedPromo = await previewPromoDiscount(request.student.toString(), req.user?.role, promoCodeInput, fees.studentTotal);
+      // The discount comes out of the platform's own margin (studentFee),
+      // never the tutor's payout - tutorNet/tutorFee/tax are untouched.
+      fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+      fees.studentTotal = fees.subtotal + fees.studentFee;
+      recomputeGatewayFee(fees);
+    }
+
     const checkoutUrl = await paymentProvider.createCheckout({
-      amount: bid.amount,
+      amount: fees.studentTotal,
       currency: bid.currency || "PKR",
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
@@ -694,10 +753,12 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       bidId: bid._id.toString(),
       studentId: request.student.toString(),
       tutorId: bid.tutor.toString(),
+      feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
       description: `TUTORERA offer acceptance ${bid._id.toString()}`,
       successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
       failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
       checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
+      ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
     res.status(200).json({
@@ -711,6 +772,11 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       { _id: bid._id, status: "payment_pending" },
       { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
     );
+
+    if (err instanceof PromoCodeError) {
+      res.status(err.statusCode).json({ success: false, message: err.message });
+      return;
+    }
 
     console.error("Failed to create payment checkout for offer acceptance:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
@@ -737,6 +803,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
       subject: string;
       amount: number;
     } | null = null;
+    let appliedPromoForRedemption: { promoCodeId: string; code: string; discountAmount: number; originalAmount: number } | null = null;
 
     await session.withTransaction(async () => {
       // Atomic guard — only proceeds if this bid is still awaiting payment
@@ -772,17 +839,32 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         tutor: bid.tutor,
       }).session(session);
 
-      const fees = calculateMarketplaceFees(bid.amount);
+      const fees = await calculateMarketplaceFees(bid.amount, {
+        currency: bid.currency || request.currency,
+        countryCode: request.countryCode,
+        teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+      });
+      const appliedPromo = await getAppliedPromoForBasket(`BID-${bidId}`);
+      if (appliedPromo) {
+        // Mirror the same discount applied at checkout time (initiateAcceptBid)
+        // so the booking record reflects what the student actually paid -
+        // discount comes out of the platform's studentFee margin, tutor
+        // payout is untouched.
+        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+        fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
+        appliedPromoForRedemption = appliedPromo;
+      }
+      const linkedParent = await resolveLinkedBookingParent(request.student as Types.ObjectId, session);
 
       const bookingArr = await Booking.create([{
         student: request.student,
+        ...(linkedParent && { parent: linkedParent }),
         tutor: bid.tutor,
         request: request._id,
         bid: bid._id,
         amount: bid.amount,
         finalAgreedRate: bid.amount,
-        currency: bid.currency || request.currency,
-        countryCode: request.countryCode,
         timezone: request.timezone,
         scheduleTimezone: request.scheduleTimezone || request.timezone,
         scheduledStartAt: request.scheduledStartAt,
@@ -790,6 +872,8 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         pricingUnit: bid.pricingUnit || "hour",
         sessionCount: 1,
         ...fees,
+        currency: bid.currency || request.currency,
+        countryCode: request.countryCode,
         platformFee: fees.tutorFee + fees.tax,
         tutorPayout: fees.tutorNet,
         schedule: request.schedule,
@@ -843,6 +927,13 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         subject: string;
         amount: number;
       };
+
+      if (appliedPromoForRedemption) {
+        const promo = appliedPromoForRedemption as { promoCodeId: string; code: string; discountAmount: number; originalAmount: number };
+        await finalizePromoRedemption(promo.promoCodeId, payload.requestStudent, (responseBooking as any)._id.toString(), promo.originalAmount, promo.discountAmount).catch(err =>
+          console.error("Failed to record promo code redemption for booking:", err)
+        );
+      }
 
       // Notifications/emails are best-effort — same as the original flow.
       if (io) {
@@ -905,11 +996,20 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   // Online Tuition: No Police Verification required.
   // In-Person / Home Tuition: Tutor MUST have an approved Police Verification Report.
   const requestedMode = teachingMode || tutorProfile.teachingMode;
+  if (!['online', 'in-person'].includes(requestedMode)) {
+    res.status(422).json({ success: false, code: "DIRECT_BOOKING_MODE_REQUIRED", message: "Choose either online or in-person tuition for a direct booking." });
+    return;
+  }
+  if (tutorProfile.teachingMode !== "both" && tutorProfile.teachingMode !== requestedMode) {
+    res.status(422).json({ success: false, code: "TUTOR_MODE_UNAVAILABLE", message: "This tutor is not available for the selected teaching mode." });
+    return;
+  }
   const market = await resolveMarket(req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK");
   if (!market || !market.isActive || !market.studentRegistration) {
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Direct booking is not available in the selected market." });
     return;
   }
+
   try { await assertMarketFeature(market.countryCode, "requests"); } catch (error: any) {
     res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
   }
@@ -934,7 +1034,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   const existingPending = await Request.findOne({
     student: req.user?._id,
     targetTutor: tutorId,
-    status: "open",
+    status: { $in: ["open", "published", "receiving_offers", "negotiating", "awaiting_parent_approval", "awaiting_payment"] },
   });
   if (existingPending) {
     res.status(400).json({
@@ -944,7 +1044,20 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     return;
   }
 
-  const scheduleTimezone = isValidIanaTimezone(req.body.timezone) ? req.body.timezone : market.timezone;
+  let locationReferences: Record<string, unknown>;
+  try {
+    locationReferences = await resolveLocationReferences(req.body, market.countryCode);
+  } catch (error: any) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    return;
+  }
+  if (req.body.timezone && !isValidIanaTimezone(req.body.timezone)) {
+    res.status(422).json({ success: false, code: "INVALID_TIMEZONE", message: "Please select a valid IANA timezone." });
+    return;
+  }
+  const scheduleTimezone = isValidIanaTimezone(req.body.timezone)
+    ? req.body.timezone
+    : (locationReferences.timezone as string | undefined) || market.timezone;
   let scheduledStartAt: Date | undefined;
   let scheduledEndAt: Date | undefined;
   if (selectedDate && selectedStartTime) {
@@ -952,6 +1065,10 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
       scheduledStartAt = zonedDateTimeToUtc(selectedDate, selectedStartTime, scheduleTimezone);
       if (selectedEndTime) scheduledEndAt = zonedDateTimeToUtc(selectedDate, selectedEndTime, scheduleTimezone);
     } catch { res.status(422).json({ success: false, message: "Please provide a valid IANA timezone and local lesson time." }); return; }
+  }
+  if (scheduledStartAt && scheduledEndAt && scheduledEndAt <= scheduledStartAt) {
+    res.status(422).json({ success: false, code: "INVALID_SCHEDULE_WINDOW", message: "Lesson end time must be after the start time." });
+    return;
   }
 
   // A tutor can be discovered across borders for online teaching. The request,
@@ -976,12 +1093,13 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     currency: market.currency,
     countryCode: market.countryCode,
     countryName: market.countryName,
+    ...locationReferences,
     timezone: scheduleTimezone,
     scheduleTimezone,
     scheduledStartAt,
     scheduledEndAt,
     teachingMode: teachingMode || tutorProfile.teachingMode,
-    city: city || tutorProfile.city,
+    city: (locationReferences.city as string | undefined) || city || tutorProfile.city,
     schedule: selectedDate && selectedStartTime
       ? `${selectedDate} ${selectedStartTime}–${selectedEndTime}`
       : schedule,
@@ -1173,11 +1291,11 @@ export const getPublicRequestsPreview = async (req: ExpressRequest, res: Respons
   if (subject) filter.subject = new RegExp(`^${escapeRegExp(String(subject).replace(/-/g, " "))}$`, "i");
   if (level) filter.level = String(level);
   if (currency) filter.currency = String(currency).toUpperCase();
-  if (teachingMode && teachingMode !== "all") {
+if (teachingMode && teachingMode !== "all") {
     if (teachingMode === "online") {
       filter.teachingMode = { $in: ["online", "both"] };
-    } else if (teachingMode === "in_person" || teachingMode === "home") {
-      filter.teachingMode = { $in: ["in_person", "home", "both"] };
+    } else if (teachingMode === "in-person") {
+      filter.teachingMode = { $in: ["in-person", "both"] };
     } else {
       filter.teachingMode = String(teachingMode);
     }

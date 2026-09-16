@@ -28,12 +28,14 @@ export interface PayoutLineItem {
   tutorFee: number;
   taxOnFee: number;
   netPayout: number;
+  currency: string;
 }
 
 export interface PayoutReportData {
   tutorId: string;
   tutorName: string;
   tutorEmail: string;
+  currency: string;
   periodStart: Date;
   periodEnd: Date;
   grossAmount: number;
@@ -77,7 +79,8 @@ export async function generateTutorPayoutReport(
   tutorId: string,
   periodStart: Date,
   periodEnd: Date,
-  generatedBy?: { userId?: string; role: "admin" | "tutor" }
+  generatedBy?: { userId?: string; role: "admin" | "tutor" },
+  requestedCurrency?: string
 ): Promise<{ data: PayoutReportData; pdfBuffer: Buffer }> {
   try {
     const tutor = await User.findById(tutorId);
@@ -90,7 +93,7 @@ export async function generateTutorPayoutReport(
       throw Object.assign(new Error("Tutor profile not found."), { statusCode: 404 });
     }
 
-    const completedBookings = await Booking.find({
+    const paidBookings = await Booking.find({
       tutor: tutor._id,
       status: "completed",
       payoutStatus: "paid",
@@ -103,6 +106,17 @@ export async function generateTutorPayoutReport(
       .populate("request", "subject sessionDurationMinutes")
       .lean();
 
+    const normalizedCurrency = requestedCurrency?.trim().toUpperCase();
+    if (normalizedCurrency && !/^[A-Z]{3}$/.test(normalizedCurrency)) {
+      throw Object.assign(new Error("Use a valid three-letter report currency."), { statusCode: 400 });
+    }
+    const availableCurrencies = [...new Set(paidBookings.map(booking => booking.currency || "PKR"))];
+    if (!normalizedCurrency && availableCurrencies.length > 1) {
+      throw Object.assign(new Error("Select a currency before generating a multi-currency payout report."), { statusCode: 400 });
+    }
+    const currency = normalizedCurrency || availableCurrencies[0] || "PKR";
+    const completedBookings = paidBookings.filter(booking => (booking.currency || "PKR") === currency);
+
     const payoutData = await calculatePayoutData(completedBookings);
 
     const reportId = crypto.randomBytes(16).toString("hex");
@@ -113,6 +127,7 @@ export async function generateTutorPayoutReport(
       tutorId,
       tutorName: tutor.name,
       tutorEmail: tutor.email,
+      currency,
       periodStart,
       periodEnd,
       grossAmount: payoutData.grossAmount,
@@ -183,6 +198,7 @@ export async function calculatePayoutData(bookings: any[]) {
     tutorFee: booking.tutorFee ?? 0,
     taxOnFee: booking.tax ?? 0,
     netPayout: booking.tutorNet ?? booking.tutorPayout ?? 0,
+    currency: booking.currency || "PKR",
   }));
 
   return {
@@ -323,13 +339,13 @@ function addPayoutSummary(doc: any, data: PayoutReportData): void {
     .font("Helvetica-Bold")
     .fontSize(14)
     .fillColor(COLORS.royalBlue)
-    .text(`Net Payout: Rs. ${data.netPayout.toLocaleString()}`, 65, y, { align: "center", width: 470 });
+    .text(`Net Payout: ${data.currency} ${data.netPayout.toLocaleString()}`, 65, y, { align: "center", width: 470 });
 
   const summaryItems = [
-    { label: "Gross Amount", value: `Rs. ${data.grossAmount.toLocaleString()}` },
-    { label: "Tutor Service Fee", value: `Rs. ${data.platformFee.toLocaleString()}` },
-    { label: "Tax on Tutor Fee", value: `Rs. ${data.taxOnFee.toLocaleString()}` },
-    { label: "Total Deductions", value: `Rs. ${data.totalDeduction.toLocaleString()}` },
+    { label: "Gross Amount", value: `${data.currency} ${data.grossAmount.toLocaleString()}` },
+    { label: "Tutor Service Fee", value: `${data.currency} ${data.platformFee.toLocaleString()}` },
+    { label: "Tax on Tutor Fee", value: `${data.currency} ${data.taxOnFee.toLocaleString()}` },
+    { label: "Total Deductions", value: `${data.currency} ${data.totalDeduction.toLocaleString()}` },
     { label: "Period", value: `${data.periodStart.toLocaleDateString()} - ${data.periodEnd.toLocaleDateString()}` },
     { label: "Sessions Completed", value: data.sessionsCompleted.toString() },
     { label: "Hours Taught", value: `${data.hoursTaught} hrs` },
@@ -360,11 +376,11 @@ function addTaxBreakdownSection(doc: any, data: PayoutReportData): void {
   const taxPercent = data.platformFee > 0 ? (data.taxOnFee / data.platformFee) * 100 : 0;
   const deductionPercent = data.grossAmount > 0 ? (data.totalDeduction / data.grossAmount) * 100 : 0;
   const taxItems = [
-    { label: "Gross Payout Amount", value: `Rs. ${data.grossAmount.toLocaleString()}`, rate: "100%", category: "Base" },
-    { label: "Tutor Service Fee", value: `Rs. ${data.platformFee.toLocaleString()}`, rate: `${feePercent.toFixed(1)}%`, category: "Stored snapshot" },
-    { label: "Tax on Tutor Fee", value: `Rs. ${data.taxOnFee.toLocaleString()}`, rate: `${taxPercent.toFixed(1)}% of fee`, category: "Stored snapshot" },
-    { label: "Total Deductions", value: `Rs. ${data.totalDeduction.toLocaleString()}`, rate: `${deductionPercent.toFixed(1)}% effective`, category: "Combined" },
-    { label: "Net Payout (Take-Home)", value: `Rs. ${data.netPayout.toLocaleString()}`, rate: `${data.effectiveTakeHomePercent.toFixed(1)}%`, category: "Net" },
+    { label: "Gross Payout Amount", value: `${data.currency} ${data.grossAmount.toLocaleString()}`, rate: "100%", category: "Base" },
+    { label: "Tutor Service Fee", value: `${data.currency} ${data.platformFee.toLocaleString()}`, rate: `${feePercent.toFixed(1)}%`, category: "Stored snapshot" },
+    { label: "Tax on Tutor Fee", value: `${data.currency} ${data.taxOnFee.toLocaleString()}`, rate: `${taxPercent.toFixed(1)}% of fee`, category: "Stored snapshot" },
+    { label: "Total Deductions", value: `${data.currency} ${data.totalDeduction.toLocaleString()}`, rate: `${deductionPercent.toFixed(1)}% effective`, category: "Combined" },
+    { label: "Net Payout (Take-Home)", value: `${data.currency} ${data.netPayout.toLocaleString()}`, rate: `${data.effectiveTakeHomePercent.toFixed(1)}%`, category: "Net" },
   ];
 
   let y = doc.y;
@@ -393,7 +409,7 @@ function addLineItemsSection(doc: any, data: PayoutReportData): void {
     doc.font("Helvetica-Bold").fontSize(10).fillColor(COLORS.deepNavy)
       .text(`${index + 1}. ${item.subject} - ${new Date(item.payoutDate).toLocaleDateString("en-PK")}`);
     doc.font("Helvetica").fontSize(9).fillColor(COLORS.text)
-      .text(`Booking ${item.bookingId} | Gross Rs. ${item.grossAmount.toLocaleString()} | Fee Rs. ${item.tutorFee.toLocaleString()} | Tax Rs. ${item.taxOnFee.toLocaleString()} | Net Rs. ${item.netPayout.toLocaleString()}`)
+      .text(`Booking ${item.bookingId} | Gross ${item.currency} ${item.grossAmount.toLocaleString()} | Fee ${item.currency} ${item.tutorFee.toLocaleString()} | Tax ${item.currency} ${item.taxOnFee.toLocaleString()} | Net ${item.currency} ${item.netPayout.toLocaleString()}`)
       .moveDown(0.7);
   });
 }

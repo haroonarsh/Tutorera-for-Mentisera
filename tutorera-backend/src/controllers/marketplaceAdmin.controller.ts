@@ -54,7 +54,7 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
       { $count: "count" },
     ]),
     Bid.countDocuments({ status: "accepted" }),
-    Booking.find().select("subtotal studentTotal tutorFee platformFee finalAgreedRate amount createdAt").lean(),
+    Booking.find().select("subtotal studentTotal tutorFee platformFee finalAgreedRate amount currency createdAt").lean(),
     Booking.countDocuments({ status: "completed" }),
     Booking.countDocuments({ status: "cancelled" }),
     Request.countDocuments({ status: "disputed" }),
@@ -75,11 +75,36 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
   ]);
   const requestDates = await Request.find({ _id: { $in: firstOffers.map(x => x._id) } }).select("createdAt").lean(); const dateMap=new Map(requestDates.map(r=>[r._id.toString(),r.createdAt.getTime()]));
   const averageMinutesToFirstOffer=firstOffers.length?firstOffers.reduce((s,x)=>s+Math.max(0,x.first.getTime()-(dateMap.get(x._id.toString())||x.first.getTime())),0)/firstOffers.length/60000:0;
-  const acceptedRows=await Bid.find({status:"accepted"}).select("initialStudentRate amount createdAt viewedAt").lean();
+  const acceptedRows=await Bid.find({status:"accepted"}).select("initialStudentRate amount currency createdAt viewedAt").lean();
   const averageNegotiatedDiscount=acceptedRows.length?acceptedRows.reduce((s,o)=>s+((o.initialStudentRate-o.amount)/o.initialStudentRate*100),0)/acceptedRows.length:0;
-  const averageAgreedRate=acceptedRows.length?acceptedRows.reduce((s,o)=>s+o.amount,0)/acceptedRows.length:0;
   const responseRows=await Bid.find({viewedAt:{$exists:true}}).select("createdAt viewedAt").lean(); const averageTutorResponseMinutes=responseRows.length?responseRows.reduce((s,o)=>s+Math.max(0,(o.viewedAt!.getTime()-o.createdAt.getTime())/60000),0)/responseRows.length:0;
-  const marketplaceGMV=bookings.reduce((s,b)=>s+(b.studentTotal||b.subtotal||b.amount||0),0); const platformRevenue=bookings.reduce((s,b)=>s+(b.tutorFee||b.platformFee||0),0);
+  // Bucketed per currency - PK/AE/US/SA/IN settle in different currencies, so summing or
+  // averaging raw amounts across them (e.g. PKR 2,000 + AED 300) would be meaningless.
+  type MoneyBucket = { currency: string; marketplaceGMV: number; platformRevenue: number; bookingsCount: number; agreedRateSum: number; agreedRateCount: number };
+  const byCurrency = new Map<string, MoneyBucket>();
+  const bucketFor = (currency: string | undefined) => {
+    const key = currency || "PKR";
+    let bucket = byCurrency.get(key);
+    if (!bucket) { bucket = { currency: key, marketplaceGMV: 0, platformRevenue: 0, bookingsCount: 0, agreedRateSum: 0, agreedRateCount: 0 }; byCurrency.set(key, bucket); }
+    return bucket;
+  };
+  for (const b of bookings) {
+    const bucket = bucketFor(b.currency);
+    bucket.marketplaceGMV += b.studentTotal || b.subtotal || b.amount || 0;
+    bucket.platformRevenue += b.tutorFee || b.platformFee || 0;
+    bucket.bookingsCount += 1;
+  }
+  for (const o of acceptedRows) {
+    const bucket = bucketFor(o.currency);
+    bucket.agreedRateSum += o.amount;
+    bucket.agreedRateCount += 1;
+  }
+  const moneyByCurrency = Array.from(byCurrency.values()).map((bucket) => ({
+    currency: bucket.currency,
+    marketplaceGMV: bucket.marketplaceGMV,
+    platformRevenue: bucket.platformRevenue,
+    averageAgreedRate: bucket.agreedRateCount ? bucket.agreedRateSum / bucket.agreedRateCount : 0,
+  }));
   res.json({
     success: true,
     metrics: {
@@ -95,12 +120,10 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
       averageMinutesToFirstOffer,
       offerAcceptanceRate: totalOffers ? acceptedOffers / totalOffers * 100 : 0,
       averageNegotiatedDiscount,
-      averageAgreedRate,
       averageTutorResponseMinutes,
       bookingsGenerated: bookings.length,
       conversionRate: totalRequests ? bookings.length / totalRequests * 100 : 0,
-      marketplaceGMV,
-      platformRevenue,
+      moneyByCurrency,
       completionRate: bookings.length ? completed / bookings.length * 100 : 0,
       cancellationRate: bookings.length ? cancelled / bookings.length * 100 : 0,
       disputeRate: totalRequests ? disputed / totalRequests * 100 : 0,
@@ -122,5 +145,5 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
 };
 
 export const listMarketplaceRequests=async(req:AuthRequest,res:Response):Promise<void>=>{const filter:Record<string,unknown>={};if(req.countryScopeCode)filter.countryCode=req.countryScopeCode;for(const key of ["subject","city","status","teachingMode","lossReason"] as const)if(req.query[key])filter[key]=req.query[key];if(req.query.minPrice||req.query.maxPrice)filter.budget={...(req.query.minPrice?{$gte:Number(req.query.minPrice)}:{}),...(req.query.maxPrice?{$lte:Number(req.query.maxPrice)}:{})};const requests=await Request.find(filter).populate("student","name city countryCode").sort("-createdAt").limit(200).lean();res.json({success:true,requests})};
-export const listMarketplaceOffers=async(req:AuthRequest,res:Response):Promise<void>=>{const filter:Record<string,unknown>={};if(req.query.status)filter.status=req.query.status;if(req.query.flagged==="true")filter.flaggedForModeration=true;if(req.countryScopeCode){const requestIds=(await Request.find({countryCode:req.countryScopeCode}).select("_id").lean()).map((request)=>request._id);filter.request={$in:requestIds}}const offers=await Bid.find(filter).populate("tutor","name avatar city countryCode").populate("request","subject city level teachingMode budget status countryCode").sort("-createdAt").limit(300).lean();res.json({success:true,offers})};
-export const getMarketplaceOfferDetail=async(req:AuthRequest,res:Response):Promise<void>=>{const offer=await Bid.findById(req.params.id).populate("tutor","name avatar city").populate("request","subject city level teachingMode budget status student countryCode").lean();if(!offer){res.status(404).json({success:false,message:"Offer not found."});return}if(req.countryScopeCode && (offer.request as any)?.countryCode!==req.countryScopeCode){res.status(404).json({success:false,message:"Offer not found."});return}const history=await OfferNegotiation.find({offer:offer._id}).populate("senderUser","name role").sort("sequenceNumber").lean();res.json({success:true,offer,history})};
+export const listMarketplaceOffers=async(req:AuthRequest,res:Response):Promise<void>=>{const filter:Record<string,unknown>={};if(req.query.status)filter.status=req.query.status;if(req.query.flagged==="true")filter.flaggedForModeration=true;if(req.countryScopeCode){const requestIds=(await Request.find({countryCode:req.countryScopeCode}).select("_id").lean()).map((request)=>request._id);filter.request={$in:requestIds}}const offers=await Bid.find(filter).populate("tutor","name avatar city countryCode").populate("request","subject city level teachingMode budget status countryCode currency").sort("-createdAt").limit(300).lean();res.json({success:true,offers})};
+export const getMarketplaceOfferDetail=async(req:AuthRequest,res:Response):Promise<void>=>{const offer=await Bid.findById(req.params.id).populate("tutor","name avatar city").populate("request","subject city level teachingMode budget status student countryCode currency").lean();if(!offer){res.status(404).json({success:false,message:"Offer not found."});return}if(req.countryScopeCode && (offer.request as any)?.countryCode!==req.countryScopeCode){res.status(404).json({success:false,message:"Offer not found."});return}const history=await OfferNegotiation.find({offer:offer._id}).populate("senderUser","name role").sort("sequenceNumber").lean();res.json({success:true,offer,history})};

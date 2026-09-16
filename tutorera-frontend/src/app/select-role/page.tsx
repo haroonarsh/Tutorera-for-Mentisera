@@ -1,168 +1,181 @@
 "use client";
 
-import BrandLogo from "@/components/BrandLogo";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 
 export default function SelectRolePage() {
-  const { selectRole, loading } = useAuth();
-  const [selected, setSelected] = useState<"student" | "tutor" | "parent">("student");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { selectRole, user, loading } = useAuth();
+  const [role, setRole] = useState<"student" | "tutor" | "parent">("student");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
+    setError("");
     try {
-      await selectRole(selected);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to set role. Please try again.");
-      setSubmitting(false);
+      await selectRole(role);
+      setSuccess("Role selected successfully!");
+      // Redirect to dashboard or appropriate page after selection
+      router.replace("/dashboard");
+    } catch (err) {
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setError(errorObj.response?.data?.message || "Failed to select role");
     }
   };
 
+  if (user) {
+    // If user is already logged in and has a role, redirect
+    if (user.role !== "pending") {
+      router.replace("/dashboard");
+      return null;
+    }
+  }
+
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#F5F7FF",
-      padding: "2rem",
+    <div style={{ 
+      minHeight: "100vh", 
+      backgroundColor: "#F5F7FF", 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      padding: "2rem 1rem" 
     }}>
-      <div style={{ marginBottom: "2rem" }}>
-        <BrandLogo />
-      </div>
-
-      <div style={{
-        backgroundColor: "white",
-        borderRadius: "1.25rem",
-        border: "1px solid #e5e7eb",
-        padding: "2.5rem",
-        maxWidth: "480px",
-        width: "100%",
-        textAlign: "center",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+      <div style={{ 
+        backgroundColor: "white", 
+        borderRadius: "1rem", 
+        padding: "2.5rem", 
+        width: "100%", 
+        maxWidth: "400px", 
+        textAlign: "center", 
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)" 
       }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#021550", marginBottom: "0.5rem" }}>
-          Choose Your Role
+        <h1 style={{ 
+          fontSize: "1.5rem", 
+          fontWeight: "700", 
+          color: "#021550", 
+          marginBottom: "1.5rem" 
+        }}>
+          Select Your Role
         </h1>
-        <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "2rem" }}>
-          Select how you want to use TUTORERA. You can update this later from your account settings.
+        
+        <p style={{ 
+          color: "#4b5563", 
+          marginBottom: "1.5rem", 
+          fontSize: "0.95rem" 
+        }}>
+          After signing in with Google, please select your role to continue.
         </p>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "2rem" }}>
-            <button
-              type="button"
-              onClick={() => setSelected("student")}
-              style={{
-                padding: "1.25rem",
-                border: selected === "student" ? "2px solid #0329B2" : "1.5px solid #e5e7eb",
-                borderRadius: "0.75rem",
-                background: selected === "student" ? "#EEF5FF" : "white",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s ease",
+        
+        <form onSubmit={handleSubmit} style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "1rem", 
+          marginBottom: "1.5rem"
+        }}>
+          <div>
+            <label 
+              style={{ 
+                display: "block", 
+                fontSize: "0.875rem", 
+                fontWeight: "600", 
+                color: "#021550", 
+                marginBottom: "0.4rem" 
+              }} 
+            >
+              Role
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as "student" | "tutor" | "parent")}
+              style={{ 
+                width: "100%", 
+                padding: "0.75rem 1rem", 
+                border: "1.5px solid #e5e7eb", 
+                borderRadius: "0.5rem", 
+                fontSize: "0.9rem", 
+                backgroundColor: "white", 
+                color: "#021550"
               }}
             >
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", marginBottom: "0.25rem" }}>
-                🎓 I'm a Student
-              </div>
-              <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-                I want to browse tutors, post tuition requests, and book sessions.
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelected("parent")}
-              style={{
-                padding: "1.25rem",
-                border: selected === "parent" ? "2px solid #0329B2" : "1.5px solid #e5e7eb",
-                borderRadius: "0.75rem",
-                background: selected === "parent" ? "#EEF5FF" : "white",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "border-color 0.15s ease, background-color 0.15s ease",
-              }}
-            >
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", marginBottom: "0.25rem" }}>
-                👪 I&apos;m a Parent or Guardian
-              </div>
-              <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-                I want to manage safe tutoring, bookings, and learning plans for a child.
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelected("tutor")}
-              style={{
-                padding: "1.25rem",
-                border: selected === "tutor" ? "2px solid #0329B2" : "1.5px solid #e5e7eb",
-                borderRadius: "0.75rem",
-                background: selected === "tutor" ? "#EEF5FF" : "white",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", marginBottom: "0.25rem" }}>
-                📚 I'm a Tutor
-              </div>
-              <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-                I want to offer tuition, respond to student requests, and grow my teaching business.
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelected("parent")}
-              style={{
-                padding: "1.25rem",
-                border: selected === "parent" ? "2px solid #0329B2" : "1.5px solid #e5e7eb",
-                borderRadius: "0.75rem",
-                background: selected === "parent" ? "#EEF5FF" : "white",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#021550", marginBottom: "0.25rem" }}>
-                👨‍👩‍👧 I'm a Parent
-              </div>
-              <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-                I want to find tutors for my children and manage their learning progress.
-              </div>
-            </button>
+              <option value="student">Student</option>
+              <option value="tutor">Tutor</option>
+              <option value="parent">Parent</option>
+            </select>
           </div>
-
+          
           {error && (
-            <p style={{ color: "#ef4444", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>
+            <div 
+              role="alert" 
+              style={{ 
+                backgroundColor: "#fef2f2", 
+                border: "1px solid #fecaca", 
+                borderRadius: "0.5rem", 
+                padding: "0.75rem 1rem", 
+                marginBottom: "1rem", 
+                color: "#dc2626", 
+                fontSize: "0.875rem" 
+              }}
+            >
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div 
+              role="alert" 
+              style={{ 
+                backgroundColor: "#f0fdf4", 
+                border: "1px solid #10b981", 
+                borderRadius: "0.5rem", 
+                padding: "0.75rem 1rem", 
+                marginBottom: "1rem", 
+                color: "#166534", 
+                fontSize: "0.875rem" 
+              }}
+            >
+              {success}
+            </div>
           )}
 
           <button
             type="submit"
-            disabled={submitting || loading}
-            style={{
-              width: "100%",
-              padding: "0.875rem",
-              background: "#0329B2",
-              color: "white",
-              border: "none",
-              borderRadius: "0.5rem",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              cursor: submitting || loading ? "not-allowed" : "pointer",
-              opacity: submitting || loading ? 0.7 : 1,
+            disabled={loading}
+            style={{ 
+              backgroundColor: "#0329b2", 
+              color: "white", 
+              padding: "0.75rem 1.5rem", 
+              borderRadius: "0.5rem", 
+              border: "none", 
+              fontWeight: "600", 
+              fontSize: "0.95rem", 
+              cursor: loading ? "not-allowed" : "pointer", 
+              transition: "background 0.2s",
+              opacity: loading ? 0.7 : 1
             }}
           >
-            {submitting || loading ? "Setting up your account..." : "Continue"}
+            {loading ? "Saving..." : "Continue"}
           </button>
         </form>
+        
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{ 
+            backgroundColor: "#3b82f6", 
+            color: "white", 
+            padding: "0.75rem 1.5rem", 
+            borderRadius: "0.5rem", 
+            border: "none", 
+            fontWeight: "600", 
+            fontSize: "0.95rem", 
+            cursor: "pointer", 
+            transition: "background 0.2s"
+          }}
+        >
+          Go Back
+        </button>
       </div>
     </div>
   );

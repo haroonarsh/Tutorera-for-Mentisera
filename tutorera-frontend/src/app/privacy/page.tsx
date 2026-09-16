@@ -17,7 +17,7 @@ import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Global Privacy Policy | TUTORERA",
+  title: "Global Privacy Policy",
   description: "Comprehensive privacy policy explaining data collection, lawful bases, international data transfers, child data protection, and self-serve user rights.",
 };
 
@@ -92,7 +92,7 @@ We never claim that using the platform waives your international transfer statut
     content: `We share data with trusted third-party subprocessors strictly to deliver platform services:
 • Cloud Infrastructure & Hosting: MongoDB Atlas, Render, Cloudflare Workers, Cloudinary.
 • Authentication & Security: Google OAuth, JSON Web Token cryptography.
-• Payment Processing: Authorized PCI-DSS payment gateways (Stripe, Paymob, local banking partners).
+• Payment Processing: Authorized PCI-DSS payment gateways and local banking partners.
 • Email & Transactional Notifications: SendGrid, Resend.
 View our complete, updated directory on our Subprocessors Page.`
   },
@@ -119,7 +119,7 @@ To exercise rights not available self-serve, contact ${PRIVACY_CONTACT_EMAIL}.`
   {
     id: "10-cookies",
     title: "10. Cookies, Tracking & Local Storage",
-    content: `We use cookies and local storage to keep you authenticated, remember your preferred currency/timezone, and analyze site traffic. Non-essential analytics and marketing cookies require prior consent in jurisdictions where legally mandated. Learn more in our Cookie Policy.`
+    content: `We use cookies and local storage to keep you authenticated, remember your preferred currency/timezone, and analyze site traffic. Non-essential analytics and marketing cookies require prior consent in jurisdictions where legally mandated.\n\nWe also participate in Google AdSense (publisher ID ca-pub-2559940686225219), which uses cookies such as __gads to serve relevant contextual and interest-based advertisements and to measure ad performance. These cookies are only set after you have given advertising consent through our Cookie Banner. We do NOT sell your personal data to advertisers and never share identifiable information with advertising partners beyond what is necessary for ad delivery. Learn more in our Cookie Policy.`
   },
   {
     id: "11-mobile-privacy",

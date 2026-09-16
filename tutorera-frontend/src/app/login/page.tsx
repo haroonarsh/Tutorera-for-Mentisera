@@ -1,48 +1,94 @@
 "use client";
 
-import BrandLogo from "@/components/BrandLogo";
-import GoogleButton from "@/components/GoogleButton";
-import { useAuth } from "@/context/AuthContext";
 import { UI_COLORS } from "@/lib/brand";
-import { BookOpen,Eye,EyeOff,GraduationCap,Users } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle2, Eye, EyeOff, Info } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import GoogleButton from "@/components/GoogleButton";
+import BrandLogo from "@/components/BrandLogo";
 
 const C = UI_COLORS;
 
-const ROLE_TABS = [
-  { value: "student" as const, label: "Student", icon: <BookOpen size={15} /> },
-  { value: "tutor" as const, label: "Tutor", icon: <GraduationCap size={15} /> },
-  { value: "parent" as const, label: "Parent", icon: <Users size={15} /> },
-];
+function getSafeRedirect(target: string | null): string | null {
+  if (!target) return null;
+  // Must start with single slash, prevent protocol-relative (//) and backslash traversal (/\)
+  if (target.startsWith("/") && !target.startsWith("//") && !target.startsWith("/\\")) {
+    return target;
+  }
+  return null;
+}
 
-export default function LoginPage() {
-  const [googleRole, setGoogleRole] = useState<"student" | "tutor" | "parent">("student");
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const { user, loading: authLoading, login, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const safeRedirect = useMemo(() => {
+    return getSafeRedirect(searchParams.get("redirect"));
+  }, [searchParams]);
+
+  const noticeMessage = useMemo(() => {
+    if (searchParams.get("reset") === "success") {
+      return {
+        type: "success" as const,
+        text: "Your password has been successfully reset. Please sign in with your new password.",
+      };
+    }
+    if (searchParams.get("registered") === "true") {
+      return {
+        type: "success" as const,
+        text: "Your account was created successfully! Please sign in below.",
+      };
+    }
+    if (searchParams.get("session") === "expired") {
+      return {
+        type: "info" as const,
+        text: "Your session has expired. Please sign in again to continue.",
+      };
+    }
+    return null;
+  }, [searchParams]);
+
+  // If already authenticated, smoothly navigate to dashboard or redirect destination
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (user.role === "pending") {
+        router.replace("/select-role");
+      } else if (safeRedirect) {
+        router.replace(safeRedirect);
+      } else if (user.role === "admin") {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+    }
+  }, [user, authLoading, safeRedirect, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+    const sanitizedEmail = email.trim().toLowerCase();
+
     try {
-      const loggedInUser = await login(email, password);
+      const loggedInUser = await login(sanitizedEmail, password);
       if (loggedInUser.role === "admin") {
-        router.replace("/admin");
+        router.replace(safeRedirect && safeRedirect.startsWith("/admin") ? safeRedirect : "/admin");
       } else if (loggedInUser.role === "pending") {
         router.replace("/select-role");
       } else {
-        router.replace("/dashboard");
+        router.replace(safeRedirect || "/dashboard");
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Invalid email or password");
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setError(errorObj.response?.data?.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -51,19 +97,32 @@ export default function LoginPage() {
   const handleGoogleToken = async (idToken: string) => {
     setError("");
     try {
-      const { user, needsRole } = await loginWithGoogle(idToken, googleRole);
-      if (needsRole) {
+      const { user: authedUser, needsRole } = await loginWithGoogle(idToken);
+      if (needsRole || authedUser.role === "pending") {
         router.replace("/select-role");
-      } else if (user.role === "admin") {
-        router.replace("/admin");
+      } else if (authedUser.role === "admin") {
+        router.replace(safeRedirect && safeRedirect.startsWith("/admin") ? safeRedirect : "/admin");
       } else {
-        router.replace("/dashboard");
+        router.replace(safeRedirect || "/dashboard");
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Google sign-in failed. Please try again.");
+      const errorObj = err as { response?: { data?: { message?: string } } };
+      setError(errorObj.response?.data?.message || "Google sign-in failed. Please try again.");
     }
   };
+
+  if (!authLoading && user) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#F5F7FF", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
+        <div style={{ backgroundColor: "white", borderRadius: "1rem", padding: "2.5rem", width: "100%", maxWidth: "440px", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid #e5e7eb" }}>
+          <BrandLogo size="lg" />
+          <p style={{ marginTop: "1rem", color: C.gray600, fontSize: "0.95rem" }}>
+            Redirecting to your account...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F5F7FF", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
@@ -79,43 +138,34 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Google Sign In — needs role selector for new accounts */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          {/* Role selector for Google OAuth */}
-          <div style={{ display: "flex", backgroundColor: "#f1f5f9", borderRadius: "0.625rem", padding: "0.25rem", marginBottom: "0.75rem" }}>
-            {ROLE_TABS.map(tab => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setGoogleRole(tab.value)}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.35rem",
-                  padding: "0.5rem 0.25rem",
-                  borderRadius: "0.5rem",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  transition: "all 0.2s",
-                  backgroundColor: googleRole === tab.value ? "white" : "transparent",
-                  color: googleRole === tab.value ? "#0329b2" : "#64748b",
-                  boxShadow: googleRole === tab.value ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-                }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
+        {noticeMessage && (
+          <div
+            role="status"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.6rem",
+              backgroundColor: noticeMessage.type === "success" ? "#f0fdf4" : "#eff6ff",
+              border: `1px solid ${noticeMessage.type === "success" ? "#bbf7d0" : "#bfdbfe"}`,
+              borderRadius: "0.5rem",
+              padding: "0.75rem 1rem",
+              marginBottom: "1.25rem",
+              color: noticeMessage.type === "success" ? "#166534" : "#1e40af",
+              fontSize: "0.875rem",
+              lineHeight: 1.4,
+            }}
+          >
+            {noticeMessage.type === "success" ? <CheckCircle2 size={18} style={{ flexShrink: 0 }} /> : <Info size={18} style={{ flexShrink: 0 }} />}
+            <span>{noticeMessage.text}</span>
           </div>
+        )}
 
+        {/* Google Sign In */}
+        <div style={{ marginBottom: "1.25rem" }}>
           <GoogleButton
             onToken={handleGoogleToken}
             text="signin_with"
-            roleLabel={ROLE_TABS.find(t => t.value === googleRole)?.label ?? "Student"}
+            roleLabel="account"
           />
         </div>
 
@@ -126,7 +176,11 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", padding: "0.75rem 1rem", marginBottom: "1.5rem", color: C.error, fontSize: "0.875rem" }}>
+          <div
+            role="alert"
+            data-testid="login-error"
+            style={{ backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "0.5rem", padding: "0.75rem 1rem", marginBottom: "1.5rem", color: C.error, fontSize: "0.875rem" }}
+          >
             {error}
           </div>
         )}
@@ -139,6 +193,9 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck="false"
               placeholder="you@example.com"
               style={{ width: "100%", padding: "0.75rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary }}
               onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
@@ -157,6 +214,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 placeholder="••••••••"
                 style={{ width: "100%", padding: "0.75rem 2.75rem 0.75rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", fontSize: "0.9rem", outline: "none", boxSizing: "border-box", color: C.primary }}
                 onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
@@ -165,6 +223,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
+                aria-label={showPass ? "Hide password" : "Show password"}
                 style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.gray500 }}
               >
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -183,11 +242,27 @@ export default function LoginPage() {
 
         <p style={{ textAlign: "center", marginTop: "1.5rem", fontSize: "0.875rem", color: C.gray500 }}>
           Don't have an account?{" "}
-          <Link href="/register" style={{ color: C.accent, fontWeight: "600", textDecoration: "none" }}>
+          <Link
+            href={safeRedirect ? `/register?redirect=${encodeURIComponent(safeRedirect)}` : "/register"}
+            style={{ color: C.accent, fontWeight: "600", textDecoration: "none" }}
+          >
             Sign up
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", backgroundColor: "#F5F7FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: "36px", height: "36px", border: "3px solid #0329B2", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

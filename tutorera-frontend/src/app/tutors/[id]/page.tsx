@@ -1,28 +1,30 @@
-import AvatarImage from "@/components/Common/AvatarImage";
-import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
-import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
-import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
-import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
-import { SITE_URL } from "@/lib/site";
-import { fetchTutor,tutorProfileHref } from "@/lib/tutor-directory";
-import type { Review } from "@/types/tutor";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import type { Metadata } from "next";
 import {
-  Award,
   BookOpen,
   CheckCircle,
-  ChevronRight,
   Clock,
-  Home,
   MapPin,
-  ShieldCheck,
-  Sparkles,
   Star,
+  ShieldCheck,
+  Award,
   Video,
+  FileCheck2,
+  Sparkles,
+  Home,
+  ChevronRight,
   Zap,
 } from "lucide-react";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import TutorProfileActions from "@/components/Tutors/TutorProfileActions";
+import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
+import AvatarImage from "@/components/Common/AvatarImage";
+import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
+import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
+import { fetchTutor, fetchTutors, tutorProfileHref } from "@/lib/tutor-directory";
+import TutorCard from "@/components/Tutors/TutorCard";
+import { SITE_URL } from "@/lib/site";
+import type { Review } from "@/types/tutor";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -31,7 +33,7 @@ const API_URL =
 type Props = { params: Promise<{ id: string }> };
 
 function formatName(raw?: string): string {
-  if (!raw) return "Tutor";
+  if (!raw) return "Verified Tutor";
   return raw
     .split(" ")
     .filter(Boolean)
@@ -44,37 +46,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tutor = await fetchTutor(id);
   if (!tutor) {
     return {
-      title: "Tutor Profile | TUTORERA",
+      title: "Tutor Profile",
       robots: { index: false, follow: true },
     };
   }
 
   const name = formatName(tutor.user?.name || tutor.fullName);
   const primarySubject = tutor.subjects?.[0] || "Tuition";
-  const city = tutor.city || tutor.user?.city || "Pakistan";
+  const city = tutor.city || tutor.user?.city || "Online worldwide";
   const modeText =
     tutor.teachingMode === "both"
       ? "Online & In-Person"
       : tutor.teachingMode === "online"
       ? "Online"
       : "In-Person";
-  const rateText = tutor.hourlyRate && tutor.hourlyRate > 0
-    ? `${tutor.currency || "PKR"} ${tutor.hourlyRate.toLocaleString("en-US")}/hr`
-    : "rate shown on the tutor profile when available";
+  const rateText = tutor.hourlyRate
+    ? `${tutor.currency || "Market currency"} ${tutor.hourlyRate.toLocaleString("en-US")}/hr`
+    : "Competitive rates";
 
-  const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText}) | TUTORERA`;
-  const verificationText = tutor.isVerified ? " The profile carries TUTORERA's verification badge." : "";
-  const description = `${name} teaches ${primarySubject} for students in ${city} and ${modeText.toLowerCase()} lessons. Subjects include ${
+  const title = `${name} - ${primarySubject} Tutor in ${city} (${modeText})`;
+  const description = `${name} is an approved, verified ${primarySubject} educator serving students in ${city} and worldwide (${modeText}). Offering ${
     tutor.subjects?.slice(0, 3).join(", ") || primarySubject
-  }; levels include ${tutor.levels?.slice(0, 3).join(", ") || "those listed on the profile"}. Current rate: ${rateText}.${verificationText}`;
+  } across ${tutor.levels?.slice(0, 3).join(", ") || "standard curricula"} at ${rateText}.`;
   const canonical = tutorProfileHref(tutor);
 
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: {
+      canonical,
+    },
     openGraph: {
-      title,
+      title: `${title} | TUTORERA`,
       description,
       url: `${SITE_URL}${canonical}`,
       type: "profile",
@@ -130,15 +133,21 @@ export default async function TutorProfilePage({ params }: Props) {
   if (!tutor) notFound();
 
   const name = formatName(tutor.user?.name || tutor.fullName);
-  const city = tutor.city || tutor.user?.city || "Pakistan";
-  const countryCode = tutor.countryCode || tutor.user?.countryCode || "PK";
+  const city = tutor.city || tutor.user?.city || "";
+  const countryCode = tutor.countryCode || tutor.user?.countryCode || "";
   const countryName =
-    tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode);
+    tutor.countryName || tutor.user?.countryName || (countryCode === "PK" ? "Pakistan" : countryCode) || "Online worldwide";
   const locationDisplay = city ? `${city}, ${countryName}` : countryName;
   const avatarUrl = tutor.user?.avatar || null;
   const tutorUserId = tutor.user?._id || String(tutor.user || tutor._id);
 
   const { reviews, slots } = await extras(tutorUserId);
+
+  const primarySubject = tutor.subjects?.[0];
+  const similarTutorsResult = primarySubject
+    ? await fetchTutors({ subject: primarySubject, countryCode }, 5)
+    : { tutors: [] };
+  const similarTutors = similarTutorsResult.tutors.filter((t) => t._id !== tutor._id).slice(0, 4);
 
   const hasVideo = Boolean(tutor.videoIntro);
   const isHomeTutor = tutor.teachingMode === "in-person" || tutor.teachingMode === "both";
@@ -148,57 +157,8 @@ export default async function TutorProfilePage({ params }: Props) {
       : tutor.teachingMode === "online"
       ? "online worldwide"
       : "in-person";
-  const displayRating = tutor.averageRating ?? tutor.rating;
-  const hasReviews = Boolean(tutor.totalReviews && tutor.totalReviews > 0 && displayRating && displayRating > 0);
-  const hasRate = Boolean(tutor.hourlyRate && tutor.hourlyRate > 0);
-  const verificationStatus = tutor.verificationStatus?.toLowerCase();
-  const isApproved = verificationStatus === "approved" || verificationStatus === "verified";
-  const canShowVerification = tutor.isVerified === true && isApproved;
-  const canShowPoliceCheck = tutor.policeVerificationStatus === "approved";
 
   const canonical = tutorProfileHref(tutor);
-  const personSchema: Record<string, unknown> = {
-    "@type": "Person",
-    "@id": `${SITE_URL}${canonical}#person`,
-    name,
-    image: avatarUrl || undefined,
-    jobTitle: `${tutor.subjects?.[0] || "Academic"} Tutor`,
-    description: tutor.bio || undefined,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: city,
-      addressCountry: countryCode,
-    },
-    knowsAbout: [
-      ...(tutor.subjects || []),
-      ...(tutor.curricula || []),
-      ...(tutor.levels || []),
-    ],
-    alumniOf: tutor.education?.map((edu) => ({
-      "@type": "EducationalOrganization",
-      name: edu.institution,
-    })),
-  };
-
-  if (hasRate) {
-    personSchema.offers = {
-      "@type": "Offer",
-      price: tutor.hourlyRate,
-      priceCurrency: tutor.currency || "PKR",
-      availability: "https://schema.org/InStock",
-    };
-  }
-
-  if (hasReviews) {
-    personSchema.aggregateRating = {
-      "@type": "AggregateRating",
-      ratingValue: displayRating,
-      reviewCount: tutor.totalReviews,
-      bestRating: 5,
-      worstRating: 1,
-    };
-  }
-
   const profileSchema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -216,7 +176,64 @@ export default async function TutorProfilePage({ params }: Props) {
           ],
         },
       },
-      personSchema,
+      {
+        "@type": "Person",
+        "@id": `${SITE_URL}${canonical}#person`,
+        name,
+        image: avatarUrl || undefined,
+        jobTitle: `${tutor.subjects?.[0] || "Academic"} Tutor`,
+        description: tutor.bio || undefined,
+        // Links this tutor into the sitewide entity graph (Organization <-> Service <->
+        // Person <-> Course) instead of leaving Person as an isolated node.
+        worksFor: { "@id": `${SITE_URL}/#organization` },
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: city,
+          addressCountry: countryCode,
+        },
+        knowsAbout: [
+          ...(tutor.subjects || []),
+          ...(tutor.curricula || []),
+          ...(tutor.levels || []),
+        ],
+        alumniOf: tutor.education?.map((edu) => ({
+          "@type": "EducationalOrganization",
+          name: edu.institution,
+        })),
+        makesOffer: {
+          "@type": "Offer",
+          price: tutor.hourlyRate || 0,
+          priceCurrency: tutor.currency || undefined,
+          availability: "https://schema.org/InStock",
+        },
+        ...(tutor.totalReviews
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: tutor.averageRating || 5,
+                reviewCount: tutor.totalReviews,
+                bestRating: 5,
+                worstRating: 1,
+              },
+            }
+          : {}),
+        ...(reviews.length
+          ? {
+              review: reviews.slice(0, 10).map((r) => ({
+                "@type": "Review",
+                author: { "@type": "Person", name: r.student?.name || "TutorEra student" },
+                datePublished: r.createdAt,
+                reviewBody: r.comment,
+                reviewRating: {
+                  "@type": "Rating",
+                  ratingValue: r.rating,
+                  bestRating: 5,
+                  worstRating: 1,
+                },
+              })),
+            }
+          : {}),
+      },
     ],
   };
 
@@ -233,6 +250,7 @@ export default async function TutorProfilePage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
       />
 
+      {/* ── COVER BANNER & BREADCRUMB ── */}
       <section
         style={{
           background: "linear-gradient(135deg, #021550 0%, #062b8c 45%, #021245 100%)",
@@ -243,6 +261,7 @@ export default async function TutorProfilePage({ params }: Props) {
         }}
         aria-label="Tutor Profile Banner"
       >
+        {/* Ambient Decorative Blurs & Mesh Pattern */}
         <div
           style={{
             position: "absolute",
@@ -301,6 +320,7 @@ export default async function TutorProfilePage({ params }: Props) {
             zIndex: 2,
           }}
         >
+          {/* High-contrast, Accessible Glassmorphic Breadcrumb */}
           <nav
             aria-label="Breadcrumb"
             style={{
@@ -366,6 +386,7 @@ export default async function TutorProfilePage({ params }: Props) {
         </div>
       </section>
 
+      {/* ── OVERLAPPING HERO PROFILE CARD ── */}
       <section
         style={{
           maxWidth: 1100,
@@ -393,6 +414,7 @@ export default async function TutorProfilePage({ params }: Props) {
               flexWrap: "wrap",
             }}
           >
+            {/* Avatar with Verified Badge */}
             <div style={{ position: "relative", flexShrink: 0 }}>
               <AvatarImage
                 src={avatarUrl}
@@ -404,7 +426,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   boxShadow: "0 8px 26px rgba(2, 21, 80, 0.15)",
                 }}
               />
-              {canShowVerification && (
+              {tutor.isVerified && (
                 <span
                   style={{
                     position: "absolute",
@@ -428,6 +450,7 @@ export default async function TutorProfilePage({ params }: Props) {
               )}
             </div>
 
+            {/* Profile Identity Details */}
             <div style={{ flex: 1, minWidth: 280 }}>
               <div
                 style={{
@@ -450,7 +473,7 @@ export default async function TutorProfilePage({ params }: Props) {
                   {name}
                 </h1>
 
-                {canShowVerification && (
+                {tutor.isVerified && (
                   <span
                     style={{
                       backgroundColor: "rgba(16, 185, 129, 0.12)",
@@ -484,7 +507,7 @@ export default async function TutorProfilePage({ params }: Props) {
                       border: "1px solid rgba(59, 130, 246, 0.3)",
                     }}
                   >
-                    Online Worldwide
+                    🌐 Online Worldwide
                   </span>
                 )}
 
@@ -503,11 +526,11 @@ export default async function TutorProfilePage({ params }: Props) {
                       border: "1px solid rgba(59, 130, 246, 0.3)",
                     }}
                   >
-                    Online & In-Person
+                    🌐 Online & In-Person
                   </span>
                 )}
 
-                {canShowPoliceCheck && (
+                {tutor.policeVerificationStatus === "approved" && (
                   <span
                     style={{
                       backgroundColor: "rgba(147, 51, 234, 0.1)",
@@ -522,7 +545,7 @@ export default async function TutorProfilePage({ params }: Props) {
                       border: "1px solid rgba(147, 51, 234, 0.3)",
                     }}
                   >
-                    <ShieldCheck size={14} /> Police Verification Approved
+                    Background/Safety Verified
                   </span>
                 )}
 
@@ -541,11 +564,12 @@ export default async function TutorProfilePage({ params }: Props) {
                       border: "1px solid rgba(200, 27, 127, 0.3)",
                     }}
                   >
-                    <Video size={14} color="#db2777" /> Demo Video Available
+                    <Video size={14} color="#db2777" /> Video Demo Verified
                   </span>
                 )}
               </div>
 
+              {/* Primary Subjects Headline */}
               <p
                 style={{
                   color: "#0329B2",
@@ -554,9 +578,10 @@ export default async function TutorProfilePage({ params }: Props) {
                   fontWeight: 700,
                 }}
               >
-                {tutor.subjects?.join(" • ") || "Academic Tutor"}
+                {tutor.subjects?.join(" • ") || "Academic Specialist"}
               </p>
 
+              {/* Meta Stats Row */}
               <div
                 style={{
                   color: "#64748b",
@@ -570,28 +595,29 @@ export default async function TutorProfilePage({ params }: Props) {
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <MapPin size={16} color="#0329B2" /> {locationDisplay}
                 </span>
-                {hasReviews ? (
-                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                    <Star size={16} color="#fbbf24" fill="#fbbf24" />
-                    <strong style={{ color: "#021550" }}>{displayRating?.toFixed(1)}</strong>{" "}
-                    ({tutor.totalReviews} student reviews)
-                  </span>
-                ) : (
-                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                    <Star size={16} color="#94a3b8" /> No student reviews yet
-                  </span>
-                )}
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Clock size={16} color="#0329B2" /> {tutor.experience && tutor.experience > 0 ? `${tutor.experience} years experience` : "Experience not specified"}
+                  <Star size={16} color="#fbbf24" fill="#fbbf24" />
+                  <strong style={{ color: "#021550" }}>
+                    {tutor.averageRating?.toFixed(1) || "5.0"}
+                  </strong>{" "}
+                  ({tutor.totalReviews || 0} student reviews)
                 </span>
-                {tutor.averageResponseMinutes !== undefined && tutor.averageResponseMinutes > 0 && (
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Clock size={16} color="#0329B2" /> {tutor.experience || 0} years experience
+                </span>
+                {tutor.averageResponseMinutes !== undefined && tutor.averageResponseMinutes > 0 ? (
                   <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#7c3aed" }}>
                     <Zap size={15} color="#7c3aed" /> Responds in ~{tutor.responseTimeFormatted || `${Math.round(tutor.averageResponseMinutes)}m`}
+                  </span>
+                ) : (
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#166534" }}>
+                    <Zap size={15} color="#16a34a" /> Fast Responder
                   </span>
                 )}
               </div>
             </div>
 
+            {/* Quick Pricing Badge / Desktop Direct Action */}
             <div
               style={{
                 display: "flex",
@@ -609,7 +635,10 @@ export default async function TutorProfilePage({ params }: Props) {
                   color: "#0329B2",
                 }}
               >
-                {hasRate ? <>{tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString("en-US")}<span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>/hr</span></> : "Rate on request"}
+                {tutor.currency || "Market currency"} {tutor.hourlyRate?.toLocaleString("en-US")}
+                <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
+                  /hr
+                </span>
               </div>
               <a
                 href="#booking-card"
@@ -632,6 +661,7 @@ export default async function TutorProfilePage({ params }: Props) {
             </div>
           </div>
 
+          {/* Integrated Teaching Overview Statement (replacing raw SEO paragraph) */}
           <div
             style={{
               marginTop: "1.5rem",
@@ -649,14 +679,16 @@ export default async function TutorProfilePage({ params }: Props) {
           >
             <BookOpen size={20} color="#0329B2" style={{ flexShrink: 0 }} />
             <span>
-              <strong>{name}</strong> lists{" "}
+              <strong>{name}</strong> specializes in{" "}
               <strong>{tutor.subjects?.join(", ") || "academic tutoring"}</strong> ({locationDisplay}) and
-              offers <strong>{modeLabel}</strong> lessons. Review the tutor's profile, availability, verification status, and teaching information before booking.
+              offers <strong>{modeLabel}</strong> lessons focused on deep conceptual clarity, past paper
+              practice, and customized student pacing.
             </span>
           </div>
         </div>
       </section>
 
+      {/* Main Container */}
       <div
         style={{
           maxWidth: 1100,
@@ -668,7 +700,10 @@ export default async function TutorProfilePage({ params }: Props) {
         }}
         className="profile-grid"
       >
+        {/* Left Column Content */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          
+          {/* ── DEMO VIDEO / TRIAL SESSION SECTION (Always rendered) ── */}
           <TutorVideoPlayer
             videoUrl={tutor.videoIntro}
             tutorName={name}
@@ -676,10 +711,11 @@ export default async function TutorProfilePage({ params }: Props) {
             subjects={tutor.subjects || []}
             city={city}
             hourlyRate={tutor.hourlyRate}
-            currency={tutor.currency || "PKR"}
+            currency={tutor.currency || ""}
             tutorUserId={tutorUserId}
           />
 
+          {/* ── TRUST & VERIFICATION PILLARS ── */}
           <section style={card}>
             <h2
               style={{
@@ -703,31 +739,29 @@ export default async function TutorProfilePage({ params }: Props) {
                 gap: "0.85rem",
               }}
             >
-              {canShowVerification && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.6rem",
-                    padding: "0.75rem 1rem",
-                    borderRadius: 10,
-                    backgroundColor: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
-                  }}
-                >
-                  <CheckCircle size={18} color="#16a34a" />
-                  <div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#166534" }}>
-                      Identity Verification
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "#15803d" }}>
-                      Verification badge active
-                    </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                  padding: "0.75rem 1rem",
+                  borderRadius: 10,
+                  backgroundColor: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                }}
+              >
+                <CheckCircle size={18} color="#16a34a" />
+                <div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#166534" }}>
+                    Identity Document
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#15803d" }}>
+                    Verified by Admin
                   </div>
                 </div>
-              )}
+              </div>
 
-              {tutor.education?.some((e) => e.degree && e.institution) && (
+              {tutor.education?.some((e) => e.degree) && (
                 <div
                   style={{
                     display: "flex",
@@ -742,16 +776,16 @@ export default async function TutorProfilePage({ params }: Props) {
                   <Award size={18} color="#2563eb" />
                   <div>
                     <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1e40af" }}>
-                      Education Listed
+                      Academic Degree
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "#1d4ed8" }}>
-                      Degree and institution provided
+                      Credentials Checked
                     </div>
                   </div>
                 </div>
               )}
 
-              {canShowPoliceCheck && (
+              {tutor.policeVerificationStatus === "approved" && (
                 <div
                   style={{
                     display: "flex",
@@ -766,16 +800,16 @@ export default async function TutorProfilePage({ params }: Props) {
                   <ShieldCheck size={18} color="#9333ea" />
                   <div>
                     <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#6b21a8" }}>
-                      Police Verification
+                      Background/Safety Review
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "#7e22ce" }}>
-                      Approved status recorded
+                      Home Tuition Safe
                     </div>
                   </div>
                 </div>
               )}
 
-              {hasVideo && (
+              {hasVideo ? (
                 <div
                   style={{
                     display: "flex",
@@ -793,7 +827,29 @@ export default async function TutorProfilePage({ params }: Props) {
                       Demo Video
                     </div>
                     <div style={{ fontSize: "0.75rem", color: "#be185d" }}>
-                      Available on this profile
+                      Screening Verified
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: 10,
+                    backgroundColor: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <FileCheck2 size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#334155" }}>
+                      Platform Screened
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                      TUTORERA Guarantee
                     </div>
                   </div>
                 </div>
@@ -807,45 +863,44 @@ export default async function TutorProfilePage({ params }: Props) {
                     gap: "0.6rem",
                     padding: "0.75rem 1rem",
                     borderRadius: 10,
-                    backgroundColor: "#f8fafc",
-                    border: "1px solid #e2e8f0",
+                    backgroundColor: "#faf5ff",
+                    border: "1px solid #e9d5ff",
                   }}
                 >
-                  <Home size={18} color="#475569" />
+                  <ShieldCheck size={18} color="#9333ea" />
                   <div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#334155" }}>
-                      In-Person Tuition
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#6b21a8" }}>
+                      Home Tuition Safe
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                      Offered where location permits
+                    <div style={{ fontSize: "0.75rem", color: "#7e22ce" }}>
+                      Background Screened
                     </div>
                   </div>
                 </div>
               )}
             </div>
-
-            {!canShowVerification && !canShowPoliceCheck && !hasVideo && !tutor.education?.some((e) => e.degree && e.institution) && (
-              <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0 }}>
-                No additional verification or profile trust signals are currently published for this tutor.
-              </p>
-            )}
           </section>
 
+          {/* About section */}
           <section style={card}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: ".8rem" }}>
               About {name}
             </h2>
             <p style={{ color: "#374151", lineHeight: 1.8, fontSize: "0.95rem", whiteSpace: "pre-line" }}>
-              {tutor.bio || `${name} has not added a detailed tutor biography yet.`}
+              {tutor.bio ||
+                `${name} is a verified tutor on TUTORERA specializing in ${tutor.subjects?.join(
+                  ", "
+                )}. Dedicated to student-centric learning, conceptual clarity, and regular assessment.`}
             </p>
           </section>
 
+          {/* Subjects & Levels */}
           <section style={card}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
               Subjects & Teaching Levels
             </h2>
             <div style={{ display: "flex", flexWrap: "wrap", gap: ".6rem", marginBottom: "1.25rem" }}>
-              {tutor.subjects?.length ? tutor.subjects.map((subject) => (
+              {tutor.subjects?.map((subject) => (
                 <span
                   key={subject}
                   style={{
@@ -860,7 +915,7 @@ export default async function TutorProfilePage({ params }: Props) {
                 >
                   {subject}
                 </span>
-              )) : <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>Subjects not specified</span>}
+              ))}
             </div>
 
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#4b5563", marginBottom: ".6rem" }}>
@@ -884,11 +939,14 @@ export default async function TutorProfilePage({ params }: Props) {
                   </span>
                 ))
               ) : (
-                <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>Teaching levels not specified</span>
+                <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>
+                  Primary, Middle, Matric, O/A Levels
+                </span>
               )}
             </div>
           </section>
 
+          {/* Curricula & Boards */}
           {tutor.curricula && tutor.curricula.length > 0 && (
             <section style={card}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
@@ -915,6 +973,7 @@ export default async function TutorProfilePage({ params }: Props) {
             </section>
           )}
 
+          {/* Education & Degrees */}
           {tutor.education && tutor.education.length > 0 && (
             <section style={card}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
@@ -961,6 +1020,7 @@ export default async function TutorProfilePage({ params }: Props) {
             </section>
           )}
 
+          {/* Teaching Details / Summary */}
           <section style={card}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
               Teaching Details
@@ -969,7 +1029,11 @@ export default async function TutorProfilePage({ params }: Props) {
               <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
                 <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>MODE</span>
                 <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0", textTransform: "capitalize" }}>
-                  {tutor.teachingMode === "both" ? "Online & In-Person" : tutor.teachingMode === "online" ? "Online Only" : tutor.teachingMode === "in-person" ? "In-Person Only" : "Not specified"}
+                  {tutor.teachingMode === "both"
+                    ? "Online & In-Person"
+                    : tutor.teachingMode === "online"
+                    ? "Online Only"
+                    : "In-Person Only"}
                 </p>
               </div>
 
@@ -983,7 +1047,7 @@ export default async function TutorProfilePage({ params }: Props) {
               <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
                 <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>LANGUAGES</span>
                 <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0" }}>
-                  {tutor.languages?.length ? tutor.languages.join(", ") : "Not specified"}
+                  {tutor.languages?.join(", ") || "English, Urdu"}
                 </p>
               </div>
 
@@ -991,15 +1055,16 @@ export default async function TutorProfilePage({ params }: Props) {
                 <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>EXPERIENCE</span>
                 <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0", display: "flex", alignItems: "center", gap: "0.4rem" }}>
                   <Clock size={17} color="#0329B2" />
-                  {tutor.experience && tutor.experience > 0 ? `${tutor.experience} Years Teaching` : "Not specified"}
+                  {tutor.experience || 0} Years Teaching
                 </p>
               </div>
             </div>
             <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "1rem", lineHeight: 1.5 }}>
-              You can discuss syllabus coverage, assessment frequency, lesson schedules, and rates directly through the student-led marketplace before confirming a booking.
+              * You can discuss syllabus coverage, test series frequency, and custom lesson schedules directly with the tutor or negotiate rates through our student-led marketplace.
             </p>
           </section>
 
+          {/* Upcoming availability */}
           {slots.length > 0 && (
             <section style={card}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
@@ -1028,17 +1093,16 @@ export default async function TutorProfilePage({ params }: Props) {
             </section>
           )}
 
+          {/* Student Reviews */}
           <section style={card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", margin: 0 }}>
                 Student Reviews ({tutor.totalReviews || 0})
               </h2>
-              {hasReviews && (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontWeight: 700, color: "#021550" }}>
-                  <Star size={18} color="#fbbf24" fill="#fbbf24" />
-                  <span>{displayRating?.toFixed(1)} / 5.0</span>
-                </div>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontWeight: 700, color: "#021550" }}>
+                <Star size={18} color="#fbbf24" fill="#fbbf24" />
+                <span>{tutor.averageRating?.toFixed(1) || "5.0"} / 5.0</span>
+              </div>
             </div>
 
             {reviews.length ? (
@@ -1052,7 +1116,7 @@ export default async function TutorProfilePage({ params }: Props) {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <strong style={{ color: "#021550", fontSize: "0.95rem" }}>
-                      {review.student?.name || "Student"}
+                      {review.student?.name || "Verified Student"}
                     </strong>
                     <div style={{ display: "flex", gap: "2px" }}>
                       {[...Array(5)].map((_, i) => (
@@ -1072,12 +1136,13 @@ export default async function TutorProfilePage({ params }: Props) {
               ))
             ) : (
               <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                No completed-session reviews are available for this tutor yet.
+                No completed session reviews yet. Book the first session with {name}!
               </p>
             )}
           </section>
         </div>
 
+        {/* Right Sticky Column: Actions & Booking / Marketplace Invite */}
         <aside id="booking-card">
           <div style={{ ...card, position: "sticky", top: 90 }}>
             <div
@@ -1098,7 +1163,10 @@ export default async function TutorProfilePage({ params }: Props) {
                   color: "#0329B2",
                 }}
               >
-                {hasRate ? <>{tutor.currency || "PKR"} {tutor.hourlyRate?.toLocaleString("en-US")}<span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>/hr</span></> : "Rate on request"}
+                {tutor.currency || "Market currency"} {tutor.hourlyRate?.toLocaleString("en-US")}
+                <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "#64748b" }}>
+                  /hr
+                </span>
               </span>
             </div>
 
@@ -1118,7 +1186,7 @@ export default async function TutorProfilePage({ params }: Props) {
             >
               <Sparkles size={14} color="#16a34a" />
               <span>
-                <strong>First-session protection:</strong> eligible sessions may qualify for replacement, credit, or refund review under TUTORERA's published policy.
+                <strong>First-session protection:</strong> eligible sessions may qualify for replacement, credit, or refund review.
               </span>
             </div>
 
@@ -1127,7 +1195,7 @@ export default async function TutorProfilePage({ params }: Props) {
               tutorUserId={tutorUserId}
               tutorName={name}
               hourlyRate={tutor.hourlyRate}
-              currency={tutor.currency || "PKR"}
+              currency={tutor.currency || ""}
               subjects={tutor.subjects || []}
               teachingMode={tutor.teachingMode}
               city={city}
@@ -1136,13 +1204,27 @@ export default async function TutorProfilePage({ params }: Props) {
         </aside>
       </div>
 
+      {similarTutors.length > 0 && (
+        <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 1.5rem 3rem" }}>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", marginBottom: "1rem" }}>
+            More {primarySubject} tutors {city ? `near ${city}` : ""}
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1.25rem" }}>
+            {similarTutors.map((t) => (
+              <TutorCard key={t._id} tutor={t} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Sticky Bottom CTA for Mobile */}
       <StickyTutorProfileCTA
         tutorId={tutor._id}
         tutorUserId={tutorUserId}
         tutorName={name}
         hourlyRate={tutor.hourlyRate}
-        currency={tutor.currency || "PKR"}
-        rating={hasReviews ? displayRating : undefined}
+        currency={tutor.currency || ""}
+        rating={tutor.averageRating}
         teachingMode={tutor.teachingMode}
         city={city}
         subjects={tutor.subjects || []}

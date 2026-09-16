@@ -4,7 +4,7 @@ import { usePathname,useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const PATH_PERMISSIONS: Record<string, string> = {
-  "/admin/payments": "payment.read",
+  "/admin/payments": "bookings.read",
   "/admin/payouts": "payout.read",
   "/admin/reconciliation": "finance.reconcile",
   "/admin/fee-config": "finance.fee_configure",
@@ -16,6 +16,14 @@ const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/users": "users.read",
   "/admin/markets": "market.read",
   "/admin/control-tower": "system.monitor",
+  "/admin/parents": "student.read",
+  "/admin/refund-requests": "claims.read",
+  "/admin/curriculum": "market.configure",
+  "/admin/tutor-ratings": "tutor.quality_manage",
+  "/admin/reports": "analytics.read",
+  "/admin/blogs": "content.manage",
+  "/admin/feature-flags": "market.configure",
+  "/admin/email-templates": "system.monitor",
 };
 
 const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
@@ -25,15 +33,21 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/supply-gaps": "analytics.read",
   "/admin/liquidity": "analytics.read",
   "/admin/students": "student.read",
+  "/admin/parents": "student.read",
+  "/admin/onboarding": "student.read",
   "/admin/tutors": "tutor.read",
   "/admin/applications": "tutor.read",
-  "/admin/verifications": "tutor.verify",
   "/admin/matching": "matching.read",
   "/admin/analytics": "analytics.read",
   "/admin/contacts": "student.read",
   "/admin/broadcasts": "broadcast.send",
   "/admin/student-ratings": "student.read",
   "/admin/referrals": "growth.read",
+  "/admin/promotions": "growth.manage",
+  "/admin/refund-requests": "claims.read",
+  "/admin/blogs": "content.manage",
+  "/admin/feature-flags": "market.configure",
+  "/admin/email-templates": "system.monitor",
 };
 
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {
@@ -51,7 +65,7 @@ function hasPermission(adminRole?: string, adminPermissions?: string[], required
       finance: ["payment.read","payment.manage","payment.refund","payout.read","payout.approve","payout.process","finance.reconcile","finance.fee_configure","bookings.read","analytics.read"],
       support: ["student.read","tutor.read","request.read","bookings.read","claims.read","safety.create","payment.read"],
       growth: ["growth.read","growth.manage","broadcast.send","analytics.read","users.read"],
-      content: ["growth.read","analytics.read"],
+      content: ["growth.read","analytics.read","content.manage"],
       analyst: ["analytics.read","request.read","tutor.read","student.read","bookings.read","payment.read","matching.read","growth.read","market.read","audit.read","system.monitor"],
     };
     const perms = rolePerms[adminRole] || [];
@@ -81,7 +95,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     if (loading) return;
 
     if (!user) {
-      router.replace("/login");
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 

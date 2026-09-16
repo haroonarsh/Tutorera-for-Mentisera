@@ -1,131 +1,157 @@
 // backend/src/services/pricing.service.ts
-// Global fee and tax calculation engine.
-// Replaces the hardcoded calculateMarketplaceFees() with a country-aware version
-// that reads TaxConfig from the database and applies the correct VAT/GST rate.
+// The single, authoritative fee/tax calculation engine for every booking.
+// Reads FeeConfig (TutorEra's own commission + payment gateway processing
+// cost) and TaxConfig (per-country government tax) from the database instead
+// of the hardcoded constants this replaces, so both admin config pages
+// actually control the numbers charged to real students and paid to real
+// tutors.
 
+import FeeConfig from "../models/FeeConfig.model";
 import TaxConfig from "../models/TaxConfig.model";
-import { convertAmount } from "./exchangeRate.service";
 
-export interface FeeBreakdown {
-  grossAmount: number;          // what the student pays (amount agreed)
-  currency: string;             // ISO 4217 currency code
-  studentFeeRate: number;       // % charged to student on top
-  studentFee: number;
-  studentTotal: number;         // grossAmount + studentFee
-  platformFeeRate: number;      // % taken from tutor's side
-  platformFee: number;
-  taxRate: number;              // % tax (VAT / GST)
-  taxAmount: number;
-  taxType: string;              // "VAT", "GST", etc.
-  tutorNet: number;             // what the tutor receives after fees & tax
-  tutorFee: number;             // platform fee on tutor side
-  platformNet: number;          // platform's gross revenue
-  amountUSD?: number;           // normalised USD equivalent
+export interface MarketplaceFees {
+  subtotal: number;        // the agreed tuition rate
+  studentFee: number;      // TutorEra's service fee, added on top for the student
+  studentTotal: number;    // subtotal + studentFee - what the student is actually charged
+  tutorFee: number;        // TutorEra's commission, deducted from the tutor's side
+  tax: number;             // government tax (VAT/GST/service tax), per TaxConfig
+  taxType: string;         // "VAT" | "GST" | "service_tax" | "DST" | "none"
+  gatewayFee: number;      // payment gateway's own processing cost, absorbed by the platform
+  tutorNet: number;        // subtotal - tutorFee - tax = what the tutor actually receives
+  currency: string;
+  countryCode: string;
+  feeConfig: {
+    studentFeePercent: number;
+    tutorFeePercent: number;
+    minimumFee: number;
+    maximumFee: number;
+    gatewayFeePercent: number;
+    gatewayFixedFee: number;
+    taxRatePercent: number;
+    version: string;
+  };
 }
 
-// Default platform fee rates (overrideable by MarketConfig in future)
-const STUDENT_FEE_RATE = 0.05;  // 5% service fee on top of agreed amount
-const PLATFORM_FEE_RATE = 0.15; // 15% commission from tutor's payment
+// Bootstrapping fallback only - used the first time the server ever runs,
+// before an admin has saved a FeeConfig record. Once a record exists,
+// getActiveFeeConfig() always uses the real one from the database.
+const DEFAULT_FEE_CONFIG = {
+  studentFeePercent: 0,
+  tutorFeePercent: 20,
+  minimumFee: 0,
+  maximumFee: 5000,
+  gatewayFeePercent: 2.9,
+  gatewayFixedFee: 0,
+};
 
-/** Static fallback — used when no TaxConfig is found for a country */
-const DEFAULT_TAX_CONFIG = { rate: 0, taxType: "none", name: "None" };
+async function getActiveFeeConfig() {
+  const active = await FeeConfig.findOne({ isActive: true }).sort("-updatedAt").lean();
+  if (active) return active;
+  return { version: "default", ...DEFAULT_FEE_CONFIG };
+}
+
+async function getTaxConfigForCountry(countryCode: string) {
+  const cfg = await TaxConfig.findOne({ countryCode: countryCode.toUpperCase(), isActive: true }).lean();
+  return cfg || { rate: 0, taxType: "none" as const, platformCollects: true, appliesOnlineServices: true, appliesHomeTuition: true };
+}
+
+function clampFee(rawFee: number, minimumFee: number, maximumFee: number): number {
+  if (rawFee < minimumFee) return minimumFee;
+  if (maximumFee > 0 && rawFee > maximumFee) return maximumFee;
+  return rawFee;
+}
 
 /**
- * Calculate all fees and tax for a given booking amount.
+ * Calculate every fee, commission, tax, and gateway cost for a booking.
  *
- * @param amount      - The agreed tuition amount (in the given currency)
- * @param currency    - ISO 4217 currency of the transaction (e.g. "PKR")
- * @param countryCode - ISO 3166-1 alpha-2 country code for tax lookup (e.g. "PK")
- * @param mode        - "online" | "in-person" | "both" — affects DST applicability
+ * @param subtotal    - the agreed tuition rate (before any fees)
+ * @param opts.currency    - ISO 4217 currency of the transaction (e.g. "PKR")
+ * @param opts.countryCode - ISO 3166-1 alpha-2 country for tax lookup (e.g. "PK")
+ * @param opts.teachingMode - affects whether tax applies (online vs home tuition can differ per country)
  */
-export async function calculateFees(
-  amount: number,
-  currency: string,
-  countryCode = "PK",
-  mode: "online" | "in-person" | "both" = "online"
-): Promise<FeeBreakdown> {
-  // 1. Fetch tax config for this country
-  const taxCfg = await TaxConfig.findOne({
-    countryCode: countryCode.toUpperCase(),
-    isActive: true,
-  }).lean() ?? DEFAULT_TAX_CONFIG;
+export async function calculateMarketplaceFees(
+  subtotal: number,
+  opts: { currency?: string; countryCode?: string; teachingMode?: "online" | "in-person" | "both" } = {}
+): Promise<MarketplaceFees> {
+  const currency = (opts.currency || "PKR").toUpperCase();
+  const countryCode = (opts.countryCode || "PK").toUpperCase();
+  const teachingMode = opts.teachingMode || "online";
 
-  const taxRate = taxCfg.rate / 100;
-  const taxType = (taxCfg as any).taxType ?? "none";
-  const taxApplies = mode === "in-person"
-    ? (taxCfg as any).appliesHomeTuition !== false
-    : (taxCfg as any).appliesOnlineServices !== false;
+  const [feeCfg, taxCfg] = await Promise.all([
+    getActiveFeeConfig(),
+    getTaxConfigForCountry(countryCode),
+  ]);
 
-  // 2. Student fee (added on top of agreed amount)
-  const studentFee = Math.round(amount * STUDENT_FEE_RATE);
-  const studentTotal = amount + studentFee;
+  const studentFee = clampFee(
+    Math.round(subtotal * feeCfg.studentFeePercent / 100),
+    feeCfg.minimumFee,
+    feeCfg.maximumFee
+  );
+  const tutorFee = clampFee(
+    Math.round(subtotal * feeCfg.tutorFeePercent / 100),
+    feeCfg.minimumFee,
+    feeCfg.maximumFee
+  );
+  const studentTotal = subtotal + studentFee;
 
-  // 3. Platform fee (deducted from tutor's received payment)
-  const platformFee = Math.round(amount * PLATFORM_FEE_RATE);
-
-  // 4. Tax (applied to platform revenue if platform is the collector)
-  const taxableBase = platformFee + studentFee;
-  const taxAmount = taxApplies && (taxCfg as any).platformCollects !== false
-    ? Math.round(taxableBase * taxRate)
+  // "both" used to silently alias to "online" here, checking only
+  // appliesOnlineServices and ignoring appliesHomeTuition entirely - a mixed
+  // booking was taxed as 100% online (or 0% if only home tuition were
+  // taxable in that country) with no regard for the in-person component it
+  // actually contains. A "both" booking is taxable if either service type
+  // is taxable in that country - it isn't a proportional split (this engine
+  // has no way to know the online/in-person mix of a "both" booking), but
+  // that's a strictly more correct default than ignoring one component.
+  const taxApplies = teachingMode === "in-person"
+    ? taxCfg.appliesHomeTuition !== false
+    : teachingMode === "both"
+    ? taxCfg.appliesOnlineServices !== false || taxCfg.appliesHomeTuition !== false
+    : taxCfg.appliesOnlineServices !== false;
+  const tax = taxApplies && taxCfg.platformCollects !== false
+    ? Math.round(tutorFee * (taxCfg.rate || 0) / 100)
     : 0;
 
-  // 5. Tutor receives the gross amount minus the platform cut
-  const tutorNet = amount - platformFee;
+  // The gateway charges on the full amount that actually flows through it -
+  // the student's total checkout amount - and this cost is absorbed by the
+  // platform's own margin, never deducted from the tutor's payout.
+  const gatewayFee = Math.round(studentTotal * feeCfg.gatewayFeePercent / 100 + feeCfg.gatewayFixedFee);
 
-  // 6. Platform net = fees collected - tax remitted
-  const platformNet = studentFee + platformFee - taxAmount;
-
-  // 7. Normalise to USD for analytics
-  let amountUSD: number | undefined;
-  try {
-    amountUSD = await convertAmount(amount, currency, "USD");
-    amountUSD = Math.round(amountUSD * 100) / 100;
-  } catch { /* non-critical */ }
+  const tutorNet = subtotal - tutorFee - tax;
 
   return {
-    grossAmount: amount,
-    currency: (currency || "PKR").toUpperCase(),
-    studentFeeRate: STUDENT_FEE_RATE * 100,
+    subtotal,
     studentFee,
     studentTotal,
-    platformFeeRate: PLATFORM_FEE_RATE * 100,
-    platformFee,
-    taxRate: taxCfg.rate,
-    taxAmount,
-    taxType,
+    tutorFee,
+    tax,
+    taxType: taxCfg.taxType || "none",
+    gatewayFee,
     tutorNet,
-    tutorFee: platformFee,
-    platformNet,
-    amountUSD,
+    currency,
+    countryCode,
+    feeConfig: {
+      studentFeePercent: feeCfg.studentFeePercent,
+      tutorFeePercent: feeCfg.tutorFeePercent,
+      minimumFee: feeCfg.minimumFee,
+      maximumFee: feeCfg.maximumFee,
+      gatewayFeePercent: feeCfg.gatewayFeePercent,
+      gatewayFixedFee: feeCfg.gatewayFixedFee,
+      taxRatePercent: taxCfg.rate || 0,
+      version: (feeCfg as any).version || "default",
+    },
   };
 }
 
 /**
- * Lightweight synchronous version using hardcoded rates — for use in
- * non-async contexts (e.g. validators) where DB access is not available.
+ * A promo code applied after calculateMarketplaceFees() reduces studentFee/
+ * studentTotal - gatewayFee was computed against the pre-discount amount, but
+ * the gateway only ever sees what's actually charged. Call this after
+ * mutating fees.studentFee/studentTotal for a promo discount to keep
+ * gatewayFee accurate. Mutates and returns the same object.
  */
-export function calculateFeesSync(amount: number, currency = "PKR"): FeeBreakdown {
-  const studentFee = Math.round(amount * STUDENT_FEE_RATE);
-  const studentTotal = amount + studentFee;
-  const platformFee = Math.round(amount * PLATFORM_FEE_RATE);
-  const tutorNet = amount - platformFee;
-  const platformNet = studentFee + platformFee;
-
-  return {
-    grossAmount: amount,
-    currency: currency.toUpperCase(),
-    studentFeeRate: STUDENT_FEE_RATE * 100,
-    studentFee,
-    studentTotal,
-    platformFeeRate: PLATFORM_FEE_RATE * 100,
-    platformFee,
-    taxRate: 0,
-    taxAmount: 0,
-    taxType: "none",
-    tutorNet,
-    tutorFee: platformFee,
-    platformNet,
-  };
+export function recomputeGatewayFee(fees: MarketplaceFees): MarketplaceFees {
+  fees.gatewayFee = Math.round(fees.studentTotal * fees.feeConfig.gatewayFeePercent / 100 + fees.feeConfig.gatewayFixedFee);
+  return fees;
 }
 
 /**

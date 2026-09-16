@@ -1,22 +1,28 @@
 "use client";
-import BrandLogo from "@/components/BrandLogo";
-import GoogleButton from "@/components/GoogleButton";
-import { useAuth } from "@/context/AuthContext";
-import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
-import { Eye,EyeOff } from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter,useSearchParams } from "next/navigation";
-import { Suspense,useEffect,useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
+import { useAuth } from "@/context/AuthContext";
+import GoogleButton from "@/components/GoogleButton";
+import api from "@/lib/axios";
+import { Suspense } from "react";
+import { useGeoData } from "@/lib/geoService";
 
 const C = UI_COLORS;
 
-const launchMarkets = [{ code: "PK", name: "Pakistan", dial: "+92" }, { code: "AE", name: "United Arab Emirates", dial: "+971" }, { code: "GB", name: "United Kingdom", dial: "+44" }];
+const FALLBACK_MARKETS = [{ code: "PK", name: "Pakistan", phoneCode: "+92" }, { code: "AE", name: "United Arab Emirates", phoneCode: "+971" }, { code: "GB", name: "United Kingdom", phoneCode: "+44" }];
 
 function RegisterForm() {
+  const geo = useGeoData();
+  const launchMarkets = geo.countries.length > 0 ? geo.countries : FALLBACK_MARKETS;
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "", countryCode: "PK", preferredLanguage: "en" });
   const [citySuggestions, setCitySuggestions] = useState<Array<{ _id?: string; name: string }>>([]);
   const [referralCode, setReferralCode] = useState("");
+  const [referralApplied, setReferralApplied] = useState(false);
+  const [referralMsg, setReferralMsg] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,7 +62,8 @@ function RegisterForm() {
     // Apply referral code after registration if provided
       if (referralCode.trim()) {
         try {
-          await api.post("/referral/apply", { code: referralCode.trim() });
+          const res = await api.post("/referral/apply", { code: referralCode.trim() });
+          setReferralMsg(res.data.message);
         } catch {
           // Referral code invalid — don't block registration, just ignore
         }
@@ -66,7 +73,7 @@ function RegisterForm() {
     if (form.role === "tutor") {
       router.push("/onboarding/tutor");
     } else if (form.role === "parent") {
-      router.push("/dashboard");
+      router.push("/onboarding/parent");
     } else {
       router.push("/onboarding/student");
     }
@@ -89,7 +96,7 @@ function RegisterForm() {
       } else if (user.role === "student") {
         router.push("/onboarding/student");
       } else if (user.role === "parent") {
-        router.push("/dashboard");
+        router.push("/onboarding/parent");
       } else if (user.role === "admin") {
         router.push("/admin");
       } else {
@@ -151,7 +158,7 @@ function RegisterForm() {
           <div>
             <label htmlFor="countryCode" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Country or market</label>
             <select id="countryCode" name="countryCode" value={form.countryCode} onChange={handleChange} required style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', color: C.primary, background: 'white' }}>
-              {launchMarkets.map((market) => <option key={market.code} value={market.code}>{market.name} ({market.dial})</option>)}
+              {launchMarkets.map((market) => <option key={market.code} value={market.code}>{market.name} ({market.phoneCode})</option>)}
             </select>
             {form.countryCode !== "PK" && <p style={{ margin: '.45rem 0 0', color: C.gray500, fontSize: '.78rem', lineHeight: 1.5 }}>Discovery beta: profiles, requests, offers, and negotiation are available. Acceptance and payment are not available yet.</p>}
           </div>
@@ -160,7 +167,7 @@ function RegisterForm() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone</label>
-              <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder={`${launchMarkets.find((market) => market.code === form.countryCode)?.dial} …`}
+              <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder={`${launchMarkets.find((market) => market.code === form.countryCode)?.phoneCode} …`}
                 style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                 onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                 onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -213,9 +220,9 @@ function RegisterForm() {
               onChange={e => setReferralCode(e.target.value.toUpperCase())}
               placeholder="e.g. AHMAD3F2A"
               maxLength={12}
-              style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, letterSpacing: '0.05em', fontWeight: 600 }}
+              style={{ width: '100%', padding: '0.75rem 1rem', border: `1.5px solid ${referralApplied ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, letterSpacing: '0.05em', fontWeight: 600 }}
               onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              onBlur={e => (e.currentTarget.style.borderColor = referralApplied ? '#bbf7d0' : '#e5e7eb')} />
             {referralCode && (
               <p style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.3rem', fontWeight: 600 }}>
                 🎁 You'll get Rs. 200 credit on your first booking!

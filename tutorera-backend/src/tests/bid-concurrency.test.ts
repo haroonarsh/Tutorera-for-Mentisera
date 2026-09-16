@@ -1,16 +1,26 @@
 // src/tests/bid-concurrency.test.ts
 //
 // Covers scenario #3 from the audit's minimum backend test suite: two
-// concurrent bid-accept requests must create exactly one booking. This is
-// what BE-07's fix (atomic findOneAndUpdate({status:"open"}) guard inside a
-// Mongo transaction) is supposed to guarantee — this test actually fires
-// both requests at once instead of trusting the code reads correctly.
+// concurrent bid-accept requests must never both win. This is what BE-07's
+// fix (atomic findOneAndUpdate({status:"open"}) guard inside a Mongo
+// transaction) is supposed to guarantee — this test actually fires both
+// requests at once instead of trusting the code reads correctly.
+//
+// Offer acceptance is now a two-phase, payment-gated flow (see
+// request.controller.ts): acceptBid/initiateAcceptBid only reserves the
+// request/bid (moving them to "awaiting_payment"/"payment_pending") and
+// returns a payment checkout URL - the same atomic guard BE-07 added, just
+// one step earlier than when this test was first written. The Booking
+// itself is only created by finalizeBidAcceptance(), called once the
+// payment gateway's webhook confirms payment - so these tests assert the
+// race is won by only one side at the reservation step, then finalize the
+// winner to confirm exactly one booking results end to end.
 
 import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
-import { acceptBid } from "../controllers/request.controller";
+import { acceptBid, finalizeBidAcceptance } from "../controllers/request.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
 
@@ -54,6 +64,8 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
       request: requestDoc._id,
       tutor: tutor._id,
       amount: 1000,
+      initialStudentRate: 1000,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       message: "I can help",
     });
 
@@ -80,8 +92,15 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     const successCount = statusCalls.filter((code) => code === 200).length;
     expect(successCount).toBe(1);
 
-    // The real proof: no matter how the two requests raced, the database
-    // must contain exactly one booking for this request.
+    // No matter how the two requests raced, the reservation guard must have
+    // let exactly one through to "payment_pending"/"awaiting_payment".
+    const reservedBid = await Bid.findById(bid._id);
+    expect(reservedBid?.status).toBe("payment_pending");
+    const reservedRequest = await Request.findById(requestDoc._id);
+    expect(reservedRequest?.status).toBe("awaiting_payment");
+
+    // Completing payment (the webhook) must then produce exactly one booking.
+    await finalizeBidAcceptance(bid._id.toString(), { to: () => ({ emit: jest.fn() }) });
     const bookings = await Booking.find({ request: requestDoc._id });
     expect(bookings.length).toBe(1);
 
@@ -108,8 +127,9 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
       schedule: "Mornings",
       status: "open",
     });
-    const bidA = await Bid.create({ request: requestDoc._id, tutor: tutorA._id, amount: 1500, message: "A" });
-    const bidB = await Bid.create({ request: requestDoc._id, tutor: tutorB._id, amount: 1400, message: "B" });
+    const bidExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const bidA = await Bid.create({ request: requestDoc._id, tutor: tutorA._id, amount: 1500, initialStudentRate: 1500, expiresAt: bidExpiry, message: "A" });
+    const bidB = await Bid.create({ request: requestDoc._id, tutor: tutorB._id, amount: 1400, initialStudentRate: 1400, expiresAt: bidExpiry, message: "B" });
 
     const reqA = mockAuthRequest({
       params: { id: requestDoc._id.toString(), bidId: bidA._id.toString() },
@@ -125,14 +145,25 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
 
     await Promise.all([acceptBid(reqA, resA), acceptBid(reqB, resB)]);
 
+    // Exactly one bid must have won the reservation race.
+    const reservedBids = await Bid.find({ request: requestDoc._id, status: "payment_pending" });
+    expect(reservedBids.length).toBe(1);
+    const winningBid = reservedBids[0];
+
+    // The loser must be untouched (still its original "submitted" status) -
+    // it never made it past the atomic guard.
+    const loserBid = await Bid.findOne({ request: requestDoc._id, _id: { $ne: winningBid._id } });
+    expect(loserBid?.status).toBe("submitted");
+
+    // Completing payment for the winner must produce exactly one booking and
+    // finally mark the loser "not_selected".
+    await finalizeBidAcceptance(winningBid._id.toString(), { to: () => ({ emit: jest.fn() }) });
     const bookings = await Booking.find({ request: requestDoc._id });
     expect(bookings.length).toBe(1);
 
-    // Whichever bid lost the race must not have been silently left "pending"
-    // forever — it should be untouched (still pending) since it never made
-    // it past the atomic guard, while the DB overall still shows exactly one
-    // accepted bid for this request.
     const acceptedBids = await Bid.find({ request: requestDoc._id, status: "accepted" });
     expect(acceptedBids.length).toBe(1);
+    const finalLoserBid = await Bid.findById(loserBid?._id);
+    expect(finalLoserBid?.status).toBe("not_selected");
   });
 });

@@ -1,15 +1,21 @@
 "use client";
 
-import { useGeoData } from "@/lib/geoService";
-import { COUNTRIES,Country,getCountryByCode } from "@/lib/location";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowRight,
+  Sparkles,
+  Globe,
+  Home,
+  Laptop,
   Check,
   ChevronDown,
-  Sparkles
+  MapPin,
+  DollarSign
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
+import { useGeoData } from "@/lib/geoService";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
 export default function QuickRequestComposer() {
@@ -76,6 +82,7 @@ export default function QuickRequestComposer() {
   };
 
   return (
+    <>
     <div
       style={{
         background: "white",
@@ -342,6 +349,14 @@ export default function QuickRequestComposer() {
         countries={geo.countries}
       />
     </div>
+
+    {/* NEW: Complementary Tutor CTA */}
+    <div style={{ marginTop: "1.25rem", textAlign: "center" }}>
+      <p style={{ fontSize: "0.9rem", color: "#475569" }}>
+        Are you a tutor? <Link href="/opportunities" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "underline" }}>Find students who need what you teach</Link>
+      </p>
+    </div>
+    </>
   );
 }
 

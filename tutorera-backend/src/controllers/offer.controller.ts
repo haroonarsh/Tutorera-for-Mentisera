@@ -6,16 +6,19 @@ import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import TutorProfile from "../models/TutorProfile.model";
-import { calculateMarketplaceFees } from "../config/constants";
+import ParentProfile from "../models/ParentProfile.model";
+import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
 import { containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
+import { renderTransactionalEmail } from "../utils/emailBrand";
 import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
-import { createTransaction } from "../utils/rapidGateway";
+import { paymentProvider } from "../services/paymentProvider.service";
 import { releaseExpiredPaymentHold } from "./request.controller";
+import { previewPromoDiscount, getAppliedPromoForBasket, PromoCodeError } from "../services/promoCode.service";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
@@ -34,7 +37,27 @@ function moderationReasons(message = "", amount?: number, baseline?: number) {
   if (amount && baseline && (amount < baseline * 0.35 || amount > baseline * 3)) reasons.push("unusual_price");
   return reasons;
 }
-async function offerEmail(userId: string, subject: string, message: string) { try { const user = await User.findById(userId).select("name email").lean(); if (user?.email) await sendEmail({ to: user.email, subject, html: `<h2>${escapeHtml(subject)}</h2><p>Hello ${escapeHtml(user.name)},</p><p>${escapeHtml(message)}</p><p><a href="https://tutorera.ac.pk/offers">Review your offers</a></p>` }); } catch (error) { console.error("Offer email failed:", error); } }
+async function offerEmail(userId: string, subject: string, message: string) {
+  try {
+    const user = await User.findById(userId).select("name email").lean();
+    if (user?.email) {
+      const html = renderTransactionalEmail({
+        subject,
+        emailCategory: "Offer Update",
+        emailHeading: subject,
+        emailSubheading: "An update is available on your tuition offer.",
+        firstName: user.name,
+        openingMessage: message,
+        mainMessage: "Log in to your TUTORERA dashboard to review offer details, message the other party, or complete your booking.",
+        cta: { label: "Review Offers", url: "https://tutorera.ac.pk/offers" },
+        includeSecurityNotice: true,
+      });
+      await sendEmail({ to: user.email, subject, html, eventType: "offer.updated" });
+    }
+  } catch (error) {
+    console.error("Offer email failed:", error);
+  }
+}
 
 async function context(offerId: string) {
   const offer = await Bid.findById(offerId);
@@ -155,6 +178,25 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    if (isStudentOwner) {
+      const approvalProfile = await ParentProfile.findOne({
+        "children.studentUser": request.student,
+        approvalRequiredForBookings: true,
+      }).select("user").lean();
+      if (approvalProfile) {
+        const reserved = await Request.findOneAndUpdate(
+          { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
+          { status: "awaiting_parent_approval", acceptedOffer: offer._id, finalAgreedRate: offer.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) },
+          { new: true }
+        );
+        if (!reserved) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
+        await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
+        await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: userId, entity: "Request", targetId: request._id.toString(), metadata: { offerId: offer._id.toString(), parentId: approvalProfile.user.toString() } });
+        res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "Your selected offer is awaiting parent approval before payment." });
+        return;
+      }
+    }
+
     // Atomic guard — same purpose as before: only one accept attempt can
     // win this transition, so two concurrent accept clicks can't both
     // proceed. We reserve the AGREED RATE here too, exactly like before,
@@ -173,20 +215,67 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     offer.paymentPendingExpiresAt = paymentPendingExpiresAt;
     await offer.save();
 
+    // If a tutor is accepting a student's counter-offer, do NOT generate a checkout session for the tutor!
+    if (isTutorOwner) {
+      await sendNotification(req.app.get("io"), request.student.toString(), {
+        title: "Offer Accepted",
+        message: "The tutor accepted your counter-offer! Please complete the payment to confirm the booking.",
+        type: "booking",
+        link: "/dashboard",
+      });
+      await logAudit({
+        action: "tutor_accepted_counter_offer",
+        actor: req.user?.name,
+        actorId: userId,
+        entity: "Bid",
+        targetId: offer.id,
+        metadata: { finalAgreedRate: offer.amount },
+      });
+      res.status(200).json({
+        success: true,
+        message: "Counter-offer accepted! The student has been notified to complete the payment.",
+      });
+      return;
+    }
+
     try {
       const student = await User.findById(request.student).select("name email phone");
-      const checkoutUrl = await createTransaction({
-        amount: offer.amount,
+      const fees = await calculateMarketplaceFees(offer.amount, {
+        currency: offer.currency || request.currency,
+        countryCode: request.countryCode,
+        teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+      });
+
+      let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+      const originalStudentTotal = fees.studentTotal;
+      const promoCodeInput = req.body?.promoCode;
+      if (promoCodeInput) {
+        appliedPromo = await previewPromoDiscount(request.student.toString(), req.user?.role, promoCodeInput, fees.studentTotal);
+        // The discount comes out of the platform's own margin (studentFee),
+        // never the tutor's payout - tutorNet/tutorFee/tax are untouched.
+        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+        fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
+      }
+
+      const checkoutUrl = await paymentProvider.createCheckout({
+        amount: fees.studentTotal,
+        currency: offer.currency || request.currency || "PKR",
         customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
         // Same "BID-" prefix the webhook handler already branches on —
         // Offer and Bid are the same collection, so this is fully
         // compatible with the existing payment.controller.ts webhook logic.
         basketId: `BID-${offer._id.toString()}`,
+        bidId: offer._id.toString(),
+        studentId: request.student.toString(),
+        tutorId: offer.tutor.toString(),
+        feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
         description: `TUTORERA offer acceptance ${offer._id.toString()}`,
         successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
         failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
         checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
+        ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
       });
 
       await logAudit({
@@ -213,6 +302,12 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         { _id: offer._id, status: "payment_pending" },
         { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
       );
+
+      if (err instanceof PromoCodeError) {
+        res.status(err.statusCode).json({ success: false, message: err.message });
+        return;
+      }
+
       console.error("Failed to create Rapid Gateway checkout for offer acceptance:", err);
       res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
     }
@@ -233,6 +328,18 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
   const request = await Request.findById(offer.request);
   if (!request) { res.status(404).json({ success: false, message: "Request not found." }); return; }
 
+  try {
+    await assertAcceptanceAvailable(request.countryCode);
+  } catch (marketError: any) {
+    res.status(marketError.statusCode || 409).json({
+      success: false,
+      code: marketError.code || "MARKET_DISCOVERY_ONLY",
+      message: marketError.message,
+      market: request.countryCode,
+    });
+    return;
+  }
+
   const userId = req.user?._id?.toString();
   if (request.student.toString() !== userId) {
     res.status(403).json({ success: false, message: "Only the student who accepted this offer can retry payment." });
@@ -246,15 +353,45 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const checkoutUrl = await createTransaction({
-      amount: offer.amount,
+    const fees = await calculateMarketplaceFees(offer.amount, {
+      currency: offer.currency || request.currency,
+      countryCode: request.countryCode,
+      teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
+    });
+
+    // Carry forward whatever promo code was applied on the original attempt
+    // (if any) rather than asking the student to re-enter it - re-validate
+    // it since limits/expiry could have changed between attempts, and
+    // silently drop it rather than blocking the retry if it's no longer valid.
+    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
+    const originalStudentTotal = fees.studentTotal;
+    const previousPromo = await getAppliedPromoForBasket(`BID-${offer._id.toString()}`);
+    if (previousPromo) {
+      try {
+        appliedPromo = await previewPromoDiscount(request.student.toString(), req.user?.role, previousPromo.code, fees.studentTotal);
+        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
+        fees.studentTotal = fees.subtotal + fees.studentFee;
+        recomputeGatewayFee(fees);
+      } catch (promoErr) {
+        console.warn(`Promo code ${previousPromo.code} no longer valid on retry for offer ${offer._id}:`, promoErr);
+      }
+    }
+
+    const checkoutUrl = await paymentProvider.createCheckout({
+      amount: fees.studentTotal,
+      currency: offer.currency || request.currency || "PKR",
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${offer._id.toString()}`,
+      bidId: offer._id.toString(),
+      studentId: request.student.toString(),
+      tutorId: offer.tutor.toString(),
+      feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
       description: `TUTORERA offer acceptance ${offer._id.toString()} (retry)`,
       successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
       failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
       checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
+      ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
     res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });

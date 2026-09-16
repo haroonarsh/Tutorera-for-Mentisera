@@ -6,7 +6,7 @@ export default function CareersPage() {
     <div style={{ backgroundColor: 'white' }}>
       <section style={{ backgroundColor: C.primary, padding: '5rem 1.5rem', textAlign: 'center' }}>
         <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', marginBottom: '1rem' }}>Careers at MENTISERA</h1>
-        <p style={{ color: '#9ca3af', fontSize: '1.05rem' }}>Join our team and help transform education in Pakistan.</p>
+        <p style={{ color: '#9ca3af', fontSize: '1.05rem' }}>Join our team and help build safer, more transparent tutoring for learners worldwide.</p>
       </section>
       <section style={{ padding: '5rem 1.5rem', textAlign: 'center' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>

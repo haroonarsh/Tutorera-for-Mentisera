@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { EDUCATION_LEVELS, normalizeEducationLevels, normalizeEducationLevel } from "../config/educationLevels";
 
 export interface ITutorProfile extends Document {
   user: Types.ObjectId;
@@ -9,8 +10,15 @@ export interface ITutorProfile extends Document {
   countryCode: string;
   countryName: string;
   city: string;
+  state?: string;
+  zipCode?: string;
   cityId?: string;                   // slug from location dataset e.g. "pk-lhe"
   regionCode?: string;               // ISO 3166-2 region code e.g. "PK-PB"
+  postalCode?: string;
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
   timezone: string;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   nationalityCountryCode?: string; residenceCountryCode?: string; onlineCountryReach?: string[];
@@ -38,7 +46,6 @@ export interface ITutorProfile extends Document {
   bio: string;
   hourlyRate: number;
   currency: string;
-  currencySymbol?: string;           // resolved from SUPPORTED_CURRENCIES at save
   sessionRate?: number;              // rate per session (optional override)
   monthlyRate?: number;              // rate per month (optional override)
   teachingMode: "online" | "in-person" | "both";
@@ -120,6 +127,11 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     countryName: { type: String, trim: true },
     cityId: { type: String, trim: true, lowercase: true },
     regionCode: { type: String, uppercase: true, trim: true },
+    postalCode: { type: String, trim: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number] },
+    },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
     region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
@@ -128,6 +140,8 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     residenceCountryCode: { type: String, uppercase: true, trim: true },
     onlineCountryReach: [{ type: String, uppercase: true, trim: true }],
     city: { type: String, trim: true, default: "" },
+    state: { type: String, trim: true, default: "" },
+    zipCode: { type: String, trim: true, default: "" },
     timezone: { type: String, trim: true },
     gender: { type: String, enum: ["male", "female", "other"], default: "male" },
     dateOfBirth: { type: String, default: "" },
@@ -151,7 +165,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     subjects: [{ type: String, trim: true }],
     levels: [{
       type: String,
-      enum: ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"],
+      trim: true,
     }],
     curricula: [{ type: String, trim: true }],
 
@@ -159,7 +173,6 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     bio: { type: String, trim: true, default: "" },
     hourlyRate: { type: Number, default: 0 },
     currency: { type: String, uppercase: true, trim: true },
-    currencySymbol: { type: String, trim: true, default: "" },
     sessionRate: { type: Number, min: 0 },
     monthlyRate: { type: Number, min: 0 },
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
@@ -230,6 +243,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
 );
 
 // Compound indexes for global marketplace queries
+tutorProfileSchema.index({ location: "2dsphere" });
 tutorProfileSchema.index({ countryCode: 1, isVerified: 1, teachingMode: 1 });
 tutorProfileSchema.index({ countryCode: 1, cityId: 1, subjects: 1, isVerified: 1 });
 tutorProfileSchema.index({ onlineCountryReach: 1, isVerified: 1, averageRating: -1 });
@@ -242,16 +256,52 @@ function policeIsRequired(profile: ITutorProfile): boolean {
   return inPerson && homeCountries.includes(country);
 }
 
+// location.type defaults to "Point" whenever the location subdocument exists
+// at all, even if coordinates was never populated (e.g. an online-only tutor
+// who never went through geocoding). MongoDB's 2dsphere index on `location`
+// then rejects EVERY save of that document with "Can't extract geo keys" -
+// not just location updates - because it can't build an index entry from an
+// incomplete GeoJSON Point. Strip an invalid location out so any save can
+// proceed and self-heals previously-corrupted documents. This must run from
+// pre("save"), not just pre("validate") - callers that intentionally skip
+// validation (profile.save({ validateBeforeSave: false }), e.g. admin
+// verification decisions that shouldn't revalidate legacy application data)
+// still always run pre("save"), so putting this fix only in pre("validate")
+// left every such save able to trip the same index error again.
+function repairInvalidLocation(p: any) {
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
+}
+
+tutorProfileSchema.pre("validate", function () {
+  const p = this as any;
+  if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
+    p.levels = normalizeEducationLevels(p.levels) as any;
+  }
+  repairInvalidLocation(p);
+});
+
 tutorProfileSchema.pre("save", function () {
-  const p = this as ITutorProfile;
+  const p = this as any;
+  if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
+    p.levels = normalizeEducationLevels(p.levels) as any;
+  }
+  repairInvalidLocation(p);
   const allApproved =
-    p.verificationStatus === "approved" &&
     p.cnicVerificationStatus === "approved" &&
     p.degreeVerificationStatus === "approved" &&
     p.demoVideoStatus === "approved" &&
     (!policeIsRequired(p) || p.policeVerificationStatus === "approved");
-  if (allApproved && !p.isVerified) {
+
+  if (allApproved) {
+    p.verificationStatus = "approved";
     p.isVerified = true;
+  } else if (p.verificationStatus !== "rejected") {
+    p.verificationStatus = "pending";
+    p.isVerified = false;
+  } else {
+    p.isVerified = false;
   }
 });
 

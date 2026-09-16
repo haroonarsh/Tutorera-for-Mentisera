@@ -18,6 +18,12 @@ export interface IUser extends Document {
   allowedCountryCodes?: string[];
   phone?: string;
   city?: string;
+  address?: string;
+  postalCode?: string;
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
   avatar?: string;
   isVerified: boolean;
   isApproved: boolean;

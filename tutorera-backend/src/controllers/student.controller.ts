@@ -5,6 +5,8 @@ import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import { Types } from "mongoose";
+import { resolveMarket } from "../services/market.service";
+import { resolveLocationReferences } from "../services/locationReference.service";
 
 // @desc    Save student onboarding
 // @route   POST /api/students/onboarding
@@ -17,13 +19,34 @@ export const saveStudentOnboarding = async (
     fullName, phone, city, gender, dateOfBirth,
     currentLevel, institution, subjectsNeeded,
     budgetRange, teachingModePreference,
+    countryCode, countryName, timezone, currency, country, region, cityRef, locality,
   } = req.body;
+
+  const market = await resolveMarket(countryCode || req.user?.countryCode || "PK");
+  if (!market || !market.isActive || !market.studentRegistration) {
+    res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Student onboarding is not available in the selected market." });
+    return;
+  }
+  let locationReferences: Record<string, unknown>;
+  try {
+    locationReferences = await resolveLocationReferences({ country, region, cityRef, locality, city }, market.countryCode);
+  } catch (error: any) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    return;
+  }
+  const resolvedCity = (locationReferences.city as string | undefined) || city;
+  const resolvedTimezone = timezone || (locationReferences.timezone as string | undefined) || market.timezone;
 
   // Update user name
   await User.findByIdAndUpdate(req.user?._id, {
     name: fullName,
     phone,
-    city,
+    city: resolvedCity,
+    countryCode: market.countryCode,
+    countryName: market.countryName,
+    timezone: resolvedTimezone,
+    currency: market.currency,
+    ...locationReferences,
   });
 
   // Create or update student profile
@@ -31,9 +54,13 @@ export const saveStudentOnboarding = async (
     { user: req.user?._id },
     {
       user: req.user?._id,
-      fullName, phone, city, gender, dateOfBirth,
+      fullName, phone, city: resolvedCity, gender, dateOfBirth,
+      countryCode: market.countryCode, countryName: market.countryName, timezone: resolvedTimezone, currency: market.currency,
+      ...locationReferences,
       currentLevel, institution, subjectsNeeded,
       budgetRange, teachingModePreference,
+      postalCode: req.body.postalCode,
+      location: (typeof req.body.lat === "number" && typeof req.body.lng === "number") ? { type: "Point", coordinates: [req.body.lng, req.body.lat] } : undefined,
       onboardingComplete: true,
     },
     { upsert: true, new: true }
@@ -133,6 +160,12 @@ export const getFavouriteIds = async (req: AuthRequest, res: Response): Promise<
 // @route   POST /api/students/guardians
 // @access  Private (student)
 export const linkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  res.status(410).json({
+    success: false,
+    message: "Direct guardian linking is no longer available. Ask the parent to send a consent request from their dashboard.",
+  });
+  return;
+  /* Legacy implementation retained below temporarily for source-history reference.
   const { parentProfileId, parentUserId, name, email } = req.body;
 
   if (!parentProfileId && !parentUserId && !email) {
@@ -188,6 +221,7 @@ export const linkParentGuardian = async (req: AuthRequest, res: Response): Promi
   });
 
   res.status(200).json({ success: true, message: "Parent guardian linked successfully.", parentProfile });
+  */
 };
 
 // @desc    Remove a parent guardian from my account

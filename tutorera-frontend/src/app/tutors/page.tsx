@@ -1,11 +1,11 @@
+import type { Metadata } from "next";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Find Tutors Online & In-Person",
-  description: "Search tutor profiles worldwide and locally by subject, curriculum, country, teaching mode, published reviews, availability, verification status, and hourly rates where provided.",
+  title: "Find Verified Tutors Online & In-Person",
+  description: "Search verified tutors worldwide and locally by subject, curriculum, country, teaching mode, rating, availability, and transparent hourly rates.",
   alternates: { canonical: "/tutors" },
 };
 

@@ -14,9 +14,11 @@ import {
   setSuspended,
   setReverification,
   getApplicationHistory,
+  uploadApplicationDocumentOnBehalf,
 } from "../controllers/tracking.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { trackingLimiter, tutorRotateLimiter } from "../middlewares/rateLimiters";
+import { uploadVerification } from "../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -36,6 +38,22 @@ router.patch("/admin/applications/:id/marketplace", protect, authorize("admin"),
 router.patch("/admin/applications/:id/home-tuition", protect, authorize("admin"), setHomeTuitionEligibility);
 router.patch("/admin/applications/:id/suspended", protect, authorize("admin"), setSuspended);
 router.patch("/admin/applications/:id/reverification", protect, authorize("admin"), setReverification);
+
+// Admin upload document on tutor's behalf
+router.post(
+  "/admin/applications/:id/upload-document",
+  protect,
+  authorize("admin"),
+  uploadVerification.fields([
+    { name: "file", maxCount: 1 },
+    { name: "cnicFront", maxCount: 1 },
+    { name: "cnicBack", maxCount: 1 },
+    { name: "degree", maxCount: 1 },
+    { name: "policeCertificate", maxCount: 1 },
+    { name: "videoIntro", maxCount: 1 },
+  ]),
+  uploadApplicationDocumentOnBehalf
+);
 
 // ─── Public token tracking — MUST be last (wildcard catches everything) ──────
 router.get("/:token", trackingLimiter, getPublicTracking);

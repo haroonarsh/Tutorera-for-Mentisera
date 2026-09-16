@@ -126,7 +126,7 @@ export const getAllRefundRequests = async (req: AuthRequest, res: Response): Pro
   const requests = await RefundRequest.find(filter)
     .populate("student", "name email phone")
     .populate("tutor", "name email")
-    .populate("booking", "amount studentTotal schedule teachingMode createdAt")
+    .populate("booking", "amount studentTotal currency schedule teachingMode createdAt")
     .sort("-createdAt");
 
   res.status(200).json({ success: true, total: requests.length, refundRequests: requests });

@@ -1,7 +1,7 @@
-import { ArrowRight,BadgeCheck,CheckCircle,ShieldCheck,Sparkles } from "lucide-react";
 import Link from "next/link";
-import AskTutoreraInput from "./AskTutoreraInput";
+import { ArrowRight, BadgeCheck, CheckCircle, Sparkles, ShieldCheck } from "lucide-react";
 import QuickRequestComposer from "./QuickRequestComposer";
+import AskTutoreraInput from "./AskTutoreraInput";
 
 export default function HeroMarketplace() {
   return (
@@ -24,6 +24,7 @@ export default function HeroMarketplace() {
             marginBottom: "2.5rem",
           }}
         >
+          {/* Hero Copy */}
           <div>
             <div
               style={{
@@ -55,8 +56,8 @@ export default function HeroMarketplace() {
                 marginBottom: "1rem",
               }}
             >
-              You Set the Requirement. <br />
-              <span style={{ color: "#016ef8" }}>Tutors Make Offers. You Choose.</span>
+              Students Need Tutors. <br />
+              <span style={{ color: "#016ef8" }}>Tutors Need Students. <br />TUTORERA Connects Both.</span>
             </h1>
 
             <p
@@ -68,7 +69,7 @@ export default function HeroMarketplace() {
                 maxWidth: 540,
               }}
             >
-              Post your subject, learning mode, schedule, and preferred budget. TUTORERA matches your requirement with suitable tutors who can accept your rate or send an offer. Compare, negotiate, and choose with confidence.
+              The global marketplace where you control the match. Students post requirements and budgets. Tutors apply or send offers. Compare, negotiate, and start learning or teaching today.
             </p>
 
             <div style={{ marginBottom: "1.25rem" }}>
@@ -91,7 +92,7 @@ export default function HeroMarketplace() {
               >
                 <ShieldCheck size={16} color="#10b981" />
                 <span>
-                  <strong>First-session protection:</strong> replacement, credit, or refund review where eligible
+                  <strong>Quality assurance:</strong> First-session protection for students and guaranteed payouts for verified tutors
                 </span>
                 <ArrowRight size={13} color="#059669" />
               </Link>
@@ -128,12 +129,12 @@ export default function HeroMarketplace() {
                   transition: "transform 0.15s ease, background 0.15s ease",
                 }}
               >
-                <span>Post My Tuition Request</span>
+                <span>I Need a Tutor</span>
                 <ArrowRight size={18} />
               </Link>
 
               <Link
-                href="/tutors"
+                href="/opportunities"
                 style={{
                   background: "white",
                   color: "#021550",
@@ -149,9 +150,11 @@ export default function HeroMarketplace() {
                   minHeight: "50px",
                   flex: "1 1 auto",
                   maxWidth: "240px",
+                  gap: "0.4rem"
                 }}
               >
-                Browse Tutors
+                <span>I Want to Teach</span>
+                <ArrowRight size={16} color="#021550" />
               </Link>
             </div>
 
@@ -171,7 +174,7 @@ export default function HeroMarketplace() {
             </div>
 
             <p style={{ margin: "0 0 1.25rem", color: "#021550", fontSize: "0.9rem", fontWeight: 800 }}>
-              Budget bhi aap ka. Time bhi aap ka. Tutor bhi aap ki choice.
+              Your budget. Your schedule. Your choice of tutor.
             </p>
 
             <div
@@ -204,6 +207,7 @@ export default function HeroMarketplace() {
             </div>
           </div>
 
+          {/* Quick Request Visual / Guarantee Card */}
           <div>
             <div
               style={{
@@ -223,16 +227,16 @@ export default function HeroMarketplace() {
                 You Decide the Budget. Tutors Compete for You.
               </h3>
               <p style={{ fontSize: "0.85rem", color: "#475569", lineHeight: "1.5", margin: "0 0 1rem 0" }}>
-                Unlike traditional agencies, on TUTORERA students and parents propose their preferred rate. Eligible matching tutors can accept or counter transparently.
+                Unlike traditional agencies, on TUTORERA students and parents propose their preferred rate. Verified tutors accept or counter transparently.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.78rem" }}>
                 <div style={{ background: "#f8fafc", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
                   <strong style={{ display: "block", color: "#021550" }}>Home Tuition</strong>
-                  <span style={{ color: "#64748b" }}>Eligible local tutors where enabled</span>
+                  <span style={{ color: "#64748b" }}>Local verified tutors</span>
                 </div>
                 <div style={{ background: "#f8fafc", padding: "0.6rem", borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}>
                   <strong style={{ display: "block", color: "#021550" }}>Online Tuition</strong>
-                  <span style={{ color: "#64748b" }}>Worldwide 1-on-1 tutor discovery</span>
+                  <span style={{ color: "#64748b" }}>Worldwide 1-on-1 tutors</span>
                 </div>
               </div>
 
@@ -248,9 +252,12 @@ export default function HeroMarketplace() {
                 }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "#166534", fontWeight: 700 }}>
-                  <ShieldCheck size={15} color="#16a34a" /> First-session protection where eligible
+                  <ShieldCheck size={15} color="#16a34a" /> First-Session Protection
                 </span>
-                <Link href="/first-session-guarantee" style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none" }}>
+                <Link
+                  href="/first-session-guarantee"
+                  style={{ color: "#0329b2", fontWeight: 700, textDecoration: "none" }}
+                >
                   Policy details →
                 </Link>
               </div>
@@ -258,10 +265,12 @@ export default function HeroMarketplace() {
           </div>
         </div>
 
+        {/* Ask Tutorera Natural Language Input */}
         <div style={{ marginBottom: "1.5rem" }}>
           <AskTutoreraInput />
         </div>
 
+        {/* 2. Embedded Quick Request Composer (Form-based alternative) */}
         <QuickRequestComposer />
       </div>
     </section>

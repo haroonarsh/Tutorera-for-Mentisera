@@ -60,6 +60,12 @@ const userSchema = new Schema<IUser>(
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
     locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
+    address: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], index: "2dsphere" },
+    },
     timezone: { type: String, trim: true },
     currency: { type: String, uppercase: true, trim: true },
     preferredLanguage: { type: String, lowercase: true, trim: true, default: "en" },
@@ -139,5 +145,17 @@ userSchema.methods.comparePassword = async function (
   if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// location.type defaults to "Point" whenever the location subdocument exists
+// at all, even if coordinates was never populated. MongoDB's 2dsphere index
+// then rejects EVERY save of that document with "Can't extract geo keys" -
+// not just location updates - because it can't build an index entry from an
+// incomplete GeoJSON Point. Strip an invalid location out before validation.
+userSchema.pre("validate", function () {
+  const p = this as any;
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
+});
 
 export default mongoose.model<IUser>("User", userSchema);

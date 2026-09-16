@@ -40,6 +40,8 @@ const footerColumns = [
       { label: "Child Safeguarding", href: "/child-safety" },
       { label: "Tutor Verification Standards", href: "/verification-policy" },
       { label: "Background Check Policy", href: "/background-check-policy" },
+      { label: "First-Session Guarantee", href: "/first-session-guarantee" },
+      { label: "How Payments Work", href: "/payment-process" },
       { label: "Academic Integrity Code", href: "/academic-integrity" },
       { label: "Dispute & Complaint Process", href: "/complaint-process" },
     ],
@@ -51,6 +53,7 @@ const footerColumns = [
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Cookie Policy", href: "/cookies" },
+      { label: "Disclaimer & Ad Disclosure", href: "/disclaimer" },
       { label: "Subprocessors Directory", href: "/legal/subprocessors" },
       { label: "AI & Algorithm Transparency", href: "/legal/ai-transparency" },
       { label: "Privacy Rights & Data Export", href: "/privacy-center" },
@@ -74,7 +77,7 @@ export default function Footer() {
           <div className={s.brand}>
             <BrandLogo className={s.logo} imageClassName={s.logoImage} variant="light" size="lg" />
             <p>
-              TUTORERA® by MENTISERA is a global student-led tutoring marketplace connecting students and parents with qualified tutors for online sessions worldwide and verified in-person home tuition locally.
+              TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
             </p>
             <div className={s.contactList} aria-label="Contact information">
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
@@ -110,7 +113,7 @@ export default function Footer() {
         </div>
 
         <div className={s.bottom}>
-          <p>TUTORERA® is a global digital tutoring marketplace for online learning worldwide and locally enabled home tuition.</p>
+          <p>TUTORERA is a global two-sided tutoring marketplace.</p>
           <p>© 2026 TUTORERA®. All rights reserved.</p>
         </div>
       </div>
