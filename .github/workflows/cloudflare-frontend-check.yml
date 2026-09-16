@@ -1,0 +1,49 @@
+name: Cloudflare Frontend Check
+
+on:
+  pull_request:
+    paths:
+      - "tutorera-frontend/**"
+      - ".github/workflows/cloudflare-frontend-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tutorera-frontend/**"
+      - ".github/workflows/cloudflare-frontend-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Cloudflare frontend validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tutorera-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Cloudflare Worker
+        run: npx opennextjs-cloudflare build
