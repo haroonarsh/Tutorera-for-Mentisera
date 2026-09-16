@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { UI_COLORS } from "@/lib/brand";
 
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
@@ -89,7 +90,7 @@ export default function SettingsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ width: '88px', height: '88px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '800', color: 'white', overflow: 'hidden', position: 'relative' }}>
                 {avatarPreview || user.avatar ? (
-                  <img src={avatarPreview || user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={(avatarPreview || user.avatar) as string} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
                 ) : user.name.charAt(0).toUpperCase()}
               </div>
               <label style={{ cursor: 'pointer', backgroundColor: C.gray50, border: '1px solid #e5e7eb', borderRadius: '0.4rem', padding: '0.4rem 0.875rem', fontSize: '0.8rem', fontWeight: '600', color: C.primary, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>

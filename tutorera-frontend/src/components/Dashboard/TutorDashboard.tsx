@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { UI_COLORS } from "@/lib/brand";
 // components/dashboard/TutorDashboard.tsx
 import s from "@/app/dashboard/dashboard.module.css";
@@ -161,7 +162,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
         <div className={s.personRow} style={{ margin: 0 }}>
           <div className={s.personAvatar}>
             {booking.student.avatar
-              ? <img src={booking.student.avatar} alt={booking.student.name} />
+              ? <Image src={booking.student.avatar} alt={booking.student.name}  width={100} height={100} unoptimized/>
               : booking.student.name.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -498,7 +499,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
             fontSize: 20, fontWeight: 700, color: "#0329B2",
           }}>
             {profile.user.avatar
-              ? <img src={profile.user.avatar} alt={profile.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ? <Image src={profile.user.avatar} alt={profile.user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }}  width={100} height={100} unoptimized/>
               : profile.user.name.charAt(0).toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
@@ -704,7 +705,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
         <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
           <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
-              {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
+              {userAvatar ? <Image src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}  width={100} height={100} unoptimized/> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>

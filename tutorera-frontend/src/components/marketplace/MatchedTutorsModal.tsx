@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import axiosInstance from "@/lib/axios";
 import { showError,showSuccess } from "@/lib/toast";
@@ -190,7 +191,7 @@ export default function MatchedTutorsModal({
                     <div className="flex items-start gap-3 flex-1">
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shrink-0">
                         {t.avatar ? (
-                          <img src={t.avatar} alt={t.name} className="w-full h-full object-cover" />
+                          <Image src={t.avatar} alt={t.name} className="w-full h-full object-cover"  width={100} height={100} unoptimized/>
                         ) : (
                           t.name?.charAt(0).toUpperCase() || "T"
                         )}

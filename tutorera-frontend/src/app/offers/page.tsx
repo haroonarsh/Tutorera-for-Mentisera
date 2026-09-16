@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
@@ -333,7 +334,7 @@ function OffersContent() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#0329b2", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", fontWeight: 800, overflow: "hidden" }}>
-                      {o.tutor.avatar ? <img src={o.tutor.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : o.tutor.name.charAt(0).toUpperCase()}
+                      {o.tutor.avatar ? <Image src={o.tutor.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}  width={100} height={100} unoptimized/> : o.tutor.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <strong style={{ fontSize: "1rem", color: "#021550", display: "block" }}>{o.tutor.name}</strong>

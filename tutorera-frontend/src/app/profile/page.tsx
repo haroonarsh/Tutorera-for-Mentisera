@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import api from "@/lib/axios";
@@ -164,7 +165,7 @@ export default function ProfilePage() {
           <div style={{ position: 'relative' }}>
             <div style={{ width: '90px', height: '90px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '800', color: 'white', border: '3px solid rgba(255,255,255,0.2)', overflow: 'hidden' }}>
               {avatarPreview || user.avatar ? (
-                <img src={avatarPreview || user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <Image src={(avatarPreview || user.avatar) as string} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }}  width={100} height={100} unoptimized/>
               ) : user.name.charAt(0).toUpperCase()}
             </div>
             <label style={{ position: 'absolute', bottom: 0, right: 0, width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid white' }}>
