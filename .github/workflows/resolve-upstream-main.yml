@@ -39,12 +39,15 @@ jobs:
 
             for file in "${conflicts[@]}"; do
               case "$file" in
+                "tutorera-frontend/src/app/tutors/[id]/layout.tsx")
+                  # Upstream intentionally removed this route-level layout. Preserve that deletion.
+                  git rm -- "$file"
+                  ;;
                 "tutorera-frontend/src/app/(countries)/[countryCode]/layout.tsx"|\
                 "tutorera-frontend/src/app/(countries)/[countryCode]/page.tsx"|\
                 "tutorera-frontend/src/app/(countries)/[countryCode]/tutors/page.tsx"|\
                 "tutorera-frontend/src/app/page.tsx"|\
                 "tutorera-frontend/src/app/sitemap.ts"|\
-                "tutorera-frontend/src/app/tutors/[id]/layout.tsx"|\
                 "tutorera-frontend/src/app/tutors/[id]/page.tsx"|\
                 "tutorera-frontend/src/components/Tutors/SeoTutorDirectory.tsx"|\
                 "tutorera-frontend/src/components/marketplace/OfferComparisonModal.tsx")
