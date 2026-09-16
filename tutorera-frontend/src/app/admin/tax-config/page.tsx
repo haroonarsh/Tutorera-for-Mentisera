@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import api from "@/lib/axios";
 import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import InfoTooltip from "@/components/admin/InfoTooltip";
@@ -121,7 +122,7 @@ export default function TaxConfigPage() {
           <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 12 }}>🌐 Tax Configuration</h2>
           <p style={{ margin: "4px 0 0", color: UI_COLORS.gray500, fontSize: "0.875rem" }}>
             Manage VAT, GST, and service tax rates per country. Applied automatically to every booking based on the student&apos;s country, alongside TutorEra&apos;s own commission set in{" "}
-            <a href="/admin/fee-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Fee Configuration</a>.
+            <Link href="/admin/fee-config" style={{ color: UI_COLORS.accent, fontWeight: 600 }}>Fee Configuration</Link>.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

@@ -477,7 +477,7 @@ export default function OfferComparisonModal({
               </div>
 
               <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "1rem", lineHeight: 1.5 }}>
-                By proceeding, you agree to TUTORERA&apos;s <a href="/terms" style={{ color: "#0329b2" }}>Terms of Service</a> and <a href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</a> policy.
+                By proceeding, you agree to TUTORERA&apos;s <Link href="/terms" style={{ color: "#0329b2" }}>Terms of Service</Link> and <Link href="/guarantee" style={{ color: "#0329b2" }}>Satisfaction Guarantee</Link> policy.
               </p>
 
               <div style={{ display: "flex", gap: "0.5rem" }}>

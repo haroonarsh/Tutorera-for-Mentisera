@@ -2,6 +2,7 @@
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { CheckCircle, Clock, AlertCircle, XCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -269,11 +270,11 @@ function PaymentsContent() {
                             {booking.payoutStatus === 'paid' ? 'Paid Out' : 'Payout Pending'}
                           </div>
                           {booking.payoutStatus !== 'paid' && booking.paymentStatus === 'confirmed' && (
-                            <a
+                            <Link
                               href="/admin/payouts"
                               style={{ padding: '0.5rem', backgroundColor: STATUS_COLORS.success.color, color: UI_COLORS.surface, borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: '600', textAlign: 'center', textDecoration: 'none' }}>
                               Open payout operations
-                            </a>
+                            </Link>
                           )}
                           {booking.paymentStatus !== 'confirmed' && (
                             <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted }}>⚠️ Confirm student payment first</p>

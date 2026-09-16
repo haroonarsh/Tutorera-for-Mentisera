@@ -121,7 +121,7 @@ export default function GuidebookPage() {
 
   const handleSectionClick = (anchor: string) => {
     setActiveSection(anchor);
-    window.location.hash = anchor;
+    window.history.replaceState(null, "", `#${anchor}`);
     const element = document.getElementById(anchor);
     if (element) {
       setTimeout(() => element.scrollIntoView({ behavior: "smooth" }), 100);
