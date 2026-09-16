@@ -1,14 +1,11 @@
 // src/config/env.ts
 // Validates required environment variables at startup. If anything required
 // is missing, the process exits immediately with a clear message instead of
-// starting in a broken state and failing confusingly later (e.g. a missing
-// JWT_SECRET silently producing unverifiable tokens, or a missing DB URI
-// crashing deep inside a request handler instead of at boot).
+// starting in a broken state and failing confusingly later.
 
 interface RequiredEnvVar {
     key: string;
-    // Optional extra check beyond "is it set" — e.g. minimum length for secrets.
-    validate?: (value: string) => string | null; // returns an error message, or null if valid
+    validate?: (value: string) => string | null;
 }
 
 const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
@@ -30,8 +27,25 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     { key: "GROQ_API_KEY" },
     { key: "GOOGLE_CLIENT_ID" },
     { key: "GOOGLE_CLIENT_SECRET" },
-    { key: "RAPID_GATEWAY_MERCHANT_ID" },
-    { key: "RAPID_GATEWAY_WEBHOOK_SECRET" },
+    {
+        key: "RAPID_GATEWAY_SECRET_KEY",
+        validate: (v) => (v.length < 12 ? "appears too short for a gateway secret" : null),
+    },
+    {
+        key: "RAPID_GATEWAY_WEBHOOK_SECRET",
+        validate: (v) => (v.length < 16 ? "must be at least 16 characters" : null),
+    },
+    {
+        key: "RAPID_GATEWAY_WEBHOOK_URL",
+        validate: (v) => {
+            try {
+                const url = new URL(v);
+                return url.protocol !== "https:" ? "must use HTTPS" : null;
+            } catch {
+                return "must be a valid absolute URL";
+            }
+        },
+    },
 ];
 
 export function validateEnv(): void {
@@ -41,23 +55,23 @@ export function validateEnv(): void {
         const value = process.env[key];
 
         if (!value || value.trim() === "") {
-        errors.push(`  - ${key} is missing`);
-        continue;
+            errors.push(`  - ${key} is missing`);
+            continue;
         }
 
         if (validate) {
-        const validationError = validate(value);
-        if (validationError) {
-            errors.push(`  - ${key} is invalid: ${validationError}`);
-        }
+            const validationError = validate(value);
+            if (validationError) {
+                errors.push(`  - ${key} is invalid: ${validationError}`);
+            }
         }
     }
 
     if (errors.length > 0) {
-        console.error("❌ Environment validation failed:\n" + errors.join("\n"));
-        console.error("\nFix the .env file (or your host's environment variable settings) before starting the server.");
+        console.error("Environment validation failed:\n" + errors.join("\n"));
+        console.error("\nFix the environment variables before starting the server.");
         process.exit(1);
     }
 
-    console.log("✅ Environment variables validated");
+    console.log("Environment variables validated");
 }
