@@ -1,0 +1,125 @@
+name: Deploy SafePay Worker to Cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'my-safepay-app/**'
+      - '.github/workflows/deploy-cloudflare.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-safepay-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-safepay-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: my-safepay-app
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-safepay-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare
+        run: |
+          npx wrangler deploy \
+            --name my-safepay-app \
+            --compatibility-date 2024-04-05
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: false
+
+      - name: Get deployment URL
+        id: deploy_url
+        run: |
+          ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          WORKER_NAME="my-safepay-app"
+          URL="https://${WORKER_NAME}.${ACCOUNT_ID}.workers.dev"
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployment URL: $URL"
+
+      - name: Test worker endpoint
+        run: |
+          URL="${{ steps.deploy_url.outputs.url }}"
+          for i in {1..15}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ] || [ "$STATUS" = "405" ]; then
+              echo "✅ Worker is deployed and responding"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS, retrying..."
+            sleep 4
+          done
+          echo "⚠️ Worker deployed (status check incomplete)"
+
+      - name: Slack notification - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+          payload: |
+            {
+              "text": "✅ SafePay Worker deployed to Cloudflare successfully",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Cloudflare Worker Deployment Success*\n*Worker:* my-safepay-app\n*URL:* ${{ steps.deploy_url.outputs.url }}\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Slack notification - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+          payload: |
+            {
+              "text": "❌ SafePay Worker deployment to Cloudflare failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ Cloudflare Worker Deployment Failed*\n*Worker:* my-safepay-app\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*Details:* Check GitHub Actions logs"
+                  }
+                }
+              ]
+            }

@@ -26,7 +26,7 @@ interface CountryCityPickerModalProps {
   onClose: () => void;
   selectedCountryCode: string;
   selectedCity: string;
-  onSelect: (country: Country, city: string) => void;
+  onSelect: (country: Country, city: string, cityRef?: string) => void;
   mode?: "country_and_city" | "country_only" | "city_only";
   title?: string;
   countries?: Country[];
@@ -55,7 +55,7 @@ export default function CountryCityPickerModal({
   const [countryQuery, setCountryQuery] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [customCityInput, setCustomCityInput] = useState("");
-  const [remoteCities, setRemoteCities] = useState<string[]>([]);
+  const [remoteCities, setRemoteCities] = useState<Array<{ id?: string; name: string }>>([]);
   const modalRef = useFocusTrap(isOpen, onClose);
 
   const filteredCountries = useMemo(() => {
@@ -74,7 +74,7 @@ export default function CountryCityPickerModal({
     const list = countriesProp || COUNTRIES;
     const country = list.find((c) => c.code === tempCountry.code);
     if (!country) return [];
-    return country.cities.map((ct) => typeof ct === "string" ? ct : ct.name);
+    return country.cities.map((ct) => typeof ct === "string" ? { name: ct } : { id: ct.id, name: ct.name });
   }, [tempCountry.code, countriesProp]);
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function CountryCityPickerModal({
     const timer = window.setTimeout(() => {
       api.get(`/geo/cities?country=${encodeURIComponent(tempCountry.code)}&limit=50${query ? `&q=${encodeURIComponent(query)}` : ""}`)
         .then((res) => {
-          if (!cancelled) setRemoteCities((res.data?.cities || []).map((city: { name: string }) => city.name));
+          if (!cancelled) setRemoteCities((res.data?.cities || []).map((city: { _id?: string; name: string }) => ({ id: city._id, name: city.name })));
         })
         .catch(() => { if (!cancelled) setRemoteCities([]); });
     }, query ? 180 : 0);
@@ -96,7 +96,7 @@ export default function CountryCityPickerModal({
   const filteredCities = useMemo(() => {
     if (!cityQuery.trim()) return availableCities;
     const q = cityQuery.toLowerCase();
-    return availableCities.filter((c) => c.toLowerCase().includes(q));
+    return availableCities.filter((city) => city.name.toLowerCase().includes(q));
   }, [cityQuery, availableCities]);
 
   if (!isOpen) return null;
@@ -105,8 +105,8 @@ export default function CountryCityPickerModal({
     setTempCountry(country);
     const list = countriesProp || COUNTRIES;
     const found = list.find((c) => c.code === country.code);
-    const cities = found ? found.cities.map((ct) => typeof ct === "string" ? ct : ct.name) : [];
-    const defaultCity = cities.length > 0 ? cities[0] : "";
+    const cities = found ? found.cities.map((ct) => typeof ct === "string" ? { name: ct } : { id: ct.id, name: ct.name }) : [];
+    const defaultCity = cities.length > 0 ? cities[0].name : "";
     setTempCity(defaultCity);
 
     if (mode === "country_only") {
@@ -117,16 +117,19 @@ export default function CountryCityPickerModal({
     }
   };
 
-  const handleCityPick = (cityName: string) => {
-    setTempCity(cityName);
-    onSelect(tempCountry, cityName);
+  const handleCityPick = (city: { id?: string; name: string }) => {
+    setTempCity(city.name);
+    // Static fallback cities use display slugs, while the API returns Mongo
+    // ObjectIds. Only transmit a normalized reference when it is verifiable.
+    const normalizedId = city.id && /^[a-f\d]{24}$/i.test(city.id) ? city.id : undefined;
+    onSelect(tempCountry, city.name, normalizedId);
     onClose();
   };
 
   const handleCustomCitySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customCityInput.trim()) return;
-    handleCityPick(customCityInput.trim());
+    handleCityPick({ name: customCityInput.trim() });
   };
 
   return (
@@ -354,13 +357,13 @@ export default function CountryCityPickerModal({
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {/* Filtered Pre-defined Cities */}
-              {filteredCities.map((cityName) => {
-                const isSelected = tempCity.toLowerCase() === cityName.toLowerCase();
+              {filteredCities.map((city) => {
+                const isSelected = tempCity.toLowerCase() === city.name.toLowerCase();
                 return (
                   <button
-                    key={cityName}
+                    key={city.id || city.name}
                     type="button"
-                    onClick={() => handleCityPick(cityName)}
+                    onClick={() => handleCityPick(city)}
                     style={{
                       width: "100%",
                       padding: "0.75rem 1rem",
@@ -378,7 +381,7 @@ export default function CountryCityPickerModal({
                       <MapPin size={16} color={isSelected ? "#0329b2" : "#64748b"} />
                       <div>
                         <strong style={{ display: "block", fontSize: "0.92rem", color: isSelected ? "#0329b2" : "#021550" }}>
-                          {cityName}
+                          {city.name}
                         </strong>
                       </div>
                     </div>

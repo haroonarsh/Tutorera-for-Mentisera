@@ -21,6 +21,7 @@ export interface IPaymentLedger extends Document {
   tutorPayable: number;
   platformNet: number;
   settlementStatus: "unsettled" | "expected" | "settled" | "reconciled" | "exception";
+  feeSnapshot?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -32,7 +33,7 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     bid: { type: Schema.Types.ObjectId, ref: "Bid", index: true },
     student: { type: Schema.Types.ObjectId, ref: "User", index: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", index: true },
-    provider: { type: String, required: true, trim: true, default: "rapid_gateway", index: true },
+    provider: { type: String, required: true, trim: true, default: "rapidpay", index: true },
     providerEventId: { type: String, trim: true, index: true },
     providerTransactionId: { type: String, required: true, trim: true, index: true },
     eventType: { type: String, enum: ["checkout.created", "payment.succeeded", "payment.failed", "payment.refunded", "payout.requested", "payout.completed", "manual.adjustment"], required: true },
@@ -48,6 +49,7 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     tutorPayable: { type: Number, default: 0, min: 0 },
     platformNet: { type: Number, default: 0 },
     settlementStatus: { type: String, enum: ["unsettled", "expected", "settled", "reconciled", "exception"], default: "unsettled", index: true },
+    feeSnapshot: { type: Schema.Types.Mixed, default: {} },
     metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }

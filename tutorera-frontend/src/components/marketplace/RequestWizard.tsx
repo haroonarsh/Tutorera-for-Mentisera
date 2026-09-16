@@ -18,6 +18,8 @@ import { PostRequestPayload } from "@/types/dashboard";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import RateRangeHint from "@/components/marketplace/RateRangeHint";
 import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
 
@@ -357,6 +359,16 @@ export default function RequestWizard({
             Browse Tutors While You Wait
           </Link>
         </div>
+
+        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e2e8f0" }}>
+          <p style={{ color: "#94a3b8", fontSize: "0.82rem", marginBottom: "0.75rem" }}>
+            Have a question about your request?
+          </p>
+          <WhatsAppChatButton
+            variant="outline"
+            message={`Hi TUTORERA, I just posted a ${form.subject} (${form.level}) request and have a question about it.`}
+          />
+        </div>
       </div>
     );
   }
@@ -432,7 +444,7 @@ export default function RequestWizard({
                   type="text"
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
-                  placeholder="e.g. I need Grade 9 Maths tutor in Lahore, willing to pay 3000 per hour"
+                  placeholder="e.g. I need a Grade 9 mathematics tutor, available after school"
                   style={{
                     flex: 1,
                     padding: "0.6rem 0.85rem",
@@ -615,6 +627,8 @@ export default function RequestWizard({
                 onCountryChange={(c: Country) => {
                   update("countryCode", c.code);
                   update("countryName", c.name);
+                  update("country", c.id || undefined);
+                  update("cityRef", undefined);
                   update("currency", c.currency);
                   update("timezone", c.defaultTimezone);
                   if (c.code === "US" || c.code === "GB" || c.code === "CA" || c.code === "AU") {
@@ -623,7 +637,10 @@ export default function RequestWizard({
                     if (Number(form.budget) > 500) update("budget", "80");
                   }
                 }}
-                onCityChange={(cityName: string) => update("city", cityName)}
+                onCityChange={(cityName: string, cityRef?: string) => {
+                  update("city", cityName);
+                  update("cityRef", cityRef || undefined);
+                }}
                 showCurrency={true}
                 showTimezone={true}
                 countries={geo.countries}
@@ -744,15 +761,16 @@ export default function RequestWizard({
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={labelStyle}>Your Proposed Rate ({form.currency || "PKR"}) *</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    step="1" 
-                    value={form.budget} 
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.budget}
                     onChange={(e) => update("budget", e.target.value)}
                     placeholder={`e.g. ${form.currency === "PKR" ? "2000" : "30"}`}
                     style={{ ...inputStyle, fontSize: "1.1rem", fontWeight: 700 }}
                   />
+                  <RateRangeHint subject={form.subject} city={form.city} currency={form.currency || "PKR"} />
                 </div>
                 <div>
                   <label style={labelStyle}>Pricing Unit</label>

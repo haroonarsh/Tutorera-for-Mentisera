@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
+import CurriculumInfo from "@/components/Tutors/CurriculumInfo";
 import { CITIES, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS } from "@/lib/tutor-directory";
+import { CURRICULUM_CONTENT } from "@/lib/curriculum-content";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -33,6 +35,8 @@ export default async function Page({ params }: Props) {
   const subject = SUBJECTS[slug as keyof typeof SUBJECTS];
   if (!subject) notFound();
 
+  const curriculum = CURRICULUM_CONTENT[slug];
+
   return (
     <>
       <SeoTutorDirectory
@@ -42,6 +46,7 @@ export default async function Page({ params }: Props) {
         description={`Compare verified ${subject} tutors for online worldwide learning and local in-person lessons where available.`}
         canonicalPath={`/tutors/subject/${slug}`}
       />
+      {curriculum && <CurriculumInfo content={curriculum} />}
       {LOCAL_SUBJECT_SLUGS.includes(slug as (typeof LOCAL_SUBJECT_SLUGS)[number]) && (
         <nav aria-label={`${subject} tutors by city`} style={{ maxWidth: 1100, margin: "0 auto", padding: "0 1.5rem 4rem" }}>
           <h2 style={{ marginBottom: "1rem" }}>{subject} tutors by city</h2>

@@ -12,11 +12,12 @@ export interface IRequest extends Document {
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
   learningObjectives?: string;
-  countryCode?: string; countryName?: string; city?: string; timezone?: string;
+  countryCode?: string; countryName?: string; state?: string; city?: string; zipCode?: string; timezone?: string;
   scheduleTimezone?: string; scheduledStartAt?: Date; scheduledEndAt?: Date;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
   lessonLanguage?: string;
   area?: string; travelRadiusKm?: number;
+  location?: { type: string; coordinates: number[] };
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];
   tutorGenderPreference?: "male" | "female" | "none";
@@ -25,7 +26,7 @@ export interface IRequest extends Document {
   sessionsPerWeek?: number; expectedStartDate?: Date;
   teachingMode: "online" | "in-person" | "both";
   schedule: string;
-  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
+  status: "draft" | "open" | "published" | "receiving_offers" | "negotiating" | "awaiting_parent_approval" | "awaiting_payment" | "booked" | "in_progress" | "completed" | "closed" | "cancelled" | "expired" | "disputed" | "archived";
   publishedAt?: Date;
   expiresAt?: Date;
   expiredAt?: Date;
@@ -42,6 +43,10 @@ export interface IRequest extends Document {
   lossClassifiedAt?: Date;
   acceptedOffer?: Types.ObjectId;
   finalAgreedRate?: number;
+  // Captured when a student's accept-offer attempt is redirected into
+  // parent-approval before a checkout could be created, so the code they
+  // intended to use is still applied once the parent later approves.
+  pendingPromoCode?: string;
   targetTutor?: Types.ObjectId;       // set only for direct booking requests
   isDirect: boolean;                  // flags this as a direct booking, not open bidding
   selectedDate?: string;
@@ -80,6 +85,8 @@ const requestSchema = new Schema<IRequest>(
     cityRef: { type: Schema.Types.ObjectId, ref: "City", index: true },
     locality: { type: Schema.Types.ObjectId, ref: "Locality", index: true },
     city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    zipCode: { type: String, trim: true },
     timezone: { type: String, trim: true },
     scheduleTimezone: { type: String, trim: true },
     scheduledStartAt: { type: Date, index: true },
@@ -87,6 +94,10 @@ const requestSchema = new Schema<IRequest>(
     lessonLanguage: { type: String, trim: true, default: "English" },
     area: { type: String, trim: true }, 
     travelRadiusKm: { type: Number, min: 0, max: 100 },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number] },
+    },
     isWorldwideEligible: { type: Boolean, default: true },
     preferredTutorCountries: [{ type: String, trim: true }],
     tutorGenderPreference: { type: String, enum: ["male", "female", "none"], default: "none" },
@@ -100,7 +111,7 @@ const requestSchema = new Schema<IRequest>(
     schedule: { type: String, required: true },
     status: {
       type: String,
-      enum: ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_payment", "booked", "in_progress", "completed", "closed", "cancelled", "expired", "disputed", "archived"],
+      enum: ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_parent_approval", "awaiting_payment", "booked", "in_progress", "completed", "closed", "cancelled", "expired", "disputed", "archived"],
       default: "open",
     },
     publishedAt: { type: Date },
@@ -123,6 +134,7 @@ const requestSchema = new Schema<IRequest>(
     lossClassifiedAt: { type: Date },
     acceptedOffer: { type: Schema.Types.ObjectId, ref: "Bid" },
     finalAgreedRate: { type: Number, min: 0 },
+    pendingPromoCode: { type: String, trim: true, uppercase: true },
     targetTutor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     isDirect: { type: Boolean, default: false }, 
     selectedDate: { type: String, default: "" },
@@ -138,5 +150,18 @@ requestSchema.index({ student: 1, status: 1, createdAt: -1 });
 requestSchema.index({ teachingMode: 1, countryCode: 1, status: 1, expiresAt: 1 });
 requestSchema.index({ countryCode: 1, cityRef: 1, currency: 1, status: 1, createdAt: -1 });
 requestSchema.index({ lossReason: 1, lossClassifiedAt: -1 });
+requestSchema.index({ location: "2dsphere" });
+
+// location.type defaults to "Point" whenever the location subdocument exists
+// at all, even if coordinates was never populated. MongoDB's 2dsphere index
+// then rejects EVERY save of that document with "Can't extract geo keys" -
+// not just location updates - because it can't build an index entry from an
+// incomplete GeoJSON Point. Strip an invalid location out before validation.
+requestSchema.pre("validate", function () {
+  const p = this as any;
+  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
+    p.location = undefined;
+  }
+});
 
 export default mongoose.model<IRequest>("Request", requestSchema);

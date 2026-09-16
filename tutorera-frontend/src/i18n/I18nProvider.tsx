@@ -7,8 +7,7 @@ import React, { useEffect } from "react";
 import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
 import { en } from "./messages/en";
-import { ar } from "./messages/ar";
-import { defaultLocale, directionFor } from "./config";
+import { defaultLocale, directionFor, isPublishedLocale } from "./config";
 
 // Flatten nested messages object into dot-key pairs that i18next expects
 function flatten(obj: Record<string, unknown>, prefix = ""): Record<string, string> {
@@ -28,7 +27,6 @@ if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources: {
       en: { translation: flatten(en as unknown as Record<string, unknown>) },
-      ar: { translation: flatten(ar as unknown as Record<string, unknown>) },
     },
     lng: defaultLocale,
     fallbackLng: "en",
@@ -43,13 +41,14 @@ interface I18nProviderProps {
 
 export function I18nProvider({ locale = defaultLocale, children }: I18nProviderProps) {
   useEffect(() => {
-    if (i18n.language !== locale) {
-      i18n.changeLanguage(locale);
+    const activeLocale = isPublishedLocale(locale) ? locale : defaultLocale;
+    if (i18n.language !== activeLocale) {
+      i18n.changeLanguage(activeLocale);
     }
     // Update document direction for RTL languages
     if (typeof document !== "undefined") {
-      document.documentElement.dir = directionFor(locale);
-      document.documentElement.lang = locale;
+      document.documentElement.dir = directionFor(activeLocale);
+      document.documentElement.lang = activeLocale;
     }
   }, [locale]);
 

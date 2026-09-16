@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import api from "@/lib/axios";
@@ -20,7 +20,7 @@ function StarDisplay({ rating }: { rating: number }) {
   return (
     <div style={{ display: 'flex', gap: '1px' }}>
       {[1,2,3,4,5].map(s => (
-        <span key={s} style={{ color: s <= rating ? '#f59e0b' : '#e5e7eb', fontSize: '0.875rem' }}>★</span>
+        <span key={s} style={{ color: s <= rating ? UI_COLORS.gold : UI_COLORS.border, fontSize: '0.875rem' }}>★</span>
       ))}
     </div>
   );
@@ -57,7 +57,7 @@ export default function StudentRatingsPage() {
           placeholder="Search by student name or email..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', width: '100%', maxWidth: '360px', boxSizing: 'border-box' }}
+          style={{ padding: '0.7rem 1rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', width: '100%', maxWidth: '360px', boxSizing: 'border-box' }}
         />
       </div>
 
@@ -67,18 +67,18 @@ export default function StudentRatingsPage() {
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-          <Star size={40} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
+        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '4rem', textAlign: 'center', border: `1px solid ${C.border}` }}>
+          <Star size={40} color={C.border} style={{ margin: '0 auto 1rem' }} />
           <p style={{ color: C.gray500 }}>No student ratings yet.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filtered.map(r => (
-            <div key={r._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: '1px solid #e5e7eb' }}>
+            <div key={r._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.25rem 1.5rem', border: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.875rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                   {/* Student avatar */}
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#EEF5FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.accent, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: C.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: C.accent, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
                     {r.student.avatar
                       ? <img src={r.student.avatar} alt={r.student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : r.student.name.charAt(0).toUpperCase()}
@@ -91,13 +91,13 @@ export default function StudentRatingsPage() {
 
                 <div style={{ textAlign: 'right' }}>
                   <StarDisplay rating={r.rating} />
-                  <p style={{ color: '#9ca3af', fontSize: '0.75rem', margin: '4px 0 0' }}>
+                  <p style={{ color: TEXT_COLORS.muted, fontSize: '0.75rem', margin: '4px 0 0' }}>
                     by {r.tutor.name} · {new Date(r.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
-              <p style={{ color: '#374151', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 0.75rem', padding: '0.75rem', backgroundColor: C.gray50, borderRadius: '0.5rem' }}>
+              <p style={{ color: TEXT_COLORS.secondary, fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 0.75rem', padding: '0.75rem', backgroundColor: C.gray50, borderRadius: '0.5rem' }}>
                 "{r.comment}"
               </p>
 

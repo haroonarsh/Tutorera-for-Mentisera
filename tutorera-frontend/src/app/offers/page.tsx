@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
-import { calculateMarketplaceFees } from "@/lib/site";
+import { calculateMarketplaceFees, formatMoney } from "@/lib/site";
 import { 
   CheckCircle, 
   Clock, 
@@ -17,6 +17,7 @@ import {
   CreditCard
 } from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 
 type History = { 
   _id: string; 
@@ -31,6 +32,7 @@ type History = {
 type Offer = {
   _id: string;
   amount: number;
+  currency?: string;
   initialStudentRate: number;
   pricingUnit: string;
   status: string;
@@ -61,6 +63,7 @@ type Offer = {
     subject: string;
     level: string;
     budget: number;
+    currency?: string;
     pricingUnit: string;
     teachingMode: string;
     city?: string;
@@ -82,6 +85,9 @@ function remaining(value: string, now: number) {
   const s = Math.floor((ms % 60000) / 1000);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+
+const offerMoney = (offer: Offer, amount: number, unit?: string) =>
+  formatMoney(amount, offer.currency || offer.request.currency || "PKR", unit);
 
 import CounterOfferSheet from "@/components/marketplace/CounterOfferSheet";
 
@@ -311,7 +317,7 @@ function OffersContent() {
                   <div style={{ textAlign: "right" }}>
                     <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block" }}>Offered Rate</span>
                     <strong style={{ fontSize: "1.4rem", color: "#0329b2", fontWeight: 900 }}>
-                      PKR {o.amount.toLocaleString()}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>/{o.pricingUnit}</span>
+                      {o.currency || o.request.currency || "Market currency"} {o.amount.toLocaleString()}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>/{o.pricingUnit}</span>
                     </strong>
                     <div style={{ marginTop: "0.25rem" }}>
                       <span style={{
@@ -338,7 +344,7 @@ function OffersContent() {
                     <div>
                       <strong style={{ fontSize: "1rem", color: "#021550", display: "block" }}>{o.tutor.name}</strong>
                       <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                        Student proposed: PKR {(o.initialStudentRate ?? 0).toLocaleString()}/{o.pricingUnit}
+                        Student proposed: {o.currency || o.request.currency || "Market currency"} {(o.initialStudentRate ?? 0).toLocaleString()}/{o.pricingUnit}
                       </span>
                     </div>
                   </div>
@@ -354,7 +360,7 @@ function OffersContent() {
                 {/* Tutor Earnings Box for Tutor View */}
                 {user?.role === "tutor" && (
                   <div style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "0.75rem 1rem", borderRadius: "0.5rem", fontSize: "0.825rem", color: "#92400e", marginBottom: "1rem" }}>
-                    Platform fee PKR {fees.tutorFee.toLocaleString()} + Tax PKR {fees.tax.toLocaleString()} · Estimated net payout: <strong>PKR {fees.tutorNet.toLocaleString()}</strong>
+                    Platform fee {offerMoney(o, fees.tutorFee)} + Tax {offerMoney(o, fees.tax)} · Estimated net payout: <strong>{offerMoney(o, fees.tutorNet)}</strong>
                   </div>
                 )}
 
@@ -379,7 +385,7 @@ function OffersContent() {
                       <li key={h._id} style={{ marginBottom: "0.75rem", position: "relative" }}>
                         <span style={{ position: "absolute", left: -24, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#0329b2" }} />
                         <strong style={{ fontSize: "0.85rem", color: "#021550" }}>
-                          {h.senderRole === "student" ? "Student" : "Tutor"} proposed PKR {h.amount.toLocaleString()}
+                          {h.senderRole === "student" ? "Student" : "Tutor"} proposed {offerMoney(o, h.amount)}
                         </strong>
                         <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
                           {new Date(h.createdAt).toLocaleString("en-PK")} · {h.status}
@@ -390,7 +396,7 @@ function OffersContent() {
                   </ol>
                   {isAccepted && (
                     <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#ecfdf5", borderRadius: "0.375rem", color: "#065f46", fontSize: "0.85rem", fontWeight: 700 }}>
-                      ✓ Final agreed rate locked: PKR {o.amount.toLocaleString()}/{o.pricingUnit}
+                      ✓ Final agreed rate locked: {offerMoney(o, o.amount)}/{o.pricingUnit}
                     </div>
                   )}
                 </details>
@@ -420,7 +426,7 @@ function OffersContent() {
                           boxShadow: "0 4px 14px rgba(16, 185, 129, 0.25)",
                         }}
                       >
-                        <CheckCircle size={18} /> Accept PKR {o.amount.toLocaleString()}
+                        <CheckCircle size={18} /> Accept {offerMoney(o, o.amount)}
                       </button>
                     )}
 
@@ -464,6 +470,12 @@ function OffersContent() {
                     >
                       <MessageSquare size={16} /> Message
                     </Link>
+
+                    <WhatsAppChatButton
+                      variant="outline"
+                      label="WhatsApp"
+                      message={`Hi TUTORERA, I have a question about my ${o.request.subject} offer from ${o.tutor.name} (offer ${o._id}).`}
+                    />
 
                     <button
                       onClick={() => action(o, user?.role === "tutor" ? "withdraw" : "decline")}
@@ -542,7 +554,7 @@ function OffersContent() {
           currentAmount={countering.amount}
           initialRate={countering.initialStudentRate}
           pricingUnit={countering.pricingUnit}
-          currency="PKR"
+          currency={countering.currency || countering.request.currency || ""}
           tutorName={countering.tutor?.name || "Tutor"}
           role={user?.role === "tutor" ? "tutor" : "student"}
           onClose={() => setCountering(null)}
@@ -556,7 +568,7 @@ function OffersContent() {
           onClose={() => setShowComparison(false)}
           requestTitle={offers[0]?.request?.subject || "Tuition Request"}
           proposedBudget={offers[0]?.request?.budget || 0}
-          currency="PKR"
+          currency={offers[0]?.currency || offers[0]?.request?.currency || ""}
           pricingUnit={offers[0]?.request?.pricingUnit || "hour"}
           offers={offers.map((o) => ({
             _id: o._id,
@@ -576,7 +588,7 @@ function OffersContent() {
               homeTuitionEligible: o.profile?.homeTuitionEligible,
             },
             amount: o.amount,
-            currency: o.request?.pricingUnit === "month" ? "PKR" : "PKR",
+            currency: o.currency || o.request?.currency || "",
             pricingUnit: o.request?.pricingUnit || "hour",
             message: o.message,
             matchScore: o.matchScore,

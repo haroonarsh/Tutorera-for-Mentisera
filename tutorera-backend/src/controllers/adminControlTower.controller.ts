@@ -8,16 +8,126 @@ import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import TutorProfile from "../models/TutorProfile.model";
+import StudentProfile from "../models/StudentProfile.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import SafetyCase from "../models/SafetyCase.model";
 import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
+import Country from "../models/Country.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
 import logger from "../config/logger";
 import { logAudit } from "../utils/logAudit";
+import { computeCanonicalStatus } from "../services/tracking.service";
+
+// ─── Onboarding operations ────────────────────────────────────────────────
+
+/** Phase-wise tutor pipeline, shared with the application-status state machine. */
+export const listTutorOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  const countryCode = String(req.countryScopeCode || req.query.countryCode || "").toUpperCase();
+  const userFilter: Record<string, unknown> = { role: "tutor" };
+  if (countryCode) userFilter.countryCode = countryCode;
+  const users = await User.find(userFilter).select("name email countryCode city accountStatus applicationId applicationSubmittedAt createdAt").lean();
+  const profiles = await TutorProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
+  const rows = users.map((user: any) => {
+    const profile: any = byUser.get(user._id.toString());
+    const phase = profile ? computeCanonicalStatus(profile as any) : "APPLICATION_STARTED";
+    return {
+      userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
+      countryCode: profile?.countryCode || user.countryCode || null, city: profile?.city || user.city || null,
+      applicationId: user.applicationId || null, phase, onboardingStep: profile?.onboardingStep || 1,
+      onboardingComplete: Boolean(profile?.onboardingComplete), accountStatus: user.accountStatus || "registered",
+      marketplaceEligible: Boolean(profile?.marketplaceEligible), homeTuitionEligible: Boolean(profile?.homeTuitionEligible),
+      lastUpdatedAt: profile?.lastStatusChangeAt || profile?.updatedAt || user.createdAt,
+      createdAt: user.createdAt,
+    };
+  });
+  const phase = String(req.query.phase || "");
+  const search = String(req.query.search || "").trim().toLowerCase();
+  const filteredRows = rows.filter((row: any) =>
+    (!phase || row.phase === phase) &&
+    (!search || [row.name, row.email, row.applicationId, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
+  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  const start = (page - 1) * limit;
+  res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
+};
+
+/** Student demand-readiness pipeline; no duplicate student application is created. */
+export const listStudentOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  const countryCode = String(req.countryScopeCode || req.query.countryCode || "").toUpperCase();
+  const userFilter: Record<string, unknown> = { role: "student" };
+  if (countryCode) userFilter.countryCode = countryCode;
+  const users = await User.find(userFilter).select("name email countryCode city accountStatus createdAt").lean();
+  const profiles = await StudentProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
+  const requestCounts = await Request.aggregate([
+    { $match: { student: { $in: users.map((user) => user._id) } } },
+    { $group: { _id: "$student", count: { $sum: 1 }, lastRequestAt: { $max: "$createdAt" } } },
+  ]);
+  const requestsByUser = new Map(requestCounts.map((entry) => [entry._id.toString(), entry]));
+  const rows = users.map((user: any) => {
+    const profile: any = byUser.get(user._id.toString());
+    const requestInfo: any = requestsByUser.get(user._id.toString());
+    const phase = requestInfo?.count ? "ACTIVE_REQUESTER" : profile?.onboardingComplete ? "READY_TO_POST" : profile ? "PROFILE_STARTED" : "REGISTERED";
+    return {
+      userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
+      countryCode: profile?.countryCode || user.countryCode || null, city: profile?.city || user.city || null,
+      phase, onboardingComplete: Boolean(profile?.onboardingComplete), accountStatus: user.accountStatus || "registered",
+      requestCount: requestInfo?.count || 0, lastRequestAt: requestInfo?.lastRequestAt || null,
+      lastUpdatedAt: profile?.updatedAt || requestInfo?.lastRequestAt || user.createdAt, createdAt: user.createdAt,
+    };
+  });
+  const phase = String(req.query.phase || "");
+  const search = String(req.query.search || "").trim().toLowerCase();
+  const filteredRows = rows.filter((row: any) =>
+    (!phase || row.phase === phase) &&
+    (!search || [row.name, row.email, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
+  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  const start = (page - 1) * limit;
+  res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
+};
+
+/** Parent/guardian readiness pipeline, including consented learner links. */
+export const listParentOnboarding = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  const countryCode = String(req.countryScopeCode || req.query.countryCode || "").toUpperCase();
+  const userFilter: Record<string, unknown> = { role: "parent" };
+  if (countryCode) userFilter.countryCode = countryCode;
+  const users = await User.find(userFilter).select("name email countryCode city accountStatus createdAt").lean();
+  const profiles = await ParentProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
+  const rows = users.map((user: any) => {
+    const profile: any = byUser.get(user._id.toString());
+    const linkedLearners = profile?.children?.length || 0;
+    const phase = !profile ? "REGISTERED" : linkedLearners > 0 ? "LEARNER_LINKED" : "PROFILE_STARTED";
+    return {
+      userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
+      countryCode: profile?.countryCode || user.countryCode || null, city: profile?.city || user.city || null,
+      phase, linkedLearners, approvalRequiredForBookings: Boolean(profile?.approvalRequiredForBookings),
+      accountStatus: user.accountStatus || "registered", lastUpdatedAt: profile?.updatedAt || user.createdAt, createdAt: user.createdAt,
+    };
+  });
+  const phase = String(req.query.phase || "");
+  const search = String(req.query.search || "").trim().toLowerCase();
+  const filteredRows = rows.filter((row: any) =>
+    (!phase || row.phase === phase) &&
+    (!search || [row.name, row.email, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
+  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  const start = (page - 1) * limit;
+  res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
+};
 
 // ─── 1. Control Tower Operational Pulse & Action Triage ───────────────────────
 
@@ -285,6 +395,11 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
   const filter: Record<string, unknown> = {};
   if (status) filter.paymentStatus = status;
 
+  const activeFeeConfig = await FeeConfig.findOne({ isActive: true }).sort("-updatedAt").lean();
+  const gatewayFeePercent = activeFeeConfig?.gatewayFeePercent ?? 2.9;
+  const gatewayFixedFee = activeFeeConfig?.gatewayFixedFee ?? 0;
+  const estimateGatewayFee = (gmv: number) => gmv * (gatewayFeePercent / 100) + gatewayFixedFee;
+
   const [total, bookings, ledgerStatusRows, recentLedgerRows] = await Promise.all([
     Booking.countDocuments(filter),
     Booking.find(filter)
@@ -295,8 +410,10 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       .skip(skip)
       .limit(limitNum)
       .lean(),
+    // Grouped by currency as well as status - summing grossAmount/platformNet across
+    // different currencies (PKR + AED + USD + SAR + INR) would produce a meaningless total.
     PaymentLedger.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 }, grossAmount: { $sum: "$grossAmount" }, platformNet: { $sum: "$platformNet" }, tutorPayable: { $sum: "$tutorPayable" } } },
+      { $group: { _id: { status: "$status", currency: "$currency" }, count: { $sum: 1 }, grossAmount: { $sum: "$grossAmount" }, platformNet: { $sum: "$platformNet" }, tutorPayable: { $sum: "$tutorPayable" } } },
     ]),
     PaymentLedger.find()
       .populate("student", "name email")
@@ -306,49 +423,52 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       .lean(),
   ]);
 
-  // Reconciliation summary
-  const allBookings = await Booking.find().select("studentTotal subtotal tutorFee studentFee platformFee tax paymentStatus").lean();
-  let totalGMV = 0;
-  let totalTutorNet = 0;
-  let totalPlatformGross = 0;
-  let totalEstimatedGatewayFees = 0;
+  // Reconciliation summary, broken down per currency - see note above on why these can't be summed together.
+  const allBookings = await Booking.find().select("studentTotal subtotal tutorFee studentFee platformFee tax paymentStatus currency").lean();
+  const byCurrency: Record<string, { currency: string; count: number; totalGMV: number; totalTutorNet: number; totalPlatformGross: number; totalEstimatedGatewayFees: number; netPlatformSettlement: number }> = {};
 
   for (const b of allBookings) {
     if (["received", "confirmed"].includes(b.paymentStatus)) {
+      const currency = b.currency || "PKR";
+      const bucket = byCurrency[currency] || (byCurrency[currency] = { currency, count: 0, totalGMV: 0, totalTutorNet: 0, totalPlatformGross: 0, totalEstimatedGatewayFees: 0, netPlatformSettlement: 0 });
       const gmv = b.studentTotal || b.subtotal || 0;
-      totalGMV += gmv;
-      totalTutorNet += (b.subtotal || 0) - (b.tutorFee || 0);
-      totalPlatformGross += (b.studentFee || 0) + (b.tutorFee || b.platformFee || 0);
-      totalEstimatedGatewayFees += gmv * 0.029 + 30; // 2.9% + PKR 30
+      bucket.count += 1;
+      bucket.totalGMV += gmv;
+      bucket.totalTutorNet += (b.subtotal || 0) - (b.tutorFee || 0);
+      bucket.totalPlatformGross += (b.studentFee || 0) + (b.tutorFee || b.platformFee || 0);
+      bucket.totalEstimatedGatewayFees += estimateGatewayFee(gmv);
     }
+  }
+  for (const bucket of Object.values(byCurrency)) {
+    bucket.netPlatformSettlement = bucket.totalPlatformGross - bucket.totalEstimatedGatewayFees;
   }
 
   res.json({
     success: true,
     summary: {
-      totalGMV,
-      totalTutorNet,
-      totalPlatformGross,
-      totalEstimatedGatewayFees,
-      netPlatformSettlement: totalPlatformGross - totalEstimatedGatewayFees,
+      gatewayFeePercent,
+      gatewayFixedFee,
+      byCurrency: Object.values(byCurrency),
       ledger: ledgerStatusRows.reduce((acc, row) => {
-        acc[row._id || "unknown"] = {
+        const status = row._id?.status || "unknown";
+        const currency = row._id?.currency || "PKR";
+        (acc[status] ||= {})[currency] = {
           count: row.count,
           grossAmount: row.grossAmount,
           platformNet: row.platformNet,
           tutorPayable: row.tutorPayable,
         };
         return acc;
-      }, {} as Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>),
+      }, {} as Record<string, Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>>),
     },
     ledger: recentLedgerRows,
     bookings: bookings.map((b) => {
       const gmv = b.studentTotal || b.subtotal || 0;
-      const expectedSettlement = gmv - (gmv * 0.029 + 30);
+      const estimatedGatewayFee = estimateGatewayFee(gmv);
       return {
         ...b,
-        estimatedGatewayFee: Math.round(gmv * 0.029 + 30),
-        expectedSettlement: Math.round(expectedSettlement),
+        estimatedGatewayFee: Math.round(estimatedGatewayFee),
+        expectedSettlement: Math.round(gmv - estimatedGatewayFee),
         settlementDiscrepancy: (b as any).gatewaySettlementStatus === "discrepancy",
       };
     }),
@@ -468,7 +588,8 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
       tutorFeePercent: 20,
       minimumFee: 0,
       maximumFee: 5000,
-      taxPercent: 15,
+      gatewayFeePercent: 2.9,
+      gatewayFixedFee: 0,
     });
   }
   const history = await FeeConfig.find().sort("-createdAt").limit(10).lean();
@@ -476,15 +597,16 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
 };
 
 export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { studentFeePercent, tutorFeePercent, minimumFee, maximumFee, taxPercent, notes } = req.body;
+  const { studentFeePercent, tutorFeePercent, minimumFee, maximumFee, gatewayFeePercent, gatewayFixedFee, notes } = req.body;
   const values = {
     studentFeePercent: Number(studentFeePercent ?? 0),
     tutorFeePercent: Number(tutorFeePercent ?? 20),
     minimumFee: Number(minimumFee ?? 0),
     maximumFee: Number(maximumFee ?? 5000),
-    taxPercent: Number(taxPercent ?? 15),
+    gatewayFeePercent: Number(gatewayFeePercent ?? 2.9),
+    gatewayFixedFee: Number(gatewayFixedFee ?? 0),
   };
-  if (!Object.values(values).every(Number.isFinite) || values.studentFeePercent < 0 || values.studentFeePercent > 100 || values.tutorFeePercent < 0 || values.tutorFeePercent > 100 || values.taxPercent < 0 || values.taxPercent > 100 || values.minimumFee < 0 || values.maximumFee < values.minimumFee) {
+  if (!Object.values(values).every(Number.isFinite) || values.studentFeePercent < 0 || values.studentFeePercent > 100 || values.tutorFeePercent < 0 || values.tutorFeePercent > 100 || values.gatewayFeePercent < 0 || values.gatewayFeePercent > 100 || values.gatewayFixedFee < 0 || values.minimumFee < 0 || values.maximumFee < values.minimumFee) {
     res.status(400).json({ success: false, message: "Provide valid fee percentages and a maximum fee greater than or equal to the minimum fee." });
     return;
   }
@@ -509,73 +631,11 @@ export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<
 export const getMarketConfigs = async (req: AuthRequest, res: Response): Promise<void> => {
   const { ensureLaunchMarkets } = await import("../services/market.service");
   await ensureLaunchMarkets();
-  let markets = await MarketConfig.find(req.countryScopeCode ? { countryCode: req.countryScopeCode } : {}).sort("countryCode").lean();
-  if (markets.length === 0) {
-    // Seed standard initial markets
-    await MarketConfig.create([
-      {
-        countryCode: "PK",
-        countryName: "Pakistan",
-        currency: "PKR",
-        currencySymbol: "Rs",
-        timezone: "Asia/Karachi",
-        onlineEnabled: true,
-        homeTuitionEnabled: true,
-        backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 0,
-        isActive: true,
-        launchStatus: "live",
-        supportedCities: ["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad"],
-      },
-      {
-        countryCode: "SA",
-        countryName: "Kingdom of Saudi Arabia",
-        currency: "SAR",
-        currencySymbol: "SR",
-        timezone: "Asia/Riyadh",
-        onlineEnabled: true,
-        homeTuitionEnabled: true,
-        backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 15,
-        isActive: true,
-        launchStatus: "live",
-        supportedCities: ["Riyadh", "Jeddah", "Dammam", "Mecca", "Medina"],
-      },
-      {
-        countryCode: "AE",
-        countryName: "United Arab Emirates",
-        currency: "AED",
-        currencySymbol: "AED",
-        timezone: "Asia/Dubai",
-        onlineEnabled: true,
-        homeTuitionEnabled: true,
-        backgroundCheckRequired: true,
-        platformFeePercent: 15,
-        taxPercent: 5,
-        isActive: true,
-        launchStatus: "live",
-        supportedCities: ["Dubai", "Abu Dhabi", "Sharjah"],
-      },
-      {
-        countryCode: "GB",
-        countryName: "United Kingdom",
-        currency: "GBP",
-        currencySymbol: "£",
-        timezone: "Europe/London",
-        onlineEnabled: true,
-        homeTuitionEnabled: false,
-        backgroundCheckRequired: true,
-        platformFeePercent: 12,
-        taxPercent: 20,
-        isActive: true,
-        launchStatus: "beta",
-        supportedCities: ["London", "Manchester", "Birmingham"],
-      },
-    ]);
-    markets = await MarketConfig.find().sort("countryCode").lean();
-  }
+  // ensureLaunchMarkets() upserts every LAUNCH_MARKETS entry (PK, AE, GB, US, SA, IN), so
+  // markets is never actually empty here - a legacy fallback seed that only created 4 of
+  // the 6 markets (and would default to the wrong paymentProvider) used to live in this
+  // branch and has been removed.
+  const markets = await MarketConfig.find(req.countryScopeCode ? { countryCode: req.countryScopeCode } : {}).sort("countryCode").lean();
   res.json({ success: true, markets });
 };
 
@@ -584,11 +644,34 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   const current = await MarketConfig.findById(id);
   if (!current) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
   if (req.countryScopeCode && current.countryCode !== req.countryScopeCode) { res.status(404).json({ success: false, message: "Market configuration not found." }); return; }
-  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "platformFeePercent", "taxPercent", "isActive", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
+  const allowed = ["onlineEnabled", "homeTuitionEnabled", "studentRegistration", "tutorRegistration", "backgroundCheckRequired", "isActive", "launchStatus", "supportedCities", "supportedLanguages", "defaultLanguage", "verificationPolicy"];
   const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
+  if (changes.defaultLanguage && changes.defaultLanguage !== "en") {
+    res.status(400).json({ success: false, message: "English is the only reviewed interface locale currently available." });
+    return;
+  }
+  if (Array.isArray(changes.supportedLanguages) && changes.supportedLanguages.some((language) => language !== "en")) {
+    res.status(400).json({ success: false, message: "Only English can be enabled as an interface language until additional translations are reviewed." });
+    return;
+  }
   // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
-  if (["AE", "GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
+  // AE, US, SA, IN are launched on RapidPay (see LAUNCH_MARKETS in market.service.ts) and are exempt from this lock.
+  if (["GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
   const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
+  if (updated) {
+    // upsert:true - previously a plain updateOne, which silently no-oped if
+    // no Country document existed yet for this code (e.g. not seeded by the
+    // GeoNames importer), leaving MarketConfig and Country out of sync with
+    // no error surfaced anywhere.
+    await Country.updateOne(
+      { iso2: updated.countryCode },
+      {
+        $set: { enabled: updated.isActive, launchStatus: updated.launchStatus },
+        $setOnInsert: { iso2: updated.countryCode, name: updated.countryName },
+      },
+      { upsert: true },
+    );
+  }
   await logAudit({ action: "market_config_updated", actor: req.user?.name || "Administrator", actorId: req.user?._id?.toString(), entity: "MarketConfig", targetId: id as string, metadata: { countryCode: current.countryCode, changes } });
   res.json({ success: true, market: updated });
 };
@@ -641,9 +724,15 @@ export const getStudent360 = async (req: AuthRequest, res: Response): Promise<vo
     Booking.find({ student: id }).populate("tutor", "name email").sort("-createdAt").lean(),
   ]);
 
-  const totalSpent = bookings
-    .filter((b) => ["received", "confirmed"].includes(b.paymentStatus))
-    .reduce((s, b) => s + (b.studentTotal || b.subtotal || 0), 0);
+  // Bucketed per currency - a student who booked in more than one market shouldn't have
+  // PKR and AED (etc.) amounts silently added together into one meaningless total.
+  const spendByCurrency: Record<string, number> = {};
+  for (const b of bookings) {
+    if (["received", "confirmed"].includes(b.paymentStatus)) {
+      const currency = b.currency || "PKR";
+      spendByCurrency[currency] = (spendByCurrency[currency] || 0) + (b.studentTotal || b.subtotal || 0);
+    }
+  }
 
   res.json({
     success: true,
@@ -651,7 +740,7 @@ export const getStudent360 = async (req: AuthRequest, res: Response): Promise<vo
       ...user,
       requests,
       bookings,
-      lifetimeSpend: totalSpent,
+      lifetimeSpendByCurrency: Object.entries(spendByCurrency).map(([currency, amount]) => ({ currency, amount })),
       totalRequestsCount: requests.length,
       completedBookingsCount: bookings.filter((b) => b.status === "completed").length,
     },
@@ -673,9 +762,14 @@ export const getTutor360 = async (req: AuthRequest, res: Response): Promise<void
 
   const acceptedBids = bids.filter((b) => b.status === "accepted").length;
   const winRate = bids.length ? Math.round((acceptedBids / bids.length) * 100) : 0;
-  const totalEarnings = bookings
-    .filter((b) => ["received", "confirmed"].includes(b.paymentStatus))
-    .reduce((s, b) => s + (b.tutorNet || b.tutorPayout || 0), 0);
+  // Bucketed per currency - see the matching note in getStudent360 above.
+  const earningsByCurrency: Record<string, number> = {};
+  for (const b of bookings) {
+    if (["received", "confirmed"].includes(b.paymentStatus)) {
+      const currency = b.currency || "PKR";
+      earningsByCurrency[currency] = (earningsByCurrency[currency] || 0) + (b.tutorNet || b.tutorPayout || 0);
+    }
+  }
 
   res.json({
     success: true,
@@ -684,7 +778,7 @@ export const getTutor360 = async (req: AuthRequest, res: Response): Promise<void
       bids,
       bookings,
       winRate,
-      totalEarnings,
+      totalEarningsByCurrency: Object.entries(earningsByCurrency).map(([currency, amount]) => ({ currency, amount })),
       offersSubmittedCount: bids.length,
       completedBookingsCount: bookings.filter((b) => b.status === "completed").length,
     },

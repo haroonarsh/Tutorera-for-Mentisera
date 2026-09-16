@@ -22,7 +22,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tutor Marketplace Agreement | TUTORERA",
+  title: "Tutor Marketplace Agreement",
   description: "Official legal terms, independent contractor status, earnings flow, verification warranties, and professional conduct obligations for tutors on TUTORERA®.",
 };
 

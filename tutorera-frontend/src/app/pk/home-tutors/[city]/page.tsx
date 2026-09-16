@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   const { total } = await fetchTutors({ city, countryCode: "PK", teachingMode: "in-person" }, 1);
   const path = `/pk/home-tutors/${citySlug}`;
   return {
-    title: `Home Tutors in ${city} | Verified In-Person Tutors | TUTORERA`,
+    title: `Home Tutors in ${city} | Verified In-Person Tutors`,
     description: `Find verified home tutors in ${city}. Post your tuition requirement, compare tutor offers, rates, subjects, reviews, and availability on TUTORERA.`,
     alternates: { canonical: path },
     robots: total > 0 ? { index: true, follow: true } : { index: false, follow: true },

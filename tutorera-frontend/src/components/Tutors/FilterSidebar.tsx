@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { FiltersState, LEVELS, TEACHING_MODES } from "@/types/tutor";
-import { COUNTRIES, getCitiesForCountry } from "@/lib/location";
+import { getCitiesForCountry } from "@/lib/location";
+import { useGeoData } from "@/lib/geoService";
+import api from "@/lib/axios";
 import StarRating from "./StarRating";
 import styles from "./Filtersidebar.module.css";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -36,6 +39,23 @@ function SidebarContent({
   onReset,
   activeFilterCount,
 }: FilterSidebarProps) {
+  const geo = useGeoData();
+  const countryCode = filters.country || "";
+  const [cities, setCities] = useState<{ id?: string; name: string }[]>(() => getCitiesForCountry(countryCode || "PK"));
+
+  useEffect(() => {
+    if (!countryCode) { setCities([]); return; }
+    let cancelled = false;
+    api.get(`/geo/cities?country=${encodeURIComponent(countryCode)}&limit=100`)
+      .then((res) => {
+        if (cancelled) return;
+        const remote = (res.data?.cities || []).map((c: { _id?: string; name: string }) => ({ id: c._id, name: c.name }));
+        setCities(remote.length > 0 ? remote : getCitiesForCountry(countryCode));
+      })
+      .catch(() => { if (!cancelled) setCities(getCitiesForCountry(countryCode)); });
+    return () => { cancelled = true; };
+  }, [countryCode]);
+
   return (
     <div className={styles.sidebar}>
       {/* Header */}
@@ -109,7 +129,7 @@ function SidebarContent({
             className={styles.select}
           >
             <option value="">Worldwide (All Countries)</option>
-            {COUNTRIES.map((c) => (
+            {geo.countries.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.flag} {c.name}
               </option>
@@ -124,10 +144,11 @@ function SidebarContent({
             value={filters.city}
             onChange={(e) => onFilterChange("city", e.target.value)}
             className={styles.select}
+            disabled={!countryCode}
           >
-            <option value="">All Cities</option>
-            {getCitiesForCountry(filters.country || "PK").map((city) => (
-              <option key={city.id} value={city.name}>
+            <option value="">{countryCode ? "All Cities" : "Select a country first"}</option>
+            {cities.map((city) => (
+              <option key={city.id || city.name} value={city.name}>
                 {city.name}
               </option>
             ))}

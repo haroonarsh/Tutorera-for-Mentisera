@@ -2,18 +2,22 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ShieldCheck, LogOut, BookOpen,
+  LayoutDashboard, Users, LogOut, BookOpen,
   CreditCard, MessageSquare, Menu, FileText, Shield, Gift,
   Star, Banknote, BarChart2, ClipboardList,
   Radio, Mail, Sparkles, AlertTriangle, TrendingDown, ActivitySquare,
   CheckCircle, Calculator, Sliders, ShieldAlert, Globe,
-  KeyRound, Activity, MapPin, X,
+  KeyRound, Activity, MapPin, X, HeartHandshake, RotateCcw, Flag, Settings, Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
 import AdminGuard from "@/components/AdminGuard";
 import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
 import MuiAdminProvider from "./MuiAdminProvider";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
+
+const C = UI_COLORS;
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: ["*"],
@@ -25,7 +29,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   finance: ["payment.read","payment.manage","payment.refund","payout.read","payout.approve","payout.process","finance.reconcile","finance.fee_configure","bookings.read","analytics.read"],
   support: ["student.read","tutor.read","request.read","bookings.read","claims.read","safety.create","payment.read"],
   growth: ["growth.read","growth.manage","broadcast.send","analytics.read","users.read"],
-  content: ["growth.read","analytics.read"],
+  content: ["growth.read","analytics.read","content.manage"],
   analyst: ["analytics.read","request.read","tutor.read","student.read","bookings.read","payment.read","matching.read","growth.read","market.read","audit.read","system.monitor"],
   country_admin: ["market.read","market.configure","analytics.read","tutor.read","student.read","request.read","bookings.read","payment.read","payout.read","finance.fee_configure","audit.read"],
 };
@@ -55,9 +59,17 @@ const navSections: NavSection[] = [
   {
     title: "Students",
     items: [
-      { href: "/admin/students", label: "Students", icon: <Users size={17} />, permission: "student.read" },
+      { href: "/admin/students", label: "Students Directory", icon: <Users size={17} />, permission: "student.read" },
+      { href: "/admin/onboarding?tab=students", label: "Student Pipeline", icon: <ClipboardList size={17} />, permission: "student.read" },
       { href: "/admin/at-risk-requests", label: "At-Risk Requests", icon: <AlertTriangle size={17} />, badge: "Action", permission: "request.extend" },
       { href: "/admin/student-ratings", label: "Student Ratings", icon: <Star size={17} />, permission: "student.read" },
+    ],
+  },
+  {
+    title: "Parents & Guardians",
+    items: [
+      { href: "/admin/parents", label: "Parents Directory", icon: <HeartHandshake size={17} />, permission: "student.read" },
+      { href: "/admin/onboarding?tab=parents", label: "Parent Pipeline", icon: <ClipboardList size={17} />, permission: "student.read" },
     ],
   },
   {
@@ -65,7 +77,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/tutors", label: "Tutors Directory", icon: <BookOpen size={17} />, permission: "tutor.read" },
       { href: "/admin/applications", label: "Applications", icon: <ClipboardList size={17} />, permission: "tutor.read" },
-      { href: "/admin/verifications", label: "Verifications", icon: <ShieldCheck size={17} />, permission: "tutor.verify" },
+      { href: "/admin/tutor-ratings", label: "Tutor Ratings", icon: <Star size={17} />, permission: "tutor.quality_manage" },
       { href: "/admin/supply-gaps", label: "Supply Gaps", icon: <TrendingDown size={17} />, permission: "analytics.read" },
       { href: "/admin/liquidity", label: "Liquidity Scores", icon: <ActivitySquare size={17} />, permission: "analytics.read" },
     ],
@@ -75,15 +87,18 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/matching", label: "Smart Matching", icon: <Sparkles size={17} />, permission: "matching.read" },
       { href: "/admin/bookings", label: "Bookings", icon: <CheckCircle size={17} />, permission: "bookings.read" },
+      { href: "/admin/curriculum", label: "Curriculum & Subjects", icon: <BookOpen size={17} />, permission: "market.configure" },
     ],
   },
   {
     title: "Finance",
     items: [
-      { href: "/admin/payments", label: "Payments", icon: <CreditCard size={17} />, permission: "payment.read" },
+      { href: "/admin/payments", label: "Payments", icon: <CreditCard size={17} />, permission: "bookings.read" },
       { href: "/admin/payouts", label: "Payouts", icon: <Banknote size={17} />, permission: "payout.read" },
       { href: "/admin/reconciliation", label: "Reconciliation", icon: <Calculator size={17} />, permission: "finance.reconcile" },
       { href: "/admin/fee-config", label: "Fee Config", icon: <Sliders size={17} />, permission: "finance.fee_configure" },
+      { href: "/admin/payment-providers", label: "Payment Providers", icon: <CreditCard size={17} />, permission: "finance.fee_configure" },
+      { href: "/admin/reports", label: "Reports & Exports", icon: <FileText size={17} />, permission: "analytics.read" },
     ],
   },
   {
@@ -91,12 +106,14 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/safety-cases", label: "Safety Cases", icon: <ShieldAlert size={17} />, badge: "Cases", permission: "safety.read" },
       { href: "/admin/guarantee-claims", label: "Guarantee Claims", icon: <Shield size={17} />, permission: "claims.read" },
+      { href: "/admin/refund-requests", label: "Refund Requests", icon: <RotateCcw size={17} />, permission: "claims.read" },
     ],
   },
   {
     title: "Growth",
     items: [
       { href: "/admin/referrals", label: "Referrals", icon: <Gift size={17} />, permission: "growth.read" },
+      { href: "/admin/promotions", label: "Promo Codes", icon: <Gift size={17} />, permission: "growth.manage" },
       { href: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={17} />, permission: "analytics.read" },
     ],
   },
@@ -115,7 +132,9 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/broadcasts", label: "Broadcasts", icon: <Radio size={17} />, permission: "broadcast.send" },
       { href: "/admin/email-logs", label: "Email Logs", icon: <Mail size={17} />, permission: "growth.read" },
+      { href: "/admin/email-templates", label: "Email Templates", icon: <FileText size={17} />, permission: "system.monitor" },
       { href: "/admin/contacts", label: "Inquiries", icon: <MessageSquare size={17} />, permission: "student.read" },
+      { href: "/admin/blogs", label: "Blogs", icon: <BookOpen size={17} />, permission: "content.manage" },
     ],
   },
   {
@@ -123,6 +142,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/users", label: "Users & Accounts", icon: <Users size={17} />, permission: "users.read" },
       { href: "/admin/roles", label: "Admin Roles (RBAC)", icon: <KeyRound size={17} />, permission: "roles.manage" },
+      { href: "/admin/feature-flags", label: "Feature Flags", icon: <Flag size={17} />, permission: "market.configure" },
       { href: "/admin/audit-logs", label: "Audit Logs", icon: <FileText size={17} />, permission: "audit.read" },
       { href: "/admin/system-health", label: "System Health", icon: <Activity size={17} />, permission: "system.monitor" },
     ],
@@ -132,6 +152,7 @@ const navSections: NavSection[] = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const { unreadCount } = useSocket();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -174,16 +195,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const SidebarContent = () => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "260px" }}>
       {/* Brand Header */}
-      <div style={{ padding: "1.25rem 1.25rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
+      <div style={{ padding: "1.25rem 1.25rem 1rem", borderBottom: `1px solid ${C.sidebarBorder}`, flexShrink: 0 }}>
         <BrandLogo variant="light" size="sm" />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.5rem" }}>
-          <span style={{ color: "#93c5fd", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <span style={{ color: C.accentBright, fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Control Tower
           </span>
-          <span style={{ fontSize: "0.68rem", background: "rgba(59, 130, 246, 0.2)", color: "#bfdbfe", padding: "0.15rem 0.45rem", borderRadius: "999px", border: "1px solid rgba(59,130,246,0.3)" }}>
+          <span style={{ fontSize: "0.68rem", background: "rgba(1, 110, 248, 0.2)", color: C.accentBright, padding: "0.15rem 0.45rem", borderRadius: "999px", border: "1px solid rgba(1,110,248,0.3)" }}>
             v2.6 RBAC
           </span>
         </div>
+        <Link
+          href="/admin/notifications"
+          onClick={() => setSidebarOpen(false)}
+          style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.85rem", padding: "0.5rem 0.65rem", borderRadius: "0.5rem", background: "rgba(255,255,255,0.06)", textDecoration: "none", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 600 }}
+        >
+          <span style={{ position: "relative", display: "flex" }}>
+            <Bell size={16} />
+            {unreadCount > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -5, minWidth: 14, height: 14, padding: "0 3px", borderRadius: "999px", background: STATUS_COLORS.danger.color, color: "white", fontSize: "0.58rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </span>
+          Notifications
+        </Link>
       </div>
 
       {/* Navigation Sections */}
@@ -193,7 +229,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           if (visibleItems.length === 0) return null;
           return (
             <div key={sec.title}>
-              <p style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", margin: "0 0 0.35rem 0.6rem" }}>
+              <p style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7C89A6", margin: "0 0 0.35rem 0.6rem" }}>
                 {sec.title}
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
@@ -204,7 +240,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
-                      className={isActive ? "bg-blue-800/55" : "hover:bg-white/[0.06]"}
+                      className={isActive ? undefined : "hover:bg-white/[0.06]"}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -215,12 +251,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         fontSize: "0.82rem",
                         fontWeight: isActive ? 700 : 600,
                         color: isActive ? "#ffffff" : "#cbd5e1",
-                        border: isActive ? "1px solid rgba(59,130,246,0.4)" : "1px solid transparent",
+                        background: isActive ? "rgba(1,110,248,0.22)" : "transparent",
+                        border: isActive ? `1px solid rgba(1,110,248,0.4)` : "1px solid transparent",
                         transition: "background-color 150ms ease, border-color 150ms ease, color 150ms ease",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                        <span style={{ color: isActive ? "#60a5fa" : "#94a3b8" }}>{item.icon}</span>
+                        <span style={{ color: isActive ? C.accentBright : "#94a3b8" }}>{item.icon}</span>
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
@@ -230,7 +267,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             fontWeight: 800,
                             padding: "0.1rem 0.4rem",
                             borderRadius: "999px",
-                            backgroundColor: item.badge === "Action" ? "#ef4444" : "#f59e0b",
+                            backgroundColor: item.badge === "Action" ? STATUS_COLORS.danger.color : STATUS_COLORS.warning.color,
                             color: "white",
                           }}
                         >
@@ -247,7 +284,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </nav>
 
       {/* User Footer & Logout */}
-      <div style={{ padding: "0.85rem 1rem", borderTop: "1px solid rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ padding: "0.85rem 1rem", borderTop: `1px solid ${C.sidebarBorder}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "0.5rem" }}>
           <div style={{ color: "white", fontSize: "0.8rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis" }}>
             {user?.name || "Admin"}
@@ -272,7 +309,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             borderRadius: "0.4rem",
             border: "1px solid rgba(255,255,255,0.15)",
             background: "rgba(255,255,255,0.05)",
-            color: "#f87171",
+            color: "#FCA5A5",
             cursor: "pointer",
           }}
         >
@@ -285,21 +322,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AdminGuard>
       {/* WCAG 2.1 SC 2.4.1 Skip Links */}
-      <a href="#main-content" className="skip-link" style={{ position: "absolute", top: "-100%", left: "1rem", background: "#021550", color: "white", padding: "0.75rem 1.25rem", borderRadius: "0 0 0.5rem 0.5rem", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none", zIndex: 99999, transition: "top 0.15s" }} onFocus={(e) => { (e.currentTarget as HTMLElement).style.top = "0"; }} onBlur={(e) => { (e.currentTarget as HTMLElement).style.top = "-100%"; }}>Skip to main content</a>
-      <style>{`.skip-link:focus { outline: 3px solid #fbbf24; outline-offset: 2px; }`}</style>
-      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+      <a href="#main-content" className="skip-link" style={{ position: "absolute", top: "-100%", left: "1rem", background: C.sidebar, color: "white", padding: "0.75rem 1.25rem", borderRadius: "0 0 0.5rem 0.5rem", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none", zIndex: 99999, transition: "top 0.15s" }} onFocus={(e) => { (e.currentTarget as HTMLElement).style.top = "0"; }} onBlur={(e) => { (e.currentTarget as HTMLElement).style.top = "-100%"; }}>Skip to main content</a>
+      <style>{`.skip-link:focus { outline: 3px solid ${STATUS_COLORS.warning.color}; outline-offset: 2px; }`}</style>
+      <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#F8FAFC" }}>
         {/* Desktop Sidebar */}
         <aside
           style={{
             width: "260px",
-            backgroundColor: "#0a1128",
+            backgroundColor: C.sidebar,
             display: "none",
             flexDirection: "column",
             position: "sticky",
             top: 0,
             height: "100vh",
             zIndex: 40,
-            borderRight: "1px solid #1e293b",
+            borderRight: `1px solid ${C.sidebarBorder}`,
           }}
           className="admin-desktop-sidebar"
         >
@@ -318,8 +355,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <header
             style={{
               height: "56px",
-              backgroundColor: "#0a1128",
-              borderBottom: "1px solid #1e293b",
+              backgroundColor: C.sidebar,
+              borderBottom: `1px solid ${C.sidebarBorder}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -372,7 +409,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 aria-label="Admin navigation"
                 style={{
                   width: "280px",
-                  backgroundColor: "#0a1128",
+                  backgroundColor: C.sidebar,
                   height: "100%",
                   position: "relative",
                 }}

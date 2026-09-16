@@ -22,7 +22,7 @@ export const CITIES = {
 
 export const LEVELS = {
   primary: "Primary (Grades 1-5)", middle: "Middle (Grades 6-8)", matric: "Matric (9th & 10th)", intermediate: "Intermediate / FSc",
-  "o-level": "O-Level (Cambridge / Edexcel)", "a-level": "A-Level (Cambridge / Edexcel)", university: "University / Degree",
+  "o-level": "O-Level (Cambridge / Edexcel)", igcse: "IGCSE (Cambridge / Edexcel)", "a-level": "A-Level (Cambridge / Edexcel)", university: "University / Degree",
 } as const;
 
 export const PRIMARY_CITY_SLUGS = ["lahore", "karachi", "islamabad", "rawalpindi", "faisalabad"] as const;
@@ -40,8 +40,8 @@ export interface TutorDirectoryResponse {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
 
-export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24): Promise<TutorDirectoryResponse> {
-  const params = new URLSearchParams({ limit: String(limit), page: "1" });
+export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24, page = 1): Promise<TutorDirectoryResponse> {
+  const params = new URLSearchParams({ limit: String(limit), page: String(page) });
   Object.entries(filters).forEach(([key, value]) => value && params.set(key, value));
 
   try {

@@ -1,9 +1,16 @@
 import { Types } from "mongoose";
-import { calculateMarketplaceFees } from "../config/constants";
+import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
-import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
+import { rapidpayProvider } from "./rapidpayProvider.service";
 
-export type PaymentProviderName = "rapid_gateway";
+export type PaymentProviderName = "rapidpay";
+export type LedgerProviderName = PaymentProviderName | "manual";
+export type FeeSnapshot = {
+  subtotal: number; studentFee: number; tutorFee: number; tax: number;
+  studentTotal: number; tutorNet: number; platformFee: number;
+  gatewayFee?: number;
+  feeConfig?: Record<string, unknown>;
+};
 
 export interface CheckoutParams {
   amount: number;
@@ -19,6 +26,7 @@ export interface CheckoutParams {
   bidId?: string;
   studentId?: string;
   tutorId?: string;
+  feeSnapshot?: FeeSnapshot;
   metadata?: Record<string, unknown>;
 }
 
@@ -33,18 +41,25 @@ export interface ProviderWebhookEvent {
 }
 
 export const paymentProvider = {
-  name: "rapid_gateway" as PaymentProviderName,
+  name: "rapidpay" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
-    const checkoutUrl = await createTransaction({
+    const checkoutUrl = await rapidpayProvider.createCheckout({
       amount: params.amount,
-      customerMobileNo: params.customerMobileNo,
-      customerEmail: params.customerEmail,
-      basketId: params.basketId,
-      description: params.description,
-      successUrl: params.successUrl,
-      failureUrl: params.failureUrl,
-      checkoutUrl: params.checkoutUrl,
+      currency: params.currency,
+      reference: params.basketId,
+      metadata: {
+        studentMobileNo: params.customerMobileNo,
+        studentEmail: params.customerEmail,
+        description: params.description,
+        successUrl: params.successUrl,
+        failureUrl: params.failureUrl,
+        checkoutUrl: params.checkoutUrl,
+        studentId: params.studentId,
+        bookingId: params.bookingId,
+        bidId: params.bidId,
+        feeSnapshot: params.feeSnapshot,
+      }
     });
 
     await recordPaymentLedger({
@@ -57,13 +72,14 @@ export const paymentProvider = {
       bidId: params.bidId,
       studentId: params.studentId,
       tutorId: params.tutorId,
+      feeSnapshot: params.feeSnapshot,
       metadata: { checkoutUrl, ...(params.metadata || {}) },
     });
 
     return checkoutUrl;
   },
 
-  verifyWebhookSignature,
+  verifyWebhookSignature: rapidpayProvider.verifyWebhookSignature,
 
   normalizeWebhook(body: {
     eventId: string;
@@ -74,7 +90,7 @@ export const paymentProvider = {
     currency?: string;
   }): ProviderWebhookEvent {
     return {
-      provider: "rapid_gateway",
+      provider: "rapidpay",
       eventId: body.eventId,
       eventType: body.eventType,
       merchantTransactionId: body.merchantTransactionId,
@@ -86,6 +102,7 @@ export const paymentProvider = {
 };
 
 export async function recordPaymentLedger(args: {
+  provider?: LedgerProviderName;
   providerTransactionId: string;
   providerEventId?: string;
   eventType: "checkout.created" | "payment.succeeded" | "payment.failed" | "payment.refunded" | "payout.requested" | "payout.completed" | "manual.adjustment";
@@ -96,28 +113,47 @@ export async function recordPaymentLedger(args: {
   bidId?: string;
   studentId?: string;
   tutorId?: string;
+  feeSnapshot?: FeeSnapshot;
+  settlementStatus?: "unsettled" | "expected" | "settled" | "reconciled" | "exception";
   metadata?: Record<string, unknown>;
 }) {
-  const fees = calculateMarketplaceFees(args.amount);
-  const platformNet = fees.tutorFee + fees.tax;
-  const settlementStatus: "expected" | "unsettled" = args.status === "succeeded" ? "expected" : "unsettled";
+  const snapshot = args.feeSnapshot;
+  const accounting = snapshot || await (async () => {
+    const fees = await calculateMarketplaceFees(args.amount, { currency: args.currency });
+    return {
+      subtotal: args.amount,
+      studentFee: fees.studentFee,
+      tutorFee: fees.tutorFee,
+      tax: fees.tax,
+      studentTotal: fees.studentTotal,
+      tutorNet: fees.tutorNet,
+      platformFee: fees.tutorFee + fees.tax,
+      gatewayFee: fees.gatewayFee,
+    };
+  })();
+  const provider = args.provider || paymentProvider.name;
+  const settlementStatus = args.settlementStatus || (args.status === "succeeded" ? "expected" : "unsettled");
+  const gatewayFee = accounting.gatewayFee || 0;
   const doc = {
-    provider: paymentProvider.name,
+    provider,
     providerEventId: args.providerEventId,
     providerTransactionId: args.providerTransactionId,
     eventType: args.eventType,
     status: args.status,
     grossAmount: args.amount,
     currency: args.currency || "PKR",
-    studentPayment: fees.studentTotal,
-    studentFee: fees.studentFee,
-    tutorFee: fees.tutorFee,
-    tax: fees.tax,
-    gatewayFee: 0,
+    studentPayment: accounting.studentTotal,
+    studentFee: accounting.studentFee,
+    tutorFee: accounting.tutorFee,
+    tax: accounting.tax,
+    gatewayFee,
     refundAmount: args.eventType === "payment.refunded" ? args.amount : 0,
-    tutorPayable: fees.tutorNet,
-    platformNet,
+    tutorPayable: accounting.tutorNet,
+    // The gateway's own processing cost is absorbed from the platform's
+    // margin - never deducted from the tutor's payout (tutorPayable above).
+    platformNet: accounting.platformFee - gatewayFee,
     settlementStatus,
+    feeSnapshot: snapshot || {},
     booking: args.bookingId ? new Types.ObjectId(args.bookingId) : undefined,
     bid: args.bidId ? new Types.ObjectId(args.bidId) : undefined,
     student: args.studentId ? new Types.ObjectId(args.studentId) : undefined,
@@ -127,7 +163,7 @@ export async function recordPaymentLedger(args: {
 
   if (args.providerEventId) {
     return PaymentLedger.findOneAndUpdate(
-      { provider: paymentProvider.name, providerEventId: args.providerEventId },
+      { provider, providerEventId: args.providerEventId },
       { $setOnInsert: doc },
       { upsert: true, new: true }
     );

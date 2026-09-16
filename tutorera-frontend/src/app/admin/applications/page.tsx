@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import { AdminApplicationRow, CanonicalStatus } from "@/types/tracking";
 import { showError } from "@/lib/toast";
 import s from "@/components/Tracking/tracking.module.css";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 const STATUS_LABELS: Record<CanonicalStatus, string> = {
   APPLICATION_STARTED: "Application started",
@@ -35,15 +37,20 @@ function statusPillVariant(status: CanonicalStatus): string {
   return "";
 }
 
-export default function AdminApplicationsPage() {
+function ApplicationsContent() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status") || "all";
+  const initialSearch = searchParams.get("search") || "";
+
   const [rows, setRows] = useState<AdminApplicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [summary, setSummary] = useState<Record<string, number>>({});
   const [filters, setFilters] = useState({
-    status: "all",
+    status: initialStatus,
     marketplace: "all",
     homeTuition: "all",
-    search: "",
+    search: initialSearch,
   });
   const [page, setPage] = useState(1);
 
@@ -58,6 +65,7 @@ export default function AdminApplicationsPage() {
       params.set("page", String(pageToLoad));
       const res = await api.get(`/tracking/admin/applications?${params.toString()}`);
       setRows(res.data.applications);
+      setSummary(res.data.summary || {});
       setPagination({ page: res.data.page, pages: res.data.pages, total: res.data.total });
     } catch (err) {
       showError(err, "Failed to load applications");
@@ -81,21 +89,49 @@ export default function AdminApplicationsPage() {
     <div style={{ padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ marginBottom: 18 }}>
-          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#0329B2", margin: "0 0 6px" }}>Admin</p>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "#021550", margin: "0 0 6px" }}>Tutor Applications</h1>
-          <p style={{ color: "#64748b", fontSize: 14, margin: 0 }}>Review verification, manage eligibility, and act on every tutor application.</p>
+          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: UI_COLORS.accent, margin: "0 0 6px" }}>Admin</p>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: TEXT_COLORS.primary, margin: "0 0 6px" }}>Tutor Applications</h1>
+          <p style={{ color: TEXT_COLORS.muted, fontSize: 14, margin: 0 }}>Review verification, manage eligibility, and act on every tutor application.</p>
+        </div>
+
+        {/* Phase Filter Chips */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
+          {Object.entries(summary).map(([key, count]) => (
+            <button
+              type="button"
+              key={key}
+              onClick={() => {
+                setFilters(f => ({ ...f, status: f.status === key ? "all" : key }));
+                setPage(1);
+              }}
+              style={{
+                textAlign: "left",
+                border: filters.status === key ? `2px solid ${UI_COLORS.accentBright}` : `1px solid ${UI_COLORS.border}`,
+                background: filters.status === key ? UI_COLORS.accentLight : UI_COLORS.surface,
+                padding: "10px 12px",
+                borderRadius: 10,
+                cursor: "pointer",
+                transition: "all 120ms ease",
+              }}
+            >
+              <span style={{ display: "block", color: TEXT_COLORS.muted, fontSize: 11, fontWeight: 800 }}>
+                {STATUS_LABELS[key as CanonicalStatus] || key}
+              </span>
+              <strong style={{ fontSize: 20, color: TEXT_COLORS.primary }}>{count}</strong>
+            </button>
+          ))}
         </div>
 
         <div className={s.card} style={{ marginBottom: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "#475569" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: TEXT_COLORS.secondary }}>
               Status
               <select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))} style={inputStyle}>
                 <option value="all">All</option>
                 {ALL_STATUSES.map(st => <option key={st} value={st}>{STATUS_LABELS[st]}</option>)}
               </select>
             </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "#475569" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: TEXT_COLORS.secondary }}>
               Marketplace
               <select value={filters.marketplace} onChange={e => setFilters(f => ({ ...f, marketplace: e.target.value }))} style={inputStyle}>
                 <option value="all">All</option>
@@ -103,7 +139,7 @@ export default function AdminApplicationsPage() {
                 <option value="blocked">Blocked</option>
               </select>
             </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "#475569" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: TEXT_COLORS.secondary }}>
               Home tuition
               <select value={filters.homeTuition} onChange={e => setFilters(f => ({ ...f, homeTuition: e.target.value }))} style={inputStyle}>
                 <option value="all">All</option>
@@ -111,7 +147,7 @@ export default function AdminApplicationsPage() {
                 <option value="blocked">Blocked</option>
               </select>
             </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "#475569" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: TEXT_COLORS.secondary }}>
               Search (name or Application ID)
               <div style={{ display: "flex", gap: 6 }}>
                 <input
@@ -138,7 +174,7 @@ export default function AdminApplicationsPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                  <tr style={{ background: STATUS_COLORS.neutral.bg, borderBottom: `1px solid ${UI_COLORS.border}` }}>
                     <th style={thStyle}>Application ID</th>
                     <th style={thStyle}>Tutor</th>
                     <th style={thStyle}>Status</th>
@@ -152,16 +188,16 @@ export default function AdminApplicationsPage() {
                 </thead>
                 <tbody>
                   {rows.map(row => (
-                    <tr key={row._id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={row._id} style={{ borderBottom: `1px solid ${STATUS_COLORS.neutral.bg}` }}>
                       <td style={tdStyle}>
-                        <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: "#021550" }}>{row.applicationId || "—"}</span>
+                        <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: TEXT_COLORS.primary }}>{row.applicationId || "—"}</span>
                       </td>
                       <td style={tdStyle}>
-                        <div style={{ fontWeight: 700, color: "#1f2937" }}>{row.tutorName || "—"}</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>{row.tutorEmail}</div>
+                        <div style={{ fontWeight: 700, color: TEXT_COLORS.body }}>{row.tutorName || "—"}</div>
+                        <div style={{ fontSize: 12, color: TEXT_COLORS.muted }}>{row.tutorEmail}</div>
                       </td>
                       <td style={tdStyle}>
-                        <span className={`${s.statusPill} ${statusPillVariant(row.canonicalStatus)}`} style={{ background: "#eef2ff", color: "#3730a3", border: "1px solid #c7d2fe" }}>
+                        <span className={`${s.statusPill} ${statusPillVariant(row.canonicalStatus)}`} style={{ background: STATUS_COLORS.info.bg, color: STATUS_COLORS.purple.color, border: `1px solid ${STATUS_COLORS.info.border}` }}>
                           {STATUS_LABELS[row.canonicalStatus]}
                         </span>
                       </td>
@@ -169,19 +205,19 @@ export default function AdminApplicationsPage() {
                       <td style={tdStyle}>{row.lastUpdated ? new Date(row.lastUpdated).toLocaleDateString("en-PK", { day: "numeric", month: "short" }) : "—"}</td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 60, height: 6, background: "#f1f5f9", borderRadius: 999, overflow: "hidden" }}>
-                            <div style={{ width: `${row.progress}%`, height: "100%", background: "linear-gradient(90deg, #0329B2, #7C1BEA)" }} />
+                          <div style={{ width: 60, height: 6, background: STATUS_COLORS.neutral.bg, borderRadius: 999, overflow: "hidden" }}>
+                            <div style={{ width: `${row.progress}%`, height: "100%", background: UI_COLORS.accentGradient }} />
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 700 }}>{row.progress}%</span>
                         </div>
                       </td>
                       <td style={tdStyle}>
-                        <span style={{ color: row.marketplaceEligible ? "#16a34a" : "#94a3b8", fontWeight: 700, fontSize: 12 }}>
+                        <span style={{ color: row.marketplaceEligible ? UI_COLORS.success : TEXT_COLORS.muted, fontWeight: 700, fontSize: 12 }}>
                           {row.marketplaceEligible ? "Eligible" : "Pending"}
                         </span>
                       </td>
                       <td style={tdStyle}>
-                        <span style={{ color: row.homeTuitionEligible ? "#16a34a" : row.homeTuitionRequired ? "#d97706" : "#94a3b8", fontWeight: 700, fontSize: 12 }}>
+                        <span style={{ color: row.homeTuitionEligible ? UI_COLORS.success : row.homeTuitionRequired ? STATUS_COLORS.warning.color : TEXT_COLORS.muted, fontWeight: 700, fontSize: 12 }}>
                           {row.homeTuitionEligible ? "Eligible" : row.homeTuitionRequired ? "Pending" : "N/A"}
                         </span>
                       </td>
@@ -194,7 +230,7 @@ export default function AdminApplicationsPage() {
               </table>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12 }}>
-              <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>Total {pagination.total} applications</p>
+              <p style={{ margin: 0, fontSize: 12, color: TEXT_COLORS.muted }}>Total {pagination.total} applications</p>
               <div style={{ display: "flex", gap: 6 }}>
                 <button type="button" disabled={pagination.page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} style={btnSecondaryStyle}>Prev</button>
                 <span style={{ fontSize: 12, alignSelf: "center" }}>Page {pagination.page} of {pagination.pages}</span>
@@ -208,16 +244,24 @@ export default function AdminApplicationsPage() {
   );
 }
 
+export default function AdminApplicationsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading Applications...</div>}>
+      <ApplicationsContent />
+    </Suspense>
+  );
+}
+
 const inputStyle: React.CSSProperties = {
   padding: "8px 10px",
-  border: "1px solid #cbd5e1",
+  border: `1px solid ${UI_COLORS.border}`,
   borderRadius: 8,
   fontSize: 14,
-  background: "#fff",
-  color: "#0f172a",
+  background: UI_COLORS.surface,
+  color: TEXT_COLORS.body,
   fontWeight: 500,
 };
-const thStyle: React.CSSProperties = { textAlign: "left", padding: "12px 14px", fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em" };
-const tdStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: "#1f2937", verticalAlign: "middle" };
-const btnPrimaryStyle: React.CSSProperties = { background: "#021550", color: "#fff", border: "none", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const btnSecondaryStyle: React.CSSProperties = { background: "#fff", color: "#021550", border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const thStyle: React.CSSProperties = { textAlign: "left", padding: "12px 14px", fontSize: 11, fontWeight: 800, color: TEXT_COLORS.secondary, textTransform: "uppercase", letterSpacing: "0.08em" };
+const tdStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: TEXT_COLORS.body, verticalAlign: "middle" };
+const btnPrimaryStyle: React.CSSProperties = { background: TEXT_COLORS.primary, color: UI_COLORS.surface, border: "none", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const btnSecondaryStyle: React.CSSProperties = { background: UI_COLORS.surface, color: TEXT_COLORS.primary, border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" };

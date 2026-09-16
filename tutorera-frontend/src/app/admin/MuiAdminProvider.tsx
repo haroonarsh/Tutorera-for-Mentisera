@@ -64,6 +64,21 @@ const adminTheme = createTheme({
     MuiSelect: {
       defaultProps: { size: "small" },
     },
+    // Most admin pages are hand-built with inline light-theme styles, not MUI
+    // components - CssBaseline still normally forces this theme's dark
+    // background/text color onto the raw <body> element, which cascades onto
+    // any plain unstyled tag (a bare <h1>, <label>, <p>) on those pages,
+    // rendering near-white text on the light admin background. Neutralize
+    // that global cascade here; MUI components still pick up the dark
+    // palette directly from ThemeProvider context regardless of this.
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: "transparent",
+          color: "inherit",
+        },
+      },
+    },
   },
 });
 

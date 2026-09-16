@@ -10,7 +10,6 @@ import { Toaster } from "react-hot-toast";
 import { BUSINESS_ADDRESS, LEGAL_OPERATOR, PLATFORM_NAME, SITE_URL, SUPPORT_EMAIL, SUPPORT_PHONE } from "@/lib/site";
 import SkipLink from "@/components/SkipLink";
 import LocaleBridge from "@/components/LocaleBridge";
-
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -32,6 +31,7 @@ export const metadata: Metadata = {
     "private tutors",
     "tutors in UAE",
     "tutors in UK",
+    "tutors in USA",
     "tutors in Pakistan",
     "TUTORERA",
   ],
@@ -43,8 +43,27 @@ export const metadata: Metadata = {
       ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
       : undefined,
   },
+  other: {
+    "google-adsense-account": "ca-pub-2559940686225219",
+  },
   publisher: "TUTORERA",
   metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+    // Must match the real (countries)/[countryCode] route segments
+    // (lowercase ISO 3166-1 alpha-2, per LAUNCH_MARKETS) - "/usa" was never
+    // a real route (the actual route is "/us"), so that hreflang entry
+    // pointed Google at a 404.
+    languages: {
+      "en-GB": "/gb",
+      "en-AE": "/ae",
+      "en-SA": "/sa",
+      "en-PK": "/pk",
+      "en-IN": "/in",
+      "en-US": "/us",
+      "x-default": "/",
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -126,7 +145,7 @@ export default function RootLayout({
             telephone: SUPPORT_PHONE,
             contactType: "customer service",
             email: SUPPORT_EMAIL,
-            availableLanguage: ["English", "Urdu", "Arabic"],
+            availableLanguage: ["English"],
           },
         ],
         areaServed: [
@@ -137,6 +156,9 @@ export default function RootLayout({
         ],
         sameAs: [
           "https://mentisera.com",
+          "https://www.facebook.com/tutorerapk",
+          "https://www.instagram.com/tutorera.pk",
+          "https://www.linkedin.com/company/tutorera",
         ],
       },
       {
@@ -171,8 +193,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
+     <html lang="en">
       <head>
+        <meta name="google-adsense-account" content="ca-pub-2559940686225219" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -197,9 +220,20 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-7NF2DR8MG6');
+            gtag('config', 'G-7NF2DR8MG6', {
+              'cookie_domain': 'tutorera.ac.pk',
+              'cookie_expires': 43200,
+              'cookie_flags': 'SameSite=None;Secure'
+            });
           `}
         </Script>
+        {/* Google AdSense */}
+        <Script
+          id="google-adsense"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2559940686225219"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={inter.className}>
         <SkipLink />

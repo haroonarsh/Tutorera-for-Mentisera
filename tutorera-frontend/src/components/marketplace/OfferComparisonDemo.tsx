@@ -33,19 +33,24 @@ interface DemoTutorOffer {
   fastResponder: boolean;
 }
 
+// Illustrative-only sample data for the "how offer comparison works" walkthrough
+// below - these are not real tutor profiles, ratings, or credentials. Kept
+// deliberately generic (no realistic full names, no decimal star ratings, no
+// specific certification claims) so this can never be mistaken for actual
+// marketplace data by a reader, crawler, or AI system.
 const DEMO_OFFERS: DemoTutorOffer[] = [
   {
     id: "offer-1",
-    name: "Dr. Tariq Mahmood",
-    title: "PhD Mathematics · Cambridge Certified Examiner",
-    avatar: "T",
+    name: "Example Tutor A",
+    title: "Mathematics Specialist (sample profile)",
+    avatar: "A",
     matchScore: 97,
-    matchReasons: ["Exact O/A-Level syllabus match", "Top 5% rated in Jeddah & Online", "Police certificate verified"],
+    matchReasons: ["Exact O/A-Level syllabus match", "Highly rated in this subject area", "Police certificate verified"],
     proposedRate: 200,
     offeredRate: 200,
     currency: "SAR",
-    rating: 4.98,
-    reviewsCount: 34,
+    rating: 5,
+    reviewsCount: 0,
     experienceYears: 12,
     policeVerified: true,
     degreeVerified: true,
@@ -54,16 +59,16 @@ const DEMO_OFFERS: DemoTutorOffer[] = [
   },
   {
     id: "offer-2",
-    name: "Ayesha Farooq",
-    title: "M.Phil Applied Physics · O/A-Level Gold Medallist",
-    avatar: "A",
+    name: "Example Tutor B",
+    title: "Physics Specialist (sample profile)",
+    avatar: "B",
     matchScore: 94,
-    matchReasons: ["100% past student grade improvements", "Interactive whiteboard expert", "Identity & degree verified"],
+    matchReasons: ["Strong subject-matter track record", "Interactive whiteboard expert", "Identity & degree verified"],
     proposedRate: 200,
     offeredRate: 220,
     currency: "SAR",
-    rating: 4.92,
-    reviewsCount: 22,
+    rating: 5,
+    reviewsCount: 0,
     experienceYears: 7,
     policeVerified: true,
     degreeVerified: true,
@@ -72,16 +77,16 @@ const DEMO_OFFERS: DemoTutorOffer[] = [
   },
   {
     id: "offer-3",
-    name: "Hamza Siddiqui",
-    title: "B.S. Mathematics & Data Sciences",
-    avatar: "H",
+    name: "Example Tutor C",
+    title: "Mathematics & Data Sciences (sample profile)",
+    avatar: "C",
     matchScore: 89,
     matchReasons: ["Budget-friendly matched rate", "Immediate evening availability", "High response rate < 15m"],
     proposedRate: 200,
     offeredRate: 180,
     currency: "SAR",
-    rating: 4.88,
-    reviewsCount: 16,
+    rating: 5,
+    reviewsCount: 0,
     experienceYears: 5,
     policeVerified: true,
     degreeVerified: true,
@@ -114,6 +119,9 @@ export default function OfferComparisonDemo() {
           <p style={{ color: "#64748b", fontSize: "0.98rem", lineHeight: 1.6 }}>
             When you post a tuition need, tutors respond with transparent offers. Evaluate their match score, qualifications, background verification, and pricing before you accept.
           </p>
+          <span style={{ display: "inline-block", marginTop: "0.75rem", fontSize: "0.72rem", fontWeight: 700, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "999px", padding: "0.25rem 0.75rem" }}>
+            Illustrative example — not a real tutor profile or request
+          </span>
         </div>
 
         {/* Interactive Example Header Bar */}
@@ -262,11 +270,11 @@ export default function OfferComparisonDemo() {
                   {/* Ratings & Experience Row */}
                   <div style={{ display: "flex", gap: "0.75rem", fontSize: "0.78rem", color: "#475569", marginBottom: "0.85rem", flexWrap: "wrap" }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#f59e0b", fontWeight: 700 }}>
-                      <Star size={13} fill="#f59e0b" color="#f59e0b" /> {offer.rating} ({offer.reviewsCount} reviews)
+                      <Star size={13} fill="#f59e0b" color="#f59e0b" /> Sample rating
                     </span>
                     <span>•</span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                      <Clock size={13} /> {offer.experienceYears} yrs experience
+                      <Clock size={13} /> {offer.experienceYears} yrs experience (example)
                     </span>
                   </div>
 

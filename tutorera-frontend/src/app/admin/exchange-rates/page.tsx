@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface ExchangeRateRow {
   currency: string;
@@ -71,8 +72,8 @@ export default function ExchangeRatesPage() {
   };
 
   const cellStyle: React.CSSProperties = { padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" };
-  const headCell: React.CSSProperties = { ...cellStyle, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.05em", fontSize: "0.72rem" };
-  const cardStyle: React.CSSProperties = { background: "#18181f", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 180 };
+  const headCell: React.CSSProperties = { ...cellStyle, fontWeight: 700, color: TEXT_COLORS.muted, textTransform: "uppercase" as const, letterSpacing: "0.05em", fontSize: "0.72rem" };
+  const cardStyle: React.CSSProperties = { background: UI_COLORS.sidebar, border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 180 };
 
   return (
     <div style={{ padding: "32px", maxWidth: 1200, margin: "0 auto" }}>
@@ -80,42 +81,42 @@ export default function ExchangeRatesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 12 }}>📈 Exchange Rates</h2>
-          <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.875rem" }}>
+          <p style={{ margin: "4px 0 0", color: TEXT_COLORS.muted, fontSize: "0.875rem" }}>
             Live currency rates (base: USD) — refreshed hourly
             {lastRefresh && <> • Last refresh: <strong>{new Date(lastRefresh).toLocaleString()}</strong></>}
           </p>
         </div>
-        <button onClick={handleForceRefresh} disabled={refreshing} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#6366f1", color: "white", cursor: refreshing ? "wait" : "pointer", fontWeight: 600, fontSize: "0.875rem", opacity: refreshing ? 0.6 : 1 }}>
+        <button onClick={handleForceRefresh} disabled={refreshing} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: UI_COLORS.accentBright, color: UI_COLORS.surface, cursor: refreshing ? "wait" : "pointer", fontWeight: 600, fontSize: "0.875rem", opacity: refreshing ? 0.6 : 1 }}>
           {refreshing ? "Refreshing…" : "⟳ Force Refresh"}
         </button>
       </div>
 
-      {error && <div style={{ background: "#ef444422", border: "1px solid #ef4444", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#fca5a5" }}>{error}</div>}
-      {success && <div style={{ background: "#10b98122", border: "1px solid #10b981", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#6ee7b7" }}>{success}</div>}
+      {error && <div style={{ background: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: STATUS_COLORS.danger.color }}>{error}</div>}
+      {success && <div style={{ background: STATUS_COLORS.success.bg, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: STATUS_COLORS.success.color }}>{success}</div>}
 
       {/* Summary cards */}
       <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
         <div style={cardStyle}>
-          <div style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#94a3b8", marginBottom: 4 }}>Total Currencies</div>
+          <div style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT_COLORS.muted, marginBottom: 4 }}>Total Currencies</div>
           <div style={{ fontSize: "1.75rem", fontWeight: 700 }}>{rates.length}</div>
         </div>
         <div style={cardStyle}>
-          <div style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#94a3b8", marginBottom: 4 }}>Base Currency</div>
+          <div style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT_COLORS.muted, marginBottom: 4 }}>Base Currency</div>
           <div style={{ fontSize: "1.75rem", fontWeight: 700 }}>💲 USD</div>
         </div>
         <div style={cardStyle}>
-          <div style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#94a3b8", marginBottom: 4 }}>Last Updated</div>
+          <div style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT_COLORS.muted, marginBottom: 4 }}>Last Updated</div>
           <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>{lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : "—"}</div>
         </div>
       </div>
 
       {/* Search */}
-      <input placeholder="Search currency…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f0f13", color: "#f1f5f9", width: 300, marginBottom: 16, fontSize: "0.875rem" }} />
+      <input placeholder="Search currency…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: UI_COLORS.sidebar, color: UI_COLORS.surface, width: 300, marginBottom: 16, fontSize: "0.875rem" }} />
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "64px 0", color: "#94a3b8" }}>Loading…</div>
+        <div style={{ textAlign: "center", padding: "64px 0", color: TEXT_COLORS.muted }}>Loading…</div>
       ) : (
-        <div style={{ background: "#18181f", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "auto" }}>
+        <div style={{ background: UI_COLORS.sidebar, border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
@@ -128,7 +129,7 @@ export default function ExchangeRatesPage() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={5} style={{ ...cellStyle, textAlign: "center", padding: "48px 16px", color: "#94a3b8" }}>No rates match your search.</td></tr>
+                <tr><td colSpan={5} style={{ ...cellStyle, textAlign: "center", padding: "48px 16px", color: TEXT_COLORS.muted }}>No rates match your search.</td></tr>
               ) : filtered.map((row) => (
                 <tr key={row.currency} style={{ transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(99,102,241,0.05)")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <td style={cellStyle}>
@@ -137,9 +138,9 @@ export default function ExchangeRatesPage() {
                   <td style={{ ...cellStyle, textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>{formatRate(row.rateToUSD)}</td>
                   <td style={{ ...cellStyle, textAlign: "right", fontFamily: "monospace" }}>{formatRate(row.inverse)}</td>
                   <td style={cellStyle}>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: "0.72rem", fontWeight: 600, background: row.source === "manual" ? "#f59e0b22" : "rgba(255,255,255,0.06)", color: row.source === "manual" ? "#f59e0b" : "#94a3b8" }}>{row.source}</span>
+                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: "0.72rem", fontWeight: 600, background: row.source === "manual" ? STATUS_COLORS.warning.bg : "rgba(255,255,255,0.06)", color: row.source === "manual" ? STATUS_COLORS.warning.color : TEXT_COLORS.muted }}>{row.source}</span>
                   </td>
-                  <td style={{ ...cellStyle, color: "#94a3b8", fontSize: "0.85rem" }}>{row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "—"}</td>
+                  <td style={{ ...cellStyle, color: TEXT_COLORS.muted, fontSize: "0.85rem" }}>{row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "—"}</td>
                 </tr>
               ))}
             </tbody>

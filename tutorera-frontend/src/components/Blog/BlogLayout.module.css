@@ -1,0 +1,54 @@
+.wrap {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 44px 24px 80px;
+  box-sizing: border-box;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Reserves the sidebar's width up front so nothing shifts in once its data
+   resolves - the column width never depends on content loading. */
+.sidebarSlot {
+  flex-shrink: 0;
+  width: 320px;
+}
+
+.sidebarSticky {
+  position: sticky;
+  top: 88px;
+  /* Stop before the footer instead of sticking past the end of the page. */
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
+}
+
+/* Sidebar renders below main content on mobile, not hidden - just
+   deprioritized in DOM/visual order. */
+@media (max-width: 860px) {
+  .wrap {
+    flex-direction: column;
+    padding: 28px 16px 56px;
+  }
+  .sidebarSlot {
+    width: 100%;
+  }
+  .sidebarSticky {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+.wrap :global(a:focus-visible),
+.wrap :global(button:focus-visible),
+.wrap :global(input:focus-visible) {
+  outline: 2px solid #016EF8;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

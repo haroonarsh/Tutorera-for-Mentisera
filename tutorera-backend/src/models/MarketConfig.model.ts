@@ -20,8 +20,6 @@ export interface IMarketConfig extends Document {
   paymentsEnabled: boolean;
   payoutsEnabled: boolean;
   backgroundCheckRequired: boolean;
-  platformFeePercent: number;
-  taxPercent: number;
   isActive: boolean;
   launchStatus: "live" | "beta" | "coming_soon" | "paused";
   supportedCities: string[];
@@ -53,12 +51,17 @@ const marketConfigSchema = new Schema<IMarketConfig>(
     homeTuitionEnabled: { type: Boolean, default: false },
     studentRegistration: { type: Boolean, default: true },
     tutorRegistration: { type: Boolean, default: true },
-    paymentProvider: { type: String, default: "none" },
+    paymentProvider: { type: String, enum: ["rapidpay", "none"], default: "rapidpay" },
     paymentsEnabled: { type: Boolean, default: false },
     payoutsEnabled: { type: Boolean, default: false },
     backgroundCheckRequired: { type: Boolean, default: true },
-    platformFeePercent: { type: Number, default: 15, min: 0, max: 100 },
-    taxPercent: { type: Number, default: 0, min: 0, max: 100 },
+    // Real platform commission and gateway cost live on FeeConfig, and real
+    // per-country government tax lives on TaxConfig - both consumed by the
+    // one live calculation engine (pricing.service.ts's calculateMarketplaceFees).
+    // platformFeePercent/taxPercent used to live here too, entirely decorative
+    // (nothing ever read them for actual money math, only the admin write
+    // path) - removed rather than left as a second, disconnected, and
+    // therefore misleading source of the same numbers.
     isActive: { type: Boolean, default: true, index: true },
     launchStatus: {
       type: String,

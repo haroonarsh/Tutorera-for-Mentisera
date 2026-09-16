@@ -11,6 +11,7 @@ interface ConnectedUsers {
 }
 
 const connectedUsers: ConnectedUsers = {};
+export let ioInstance: Server | undefined;
 
 export const initSocket = (httpServer: HttpServer): Server => {
   const io = new Server(httpServer, {
@@ -100,6 +101,7 @@ export const initSocket = (httpServer: HttpServer): Server => {
     });
   });
 
+  ioInstance = io;
   return io;
 };
 

@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 
@@ -18,9 +18,9 @@ interface Broadcast {
 type Audience = "all" | "students" | "tutors";
 
 const AUDIENCE_OPTIONS: { value: Audience; label: string; desc: string; color: string; bg: string }[] = [
-  { value: "all",      label: "All Users",      desc: "Students + Tutors",    color: '#0329B2', bg: '#EEF5FF' },
-  { value: "students", label: "Students Only",  desc: "All active students",  color: '#7c3aed', bg: '#f5f3ff' },
-  { value: "tutors",   label: "Tutors Only",    desc: "All active tutors",    color: '#16a34a', bg: '#f0fdf4' },
+  { value: "all",      label: "All Users",      desc: "Students + Tutors",    color: UI_COLORS.accent, bg: UI_COLORS.accentLight },
+  { value: "students", label: "Students Only",  desc: "All active students",  color: STATUS_COLORS.purple.color, bg: STATUS_COLORS.purple.bg },
+  { value: "tutors",   label: "Tutors Only",    desc: "All active tutors",    color: STATUS_COLORS.success.color, bg: STATUS_COLORS.success.bg },
 ];
 
 function audienceMeta(audience: string) {
@@ -112,10 +112,10 @@ export default function BroadcastsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
           { label: "Total Broadcasts", value: broadcasts.length, icon: "📢", color: C.accent },
-          { label: "Total Delivered",  value: totalSent,          icon: "✅", color: '#16a34a' },
-          { label: "Last Sent",        value: broadcasts[0] ? timeAgo(broadcasts[0].createdAt) : "Never", icon: "🕐", color: '#d97706' },
+          { label: "Total Delivered",  value: totalSent,          icon: "✅", color: STATUS_COLORS.success.color },
+          { label: "Last Sent",        value: broadcasts[0] ? timeAgo(broadcasts[0].createdAt) : "Never", icon: "🕐", color: STATUS_COLORS.warning.color },
         ].map(s => (
-          <div key={s.label} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.1rem 1.25rem', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+          <div key={s.label} style={{ backgroundColor: C.surface, borderRadius: '0.875rem', padding: '1.1rem 1.25rem', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
             <div style={{ width: 36, height: 36, backgroundColor: C.gray50, borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
               {s.icon}
             </div>
@@ -130,7 +130,7 @@ export default function BroadcastsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'start' }} className="broadcasts-grid">
 
         {/* Compose Form */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', padding: '1.75rem', border: `1px solid ${C.border}` }}>
           <h2 style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', marginBottom: '0.25rem' }}>
             📢 Compose Broadcast
           </h2>
@@ -140,12 +140,12 @@ export default function BroadcastsPage() {
 
           {/* Success / Error messages */}
           {successMsg && (
-            <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>
+            <div style={{ backgroundColor: STATUS_COLORS.success.bg, border: `1px solid ${STATUS_COLORS.success.border}`, borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: STATUS_COLORS.success.color, fontWeight: '600', fontSize: '0.875rem' }}>
               ✅ {successMsg}
             </div>
           )}
           {errorMsg && (
-            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#ef4444', fontWeight: '600', fontSize: '0.875rem' }}>
+            <div style={{ backgroundColor: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: STATUS_COLORS.danger.color, fontWeight: '600', fontSize: '0.875rem' }}>
               ⚠ {errorMsg}
             </div>
           )}
@@ -160,8 +160,8 @@ export default function BroadcastsPage() {
                 <button key={opt.value} onClick={() => setAudience(opt.value)}
                   style={{
                     padding: '0.75rem 1rem', borderRadius: '0.625rem', cursor: 'pointer',
-                    border: audience === opt.value ? `2px solid ${opt.color}` : '2px solid #e5e7eb',
-                    backgroundColor: audience === opt.value ? opt.bg : 'white',
+                    border: audience === opt.value ? `2px solid ${opt.color}` : `2px solid ${C.border}`,
+                    backgroundColor: audience === opt.value ? opt.bg : C.surface,
                     textAlign: 'left', transition: 'all 0.15s',
                   }}>
                   <p style={{ fontSize: '0.82rem', fontWeight: '700', color: audience === opt.value ? opt.color : C.primary, margin: 0 }}>
@@ -183,9 +183,9 @@ export default function BroadcastsPage() {
               onChange={e => setTitle(e.target.value)}
               maxLength={100}
               placeholder="e.g. Platform Maintenance Notice"
-              style={{ width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+              style={{ width: '100%', padding: '0.7rem 0.875rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
               onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
+              onBlur={e => (e.currentTarget.style.borderColor = C.border)}
             />
           </div>
 
@@ -200,17 +200,17 @@ export default function BroadcastsPage() {
               maxLength={500}
               rows={4}
               placeholder="Write your announcement here..."
-              style={{ width: '100%', padding: '0.7rem 0.875rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: C.primary, lineHeight: 1.6 }}
+              style={{ width: '100%', padding: '0.7rem 0.875rem', border: `1.5px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: C.primary, lineHeight: 1.6 }}
               onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
+              onBlur={e => (e.currentTarget.style.borderColor = C.border)}
             />
           </div>
 
           {/* Preview */}
           {(title || message) && (
-            <div style={{ backgroundColor: C.gray50, borderRadius: '0.625rem', padding: '1rem', marginBottom: '1.25rem', border: '1px solid #e5e7eb' }}>
+            <div style={{ backgroundColor: C.gray50, borderRadius: '0.625rem', padding: '1rem', marginBottom: '1.25rem', border: `1px solid ${C.border}` }}>
               <p style={{ fontSize: '0.72rem', fontWeight: '700', color: C.gray500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Preview</p>
-              <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', padding: '0.875rem', border: '1px solid #e5e7eb' }}>
+              <div style={{ backgroundColor: C.surface, borderRadius: '0.5rem', padding: '0.875rem', border: `1px solid ${C.border}` }}>
                 <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                   {title || "Title..."}
                 </p>
@@ -227,7 +227,7 @@ export default function BroadcastsPage() {
             disabled={sending || !title.trim() || !message.trim()}
             style={{
               width: '100%', padding: '0.875rem',
-              backgroundColor: sending || !title.trim() || !message.trim() ? '#e5e7eb' : C.accent,
+              backgroundColor: sending || !title.trim() || !message.trim() ? C.border : C.accent,
               color: sending || !title.trim() || !message.trim() ? C.gray500 : 'white',
               border: 'none', borderRadius: '0.625rem',
               fontWeight: '700', fontSize: '0.9rem',
@@ -247,8 +247,8 @@ export default function BroadcastsPage() {
         </div>
 
         {/* Broadcast History */}
-        <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${C.border}` }}>
             <h2 style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', margin: 0 }}>Past Broadcasts</h2>
             <p style={{ color: C.gray500, fontSize: '0.78rem', marginTop: '0.2rem' }}>Last 50 broadcasts sent</p>
           </div>
@@ -268,7 +268,7 @@ export default function BroadcastsPage() {
               {broadcasts.map((b, idx) => {
                 const meta = audienceMeta(b.audience);
                 return (
-                  <div key={b._id} style={{ padding: '1.1rem 1.5rem', borderBottom: idx < broadcasts.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                  <div key={b._id} style={{ padding: '1.1rem 1.5rem', borderBottom: idx < broadcasts.length - 1 ? `1px solid ${C.border}` : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       <p style={{ fontWeight: '700', color: C.primary, fontSize: '0.875rem', margin: 0, flex: 1 }}>
                         {b.title}
@@ -288,7 +288,7 @@ export default function BroadcastsPage() {
                         → {b.sentCount} user{b.sentCount !== 1 ? "s" : ""}
                       </span>
                       {b.sentByName && (
-                        <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
+                        <span style={{ fontSize: '0.72rem', color: C.gray500 }}>
                           by {b.sentByName}
                         </span>
                       )}

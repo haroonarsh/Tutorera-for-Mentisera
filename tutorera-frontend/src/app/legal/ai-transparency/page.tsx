@@ -19,7 +19,7 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "AI & Algorithmic Transparency Policy | TUTORERA",
+  title: "AI & Algorithmic Transparency Policy",
   description:
     "How TUTORERA uses algorithms, match scores, ranking signals, and automated moderation to connect students and tutors fairly and transparently.",
   alternates: {

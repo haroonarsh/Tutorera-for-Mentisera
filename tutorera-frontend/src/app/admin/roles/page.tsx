@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft, RefreshCw, CheckCircle, AlertCircle, Users, Key, Search, Edit3, X, Lock } from "lucide-react";
 import api from "@/lib/axios";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface AdminUser {
   _id: string;
@@ -121,18 +122,18 @@ export default function AdminRolesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <Link href="/admin" style={{ color: "#64748b", textDecoration: "none", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <Link href="/admin" style={{ color: TEXT_COLORS.muted, textDecoration: "none", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
               <ArrowLeft size={14} /> Control Tower
             </Link>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ color: "#64748b", fontSize: "0.85rem" }}>System Governance</span>
-            <span style={{ color: "#cbd5e1" }}>/</span>
-            <span style={{ color: "#0f172a", fontSize: "0.85rem", fontWeight: 600 }}>Roles & RBAC</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ color: TEXT_COLORS.muted, fontSize: "0.85rem" }}>System Governance</span>
+            <span style={{ color: UI_COLORS.border }}>/</span>
+            <span style={{ color: TEXT_COLORS.body, fontSize: "0.85rem", fontWeight: 600 }}>Roles & RBAC</span>
           </div>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 700, color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Key size={26} color="#0329b2" /> Role-Based Access Control (RBAC) Console
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 700, color: TEXT_COLORS.body, margin: 0, display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <Key size={26} color={UI_COLORS.accent} /> Role-Based Access Control (RBAC) Console
           </h1>
-          <p style={{ color: "#64748b", margin: "0.25rem 0 0", fontSize: "0.88rem" }}>
+          <p style={{ color: TEXT_COLORS.muted, margin: "0.25rem 0 0", fontSize: "0.88rem" }}>
             Enforce least-privilege security across 11 functional domains: Control Tower, Finance, T&S, Tutor Ops, and Student Success.
           </p>
         </div>
@@ -145,10 +146,10 @@ export default function AdminRolesPage() {
             alignItems: "center",
             gap: "0.4rem",
             padding: "0.55rem 0.95rem",
-            background: "#fff",
-            border: "1px solid #e2e8f0",
+            background: UI_COLORS.surface,
+            border: `1px solid ${UI_COLORS.border}`,
             borderRadius: "7px",
-            color: "#334155",
+            color: TEXT_COLORS.secondary,
             fontSize: "0.83rem",
             cursor: "pointer",
             fontWeight: 500,
@@ -162,10 +163,10 @@ export default function AdminRolesPage() {
         <div
           style={{
             padding: "0.9rem 1.25rem",
-            background: statusMessage.type === "success" ? "#f0fdf4" : "#fef2f2",
-            border: `1px solid ${statusMessage.type === "success" ? "#86efac" : "#fca5a5"}`,
+            background: statusMessage.type === "success" ? STATUS_COLORS.success.bg : STATUS_COLORS.danger.bg,
+            border: `1px solid ${statusMessage.type === "success" ? STATUS_COLORS.success.border : STATUS_COLORS.danger.border}`,
             borderRadius: "8px",
-            color: statusMessage.type === "success" ? "#166534" : "#991b1b",
+            color: statusMessage.type === "success" ? STATUS_COLORS.success.color : STATUS_COLORS.danger.color,
             marginBottom: "1.25rem",
             display: "flex",
             alignItems: "center",
@@ -179,23 +180,23 @@ export default function AdminRolesPage() {
       )}
 
       {/* Admin Users Roster */}
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", overflow: "hidden", marginBottom: "2rem", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-        <div style={{ padding: "1.1rem 1.25rem", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div style={{ background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: "10px", overflow: "hidden", marginBottom: "2rem", boxShadow: UI_COLORS.shadowCard }}>
+        <div style={{ padding: "1.1rem 1.25rem", borderBottom: `1px solid ${STATUS_COLORS.neutral.bg}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Users size={18} color="#0329b2" />
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+            <Users size={18} color={UI_COLORS.accent} />
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: TEXT_COLORS.body, margin: 0 }}>
               Authorized Admin Personnel ({filteredUsers.length})
             </h2>
           </div>
 
           <div style={{ position: "relative", minWidth: "240px" }}>
-            <Search size={14} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+            <Search size={14} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: TEXT_COLORS.muted }} />
             <input
               type="text"
               placeholder="Search by name, email, or role..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "0.45rem 0.75rem 0.45rem 2.2rem", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.83rem" }}
+              style={{ width: "100%", padding: "0.45rem 0.75rem 0.45rem 2.2rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.83rem" }}
             />
           </div>
         </div>
@@ -203,7 +204,7 @@ export default function AdminRolesPage() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
+              <tr style={{ background: STATUS_COLORS.neutral.bg, borderBottom: `1px solid ${UI_COLORS.border}`, color: TEXT_COLORS.muted }}>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Team Member</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Assigned Role</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Role Scope</th>
@@ -214,7 +215,7 @@ export default function AdminRolesPage() {
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+                  <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: TEXT_COLORS.muted }}>
                     No administrative personnel match your search.
                   </td>
                 </tr>
@@ -224,17 +225,17 @@ export default function AdminRolesPage() {
                   const permCount = user.adminPermissions?.length ?? (data?.rolePermissions[role]?.length || 0);
 
                   return (
-                    <tr key={user._id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <tr key={user._id} style={{ borderBottom: `1px solid ${STATUS_COLORS.neutral.bg}` }}>
                       <td style={{ padding: "0.75rem 1rem" }}>
-                        <div style={{ fontWeight: 600, color: "#0f172a" }}>{user.name}</div>
-                        <div style={{ fontSize: "0.78rem", color: "#64748b" }}>{user.email}</div>
+                        <div style={{ fontWeight: 600, color: TEXT_COLORS.body }}>{user.name}</div>
+                        <div style={{ fontSize: "0.78rem", color: TEXT_COLORS.muted }}>{user.email}</div>
                       </td>
                       <td style={{ padding: "0.75rem 1rem" }}>
                         <span
                           style={{
-                            background: role === "super_admin" ? "#eff6ff" : "#f1f5f9",
-                            color: role === "super_admin" ? "#1e40af" : "#334155",
-                            border: `1px solid ${role === "super_admin" ? "#bfdbfe" : "#e2e8f0"}`,
+                            background: role === "super_admin" ? UI_COLORS.accentLight : STATUS_COLORS.neutral.bg,
+                            color: role === "super_admin" ? STATUS_COLORS.info.color : TEXT_COLORS.secondary,
+                            border: `1px solid ${role === "super_admin" ? STATUS_COLORS.info.border : UI_COLORS.border}`,
                             padding: "0.2rem 0.6rem",
                             borderRadius: "999px",
                             fontSize: "0.75rem",
@@ -245,11 +246,11 @@ export default function AdminRolesPage() {
                           {role.replace(/_/g, " ")}
                         </span>
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#64748b", maxWidth: "280px", fontSize: "0.8rem" }}>
+                      <td style={{ padding: "0.75rem 1rem", color: TEXT_COLORS.muted, maxWidth: "280px", fontSize: "0.8rem" }}>
                         {ROLE_DESCRIPTIONS[role] || "Custom scoped permissions."}
                       </td>
                       <td style={{ padding: "0.75rem 1rem" }}>
-                        <span style={{ background: "#ecfdf5", color: "#059669", padding: "0.15rem 0.5rem", borderRadius: "4px", fontSize: "0.75rem", fontWeight: 600 }}>
+                        <span style={{ background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, padding: "0.15rem 0.5rem", borderRadius: "4px", fontSize: "0.75rem", fontWeight: 600 }}>
                           {permCount} capabilities
                         </span>
                       </td>
@@ -261,8 +262,8 @@ export default function AdminRolesPage() {
                             alignItems: "center",
                             gap: "0.3rem",
                             padding: "0.35rem 0.75rem",
-                            background: "#0329b2",
-                            color: "#fff",
+                            background: UI_COLORS.accent,
+                            color: UI_COLORS.surface,
                             border: "none",
                             borderRadius: "5px",
                             fontSize: "0.78rem",
@@ -283,8 +284,8 @@ export default function AdminRolesPage() {
       </div>
 
       {/* Role Catalog Cards */}
-      <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <ShieldCheck size={20} color="#059669" /> Pre-Configured Role Matrix
+      <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT_COLORS.body, marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <ShieldCheck size={20} color={STATUS_COLORS.success.color} /> Pre-Configured Role Matrix
       </h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
         {data?.availableRoles.map((role) => {
@@ -293,27 +294,27 @@ export default function AdminRolesPage() {
             <div
               key={role}
               style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
+                background: UI_COLORS.surface,
+                border: `1px solid ${UI_COLORS.border}`,
                 borderRadius: "8px",
                 padding: "1rem",
                 boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a", textTransform: "uppercase" }}>
+                <span style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT_COLORS.body, textTransform: "uppercase" }}>
                   {role.replace(/_/g, " ")}
                 </span>
-                <span style={{ fontSize: "0.72rem", background: "#eff6ff", color: "#1e40af", padding: "0.15rem 0.4rem", borderRadius: "4px", fontWeight: 600 }}>
+                <span style={{ fontSize: "0.72rem", background: UI_COLORS.accentLight, color: STATUS_COLORS.info.color, padding: "0.15rem 0.4rem", borderRadius: "4px", fontWeight: 600 }}>
                   {perms.length} perms
                 </span>
               </div>
-              <p style={{ fontSize: "0.78rem", color: "#64748b", margin: "0 0 0.6rem", lineHeight: 1.4 }}>
+              <p style={{ fontSize: "0.78rem", color: TEXT_COLORS.muted, margin: "0 0 0.6rem", lineHeight: 1.4 }}>
                 {ROLE_DESCRIPTIONS[role] || "Functional domain operator role."}
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", maxHeight: "80px", overflowY: "auto" }}>
                 {perms.map((p) => (
-                  <span key={p} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", fontSize: "0.68rem", padding: "0.1rem 0.35rem", borderRadius: "3px" }}>
+                  <span key={p} style={{ background: STATUS_COLORS.neutral.bg, color: TEXT_COLORS.muted, border: `1px solid ${UI_COLORS.border}`, fontSize: "0.68rem", padding: "0.1rem 0.35rem", borderRadius: "3px" }}>
                     {p}
                   </span>
                 ))}
@@ -339,7 +340,7 @@ export default function AdminRolesPage() {
         >
           <div
             style={{
-              background: "#fff",
+              background: UI_COLORS.surface,
               borderRadius: "12px",
               width: "100%",
               maxWidth: "600px",
@@ -351,14 +352,14 @@ export default function AdminRolesPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
               <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT_COLORS.body, margin: 0 }}>
                   Assign Role to {selectedUser.name}
                 </h2>
-                <span style={{ fontSize: "0.78rem", color: "#64748b" }}>{selectedUser.email}</span>
+                <span style={{ fontSize: "0.78rem", color: TEXT_COLORS.muted }}>{selectedUser.email}</span>
               </div>
               <button
                 onClick={() => setSelectedUser(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_COLORS.muted }}
               >
                 <X size={20} />
               </button>
@@ -366,13 +367,13 @@ export default function AdminRolesPage() {
 
             <form onSubmit={handleSaveUserRole}>
               <div style={{ marginBottom: "1.25rem" }}>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: "0.35rem" }}>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Select Operating Role
                 </label>
                 <select
                   value={targetRole}
                   onChange={(e) => handleRoleChange(e.target.value)}
-                  style={{ width: "100%", padding: "0.6rem 0.75rem", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.9rem" }}
+                  style={{ width: "100%", padding: "0.6rem 0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.9rem" }}
                 >
                   {data?.availableRoles.map((r) => (
                     <option key={r} value={r}>
@@ -384,15 +385,15 @@ export default function AdminRolesPage() {
 
               <div style={{ marginBottom: "1.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#334155" }}>
+                  <label style={{ fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary }}>
                     Granted Granular Permissions ({customPermissions.length})
                   </label>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Click checkbox to toggle fine-grained overrides</span>
+                  <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>Click checkbox to toggle fine-grained overrides</span>
                 </div>
 
                 <div
                   style={{
-                    border: "1px solid #e2e8f0",
+                    border: `1px solid ${UI_COLORS.border}`,
                     borderRadius: "8px",
                     padding: "0.75rem",
                     maxHeight: "220px",
@@ -400,11 +401,11 @@ export default function AdminRolesPage() {
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
                     gap: "0.4rem",
-                    background: "#f8fafc",
+                    background: STATUS_COLORS.neutral.bg,
                   }}
                 >
                   {data?.allPermissions.map((perm) => (
-                    <label key={perm} style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.78rem", color: "#334155", cursor: "pointer" }}>
+                    <label key={perm} style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.78rem", color: TEXT_COLORS.secondary, cursor: "pointer" }}>
                       <input
                         type="checkbox"
                         checked={customPermissions.includes(perm)}
@@ -420,7 +421,7 @@ export default function AdminRolesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedUser(null)}
-                  style={{ padding: "0.55rem 1rem", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.85rem", cursor: "pointer" }}
+                  style={{ padding: "0.55rem 1rem", background: STATUS_COLORS.neutral.bg, border: `1px solid ${UI_COLORS.border}`, borderRadius: "6px", fontSize: "0.85rem", cursor: "pointer" }}
                 >
                   Cancel
                 </button>
@@ -432,8 +433,8 @@ export default function AdminRolesPage() {
                     alignItems: "center",
                     gap: "0.4rem",
                     padding: "0.55rem 1.25rem",
-                    background: "#0329b2",
-                    color: "#fff",
+                    background: UI_COLORS.accent,
+                    color: UI_COLORS.surface,
                     border: "none",
                     borderRadius: "6px",
                     fontSize: "0.85rem",

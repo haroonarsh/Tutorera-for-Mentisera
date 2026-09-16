@@ -2,11 +2,13 @@
 import { UI_COLORS } from "@/lib/brand";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
+import { getCitiesForCountry } from "@/lib/location";
 
 const C = UI_COLORS;
 
@@ -16,8 +18,6 @@ export default function ProfilePage() {
   const guardStatus = useAppGuard();
   const router = useRouter();
 
-  const userCountryCode = user?.countryCode || "PK";
-  const cities = (geo.countries?.find(c => c.code === userCountryCode)?.cities?.map(ct => ct.name)) || ["Other"];
   const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
@@ -28,8 +28,23 @@ export default function ProfilePage() {
 
   // Personal info form
   const [personalForm, setPersonalForm] = useState({
-    name: "", phone: "", city: "",
+    name: "", phone: "", city: "", address: "", countryCode: "PK", countryName: "Pakistan", postalCode: "", lat: null as number | null, lng: null as number | null
   });
+
+  const userCountryCode = personalForm.countryCode || user?.countryCode || "PK";
+  const [cities, setCities] = useState<string[]>(() => getCitiesForCountry(userCountryCode).map(ct => ct.name));
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get(`/geo/cities?country=${encodeURIComponent(userCountryCode)}&limit=100`)
+      .then((res) => {
+        if (cancelled) return;
+        const remote = (res.data?.cities || []).map((c: { name: string }) => c.name);
+        setCities(remote.length > 0 ? remote : getCitiesForCountry(userCountryCode).map(ct => ct.name));
+      })
+      .catch(() => { if (!cancelled) setCities(getCitiesForCountry(userCountryCode).map(ct => ct.name)); });
+    return () => { cancelled = true; };
+  }, [userCountryCode]);
 
   // Tutor profile form
   const [tutorForm, setTutorForm] = useState({
@@ -41,6 +56,9 @@ export default function ProfilePage() {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [cnicFrontFile, setCnicFrontFile] = useState<File | null>(null);
+  const [cnicBackFile, setCnicBackFile] = useState<File | null>(null);
+  const [videoIntroFile, setVideoIntroFile] = useState<File | null>(null);
   const [tutorProfile, setTutorProfile] = useState<{
     verificationStatus?: string;
     isVerified?: boolean;
@@ -58,12 +76,24 @@ export default function ProfilePage() {
               name: u.name || "",
               phone: u.phone || "",
               city: u.city || "",
+              address: u.address || "",
+              countryCode: u.countryCode || "PK",
+              countryName: u.countryName || "Pakistan",
+              postalCode: u.postalCode || "",
+              lat: u.location?.coordinates?.[1] || null,
+              lng: u.location?.coordinates?.[0] || null,
             });
         }).catch(() => {
       setPersonalForm({
         name: user.name || "",
         phone: "",
         city: "",
+        address: "",
+        countryCode: user.countryCode || "PK",
+        countryName: user.countryName || "Pakistan",
+        postalCode: "",
+        lat: null,
+        lng: null,
       });
     });
 
@@ -107,11 +137,17 @@ export default function ProfilePage() {
         formData.append("avatar", avatarFile);
         await api.post("/upload/avatar", formData);
       }
-      // 2. Update personal info (name, phone, city)
+      // 2. Update personal info (name, phone, city, address, country)
       await api.patch("/auth/update-profile", {
         name: personalForm.name,
         phone: personalForm.phone,
         city: personalForm.city,
+        address: personalForm.address,
+        countryCode: personalForm.countryCode,
+        countryName: personalForm.countryName,
+        postalCode: personalForm.postalCode,
+        lat: personalForm.lat,
+        lng: personalForm.lng,
       });
 
       setSuccess("Profile updated successfully!");
@@ -126,6 +162,14 @@ export default function ProfilePage() {
   const handleTutorSave = async () => {
     setSaving(true); setError(""); setSuccess("");
     try {
+      if (cnicFrontFile || cnicBackFile || videoIntroFile) {
+        const formData = new FormData();
+        if (cnicFrontFile) formData.append("cnicFront", cnicFrontFile);
+        if (cnicBackFile) formData.append("cnicBack", cnicBackFile);
+        if (videoIntroFile) formData.append("videoIntro", videoIntroFile);
+        await api.post("/upload/verification", formData);
+      }
+
       await api.post("/tutors/profile", {
         ...tutorForm,
         hourlyRate: Number(tutorForm.hourlyRate),
@@ -164,7 +208,7 @@ export default function ProfilePage() {
           <div style={{ position: 'relative' }}>
             <div style={{ width: '90px', height: '90px', borderRadius: '50%', backgroundColor: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '800', color: 'white', border: '3px solid rgba(255,255,255,0.2)', overflow: 'hidden' }}>
               {avatarPreview || user.avatar ? (
-                <img src={avatarPreview || user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={avatarPreview || user.avatar} alt={user.name ? `${user.name}'s profile photo` : "Your profile photo"} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : user.name.charAt(0).toUpperCase()}
             </div>
             <label style={{ position: 'absolute', bottom: 0, right: 0, width: '28px', height: '28px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid white' }}>
@@ -240,17 +284,30 @@ export default function ProfilePage() {
                 <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.3rem' }}>Email cannot be changed</p>
               </div>
 
-              {/* Phone + City */}
+              {/* Phone */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  <Phone size={15} /> Phone
+                </label>
+                <input value={personalForm.phone} onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                  placeholder="03001234567"
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              </div>
+
+              {/* Country + City */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                    <Phone size={15} /> Phone
+                    <MapPin size={15} /> Country
                   </label>
-                  <input value={personalForm.phone} onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
-                    placeholder="03001234567"
-                    style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                  <select title="Country" value={personalForm.countryCode} onChange={e => setPersonalForm({ ...personalForm, countryCode: e.target.value, countryName: e.target.options[e.target.selectedIndex].text, city: "" })}
+                    style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+                    {geo.countries?.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
@@ -264,6 +321,52 @@ export default function ProfilePage() {
                     {cities.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  <MapPin size={15} /> Address / Locality
+                </label>
+                <input value={personalForm.address} onChange={e => setPersonalForm({ ...personalForm, address: e.target.value })}
+                  placeholder="e.g. DHA Phase 1"
+                  style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                  onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              </div>
+
+              {/* Postal Code & Auto Location */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  <MapPin size={15} /> Postal / Zip Code (Used for nearby matches)
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input value={personalForm.postalCode} onChange={e => setPersonalForm({ ...personalForm, postalCode: e.target.value })}
+                    placeholder="Enter postal code"
+                    style={{ flex: 1, padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', color: C.primary }}
+                    onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                  <button type="button" onClick={async () => {
+                    if (!personalForm.postalCode) return;
+                    try {
+                      const res = await api.get(`/geo/postal-lookup?q=${personalForm.postalCode}&country=${personalForm.countryCode}`);
+                      if (res.data.results && res.data.results.length > 0) {
+                        const loc = res.data.results[0];
+                        setPersonalForm({ ...personalForm, lat: loc.lat, lng: loc.lng, city: loc.placeName || personalForm.city });
+                        alert(`Location found: ${loc.placeName}`);
+                      } else {
+                        alert("Could not find location for this postal code.");
+                      }
+                    } catch (e) {
+                      alert("Error fetching location data.");
+                    }
+                  }} style={{ padding: '0 1rem', backgroundColor: C.accentLight, color: C.accent, border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>
+                    Find Location
+                  </button>
+                </div>
+                {personalForm.lat && personalForm.lng && (
+                  <p style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.4rem' }}>✅ Geospatial coordinates captured.</p>
+                )}
               </div>
 
               {/* Role badge */}
@@ -294,6 +397,9 @@ export default function ProfilePage() {
                 <div>
                   <p style={{ fontWeight: '700', color: '#92400e', fontSize: '0.9rem' }}>Verification Pending</p>
                   <p style={{ color: '#a16207', fontSize: '0.8rem' }}>Upload your CNIC and degree from the dashboard to speed up verification.</p>
+                  <Link href="/tutor/application-status" style={{ color: '#92400e', fontSize: '0.8rem', fontWeight: '700', textDecoration: 'underline' }}>
+                    View detailed status of each check
+                  </Link>
                 </div>
               </div>
             )}
@@ -413,6 +519,31 @@ export default function ProfilePage() {
                     <option value="">Select city</option>
                     {cities.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+
+                {/* Verification Documents */}
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: '700', color: C.primary, marginBottom: '1rem' }}>Verification Documents</h3>
+                  <p style={{ fontSize: '0.8rem', color: C.gray500, marginBottom: '1rem' }}>Updating these documents will temporarily pause your visibility until approved by our team.</p>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Front Image</label>
+                      <input type="file" accept="image/*" onChange={e => setCnicFrontFile(e.target.files?.[0] || null)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Back Image</label>
+                      <input type="file" accept="image/*" onChange={e => setCnicBackFile(e.target.files?.[0] || null)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Demo Video (Optional)</label>
+                    <input type="file" accept="video/*" onChange={e => setVideoIntroFile(e.target.files?.[0] || null)}
+                      style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
+                  </div>
                 </div>
 
                 <button onClick={handleTutorSave} disabled={saving}

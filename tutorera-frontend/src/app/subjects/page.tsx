@@ -2,7 +2,6 @@
 import { UI_COLORS } from "@/lib/brand";
 import Link from "next/link";
 import { slugify } from "@/lib/tutor-directory";
-import { formatPKR } from "@/lib/site";
 
 const C = UI_COLORS;
 
@@ -53,7 +52,7 @@ export default function SubjectsPage() {
           Subjects We Cover
         </h1>
         <p style={{ color: '#9ca3af', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto' }}>
-          Find expert tutors across major subjects taught in Pakistan. Tutor rates are shown in PKR before booking.
+          Find expert tutors across core subjects, global curricula, and locally relevant learning pathways. Rates are shown in the selected market currency.
         </p>
       </section>
 
@@ -76,7 +75,7 @@ export default function SubjectsPage() {
                   ))}
                 </div>
                 <p style={{ color: C.gray500, fontSize: '0.85rem', lineHeight: 1.65, marginTop: '1rem' }}>
-                  Pricing varies by tutor, level, mode, and availability. Final agreed rates are displayed in PKR before checkout; example available tutor rates may start from {formatPKR(1500, "hour")}.
+                  Pricing varies by tutor, level, mode, availability, and market. The final agreed rate is shown in the request currency before any enabled checkout.
                 </p>
               </div>
             ))}

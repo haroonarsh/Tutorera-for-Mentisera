@@ -152,13 +152,13 @@ export async function generateMetadata({
   const schedule = COUNTRY_SCHEDULES[code.toLowerCase()];
   if (!schedule) {
     return {
-      title: "Jurisdiction Legal Schedule | TUTORERA",
+      title: "Jurisdiction Legal Schedule",
       description: "Jurisdiction-specific legal and regulatory addendum for TUTORERA global marketplace.",
     };
   }
 
   return {
-    title: `${schedule.flag} ${schedule.name} Legal Schedule & Statutory Terms | TUTORERA`,
+    title: `${schedule.flag} ${schedule.name} Legal Schedule & Statutory Terms`,
     description: `Specific consumer rights, dispute resolution, tax rules, and privacy regulations governing TUTORERA services in ${schedule.name}.`,
     alternates: {
       canonical: `/legal/country/${schedule.code}`,

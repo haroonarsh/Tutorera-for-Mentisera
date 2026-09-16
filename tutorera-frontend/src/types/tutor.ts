@@ -36,8 +36,11 @@ export interface TutorProfile {
   availability: { day: string; slots: string[]; _id: string }[];
   verificationStatus?: string;
   policeVerificationStatus?: string;
+  degreeVerificationStatus?: string;
   fullName?: string;
   matchScore?: number;
+  matchBreakdown?: Record<string, number>;
+  matchReasons?: string[];
   averageResponseMinutes?: number;
   responseTimeFormatted?: string;
   lastActiveAt?: string;

@@ -59,6 +59,8 @@ const cookieCategories = [
     desc: "Used to deliver relevant tutoring announcements and prevent showing the same promotional notification repeatedly. We do NOT use marketing cookies on accounts designated for minor learners.",
     examples: [
       { name: "_fbp", provider: "Meta", duration: "90 days", purpose: "Measures conversion effectiveness of educational campaigns." },
+      { name: "_gcl_au", provider: "Google", duration: "90 days", purpose: "Tracks advertising conversion and supports Google AdSense ad delivery." },
+      { name: "__gads", provider: "Google AdSense", duration: "13 months", purpose: "Serves relevant ads and measures ad performance. Uses the ca-pub-2559940686225219 publisher ID." },
       { name: "promo_dismissed", provider: "TUTORERA", duration: "60 days", purpose: "Prevents displaying educational promo banners repeatedly." },
     ]
   }
@@ -88,6 +90,7 @@ export default function CookiePolicyPage() {
       localStorage.setItem("tutorera_cookie_consent", JSON.stringify(preferences));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      window.dispatchEvent(new CustomEvent("tutorera-consent-updated"));
     } catch {
       // fallback
     }

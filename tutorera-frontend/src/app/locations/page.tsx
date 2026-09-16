@@ -4,7 +4,7 @@ import { CITIES } from "@/lib/tutor-directory";
 
 export const metadata: Metadata = {
   title: "Tutors by Market and Location",
-  description: "Find tutors online worldwide or explore locally enabled tutoring markets in Pakistan, the UAE, and the UK.",
+  description: "Find tutors online worldwide or explore locally enabled tutoring markets in Pakistan, the United States, India, Saudi Arabia, the UAE, and the UK.",
   alternates: { canonical: "/locations" },
 };
 
@@ -20,7 +20,10 @@ export default function LocationsPage() {
           {[
             { name: "Online worldwide", description: "Find tutors across timezones and curricula.", href: "/online-tutors" },
             { name: "Pakistan", description: "Live marketplace with online and locally enabled home tuition.", href: "/pk/home-tutors/lahore" },
-            { name: "United Arab Emirates", description: "Discovery beta for profiles, requests, offers, and negotiation.", href: "/ae/tutors" },
+            { name: "United States", description: "Live marketplace for profiles, requests, offers, and negotiation.", href: "/us/tutors" },
+            { name: "India", description: "Live marketplace for profiles, requests, offers, and negotiation.", href: "/in/tutors" },
+            { name: "Saudi Arabia", description: "Live marketplace for profiles, requests, offers, and negotiation.", href: "/sa/tutors" },
+            { name: "United Arab Emirates", description: "Live marketplace for profiles, requests, offers, and negotiation.", href: "/ae/tutors" },
             { name: "United Kingdom", description: "Discovery beta for profiles, requests, offers, and negotiation.", href: "/gb/tutors" },
           ].map((market) => (
             <Link key={market.name} href={market.href} style={{ background: "#021550", border: "1px solid #18306f", borderRadius: 12, padding: "1.4rem", color: "white", textDecoration: "none" }}>

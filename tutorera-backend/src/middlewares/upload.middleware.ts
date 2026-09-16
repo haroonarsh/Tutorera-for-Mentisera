@@ -36,6 +36,12 @@ export const uploadVideo = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB — video intros need real headroom
 });
 
+export const uploadImage = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — general-purpose image uploads (e.g. blog cover images)
+});
+
 // For the combined verification route (cnic + degree + videoIntro in one request),
 // multer needs one instance whose limit covers the largest file among the fields.
 export const uploadVerification = multer({

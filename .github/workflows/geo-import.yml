@@ -1,0 +1,59 @@
+name: GeoNames Data Import
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write to the database (unchecked = dry run, counts only)"
+        type: boolean
+        default: false
+      dataset:
+        description: "GeoNames dataset to import"
+        type: choice
+        options:
+          - cities15000
+          - cities5000
+          - cities1000
+        default: cities15000
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Download GeoNames dataset
+        run: |
+          curl -sSL -o /tmp/geonames.zip "https://download.geonames.org/export/dump/${{ inputs.dataset }}.zip"
+          unzip -o /tmp/geonames.zip -d /tmp/geonames
+
+      - name: Run import (${{ inputs.apply && 'APPLY' || 'DRY RUN' }})
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: |
+          ARGS="--file=/tmp/geonames/${{ inputs.dataset }}.txt"
+          if [ "${{ inputs.apply }}" = "true" ]; then ARGS="$ARGS --apply"; fi
+          node dist/scripts/importGeoNames.js $ARGS | tee /tmp/import-result.json
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### GeoNames Import (${{ inputs.apply && 'APPLY' || 'DRY RUN' }})" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/import-result.json >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

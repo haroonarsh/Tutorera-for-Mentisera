@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay through authorized platform checkout.",
   alternates: { canonical: "/online-tutors" },
   openGraph: {
-    title: "Find Verified Online Tutors Worldwide | TUTORERA",
+    title: "Find Verified Online Tutors Worldwide",
     description:
       "Connect with qualified online tutors worldwide across Cambridge, IB, GCSE, and board curricula with transparent pricing.",
     url: `${SITE_URL}/online-tutors`,

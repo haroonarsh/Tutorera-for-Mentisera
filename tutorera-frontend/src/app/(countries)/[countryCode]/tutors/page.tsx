@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors, CITIES } from "@/lib/tutor-directory";
-import { getCountryByCode } from "@/lib/location";
-import { MARKETS, getMarketByRoute } from "@/lib/markets";
+import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
+import { SeoEligibilityService } from "@/lib/seo-eligibility";
 
 interface Props {
   params: Promise<{ countryCode: string }>;
@@ -15,59 +15,44 @@ interface Props {
 
 const value = (input: string | string[] | undefined) => (typeof input === "string" ? input : "");
 
-export function generateStaticParams() {
-  return Object.values(MARKETS).map((market) => ({ countryCode: market.route }));
-}
-
-function resolveMarket(route: string) {
-  const normalized = route.toLowerCase();
-  if (normalized === "gb") permanentRedirect("/uk/tutors");
-  return getMarketByRoute(normalized);
+export async function generateStaticParams() {
+  return liveCountryCodeParams();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode } = await params;
-  const market = getMarketByRoute(countryCode);
-  if (!market) return { title: "Tutors Directory", robots: { index: false, follow: true } };
-
-  const country = getCountryByCode(market.isoCountryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) return { title: "Tutors Directory", robots: { index: false, follow: true } };
 
-  const title = `Find Tutors in ${market.countryName} | Online & Home Tuition`;
-  const description = `Post your tutoring requirement in ${market.countryName}, compare tutor offers, and browse approved tutors. Prices and budgets use ${market.currency}; online tuition is available worldwide${market.homeTuitionEnabled ? " and local home tuition is available where eligible" : ""}.`;
-  const canonical = `/${market.route}/tutors`;
+  const title = `Find Verified Tutors in ${country.name} | Online & Home Tuition`;
+  const description = `Connect with verified tutors in ${country.name} (${country.currency}). Compare rates, explore ${country.curricula.slice(0, 3).join(", ")} curricula, and book with verified satisfaction guarantee.`;
+  const canonical = `/${countryCode.toLowerCase()}/tutors`;
+  const { total } = await fetchTutors({ countryCode: country.code }, 1);
+  const eligibility = SeoEligibilityService.evaluatePage({ activeApprovedTutors: total, homeTuitionEnabled: true });
+  const robots = eligibility === "INDEX" ? "index, follow" : "noindex, follow";
 
   return {
     title,
     description,
-    alternates: {
-      canonical,
-      languages: {
-        [market.locale]: `${SITE_URL}${canonical}`,
-        "x-default": `${SITE_URL}/tutors`,
-      },
-    },
+    robots,
+    alternates: { canonical },
     openGraph: {
-      title,
+      title: `${title} | TUTORERA`,
       description,
       url: `${SITE_URL}${canonical}`,
-      locale: market.locale.replace("-", "_"),
     },
   };
 }
 
 export default async function CountryTutorsPage({ params, searchParams }: Props) {
   const { countryCode } = await params;
-  const market = resolveMarket(countryCode);
-  if (!market) notFound();
-
-  const country = getCountryByCode(market.isoCountryCode);
+  const country = await resolveCountry(countryCode);
   if (!country) notFound();
 
   const queryParams = await searchParams;
   const initialFilters: Partial<FiltersState> = {
     search: value(queryParams.search),
-    country: market.countryName,
+    country: country.name,
     city: value(queryParams.city),
     level: value(queryParams.level),
     teachingMode: value(queryParams.teachingMode),
@@ -84,8 +69,8 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
     {
       search: initialFilters.search,
       city: initialFilters.city,
-      countryCode: market.isoCountryCode,
-      country: market.countryName,
+      countryCode: country.code,
+      country: country.name,
       level: initialFilters.level,
       subject,
       teachingMode: initialFilters.teachingMode,
@@ -96,63 +81,58 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
     12
   );
 
-  const canonicalUrl = `${SITE_URL}/${market.route}/tutors`;
   const schema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `Tutors in ${market.countryName}`,
-    description: `Browse approved tutors serving the ${market.countryName} market. Student budgets and offers use ${market.currency}.`,
-    url: canonicalUrl,
-    inLanguage: market.locale,
-    about: {
-      "@type": "Service",
-      name: `TUTORERA tutoring marketplace in ${market.countryName}`,
-      areaServed: { "@type": "Country", name: market.countryName },
-      provider: { "@id": `${SITE_URL}/#organization` },
-    },
+    name: `Verified Tutors in ${country.name}`,
+    description: `Find verified online and home tutors in ${country.name} across ${country.curricula.join(", ")}.`,
+    url: `${SITE_URL}/${countryCode.toLowerCase()}/tutors`,
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
         { "@type": "ListItem", position: 2, name: "Tutors", item: `${SITE_URL}/tutors` },
-        { "@type": "ListItem", position: 3, name: market.countryName, item: canonicalUrl },
+        { "@type": "ListItem", position: 3, name: country.name, item: `${SITE_URL}/${countryCode.toLowerCase()}/tutors` },
       ],
     },
   };
 
-  const marketStatus = market.status === "LIVE" ? "Live market" : "Discovery beta";
-  const tuitionModes = [
-    market.onlineTuitionEnabled ? "Online Tuition: worldwide" : null,
-    market.homeTuitionEnabled ? `Home Tuition: available locally in ${market.countryName}` : "Home Tuition: not yet enabled for this market",
-  ].filter(Boolean).join(" · ");
-
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      <section style={{ maxWidth: 1120, margin: "1.25rem auto 0", padding: "0 1.5rem" }} aria-label="Current TUTORERA market">
-        <div style={{ background: "#f8faff", border: "1px solid #dbe5ff", borderRadius: "14px", padding: "0.9rem 1rem", color: "#021550" }}>
-          <strong>You are viewing TUTORERA for {market.countryName} · {market.currency} ({market.currencySymbol})</strong>
-          <div style={{ marginTop: "0.3rem", fontSize: "0.88rem" }}>{marketStatus} · {tuitionModes}</div>
-          {!market.checkoutEnabled && (
-            <div style={{ marginTop: "0.3rem", fontSize: "0.85rem" }}>Online checkout is not yet available in this market. No payment option will be presented as live.</div>
-          )}
-        </div>
-      </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <div style={{ background: "#f8fafc", padding: "2rem 1.5rem", textAlign: "center", borderBottom: "1px solid #e2e8f0" }}>
+        <h1 style={{ fontSize: "2.5rem", fontWeight: 900, color: "#021550", margin: 0 }}>
+          Tutors in {country.name}
+        </h1>
+        <p style={{ maxWidth: 800, margin: "1rem auto 0", color: "#475569", fontSize: "1.1rem", lineHeight: 1.6 }}>
+          Connect with top-rated educators offering online tutoring and in-person home tuition across {country.name}. 
+          Explore verified profiles, compare subjects, and find the perfect match for your academic goals.
+        </p>
+      </div>
+
       <TutorsExplorer
         initialTutors={result.tutors}
-        initialPagination={{ total: result.total, page: result.page, pages: result.pages, limit: 12 }}
+        initialPagination={{
+          total: result.total,
+          page: result.page,
+          pages: result.pages,
+          limit: 12,
+        }}
         initialFilters={initialFilters}
-        title={`Find Tutors in ${market.countryName}`}
+        title={`Verified Tutors in ${country.name}`}
         subtitle={
           result.total
-            ? `${result.total} approved educators available for the ${market.countryName} market · budgets and offers in ${market.currency}`
-            : `Browse educators for ${country.curricula.slice(0, 3).join(", ")} and other subjects · budgets and offers in ${market.currency}`
+            ? `${result.total} verified educators available in ${country.name} (${country.currency})`
+            : `Browse verified educators in ${country.name} for ${country.curricula.slice(0, 3).join(", ")} and academic subjects`
         }
       />
-      {market.homeTuitionEnabled && country.cities && country.cities.length > 0 && (
+      {country.cities && country.cities.length > 0 && (
         <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>
           <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>
-            Explore Home Tuition Cities in {market.countryName}
+            Explore In-Person & Home Tuition Cities in {country.name}
           </h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
             {country.cities.map((city) => {
@@ -160,10 +140,26 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
               const hasDedicatedLanding = citySlug in CITIES;
               const href = hasDedicatedLanding
                 ? `/tutors/city/${citySlug}`
-                : `/${market.route}/tutors?city=${encodeURIComponent(city.name)}&teachingMode=in-person`;
+                : `/${countryCode.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`;
 
               return (
-                <Link key={city.id || city.name} href={href} style={{ background: "#f8faff", border: "1px solid #e2e8f0", borderRadius: "999px", padding: "0.45rem 1rem", fontSize: "0.85rem", fontWeight: 600, color: "#0329b2", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                <Link
+                  key={city.id || city.name}
+                  href={href}
+                  style={{
+                    background: "#f8faff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "999px",
+                    padding: "0.45rem 1rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    color: "#0329b2",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                  }}
+                >
                   {city.name} {hasDedicatedLanding ? "Tutors →" : ""}
                 </Link>
               );
@@ -171,8 +167,67 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           </div>
         </section>
       )}
-      <section style={{ maxWidth: 1120, margin: "0 auto 4rem", padding: "0 1.5rem", fontSize: "0.9rem" }}>
-        <Link href={market.legalSchedule}>View the {market.countryName} legal schedule</Link>
+
+      {/* Top Subjects List */}
+      <section style={{ maxWidth: 1120, margin: "2rem auto", padding: "0 1.5rem" }}>
+        <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>
+          Popular Subjects in {country.name}
+        </h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+          {["Mathematics", "Physics", "Chemistry", "Biology", "English", "Computer Science", "Economics", "Accounting", "Business Studies", "Urdu"].map((subject) => {
+            const slug = subject.toLowerCase().replace(/\s+/g, "-");
+            return (
+              <Link
+                key={subject}
+                href={`/tutors/subject/${slug}`}
+                style={{
+                  background: "white",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "999px",
+                  padding: "0.45rem 1rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#475569",
+                  textDecoration: "none",
+                }}
+              >
+                {subject}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Demand Hub Link */}
+      <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>
+        <div style={{
+          background: "linear-gradient(135deg, #021550, #0329b2)",
+          color: "white",
+          borderRadius: "1rem",
+          padding: "2rem",
+          textAlign: "center"
+        }}>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginBottom: "1rem" }}>
+            Are you a tutor in {country.name}?
+          </h2>
+          <p style={{ opacity: 0.9, marginBottom: "1.5rem", maxWidth: 600, margin: "0 auto 1.5rem" }}>
+            Browse active tuition requirements posted by students and parents in {country.name}. Submit your offers and start teaching today.
+          </p>
+          <Link
+            href={`/tuition-requests/${countryCode.toLowerCase()}`}
+            style={{
+              display: "inline-block",
+              background: "white",
+              color: "#0329b2",
+              padding: "0.75rem 2rem",
+              borderRadius: "999px",
+              fontWeight: 700,
+              textDecoration: "none"
+            }}
+          >
+            View Open Tuition Requests in {country.name} →
+          </Link>
+        </div>
       </section>
     </>
   );

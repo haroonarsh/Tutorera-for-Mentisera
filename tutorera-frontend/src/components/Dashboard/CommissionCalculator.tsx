@@ -6,14 +6,14 @@ import {
   TOTAL_FEE_PERCENT,
   MARKETPLACE_FEES,
 } from "@/lib/site";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { DashCard } from "./ui";
 
 const C = {
-  primary: "#021550",
-  accent: "#0329B2",
-  green: "#16a34a",
-  amber: "#d97706",
-  gray500: "#6b7280",
-  gray50: "#f9fafb",
+  primary: TEXT_COLORS.primary,
+  accent: UI_COLORS.accent,
+  green: TEXT_COLORS.success,
+  gray500: TEXT_COLORS.muted,
 };
 
 interface FeeBreakdown {
@@ -66,15 +66,15 @@ function BreakdownBar({ netPercent }: { netPercent: number }) {
   const fee = 100 - net;
   return (
     <div style={{ marginTop: 12 }}>
-      <div style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", background: "#f3f4f6" }}>
-        <div style={{ width: `${net}%`, background: "linear-gradient(90deg, #16a34a, #22c55e)", transition: "width 0.3s ease" }} />
-        <div style={{ width: `${fee}%`, background: "linear-gradient(90deg, #f87171, #ef4444)", transition: "width 0.3s ease" }} />
+      <div style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", background: UI_COLORS.gray50 }}>
+        <div style={{ width: `${net}%`, background: UI_COLORS.success, transition: "width 0.3s ease" }} />
+        <div style={{ width: `${fee}%`, background: TEXT_COLORS.danger, transition: "width 0.3s ease" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
         <span style={{ fontSize: "0.72rem", color: C.green, fontWeight: 600 }}>
           ✓ You keep {net}%
         </span>
-        <span style={{ fontSize: "0.72rem", color: "#ef4444", fontWeight: 600 }}>
+        <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.danger, fontWeight: 600 }}>
           TUTORERA {fee}%
         </span>
       </div>
@@ -90,8 +90,8 @@ interface ComparisonRow {
 
 function ComparisonTable({ rows, selected }: { rows: ComparisonRow[]; selected: number }) {
   return (
-    <div style={{ overflow: "hidden", borderRadius: 10, border: "1px solid #e5e7eb" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr", padding: "0.5rem 1rem", background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+    <div style={{ overflow: "hidden", borderRadius: 10, border: `1px solid ${UI_COLORS.border}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr", padding: "0.5rem 1rem", background: UI_COLORS.gray50, borderBottom: `1px solid ${UI_COLORS.border}` }}>
         {["Your Rate", "Net Earnings", "Difference"].map(h => (
           <span key={h} style={{ fontSize: "0.7rem", fontWeight: 700, color: C.gray500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</span>
         ))}
@@ -104,8 +104,8 @@ function ComparisonTable({ rows, selected }: { rows: ComparisonRow[]; selected: 
             display: "grid",
             gridTemplateColumns: "2fr 1fr 1.2fr",
             padding: "0.6rem 1rem",
-            background: isSelected ? "#f0fdf4" : i % 2 === 1 ? "#f9fafb" : "white",
-            borderBottom: i < rows.length - 1 ? "1px solid #f3f4f6" : "none",
+            background: isSelected ? STATUS_COLORS.success.bg : i % 2 === 1 ? UI_COLORS.gray50 : UI_COLORS.surface,
+            borderBottom: i < rows.length - 1 ? `1px solid ${UI_COLORS.border}` : "none",
           }}>
             <span style={{ fontSize: "0.85rem", fontWeight: isSelected ? "700" : "500", color: isSelected ? C.green : C.primary }}>
               PKR {r.rate.toLocaleString()}/hr {isSelected && "←"}
@@ -113,7 +113,7 @@ function ComparisonTable({ rows, selected }: { rows: ComparisonRow[]; selected: 
             <span style={{ fontSize: "0.85rem", fontWeight: "600", color: C.green }}>
               PKR {r.net.toLocaleString()}
             </span>
-            <span style={{ fontSize: "0.8rem", color: diff > 0 ? C.green : diff < 0 ? "#ef4444" : C.gray500 }}>
+            <span style={{ fontSize: "0.8rem", color: diff > 0 ? C.green : diff < 0 ? TEXT_COLORS.danger : C.gray500 }}>
               {i === 0 ? "—" : `${diff >= 0 ? "+" : ""}PKR ${diff.toLocaleString()}`}
             </span>
           </div>
@@ -162,7 +162,7 @@ export default function CommissionCalculator() {
 
       {/* ── How It Works banner ── */}
       <div style={{
-        background: "linear-gradient(135deg, #021550 0%, #0329B2 100%)",
+        background: `linear-gradient(135deg, ${UI_COLORS.primary} 0%, ${UI_COLORS.accent} 100%)`,
         borderRadius: 14,
         padding: "1.25rem 1.5rem",
         color: "white",
@@ -172,7 +172,7 @@ export default function CommissionCalculator() {
           <div>
             <p style={{ margin: "0 0 0.3rem", fontWeight: 700, fontSize: "0.9rem" }}>Transparent Pricing — Always</p>
             <p style={{ margin: 0, fontSize: "0.8rem", opacity: 0.85, lineHeight: 1.5 }}>
-              TUTORERA charges a <strong style={{ color: "#fbbf24" }}>{PLATFORM_FEE_PERCENT}% platform fee</strong> + <strong style={{ color: "#fbbf24" }}>{GST_ON_PLATFORM_FEE_PERCENT}% GST on the fee</strong> = <strong style={{ color: "#fbbf24" }}>{TOTAL_FEE_PERCENT}% total deduction</strong>. Students pay <strong style={{ color: "#86efac" }}>exactly what tutors charge</strong> — no markups, no hidden costs.
+              TUTORERA charges a <strong style={{ color: UI_COLORS.gold }}>{PLATFORM_FEE_PERCENT}% platform fee</strong> + <strong style={{ color: UI_COLORS.gold }}>{GST_ON_PLATFORM_FEE_PERCENT}% GST on the fee</strong> = <strong style={{ color: UI_COLORS.gold }}>{TOTAL_FEE_PERCENT}% total deduction</strong>. Students pay <strong style={{ color: STATUS_COLORS.success.border }}>exactly what tutors charge</strong> — no markups, no hidden costs.
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function CommissionCalculator() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }} className="calc-grid">
 
         {/* Rate input + slider */}
-        <div style={{ background: "white", borderRadius: 14, padding: "1.5rem", border: "1px solid #e5e7eb" }}>
+        <DashCard padding="lg">
           <h3 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700, color: C.primary }}>
             Set Your Hourly Rate
           </h3>
@@ -191,8 +191,8 @@ export default function CommissionCalculator() {
             <div style={{
               display: "flex",
               alignItems: "center",
-              background: "#f0f9ff",
-              border: "2px solid #bfdbfe",
+              background: UI_COLORS.accentLight,
+              border: `2px solid ${STATUS_COLORS.info.border}`,
               borderRadius: 12,
               padding: "0.75rem 1rem",
               gap: 8,
@@ -244,8 +244,8 @@ export default function CommissionCalculator() {
                 style={{
                   padding: "0.35rem 0.75rem",
                   borderRadius: 999,
-                  border: `1.5px solid ${rate === p ? C.accent : "#e5e7eb"}`,
-                  background: rate === p ? "#EEF5FF" : "white",
+                  border: `1.5px solid ${rate === p ? C.accent : UI_COLORS.border}`,
+                  background: rate === p ? UI_COLORS.accentLight : UI_COLORS.surface,
                   color: rate === p ? C.accent : C.gray500,
                   fontSize: "0.78rem",
                   fontWeight: 600,
@@ -257,10 +257,10 @@ export default function CommissionCalculator() {
               </button>
             ))}
           </div>
-        </div>
+        </DashCard>
 
         {/* Live breakdown */}
-        <div style={{ background: "white", borderRadius: 14, padding: "1.5rem", border: "1px solid #e5e7eb" }}>
+        <DashCard padding="lg">
           <h3 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem", fontWeight: 700, color: C.primary }}>
             Earnings Breakdown
           </h3>
@@ -269,33 +269,33 @@ export default function CommissionCalculator() {
           </p>
 
           <RateRow label="Your hourly rate" value={fees.rate} color={C.primary} />
-          <div style={{ height: 1, background: "#f3f4f6", margin: "0.25rem 0" }} />
+          <div style={{ height: 1, background: UI_COLORS.border, margin: "0.25rem 0" }} />
           <RateRow
             label={`Platform fee (${PLATFORM_FEE_PERCENT}%)`}
             value={fees.platformFee}
-            color="#ef4444"
-            bgColor="#fef2f2"
+            color={TEXT_COLORS.danger}
+            bgColor={STATUS_COLORS.danger.bg}
           />
           <RateRow
             label={`GST on fee (${GST_ON_PLATFORM_FEE_PERCENT}% of ${PLATFORM_FEE_PERCENT}%)`}
             value={fees.taxOnFee}
-            color="#ef4444"
-            bgColor="#fef2f2"
+            color={TEXT_COLORS.danger}
+            bgColor={STATUS_COLORS.danger.bg}
           />
-          <div style={{ height: 2, background: "#e5e7eb", margin: "0.25rem 0" }} />
+          <div style={{ height: 2, background: UI_COLORS.border, margin: "0.25rem 0" }} />
           <RateRow
             label="Total TUTORERA deduction"
             value={fees.totalDeduction}
-            color="#ef4444"
+            color={TEXT_COLORS.danger}
             bold
-            bgColor="#fff5f5"
+            bgColor={STATUS_COLORS.danger.bg}
           />
           <RateRow
             label="You take home"
             value={fees.netEarnings}
             color={C.green}
             bold
-            bgColor="#f0fdf4"
+            bgColor={STATUS_COLORS.success.bg}
           />
 
           <BreakdownBar netPercent={fees.effectiveTakeHomePercent} />
@@ -309,17 +309,17 @@ export default function CommissionCalculator() {
               { label: "Gross", value: fees.rate * 4, color: C.primary },
               { label: "Your net", value: fees.netEarnings * 4, color: C.green },
             ].map(item => (
-              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0.75rem", background: "#f9fafb", borderRadius: 7 }}>
+              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0.75rem", background: UI_COLORS.gray50, borderRadius: 7 }}>
                 <span style={{ fontSize: "0.8rem", color: C.gray500 }}>{item.label}</span>
                 <span style={{ fontSize: "0.85rem", fontWeight: 700, color: item.color }}>PKR {item.value.toLocaleString()}</span>
               </div>
             ))}
           </div>
-        </div>
+        </DashCard>
       </div>
 
       {/* ── Rate comparison table ── */}
-      <div style={{ background: "white", borderRadius: 14, padding: "1.5rem", border: "1px solid #e5e7eb" }}>
+      <DashCard padding="lg">
         <h3 style={{ margin: "0 0 0.4rem", fontSize: "0.95rem", fontWeight: 700, color: C.primary }}>
           Rate Comparison
         </h3>
@@ -327,7 +327,7 @@ export default function CommissionCalculator() {
           See how your net earnings scale with different hourly rates.
         </p>
         <ComparisonTable rows={comparisonRows} selected={rate} />
-      </div>
+      </DashCard>
 
       {/* ── Fee structure facts ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }} className="fee-facts-grid">
@@ -336,11 +336,11 @@ export default function CommissionCalculator() {
           { icon: "💸", title: "Student Pays Same", desc: "Students pay exactly what you charge. TUTORERA adds no markup to the student rate." },
           { icon: "📋", title: "Fee Snapshot", desc: `Booking fees are locked at booking time. Retroactive fee changes never apply to past bookings.` },
         ].map(fact => (
-          <div key={fact.title} style={{ background: "#f9fafb", borderRadius: 12, padding: "1rem 1.25rem", border: "1px solid #e5e7eb" }}>
+          <DashCard key={fact.title} padding="sm" style={{ background: UI_COLORS.gray50 }}>
             <span style={{ fontSize: "1.3rem", display: "block", marginBottom: "0.5rem" }}>{fact.icon}</span>
             <p style={{ margin: "0 0 0.3rem", fontWeight: 700, fontSize: "0.85rem", color: C.primary }}>{fact.title}</p>
             <p style={{ margin: 0, fontSize: "0.78rem", color: C.gray500, lineHeight: 1.5 }}>{fact.desc}</p>
-          </div>
+          </DashCard>
         ))}
       </div>
 

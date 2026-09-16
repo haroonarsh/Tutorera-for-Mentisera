@@ -14,9 +14,46 @@ import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from 
 import sendEmail from "../utils/sendEmail";
 import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/trackingEmails";
 import { sendNotification } from "../utils/socket";
+import { NotificationService } from "../services/notification.service";
+import { normalizeEducationLevels } from "../config/educationLevels";
+import { resolveLocationReferences } from "../services/locationReference.service";
+import { resolveMarket } from "../services/market.service";
+import { syncReviewQueueForProfile } from "../services/verification.service";
+import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const VIDEO_TYPES = ["video/mp4"];
+
+// Cloudinary outages/misconfig used to bubble up as an uncaught rejection,
+// which the global error handler renders as an opaque "Something went wrong"
+// with no indication a file upload was the cause. Give onboarding submitters
+// a clear, actionable message instead.
+async function safeUploadToCloudinary(
+  ...args: Parameters<typeof uploadToCloudinary>
+): Promise<ReturnType<typeof uploadToCloudinary>> {
+  try {
+    return await uploadToCloudinary(...args);
+  } catch (err) {
+    console.error("[TutorOnboarding] Cloudinary upload failed:", err);
+    throw Object.assign(new Error("We couldn't upload your file right now. Please try again in a moment."), { statusCode: 502 });
+  }
+}
+
+// Online tuition never needs a police check; in-person and both do. Reused
+// wherever teachingMode can change (initial onboarding step 4 and later
+// self-service profile edits) so the two paths can't drift out of sync.
+function computeNextPoliceStatus(
+  currentStatus: string | undefined,
+  hasPoliceCertificateOnFile: boolean,
+  teachingMode: string | undefined
+): "not_required" | "not_submitted" | "pending" | "approved" | "rejected" {
+  if (teachingMode === "online") return "not_required";
+  if (!hasPoliceCertificateOnFile) return "not_submitted";
+  // A certificate is already on file - keep its current review status unless
+  // it was previously marked not_required (switching away from online with
+  // an old certificate on file still needs a fresh review).
+  return currentStatus && currentStatus !== "not_required" ? (currentStatus as any) : "pending";
+}
 
 // @desc    Create or update tutor profile
 // @route   POST /api/tutors/profile
@@ -30,12 +67,48 @@ export const createOrUpdateProfile = async (
   let profile = await TutorProfile.findOne({ user: userId });
 
   if (profile) {
+    const updateData = { ...req.body };
+    if (updateData.cnicFront || updateData.cnicBack) {
+      updateData.cnicVerificationStatus = "pending";
+    }
+    if (updateData.videoIntro) {
+      updateData.demoVideoStatus = "pending";
+    }
+    if (typeof updateData.lat === "number" && typeof updateData.lng === "number") {
+      updateData.location = { type: "Point", coordinates: [updateData.lng, updateData.lat] };
+    }
+
+    // teachingMode drives whether a police check is required at all - unlike
+    // every other field here, it's a business-rule trigger, not an inert
+    // value. Changing it without recomputing policeVerificationStatus is how
+    // a tutor could switch to "online" and keep home-tuition eligibility
+    // (or switch to "in-person"/"both" and get stuck with no way to submit
+    // the now-required certificate).
+    if (updateData.teachingMode && updateData.teachingMode !== profile.teachingMode) {
+      updateData.policeVerificationStatus = computeNextPoliceStatus(
+        profile.policeVerificationStatus,
+        Boolean(profile.policeCertificate),
+        updateData.teachingMode
+      );
+    }
+
     // Update existing profile
     profile = await TutorProfile.findOneAndUpdate(
       { user: userId },
-      { ...req.body },
+      updateData,
       { new: true, runValidators: true }
     ).populate("user", "name email avatar phone city countryCode countryName timezone currency");
+
+    if (updateData.teachingMode && profile) {
+      const tutorUser = await User.findById(userId);
+      if (tutorUser) {
+        await syncMarketplaceAndHomeTuition(
+          { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+          tutorUser,
+          profile
+        );
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -45,10 +118,15 @@ export const createOrUpdateProfile = async (
     return;
   }
 
+  const createData = { ...req.body };
+  if (typeof createData.lat === "number" && typeof createData.lng === "number") {
+    createData.location = { type: "Point", coordinates: [createData.lng, createData.lat] };
+  }
+
   // Create new profile
   profile = await TutorProfile.create({
     user: userId,
-    ...req.body,
+    ...createData,
   });
 
   await profile.populate("user", "name email avatar phone city countryCode countryName timezone currency");
@@ -122,6 +200,15 @@ function extractObjectId(value: string): string {
   return value.match(/[a-f\d]{24}/i)?.[0] || value;
 }
 
+const escapeRegex = (value: unknown): string =>
+  String(value || "").slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const TUTOR_SORTS = new Set([
+  "-averageRating", "averageRating", "-hourlyRate", "hourlyRate",
+  "-experience", "experience", "-totalReviews", "totalReviews",
+  "-lastActiveAt", "lastActiveAt",
+]);
+
 // @desc    Get all tutors with global search & filter
 // @route   GET /api/tutors
 // @access  Public
@@ -157,7 +244,7 @@ export const getAllTutors = async (
   const andClauses: Record<string, unknown>[] = [];
 
   if (search) {
-    const pattern = new RegExp(search as string, "i");
+    const pattern = new RegExp(escapeRegex(search), "i");
     andClauses.push({
       $or: [
         { fullName: pattern },
@@ -230,15 +317,16 @@ export const getAllTutors = async (
     filter.averageRating = { $gte: Number(minRating) };
   }
 
-  const pageNum = parseInt(page as string, 10);
-  const limitNum = parseInt(limit as string, 10);
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 10));
+  const safeSort = TUTOR_SORTS.has(String(sort)) ? String(sort) : "-averageRating";
   const skip = (pageNum - 1) * limitNum;
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
-    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus")
+    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus bio experience videoIntro degreeVerificationStatus policeVerificationStatus")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
-    .sort(sort as string)
+    .sort(safeSort)
     .skip(skip)
     .limit(limitNum);
 
@@ -324,14 +412,29 @@ export const saveOnboardingStep = async (
 
   if (stepNum === 1) {
     // Personal Info & Global Location
+    const market = await resolveMarket(parsedData.countryCode || "PK");
+    if (!market || !market.isActive || !market.tutorRegistration) {
+      res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tutor onboarding is not available in the selected market." });
+      return;
+    }
+    let locationReferences: Record<string, unknown>;
+    try {
+      locationReferences = await resolveLocationReferences(parsedData, market.countryCode);
+    } catch (error: any) {
+      res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+      return;
+    }
+    const resolvedCity = (locationReferences.city as string | undefined) || parsedData.city;
+    const resolvedTimezone = parsedData.timezone || (locationReferences.timezone as string | undefined) || market.timezone;
     updateData = {
       fullName: parsedData.fullName,
       phone: parsedData.phone,
-      countryCode: parsedData.countryCode || "PK",
-      countryName: parsedData.countryName || "Pakistan",
-      city: parsedData.city,
-      timezone: parsedData.timezone || "Asia/Karachi",
-      currency: parsedData.currency || "PKR",
+      countryCode: market.countryCode,
+      countryName: market.countryName,
+      city: resolvedCity,
+      timezone: resolvedTimezone,
+      currency: market.currency,
+      ...locationReferences,
       gender: parsedData.gender,
       dateOfBirth: parsedData.dateOfBirth,
       languages: parsedData.languages || [{ language: "English", proficiency: "Fluent" }],
@@ -340,16 +443,22 @@ export const saveOnboardingStep = async (
     await User.findByIdAndUpdate(req.user?._id, {
       name: parsedData.fullName,
       phone: parsedData.phone,
-      countryCode: parsedData.countryCode || "PK",
-      countryName: parsedData.countryName || "Pakistan",
-      city: parsedData.city,
-      timezone: parsedData.timezone || "Asia/Karachi",
-      currency: parsedData.currency || "PKR",
+      countryCode: market.countryCode,
+      countryName: market.countryName,
+      city: resolvedCity,
+      timezone: resolvedTimezone,
+      currency: market.currency,
+      ...locationReferences,
     });
   }
 
   else if (stepNum === 2) {
     // Education
+    if (!String(parsedData.degree || "").trim() || !String(parsedData.institution || "").trim() || !Number.isInteger(parseInt(parsedData.year))) {
+      res.status(400).json({ success: false, message: "Degree, institution, and graduation year are required." });
+      return;
+    }
+
     let degreeDocUrl = "";
     let degreeDocPublicId = "";
 
@@ -365,7 +474,7 @@ export const saveOnboardingStep = async (
         await deleteFromCloudinary(oldPublicId).catch(() => {});
       }
 
-      const result = await uploadToCloudinary(
+      const result = await safeUploadToCloudinary(
         files.degreeDoc[0].buffer,
         "tutorera/degrees",
         "auto",
@@ -402,6 +511,16 @@ export const saveOnboardingStep = async (
         await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
           console.error("[TutorApplicationTracking] Degree resubmission email failed:", emailErr);
         });
+        await NotificationService.publishEvent("system_admin", "admin.tutor_document_resubmitted", {
+          tutorName: tutorUser.name,
+          tutorEmail: tutorUser.email,
+          applicationId: tutorUser.applicationId,
+          documentLabel: "Educational documents",
+          title: "Document resubmitted",
+          message: `${tutorUser.name} resubmitted their educational documents for re-review.`,
+          type: "verification",
+          link: "/admin/applications",
+        }).catch((err) => console.error("[TutorApplicationTracking] Admin degree-resubmission alert failed:", err));
       }
     }
   }
@@ -412,7 +531,7 @@ export const saveOnboardingStep = async (
       experience: parseInt(parsedData.experience),
       previousInstitutions: parsedData.previousInstitutions || [],
       subjects: parsedData.subjects || [],
-      levels: parsedData.levels || [],
+      levels: normalizeEducationLevels(parsedData.levels),
       curricula: parsedData.curricula || [],
       onboardingStep: 4,
     };
@@ -421,17 +540,23 @@ export const saveOnboardingStep = async (
   else if (stepNum === 4) {
     // Online Tuition: No Police Verification required.
     // In-Person / Both: Police report required for home tuition.
-    const isOnlineOnly = parsedData.teachingMode === "online";
-    const nextPoliceStatus = isOnlineOnly
-      ? ("not_required" as const)
-      : profile.policeCertificate
-        ? (profile.policeVerificationStatus && profile.policeVerificationStatus !== "not_required" ? profile.policeVerificationStatus : ("pending" as const))
-        : ("not_submitted" as const);
+    const nextPoliceStatus = computeNextPoliceStatus(
+      profile.policeVerificationStatus,
+      Boolean(profile.policeCertificate),
+      parsedData.teachingMode
+    );
 
+    // Step 1 already set the correct market-derived currency (e.g. AED for a
+    // UAE tutor). This step's rate-setting form doesn't necessarily resubmit
+    // currency, so `parsedData.currency || "PKR"` was silently clobbering a
+    // correctly-set non-PKR currency back to PKR whenever it wasn't
+    // resubmitted - falling back to the profile's own already-set currency
+    // instead of a hardcoded PKR default.
+    const nextCurrency = parsedData.currency || profile.currency || "PKR";
     updateData = {
       bio: parsedData.bio,
       hourlyRate: parseInt(parsedData.hourlyRate),
-      currency: parsedData.currency || "PKR",
+      currency: nextCurrency,
       teachingMode: parsedData.teachingMode,
       policeVerificationStatus: nextPoliceStatus,
       serviceAreas: parsedData.serviceAreas || [],
@@ -439,7 +564,7 @@ export const saveOnboardingStep = async (
       availability: parsedData.availability || [],
       onboardingStep: 5,
     };
-    await User.findByIdAndUpdate(req.user?._id, { currency: parsedData.currency || "PKR" });
+    await User.findByIdAndUpdate(req.user?._id, { currency: nextCurrency });
 
     if (parsedData.availability?.length > 0) {
       const weeklySlots = (parsedData.availability as { day: string; slots: string[] }[])
@@ -489,7 +614,7 @@ export const saveOnboardingStep = async (
       if (profile.cnicFrontPublicId) {
         await deleteFromCloudinary(profile.cnicFrontPublicId).catch(() => {});
       }
-      const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic", "auto", true);
+      const result = await safeUploadToCloudinary(files.cnicFront[0].buffer, "tutorera/cnic", "auto", true);
       cnicFrontUrl = result.secure_url;
       cnicFrontPublicId = result.public_id;
     }
@@ -503,7 +628,7 @@ export const saveOnboardingStep = async (
       if (profile.cnicBackPublicId) {
         await deleteFromCloudinary(profile.cnicBackPublicId).catch(() => {});
       }
-      const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic", "auto", true);
+      const result = await safeUploadToCloudinary(files.cnicBack[0].buffer, "tutorera/cnic", "auto", true);
       cnicBackUrl = result.secure_url;
       cnicBackPublicId = result.public_id;
     }
@@ -523,15 +648,28 @@ export const saveOnboardingStep = async (
       if (profile.policeCertificatePublicId) {
         await deleteFromCloudinary(profile.policeCertificatePublicId).catch(() => {});
       }
-      const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/police-certificates", "auto", true);
+      const result = await safeUploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/police-certificates", "auto", true);
       policeCertificateUrl = result.secure_url;
       policeCertificatePublicId = result.public_id;
     }
 
-    // Validation: Home tuition (in-person) tutors MUST provide a Police Verification Report.
-    // For online-only tutors, NO police verification is required.
+    // Validation: CNIC front and back are always mandatory for marketplace approval,
+    // regardless of teaching mode - enforce final presence (either just uploaded or
+    // already on file from a prior submission), not just this request's files.
+    const finalCnicFront = cnicFrontUrl || profile.cnicFront;
+    const finalCnicBack = cnicBackUrl || profile.cnicBack;
+    if (!finalCnicFront || !finalCnicBack) {
+      res.status(400).json({
+        success: false,
+        message: "CNIC front and back images are required to complete your application.",
+      });
+      return;
+    }
+
+    // Validation: Home tuition (in-person or both) tutors MUST provide a Police
+    // Verification Report. For online-only tutors, NO police verification is required.
     const teachingMode = profile.teachingMode;
-    if (teachingMode === "in-person" && !policeCertificateUrl && !profile.policeCertificate) {
+    if ((teachingMode === "in-person" || teachingMode === "both") && !policeCertificateUrl && !profile.policeCertificate) {
       res.status(400).json({
         success: false,
         message: "Police Verification Report is mandatory to offer Home Tuition.",
@@ -574,26 +712,54 @@ export const saveOnboardingStep = async (
           applicationId: tutorUser.applicationId || "TUT-PENDING",
           statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
         };
+        const notifyAdminOfResubmission = (documentLabel: string) =>
+          NotificationService.publishEvent("system_admin", "admin.tutor_document_resubmitted", {
+            tutorName: tutorUser.name,
+            tutorEmail: tutorUser.email,
+            applicationId: tutorUser.applicationId,
+            documentLabel,
+            title: "Document resubmitted",
+            message: `${tutorUser.name} resubmitted their ${documentLabel.toLowerCase()} for re-review.`,
+            type: "verification",
+            link: "/admin/applications",
+          }).catch((err) => console.error(`[TutorApplicationTracking] Admin ${documentLabel} resubmission alert failed:`, err));
+
         if (resubmitCnic) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "CNIC", cta);
           await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
             console.error("[TutorApplicationTracking] CNIC resubmission email failed:", emailErr);
           });
+          await notifyAdminOfResubmission("CNIC");
         }
         if (resubmitDemo) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "Demo video", cta);
           await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
             console.error("[TutorApplicationTracking] Demo resubmission email failed:", emailErr);
           });
+          await notifyAdminOfResubmission("Demo video");
         }
         if (resubmitPolice) {
           const { subject, html } = documentResubmittedEmail(tutorUser.name, "Police verification", cta);
           await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
             console.error("[TutorApplicationTracking] Police-document resubmission email failed:", emailErr);
           });
+          await notifyAdminOfResubmission("Police verification");
         }
       }
     }
+  }
+
+  // Replacing a verification artefact pauses any existing visibility until it
+  // has been reviewed again, regardless of whether the tutor used the wizard
+  // or the dedicated resubmission screen.
+  const verificationResubmitted = ["degreeVerificationStatus", "cnicVerificationStatus", "demoVideoStatus", "policeVerificationStatus"]
+    .some((key) => (updateData as any)[key] === "pending");
+  if (verificationResubmitted && (profile.marketplaceEligible || profile.homeTuitionEligible || profile.isVerified)) {
+    Object.assign(updateData, {
+      verificationStatus: "pending", isVerified: false,
+      marketplaceEligible: false, homeTuitionEligible: false,
+      marketplaceEligibleAt: null, homeTuitionEligibleAt: null,
+    });
   }
 
   // Save to DB
@@ -605,6 +771,32 @@ export const saveOnboardingStep = async (
   if (!updated) {
     res.status(404).json({ success: false, message: "Tutor profile no longer exists. Please refresh and try again." });
     return;
+  }
+
+  // The verificationResubmitted block above only catches transitions *to*
+  // "pending" - switching teachingMode to "online" sets police status to
+  // "not_required" instead, which that check misses entirely. Recompute
+  // marketplace/home-tuition eligibility from the actual current state
+  // (isMarketplaceEligible/isHomeTuitionEligible) rather than pattern-matching
+  // on which field just changed, so every step keeps eligibility flags honest.
+  if (stepNum === 4 || stepNum === 5) {
+    const tutorUserForSync = await User.findById(req.user?._id);
+    if (tutorUserForSync) {
+      await syncMarketplaceAndHomeTuition(
+        { name: tutorUserForSync.name, role: "tutor", id: tutorUserForSync._id.toString() },
+        tutorUserForSync,
+        updated
+      );
+    }
+  }
+
+  // Sync verification review queue for any newly submitted documents
+  if (stepNum === 5) {
+    try {
+      await syncReviewQueueForProfile(updated._id.toString());
+    } catch (err) {
+      console.error("[VerificationWorkflow] Failed to sync review queue:", err);
+    }
   }
 
   // ── Tutor Application Tracking: ensure applicationId + token exist ──
@@ -623,6 +815,11 @@ export const saveOnboardingStep = async (
       if (firstCompletedSubmission) {
         tutorUser.applicationSubmittedAt = new Date();
         await advanceAccountStatus(tutorUser._id.toString(), "submitted");
+      }
+      // A corrected application is reviewable again; "rejected" is not terminal
+      // when the rejection concerns a resubmittable verification component.
+      if (updated?.onboardingComplete && updated.verificationStatus !== "approved") {
+        await User.findByIdAndUpdate(tutorUser._id, { accountStatus: "submitted" });
       }
       await tutorUser.save();
 
@@ -655,6 +852,20 @@ export const saveOnboardingStep = async (
             });
           } catch (notificationErr) {
             console.error("[TutorApplicationTracking] Failed to send application submitted notification:", notificationErr);
+          }
+          try {
+            await NotificationService.publishEvent("system_admin", "admin.tutor_application_submitted", {
+              tutorName: tutorUser.name,
+              tutorEmail: tutorUser.email,
+              applicationId: tutorUser.applicationId,
+              teachingMode: updated?.teachingMode,
+              title: "New tutor application",
+              message: `${tutorUser.name} completed onboarding and is ready for review.`,
+              type: "verification",
+              link: "/admin/applications",
+            });
+          } catch (adminAlertErr) {
+            console.error("[TutorApplicationTracking] Failed to send admin new-application alert:", adminAlertErr);
           }
         }
         const profileForEvents = updated;

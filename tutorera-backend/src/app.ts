@@ -26,6 +26,7 @@ import notificationRoutes from "./routes/notification.routes";
 import chatRoutes from "./routes/chat.routes";
 import guaranteeRoutes from "./routes/guarantee.routes";
 import referralRoutes from "./routes/referral.routes";
+import promoCodeRoutes from "./routes/promoCode.routes";
 import aiRoutes from "./routes/ai.routes";
 import earningsRoutes from "./routes/earnings.routes";
 import parentRoutes from "./routes/parent.routes";
@@ -39,6 +40,7 @@ import liquidityRoutes from "./routes/liquidity.routes";
 import tutoringIndexRoutes from "./routes/tutoringIndex.routes";
 import publicRoutes from "./routes/public.routes";
 import pricingRoutes from "./routes/pricing.routes";
+import featureFlagRoutes from "./routes/featureFlag.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -116,6 +118,7 @@ apiRouter.use("/notifications", notificationRoutes);
 apiRouter.use("/chat", chatRoutes);
 apiRouter.use("/guarantee", guaranteeRoutes);
 apiRouter.use("/referral", referralRoutes);
+apiRouter.use("/promo-codes", promoCodeRoutes);
 apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/earnings", earningsRoutes);
 apiRouter.use("/parent", parentRoutes);
@@ -129,6 +132,7 @@ apiRouter.use("/tutoring-index", tutoringIndexRoutes);
 apiRouter.use("/public", publicRoutes);
 apiRouter.use("/matching", matchingRoutes);
 apiRouter.use("/pricing", pricingRoutes);
+apiRouter.use("/feature-flags", featureFlagRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);

@@ -221,6 +221,52 @@ export default function Navbar() {
 
         {/* Actions / CTA Header Button */}
         <div className={s.desktopActions}>
+          {/* Anonymous-visitor role picker - routes to the matching primary CTA.
+              Hidden once signed in, since the account's role already determines it. */}
+          {/* {!user && (
+            <div
+              role="group"
+              aria-label="Choose your role"
+              style={{
+                display: "inline-flex",
+                border: "1.5px solid #cbd5e1",
+                borderRadius: "0.5rem",
+                overflow: "hidden",
+                marginRight: "0.5rem",
+              }}
+            >
+              <Link
+                href="/post-tuition-request"
+                onClick={closeMenus}
+                style={{
+                  padding: "0.55rem 0.9rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  color: "#021550",
+                  textDecoration: "none",
+                  background: "#eef5ff",
+                  borderRight: "1.5px solid #cbd5e1",
+                }}
+              >
+                I&apos;m a Student
+              </Link>
+              <Link
+                href="/become-a-tutor"
+                onClick={closeMenus}
+                style={{
+                  padding: "0.55rem 0.9rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  color: "#475569",
+                  textDecoration: "none",
+                  background: "white",
+                }}
+              >
+                I&apos;m a Tutor
+              </Link>
+            </div>
+          )} */}
+
           {/* Marketplace Hero CTA in Navbar */}
           {user?.role === "tutor" ? (
             <Link
@@ -350,6 +396,25 @@ export default function Navbar() {
 
       {isOpen && (
         <div className={s.mobilePanel}>
+          {!user && (
+            <div style={{ display: "flex", padding: "0.75rem 1rem 0" }}>
+              <Link
+                href="/post-tuition-request"
+                onClick={closeMenus}
+                style={{ flex: 1, textAlign: "center", padding: "0.55rem", fontSize: "0.82rem", fontWeight: 700, color: "#021550", background: "#eef5ff", borderRadius: "0.5rem 0 0 0.5rem", textDecoration: "none", border: "1.5px solid #cbd5e1", borderRight: "none" }}
+              >
+                I&apos;m a Student
+              </Link>
+              <Link
+                href="/become-a-tutor"
+                onClick={closeMenus}
+                style={{ flex: 1, textAlign: "center", padding: "0.55rem", fontSize: "0.82rem", fontWeight: 700, color: "#475569", background: "white", borderRadius: "0 0.5rem 0.5rem 0", textDecoration: "none", border: "1.5px solid #cbd5e1" }}
+              >
+                I&apos;m a Tutor
+              </Link>
+            </div>
+          )}
+
           <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #f1f5f9" }}>
             <Link
               href="/post-tuition-request"

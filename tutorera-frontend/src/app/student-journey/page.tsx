@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BRAND_NAME, SUPPORT_EMAIL, formatPKR } from "@/lib/site";
+import { BRAND_NAME, SUPPORT_EMAIL } from "@/lib/site";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
@@ -12,14 +12,14 @@ export const metadata: Metadata = {
 const journey = [
   ["Student needs tutor", "A student or parent identifies the subject, level, schedule, learning mode, and support required."],
   ["Student posts tutoring request", "The requirement is submitted on TUTORERA with learning goals and relevant preferences."],
-  ["Student proposes budget in PKR", `Example: ${formatPKR(1500, "hour")} for O-Level Mathematics.`],
+  ["Student proposes a budget", "The student sets a proposed rate in the selected market currency."],
   ["Tutors submit offers", "Eligible tutors can accept the proposed budget or submit a different rate with a short message and availability."],
-  ["Student compares offers", "The comparison view shows tutor profile, verification, qualifications, experience, reviews, availability, teaching mode, response time, and PKR price."],
+  ["Student compares offers", "The comparison view shows tutor profile, verification, qualifications, experience, reviews, availability, teaching mode, response time, and the proposed price in the request currency."],
   ["Student selects one tutor", "The student independently chooses the tutor who best fits the requirement. The cheapest offer is not automatically selected."],
-  ["Final agreed rate is locked", `Example: student budget ${formatPKR(1500, "hour")}; tutor offer ${formatPKR(1800, "hour")}; accepted booking rate ${formatPKR(1800, "hour")}.`],
+  ["Final agreed rate is locked", "The selected offer, including its currency and pricing unit, is locked into the booking."],
   ["Booking generated", "A booking record is created for the selected tutor and agreed tutoring service."],
-  ["Checkout shows final amount", "The customer reviews agreed rate, sessions, subtotal, platform fee, tax, discounts, and total payable in PKR."],
-  ["Payment gateway processes payment", "Payment begins only after selection, price acceptance, and booking creation."],
+  ["Checkout shows final amount", "In checkout-enabled markets, the customer reviews the agreed rate, sessions, subtotal, fees, tax, discounts, and total payable in the booking currency."],
+  ["Payment gateway processes payment", "Payment begins only after selection, price acceptance, booking creation, and confirmation that checkout is enabled in that market."],
   ["Payment confirmation received", "TUTORERA verifies the transaction result server-side."],
   ["Booking confirmed", "The booking status is confirmed and the selected tutor is notified."],
   ["Tutor delivers lesson", "The tutor conducts the agreed online or in-person tutoring session."],
@@ -44,11 +44,11 @@ export default function StudentJourneyPage() {
           <div className={s.grid}>
             <article className={s.card}>
               <h2>Offer comparison screen includes</h2>
-              <ul className={s.checklist}>{["Tutor photo","Tutor name","Verified status","Qualification","Years of experience","Subject expertise","Rating and reviews","Proposed price in PKR","Teaching mode","Availability","Offer message","Response time","View Profile","Accept Offer","Decline","Message Tutor where appropriate"].map((item) => <li key={item}>{item}</li>)}</ul>
+              <ul className={s.checklist}>{["Tutor photo","Tutor name","Verified status","Qualification","Years of experience","Subject expertise","Rating and reviews","Proposed price in request currency","Teaching mode","Availability","Offer message","Response time","View Profile","Accept Offer where available","Decline","Message Tutor where appropriate"].map((item) => <li key={item}>{item}</li>)}</ul>
             </article>
             <article className={s.card}>
               <h2>Payment rule</h2>
-              <p>The payment gateway is not used to process offers or hold speculative money. Payment occurs only after a tutor has been selected, a final tutoring rate has been agreed, a booking exists, and the final amount is clearly displayed in PKR.</p>
+              <p>The payment gateway is not used to process offers or hold speculative money. In a checkout-enabled market, payment occurs only after a tutor has been selected, a final tutoring rate has been agreed, a booking exists, and the final amount is clearly displayed in the booking currency.</p>
               <Link className={s.cta} href="/payment-process">See payment process</Link>
             </article>
           </div>

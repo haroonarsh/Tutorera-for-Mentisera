@@ -21,7 +21,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Child Safeguarding & Minor Protection Policy | TUTORERA",
+  title: "Child Safeguarding & Minor Protection Policy",
   description: "Comprehensive child protection framework, parental consent rules, online and in-person safety protocols, and zero-tolerance safeguarding standards on TUTORERA®.",
 };
 

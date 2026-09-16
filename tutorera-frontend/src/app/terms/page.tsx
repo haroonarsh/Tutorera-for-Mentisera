@@ -22,7 +22,7 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Global Terms of Service | TUTORERA",
+  title: "Global Terms of Service",
   description: "Master contractual terms and conditions governing the TUTORERA global tutoring marketplace for students, parents, and tutors.",
 };
 
@@ -171,7 +171,7 @@ const masterTermsSections = [
   {
     id: "26-payment-processing",
     title: "26. Payment Processing & Authorized Gateways",
-    content: `Payments are processed through PCI-DSS compliant third-party payment providers (such as Stripe, Paymob, or regional banking partners). TUTORERA never stores raw credit or debit card numbers on its servers.`
+    content: `Payments are processed through PCI-DSS compliant third-party payment providers (such as our authorized Rapid Gateway processor or regional banking partners). TUTORERA never stores raw credit or debit card numbers on its servers.`
   },
   {
     id: "27-tutor-payouts",

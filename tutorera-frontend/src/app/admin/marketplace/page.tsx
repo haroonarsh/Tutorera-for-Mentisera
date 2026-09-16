@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
-type Metrics = Record<string, number | null> & { lossReasons?: Record<string, number> };
-type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; lossReason?: string; lossReasonDetail?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; student?: { name?: string } };
-type OfferRow = { _id: string; amount?: number; initialStudentRate?: number; pricingUnit?: string; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; tutor?: { name?: string }; request?: { subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string } };
+type MoneyByCurrency = { currency: string; marketplaceGMV: number; platformRevenue: number; averageAgreedRate: number };
+type Metrics = Record<string, number | null> & { lossReasons?: Record<string, number>; moneyByCurrency?: MoneyByCurrency[] };
+type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; currency?: string; status?: string; lossReason?: string; lossReasonDetail?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; student?: { name?: string } };
+type OfferRow = { _id: string; amount?: number; initialStudentRate?: number; pricingUnit?: string; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; tutor?: { name?: string }; request?: { subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; currency?: string } };
 type HistoryRow = { _id: string; senderRole?: string; amount?: number; message?: string; status?: string; flaggedForModeration?: boolean; createdAt?: string };
 
 const labels: Record<string, string> = {
@@ -21,8 +22,6 @@ const labels: Record<string, string> = {
   offerAcceptanceRate: "Offer acceptance",
   bookingsGenerated: "Bookings generated",
   conversionRate: "Request conversion",
-  marketplaceGMV: "Marketplace GMV",
-  platformRevenue: "Platform revenue",
   completionRate: "Completion rate",
   cancellationRate: "Cancellation rate",
   disputeRate: "Dispute rate",
@@ -34,8 +33,6 @@ const labels: Record<string, string> = {
   activeRelationships60d: "60-day active relationships",
   activeRelationships90d: "90-day active relationships",
   averageNegotiatedDiscount: "Negotiated discount",
-  averageAgreedRate: "Agreed hourly rate",
-  averageAgreedHourlyRate: "Agreed hourly rate",
   averageTutorResponseMinutes: "Tutor response minutes",
   classifiedLostRequests: "Classified lost requests",
   unclassifiedLostRequests: "Unclassified lost requests",
@@ -64,12 +61,15 @@ function formatPKR(value: unknown) {
   return `PKR ${toNumber(value).toLocaleString("en-PK")}`;
 }
 
+function formatMoney(value: unknown, currency?: string) {
+  return `${currency || "PKR"} ${toNumber(value).toLocaleString()}`;
+}
+
 function formatMetric(key: string, value: number | null | undefined) {
   const n = toNumber(value, Number.NaN);
   if (value === null || value === undefined || Number.isNaN(n)) return "-";
   const lower = key.toLowerCase();
   if (lower.includes("rate") || lower.includes("discount") || ["conversionRate", "completionRate", "cancellationRate", "disputeRate"].includes(key)) return `${n.toFixed(1)}%`;
-  if (key.includes("GMV") || key.includes("Revenue") || key.includes("HourlyRate")) return formatPKR(n);
   return n.toFixed(lower.includes("average") ? 1 : 0);
 }
 
@@ -126,7 +126,7 @@ export default function Page() {
       <h1 style={{ fontSize: "1.8rem" }}>Marketplace Analytics</h1>
       <p style={{ color: UI_COLORS.gray600, margin: ".5rem 0 2rem" }}>Operational request, offer, negotiation, conversion, pricing and trust signals.</p>
 
-      {loadError && <p role="alert" style={{ color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: 12 }}>{loadError}</p>}
+      {loadError && <p role="alert" style={{ color: STATUS_COLORS.warning.color, background: STATUS_COLORS.warning.bg, border: `1px solid ${STATUS_COLORS.warning.border}`, borderRadius: 10, padding: 12 }}>{loadError}</p>}
 
       {loading && !metrics ? (
         <p>Loading...</p>
@@ -134,6 +134,33 @@ export default function Page() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 16 }}>
           {Object.entries(metrics ?? {}).filter(([, value]) => typeof value !== "object").map(([key, value]) => <article key={key} style={panel}><p style={muted}>{labels[key] || key}</p><strong style={{ fontSize: 24 }}>{formatMetric(key, value as number | null)}</strong></article>)}
         </div>
+      )}
+
+      {metrics?.moneyByCurrency && metrics.moneyByCurrency.length > 0 && (
+        <section style={{ marginTop: 28 }}>
+          <h2 style={sectionTitle}>GMV & Revenue by Currency</h2>
+          <p style={muted}>Markets settle in their own currency, so these are shown per currency rather than summed together.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 16 }}>
+            {metrics.moneyByCurrency.map((bucket) => (
+              <article key={`gmv-${bucket.currency}`} style={panel}>
+                <p style={muted}>{bucket.currency} Marketplace GMV</p>
+                <strong style={{ fontSize: 24 }}>{formatMoney(bucket.marketplaceGMV, bucket.currency)}</strong>
+              </article>
+            ))}
+            {metrics.moneyByCurrency.map((bucket) => (
+              <article key={`rev-${bucket.currency}`} style={panel}>
+                <p style={muted}>{bucket.currency} Platform Revenue</p>
+                <strong style={{ fontSize: 24 }}>{formatMoney(bucket.platformRevenue, bucket.currency)}</strong>
+              </article>
+            ))}
+            {metrics.moneyByCurrency.map((bucket) => (
+              <article key={`rate-${bucket.currency}`} style={panel}>
+                <p style={muted}>{bucket.currency} Agreed Hourly Rate</p>
+                <strong style={{ fontSize: 24 }}>{formatMoney(bucket.averageAgreedRate.toFixed(0), bucket.currency)}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       {metrics?.lossReasons && Object.keys(metrics.lossReasons).length > 0 && (
@@ -161,8 +188,8 @@ export default function Page() {
                   <p style={muted}>{offer.tutor?.name || "Tutor"} - {offer.request?.city || "Online"} - {offer.status || "status pending"}</p>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <strong>{formatPKR(offer.amount)}/{offer.pricingUnit || "hour"}</strong>
-                  <p style={muted}>Student rate {formatPKR(offer.initialStudentRate || offer.request?.budget)}</p>
+                  <strong>{formatMoney(offer.amount, offer.request?.currency)}/{offer.pricingUnit || "hour"}</strong>
+                  <p style={muted}>Student rate {formatMoney(offer.initialStudentRate || offer.request?.budget, offer.request?.currency)}</p>
                 </div>
               </div>
               <p style={{ ...muted, marginTop: 8 }}>Flags: {(offer.moderationReasons || []).join(", ") || "manual review"}</p>
@@ -178,9 +205,9 @@ export default function Page() {
           {requests.length === 0 ? <p style={muted}>No marketplace requests found.</p> : requests.slice(0, 20).map((request) => (
             <article key={request._id} style={panel}>
               <strong>{request.subject || "Tuition request"}</strong>
-              <p style={muted}>{request.student?.name || "Student"} - {request.city || "Online"} - {request.level || "Any level"} - {request.teachingMode || "mode open"} - {formatPKR(request.budget)} - {request.status || "status pending"}</p>
-              {request.lossReason && <p style={{ ...muted, color: "#7c2d12" }}>Loss reason: {lossReasonLabels[request.lossReason] || request.lossReason}{request.lossReasonDetail ? ` — ${request.lossReasonDetail}` : ""}</p>}
-              {request.flaggedForModeration && <p style={{ color: "#92400e", fontSize: 13 }}>Flags: {(request.moderationReasons || []).join(", ") || "manual review"}</p>}
+              <p style={muted}>{request.student?.name || "Student"} - {request.city || "Online"} - {request.level || "Any level"} - {request.teachingMode || "mode open"} - {formatMoney(request.budget, request.currency)} - {request.status || "status pending"}</p>
+              {request.lossReason && <p style={{ ...muted, color: STATUS_COLORS.warning.color }}>Loss reason: {lossReasonLabels[request.lossReason] || request.lossReason}{request.lossReasonDetail ? ` — ${request.lossReasonDetail}` : ""}</p>}
+              {request.flaggedForModeration && <p style={{ color: STATUS_COLORS.warning.color, fontSize: 13 }}>Flags: {(request.moderationReasons || []).join(", ") || "manual review"}</p>}
             </article>
           ))}
         </div>
@@ -191,11 +218,11 @@ export default function Page() {
           <div style={modal}>
             <button onClick={() => setSelected(null)} aria-label="Close offer detail" style={{ ...button, marginLeft: "auto", display: "block" }}>Close</button>
             <h2 style={sectionTitle}>Negotiation Inspection</h2>
-            <p style={muted}>{selected.offer.tutor?.name || "Tutor"} - {selected.offer.status || "status pending"} - {formatPKR(selected.offer.amount)}/{selected.offer.pricingUnit || "hour"}</p>
+            <p style={muted}>{selected.offer.tutor?.name || "Tutor"} - {selected.offer.status || "status pending"} - {formatMoney(selected.offer.amount, selected.offer.request?.currency)}/{selected.offer.pricingUnit || "hour"}</p>
             <ol style={{ borderLeft: `2px solid ${UI_COLORS.accentLight}`, paddingLeft: 20 }}>
               {selected.history.map((row) => (
                 <li key={row._id} style={{ marginBottom: 12 }}>
-                  <strong>{row.senderRole || "User"} proposed {formatPKR(row.amount)}</strong><br />
+                  <strong>{row.senderRole || "User"} proposed {formatMoney(row.amount, selected.offer.request?.currency)}</strong><br />
                   <small>{row.createdAt ? new Date(row.createdAt).toLocaleString("en-PK") : "Date unavailable"} - {row.status || "recorded"}{row.flaggedForModeration ? " - flagged" : ""}</small>
                   {row.message && <p>{row.message}</p>}
                 </li>
@@ -209,7 +236,7 @@ export default function Page() {
   );
 }
 
-const panel = { background: "white", padding: 18, border: "1px solid #dbe5ff", borderRadius: 12, boxShadow: "0 14px 34px rgba(2,21,80,.06)" } as const;
+const panel = { background: "white", padding: 18, border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(2,21,80,.06)" } as const;
 const muted = { fontSize: 13, color: UI_COLORS.gray600, margin: "4px 0" } as const;
 const sectionTitle = { fontSize: 20, margin: "0 0 12px" } as const;
 const button = { marginTop: 10, border: `1px solid ${UI_COLORS.accentLight}`, borderRadius: 10, background: "white", color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 700, cursor: "pointer" } as const;

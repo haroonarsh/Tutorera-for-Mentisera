@@ -20,7 +20,7 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Tutor Verification & Badging Standards | TUTORERA",
+  title: "Tutor Verification & Badging Standards",
   description:
     "TUTORERA's multi-tier tutor vetting process, identity verification standards, credential validation, background screening, and verified badge legal disclosures.",
   alternates: {

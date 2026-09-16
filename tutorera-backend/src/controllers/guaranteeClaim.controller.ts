@@ -5,7 +5,8 @@ import GuaranteeClaim from "../models/GuaranteeClaim.model";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
-import { escapeHtml } from "../utils/escapeHtml";
+import { renderTransactionalEmail } from "../utils/emailBrand";
+import { formatMoney } from "../utils/emailTemplates";
 
 // @desc    Submit a first session guarantee claim
 // @route   POST /api/guarantee/claim
@@ -54,53 +55,71 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
     details: details || "",
   });
 
+  const formattedAmount = formatMoney(booking.amount, booking.currency || "PKR");
+  const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
+
   // Email to admin
+  const adminSubject = `[TUTORERA Guarantee] New Claim: ${req.user?.name}`;
+  const adminHtml = renderTransactionalEmail({
+    subject: adminSubject,
+    emailCategory: "Guarantee Claim",
+    emailHeading: "First Session Guarantee Claim",
+    emailSubheading: `Submitted by ${req.user?.name} for booking ${bookingId}.`,
+    firstName: "Trust & Safety Team",
+    openingMessage: "A student has filed a First Session Satisfaction Guarantee claim requesting review and remedy.",
+    mainMessage: details ? `Student Statement:\n"${details}"` : "Please review the session details and determine whether to grant session credit or refund.",
+    detailsCard: {
+      title: "Claim Summary",
+      rows: [
+        { label: "Student", value: `${req.user?.name} (${req.user?.email})`, highlight: true },
+        { label: "Tutor", value: `${tutor.name} (${tutor.email})` },
+        { label: "Booking ID", value: bookingId, highlight: true },
+        { label: "Session Amount", value: formattedAmount },
+        { label: "Claim Reason", value: reason },
+        { label: "Status", value: "Under Review", isStatus: true, statusVariant: "warning" },
+      ],
+    },
+    cta: { label: "Review Claim in Admin Panel", url: "https://tutorera.ac.pk/admin" },
+    includeSecurityNotice: false,
+    deliverability: "Administrative dispatch for satisfaction guarantee management.",
+  });
+
   await sendEmail({
-    to: process.env.EMAIL_USER as string,
-    subject: `🔴 First Session Guarantee Claim — ${escapeHtml(req.user?.name)}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">First Session Guarantee Claim</h2>
-        <p style="background: #fef2f2; padding: 0.75rem 1rem; border-radius: 0.5rem; color: #ef4444; font-weight: 600;">
-          A student was not satisfied with their first session and is requesting a remedy.
-        </p>
-        <hr />
-        <p><strong>Student:</strong> ${escapeHtml(req.user?.name)} (${escapeHtml(req.user?.email)})</p>
-        <p><strong>Tutor:</strong> ${escapeHtml(tutor.name)} (${escapeHtml(tutor.email)})</p>
-        <p><strong>Booking ID:</strong> ${escapeHtml(bookingId)}</p>
-        <p><strong>Amount Paid:</strong> Rs. ${booking.amount.toLocaleString()}</p>
-        <p><strong>Reason:</strong> ${escapeHtml(reason)}</p>
-        ${details ? `<p><strong>Details:</strong></p><p style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">${escapeHtml(details)}</p>` : ""}
-        <hr />
-        <p style="color: #6b7280; font-size: 0.875rem;">
-          Please review this claim in the admin panel and take appropriate action.
-        </p>
-        <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Guarantee System</p>
-      </div>
-    `,
+    to: adminRecipient,
+    subject: adminSubject,
+    html: adminHtml,
+    eventType: "safety.case_created",
   });
 
   // Confirmation email to student
+  const studentSubject = "Your Guarantee Claim Has Been Received — TUTORERA";
+  const studentHtml = renderTransactionalEmail({
+    subject: studentSubject,
+    emailCategory: "Guarantee Update",
+    emailHeading: `Claim Received, ${req.user?.name}`,
+    emailSubheading: "Our student satisfaction team is reviewing your claim.",
+    firstName: req.user?.name,
+    openingMessage: "We have received your First Session Satisfaction Guarantee claim. Our team will review the session records and contact you within 24–48 hours.",
+    mainMessage: "If approved, TUTORERA will provide a session credit to try another verified educator or process a complete refund to your original payment method.",
+    detailsCard: {
+      title: "Claim Reference",
+      rows: [
+        { label: "Claim Reference", value: `CLM-${bookingId.slice(-8).toUpperCase()}`, highlight: true },
+        { label: "Reason", value: reason },
+        { label: "Resolution SLA", value: "24–48 Hours" },
+        { label: "Status", value: "Under Review", isStatus: true, statusVariant: "info" },
+      ],
+    },
+    cta: { label: "View Booking Details", url: "https://tutorera.ac.pk/dashboard" },
+    includeSecurityNotice: false,
+    deliverability: "This transactional notification was sent regarding your TUTORERA guarantee claim.",
+  });
+
   await sendEmail({
     to: req.user?.email as string,
-    subject: "Your First Session Guarantee Claim — TUTORERA®",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">We received your claim, ${escapeHtml(req.user?.name)}!</h2>
-        <p>Our team will review your first session guarantee claim and get back to you within <strong>24–48 hours</strong>.</p>
-        <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin: 1rem 0;">
-          <p style="margin: 0 0 0.5rem;"><strong>Your reason:</strong> ${escapeHtml(reason)}</p>
-          ${details ? `<p style="margin: 0;"><strong>Details:</strong> ${escapeHtml(details)}</p>` : ""}
-        </div>
-        <p>If approved, we will either:</p>
-        <ul>
-          <li>Offer you a session credit to try another tutor, or</li>
-          <li>Process a refund — our team will contact you with next steps</li>
-        </ul>
-        <hr />
-        <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan · First Session Guarantee</p>
-      </div>
-    `,
+    subject: studentSubject,
+    html: studentHtml,
+    eventType: "safety.case_created",
   });
 
   res.status(201).json({
@@ -111,27 +130,34 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
 };
 
 // @desc    Get all guarantee claims (admin)
-// @route   GET /api/admin/guarantee-claims
+// @route   GET /api/guarantee/claims
 // @access  Private (admin)
-export const getAllClaims = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getClaims = async (req: AuthRequest, res: Response): Promise<void> => {
   const claims = await GuaranteeClaim.find()
-    .populate("student", "name email phone")
+    .populate("student", "name email")
     .populate("tutor", "name email")
-    .populate("booking", "amount schedule teachingMode createdAt")
+    .populate("booking")
     .sort("-createdAt");
 
-  res.status(200).json({ success: true, total: claims.length, claims });
+  res.status(200).json({ success: true, count: claims.length, claims });
 };
 
-// @desc    Update guarantee claim status (admin)
-// @route   PATCH /api/admin/guarantee-claims/:id
+export const getAllClaims = getClaims;
+
+// @desc    Update claim status (admin)
+// @route   PATCH /api/guarantee/claims/:id
 // @access  Private (admin)
 export const updateClaimStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   const { status, adminNote } = req.body;
 
+  if (!["approved", "rejected"].includes(status)) {
+    res.status(400).json({ success: false, message: "Status must be 'approved' or 'rejected'." });
+    return;
+  }
+
   const claim = await GuaranteeClaim.findByIdAndUpdate(
     req.params.id,
-    { status, adminNote: adminNote || "" },
+    { status, adminNote, resolvedAt: new Date() },
     { new: true }
   ).populate("student", "name email");
 
@@ -143,34 +169,61 @@ export const updateClaimStatus = async (req: AuthRequest, res: Response): Promis
   // Email student about the decision
   const student = claim.student as unknown as { name: string; email: string };
   if (status === "approved") {
+    const approvedSubject = "Your Guarantee Claim Was Approved — TUTORERA";
+    const approvedHtml = renderTransactionalEmail({
+      subject: approvedSubject,
+      emailCategory: "Guarantee Resolution",
+      emailHeading: "Claim Approved",
+      emailSubheading: "Your first session satisfaction guarantee claim has been approved.",
+      firstName: student.name,
+      openingMessage: "Great news! Your First Session Guarantee claim has been reviewed and approved by our satisfaction team.",
+      mainMessage: adminNote ? `Advisory Note:\n"${adminNote}"` : "Our support desk will coordinate your replacement session credit or process your refund to your original payment method.",
+      detailsCard: {
+        title: "Resolution Details",
+        rows: [
+          { label: "Decision", value: "Approved", isStatus: true, statusVariant: "success" },
+          { label: "Next Step", value: "Credit or Refund Processing" },
+          { label: "Resolution Date", value: new Date().toLocaleDateString("en-US") },
+        ],
+      },
+      cta: { label: "Visit Dashboard", url: "https://tutorera.ac.pk/dashboard" },
+      includeSecurityNotice: false,
+      deliverability: "This transactional message was sent regarding your TUTORERA claim resolution.",
+    });
+
     await sendEmail({
       to: student.email,
-      subject: "✅ Your Guarantee Claim Was Approved — TUTORERA®",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #16a34a;">Great news, ${escapeHtml(student.name)}!</h2>
-          <p>Your first session guarantee claim has been <strong>approved</strong>.</p>
-          ${adminNote ? `<p><strong>Note from our team:</strong> ${escapeHtml(adminNote)}</p>` : ""}
-          <p>Our team will contact you shortly to arrange your session credit or refund.</p>
-          <hr />
-          <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
-        </div>
-      `,
+      subject: approvedSubject,
+      html: approvedHtml,
+      eventType: "safety.case_resolved",
     });
   } else if (status === "rejected") {
+    const rejectedSubject = "Update on Your Guarantee Claim — TUTORERA";
+    const rejectedHtml = renderTransactionalEmail({
+      subject: rejectedSubject,
+      emailCategory: "Guarantee Resolution",
+      emailHeading: "Claim Review Update",
+      emailSubheading: "We were unable to approve your guarantee claim at this time.",
+      firstName: student.name,
+      openingMessage: "Our team has reviewed your First Session Guarantee claim along with the lesson records and was unable to approve it under platform guarantee guidelines.",
+      mainMessage: adminNote ? `Review Reason:\n"${adminNote}"` : "If you have questions or additional details to share, please reply to this email to speak with a senior supervisor.",
+      detailsCard: {
+        title: "Claim Status",
+        rows: [
+          { label: "Decision", value: "Not Approved", isStatus: true, statusVariant: "neutral" },
+          { label: "Reason", value: adminNote || "Does not meet guarantee terms" },
+        ],
+      },
+      cta: { label: "Contact Support", url: "mailto:hello@mentisera.pk" },
+      includeSecurityNotice: false,
+      deliverability: "This message was sent regarding your TUTORERA claim decision.",
+    });
+
     await sendEmail({
       to: student.email,
-      subject: "Update on your Guarantee Claim — TUTORERA®",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a1a2e;">Update on your claim, ${escapeHtml(student.name)}</h2>
-          <p>After reviewing your first session guarantee claim, we were unable to approve it at this time.</p>
-          ${adminNote ? `<p><strong>Reason:</strong> ${escapeHtml(adminNote)}</p>` : ""}
-          <p>If you have questions, please contact our support team.</p>
-          <hr />
-          <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Pakistan</p>
-        </div>
-      `,
+      subject: rejectedSubject,
+      html: rejectedHtml,
+      eventType: "safety.case_resolved",
     });
   }
 

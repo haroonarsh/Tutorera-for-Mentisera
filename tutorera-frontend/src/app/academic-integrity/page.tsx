@@ -18,7 +18,7 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Academic Integrity & Honor Code | Anti-Cheating Policy | TUTORERA",
+  title: "Academic Integrity & Honor Code | Anti-Cheating Policy",
   description:
     "TUTORERA's strict academic integrity rules, prohibition against ghostwriting, ban on exam cheating, and educational honor code for students and tutors.",
   alternates: {

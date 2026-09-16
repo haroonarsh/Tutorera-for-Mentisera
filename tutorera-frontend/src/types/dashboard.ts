@@ -18,6 +18,10 @@ export interface DashRequest {
   teachingMode: string;
   countryCode?: string;
   countryName?: string;
+  country?: string;
+  region?: string;
+  cityRef?: string;
+  locality?: string;
   timezone?: string;
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];
@@ -147,6 +151,10 @@ export interface PostRequestPayload {
   currency?: string;
   countryCode?: string;
   countryName?: string;
+  country?: string;
+  region?: string;
+  cityRef?: string;
+  locality?: string;
   timezone?: string;
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];

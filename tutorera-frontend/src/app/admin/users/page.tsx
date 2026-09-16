@@ -1,5 +1,5 @@
 "use client";
-import { UI_COLORS } from "@/lib/brand";
+import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { UserCheck, UserX, Search } from "lucide-react";
 import api from "@/lib/axios";
@@ -19,9 +19,9 @@ interface User {
 }
 
 const roleColors: Record<string, { bg: string; color: string }> = {
-  student: { bg: '#EEF5FF', color: '#0329B2' },
-  tutor:   { bg: '#f0fdf4', color: '#16a34a' },
-  admin:   { bg: '#f5f3ff', color: '#7c3aed' },
+  student: { bg: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color },
+  tutor:   { bg: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color },
+  admin:   { bg: STATUS_COLORS.purple.bg, color: STATUS_COLORS.purple.color },
 };
 
 export default function UsersPage() {
@@ -93,26 +93,26 @@ export default function UsersPage() {
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <Search size={16} color={C.gray500} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..."
-            style={{ width: '100%', padding: '0.7rem 1rem 0.7rem 2.25rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
+            style={{ width: '100%', padding: '0.7rem 1rem 0.7rem 2.25rem', border: `1px solid ${C.border}`, borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', backgroundColor: C.surface }}
             onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-            onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+            onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {["all", "student", "tutor", "admin"].map(role => (
             <button key={role} onClick={() => setRoleFilter(role)}
-              style={{ padding: '0.5rem 1rem', borderRadius: '999px', border: roleFilter === role ? 'none' : '1px solid #e5e7eb', backgroundColor: roleFilter === role ? C.primary : 'white', color: roleFilter === role ? 'white' : C.gray500, fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+              style={{ padding: '0.5rem 1rem', borderRadius: '999px', border: roleFilter === role ? 'none' : `1px solid ${C.border}`, backgroundColor: roleFilter === role ? C.primary : C.surface, color: roleFilter === role ? C.surface : C.gray500, fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}>
               {role}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', border: '1px solid #e5e7eb', overflow: 'visible' }}>
+      <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'visible' }}>
 
         {/* Desktop Table Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: '1px solid #e5e7eb' }} className="admin-table-header">
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '0.75rem 1.5rem', backgroundColor: C.gray50, borderBottom: `1px solid ${C.border}` }} className="admin-table-header">
           {["Name", "Email", "Role", "City", "Status", "Actions"].map(h => (
-            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
+            <p key={h} style={{ fontSize: '0.75rem', fontWeight: '700', color: TEXT_COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{h}</p>
           ))}
         </div>
 
@@ -125,14 +125,14 @@ export default function UsersPage() {
           <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>No users found.</div>
         ) : (
           users.map((user, idx) => (
-            <div key={user._id} style={{ borderBottom: idx < users.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+            <div key={user._id} style={{ borderBottom: idx < users.length - 1 ? `1px solid ${C.border}` : 'none' }}>
 
               {/* Desktop Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 0.8fr 0.8fr 1.2fr 1fr', padding: '1rem 1.5rem', alignItems: 'center' }} className="admin-table-row">
 
                 {/* Name */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <div style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
+                  <div style={{ width: '32px', height: '32px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.surface, fontSize: '0.8rem', fontWeight: '700', flexShrink: 0 }}>
                     {user.name.charAt(0)}
                   </div>
                   <span style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>{user.name}</span>
@@ -150,13 +150,13 @@ export default function UsersPage() {
                 <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
 
                 {/* Status */}
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? C.success : STATUS_COLORS.danger.color }}>
                   {user.isActive ? "Active" : "Inactive"}
                 </span>
 
                 {/* Action */}
                 <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a', width: 'fit-content' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? STATUS_COLORS.danger.bg : STATUS_COLORS.success.bg, color: user.isActive ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color, width: 'fit-content' }}>
                   {user.isActive ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
                 </button>
               </div>
@@ -165,7 +165,7 @@ export default function UsersPage() {
               <div style={{ padding: '1rem 1.25rem' }} className="admin-mobile-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <div style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
+                    <div style={{ width: '38px', height: '38px', backgroundColor: C.accent, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.surface, fontSize: '1rem', fontWeight: '700', flexShrink: 0 }}>
                       {user.name.charAt(0)}
                     </div>
                     <div>
@@ -182,13 +182,13 @@ export default function UsersPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? '#16a34a' : '#ef4444' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? C.success : STATUS_COLORS.danger.color }}>
                       • {user.isActive ? "Active" : "Inactive"}
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? '#fef2f2' : '#f0fdf4', color: user.isActive ? '#ef4444' : '#16a34a' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? STATUS_COLORS.danger.bg : STATUS_COLORS.success.bg, color: user.isActive ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color }}>
                       {user.isActive ? "Deactivate" : "Activate"}
                     </button>
                   </div>
@@ -203,14 +203,14 @@ export default function UsersPage() {
       {!loading && pagination.pages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
           <button onClick={() => fetchUsers(pagination.page - 1, search, roleFilter)} disabled={pagination.page <= 1}
-            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page <= 1 ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: `1px solid ${C.border}`, backgroundColor: C.surface, color: pagination.page <= 1 ? C.border : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer' }}>
             ← Previous
           </button>
           <span style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '0.85rem', color: C.gray500, fontWeight: '600' }}>
             Page {pagination.page} of {pagination.pages}
           </span>
           <button onClick={() => fetchUsers(pagination.page + 1, search, roleFilter)} disabled={pagination.page >= pagination.pages}
-            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: pagination.page >= pagination.pages ? '#d1d5db' : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: `1px solid ${C.border}`, backgroundColor: C.surface, color: pagination.page >= pagination.pages ? C.border : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
             Next →
           </button>
         </div>

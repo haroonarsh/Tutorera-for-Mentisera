@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
   title: "How Tutor Offers Work | Global Student-Led Tutoring Marketplace",
@@ -121,6 +122,11 @@ export default function HowTutorOffersWorkPage() {
               <strong>Secure platform booking:</strong> Review transparent checkout details with satisfaction guarantee. Your payment is protected until the session is successfully delivered.
             </li>
           </ol>
+        </section>
+
+        {/* Ad placement */}
+        <section style={{ padding: "2rem 0", textAlign: "center" }}>
+          <AdBanner slot="7346189519" format="auto" label="Advertisement" />
         </section>
 
         <section

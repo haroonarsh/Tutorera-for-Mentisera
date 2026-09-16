@@ -67,11 +67,10 @@ export default function TopRequestsSection() {
     <section className={s.root} aria-labelledby="requests-title">
       <div className={s.container}>
         <header className={s.head}>
-          <p className={s.eyebrow}>Live student demand</p>
-          <h2 id="requests-title">Students Looking for Tutors Right Now</h2>
+          <p className={s.eyebrow}>Tuition Opportunities</p>
+          <h2 id="requests-title">Tuition Opportunities Available to Tutors</h2>
           <p className={s.subtitle}>
-            Real students have posted tuition needs. Browse active requests to see how offers and
-            matching work, or post your own requirement.
+            Real students have posted tuition needs. Tutors can browse active requests to see live opportunities, while students can post their own requirements.
           </p>
         </header>
 
@@ -186,10 +185,13 @@ export default function TopRequestsSection() {
         )}
 
         {!loading && !errored && (
-          <div className={s.browseAll}>
-            <Link className={s.textLink} href="/browse-requests">
-              Browse all tuition requests <ArrowRight size={16} aria-hidden="true" />
+          <div className={s.browseAll} style={{ display: "flex", flexDirection: "column", gap: "1rem", alignItems: "center" }}>
+            <Link className={s.textLink} href="/opportunities">
+              View all matching opportunities <ArrowRight size={16} aria-hidden="true" />
             </Link>
+            <div style={{ fontSize: "0.9rem", color: "#475569" }}>
+              Need a Tutor? <Link href="/post-tuition-request" style={{ color: "#016ef8", fontWeight: 600, textDecoration: "underline" }}>Post Your Requirement</Link>
+            </div>
           </div>
         )}
       </div>
