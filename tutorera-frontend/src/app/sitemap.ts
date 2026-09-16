@@ -15,6 +15,9 @@ const routes = [
 ];
 
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
+const PAKISTAN_LEVEL_SLUGS = ["matric", "intermediate", "o-level", "a-level"] as const;
+const PAKISTAN_EXAM_SLUGS = ["mdcat", "ecat", "ielts"] as const;
+const CURRICULUM_SUBJECT_SLUGS = ["mathematics", "physics", "chemistry", "biology", "english", "computer-science"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
@@ -45,7 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const localResults = await Promise.all(PRIMARY_CITY_SLUGS.flatMap((citySlug) => LOCAL_SUBJECT_SLUGS.map(async (subjectSlug) => {
     const city = CITIES[citySlug];
     const subject = SUBJECTS[subjectSlug];
-    const { total } = await fetchTutors({ city, subject }, 1);
+    const { total } = await fetchTutors({ countryCode: "PK", city, subject }, 1);
     return total > 0 ? { url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.85 } : null;
   })));
 
@@ -63,12 +66,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return total > 0 ? { url: `${SITE_URL}/pk/home-tutors/${citySlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.9 } : null;
   }));
 
+  const pakistanLevelResults = await Promise.all(PAKISTAN_LEVEL_SLUGS.map(async (levelSlug) => {
+    const level = LEVELS[levelSlug];
+    const { total } = await fetchTutors({ countryCode: "PK", level }, 1);
+    return total > 0 ? { url: `${SITE_URL}/pk/tutors/level/${levelSlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.88 } : null;
+  }));
+
+  const pakistanExamResults = await Promise.all(PAKISTAN_EXAM_SLUGS.map(async (examSlug) => {
+    const subject = SUBJECTS[examSlug];
+    const { total } = await fetchTutors({ countryCode: "PK", subject }, 1);
+    return total > 0 ? { url: `${SITE_URL}/pk/tutors/exam/${examSlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.88 } : null;
+  }));
+
+  const curriculumResults = await Promise.all(PRIMARY_CITY_SLUGS.flatMap((citySlug) => PAKISTAN_LEVEL_SLUGS.flatMap((levelSlug) => CURRICULUM_SUBJECT_SLUGS.map(async (subjectSlug) => {
+    const city = CITIES[citySlug];
+    const level = LEVELS[levelSlug];
+    const subject = SUBJECTS[subjectSlug];
+    const { total } = await fetchTutors({ countryCode: "PK", city, level, subject }, 1);
+    return total > 0 ? {
+      url: `${SITE_URL}/pk/tutors/city/${citySlug}/${levelSlug}/${subjectSlug}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.9,
+    } : null;
+  }))));
+
   const research: MetadataRoute.Sitemap = tutors.length >= 10 ? [
     { url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 },
     { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
   ] : [];
 
-  // Reuse the tutor inventory checks above so thin city/subject demand pages are not advertised to crawlers.
   const tuitionRequestDemandPages: MetadataRoute.Sitemap = localResults.flatMap((page, index) => {
     if (!page) return [];
     const citySlug = PRIMARY_CITY_SLUGS[Math.floor(index / LOCAL_SUBJECT_SLUGS.length)];
@@ -83,6 +110,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...countryHubResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...homeTutorResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...localResults.filter((page): page is NonNullable<typeof page> => page !== null),
+    ...pakistanLevelResults.filter((page): page is NonNullable<typeof page> => page !== null),
+    ...pakistanExamResults.filter((page): page is NonNullable<typeof page> => page !== null),
+    ...curriculumResults.filter((page): page is NonNullable<typeof page> => page !== null),
     ...research,
     ...profiles,
     ...tuitionRequestDemandPages,
