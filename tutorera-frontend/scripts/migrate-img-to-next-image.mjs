@@ -67,9 +67,25 @@ for (const file of walk(root)) {
       : importLine + text;
   }
 
+  // Logical-or avatar sources are rendered only when the surrounding JSX condition
+  // guarantees a value, but Next Image's src prop is stricter than a native <img>.
+  text = text.replaceAll(
+    "src={avatarPreview || user.avatar}",
+    "src={(avatarPreview || user.avatar) as string}",
+  );
+
   fs.writeFileSync(file, text);
   changedFiles += 1;
   migratedImages += count;
+}
+
+const navbarPath = path.join(root, "components", "Navbar.tsx");
+if (fs.existsSync(navbarPath)) {
+  const navbar = fs.readFileSync(navbarPath, "utf8").replace(
+    "/* eslint-disable @next/next/no-img-element */\n",
+    "",
+  );
+  fs.writeFileSync(navbarPath, navbar);
 }
 
 console.log(`Migrated ${migratedImages} <img> elements across ${changedFiles} files to next/image.`);
