@@ -68,8 +68,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
   ] : [];
 
-  const TARGET_DEMAND_SLUGS = PRIMARY_CITY_SLUGS.flatMap((citySlug) => LOCAL_SUBJECT_SLUGS.map((subjectSlug) => ({ citySlug, subjectSlug })));
-  const tuitionRequestDemandPages: MetadataRoute.Sitemap = TARGET_DEMAND_SLUGS.map(({ citySlug, subjectSlug }) => ({ url: `${SITE_URL}/tuition-requests/pk/${citySlug}/${subjectSlug}`, lastModified, changeFrequency: "daily", priority: 0.8 }));
+  // Reuse the tutor inventory checks above so thin city/subject demand pages are not advertised to crawlers.
+  const tuitionRequestDemandPages: MetadataRoute.Sitemap = localResults.flatMap((page, index) => {
+    if (!page) return [];
+    const citySlug = PRIMARY_CITY_SLUGS[Math.floor(index / LOCAL_SUBJECT_SLUGS.length)];
+    const subjectSlug = LOCAL_SUBJECT_SLUGS[index % LOCAL_SUBJECT_SLUGS.length];
+    return [{ url: `${SITE_URL}/tuition-requests/pk/${citySlug}/${subjectSlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.8 }];
+  });
 
   return [
     ...staticPages,
