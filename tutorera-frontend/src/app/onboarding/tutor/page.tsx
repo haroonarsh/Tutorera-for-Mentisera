@@ -53,9 +53,6 @@ export default function TutorOnboardingPage() {
   const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
     "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"
   ];
-  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
-    "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"
-  ];
 
   // Step 1
   const [step1, setStep1] = useState({
@@ -71,6 +68,15 @@ export default function TutorOnboardingPage() {
     gender: "male",
     dateOfBirth: "",
   });
+
+  // Education levels are market-relevant (GCSE/A-Level for GB vs Matric/
+  // O-Level for PK, etc.) - GET /geo/countries now returns them per-country,
+  // so use the selected country's list before falling back to the global
+  // (Pakistan-flavored) one.
+  const selectedCountryLevels = geo.countries.find((c) => c.code === step1.countryCode)?.levels;
+  const levels = (selectedCountryLevels && selectedCountryLevels.length > 0) ? selectedCountryLevels : geo.levels && geo.levels.length > 0 ? geo.levels : [
+    "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"
+  ];
 
   // Step 2
   const [step2, setStep2] = useState({ degree: "", institution: "", year: "" });

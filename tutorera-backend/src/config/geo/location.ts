@@ -254,3 +254,45 @@ export const MASTER_LEVELS = [
   "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)",
   "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation",
 ];
+
+// Every market previously got the exact same Pakistan-flavored level list
+// (MASTER_LEVELS) regardless of country - a UK student picking their child's
+// level never saw "GCSE" anywhere. This doesn't replace MASTER_LEVELS (kept
+// for backward compatibility and as the fallback for markets without an
+// entry below); level values are free-form strings on TutorProfile/Request
+// (normalizeEducationLevel() passes unrecognized values through unchanged),
+// so adding new terminology here needs no schema/validation change - this
+// only changes which options a market's forms show first.
+export const EDUCATION_LEVELS_BY_COUNTRY: Record<string, string[]> = {
+  PK: MASTER_LEVELS,
+  GB: [
+    "Primary (Key Stage 1-2)", "Key Stage 3", "GCSE", "IGCSE", "A-Level",
+    "BTEC", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation",
+  ],
+  AE: [
+    "Primary", "Middle School", "IGCSE", "GCSE", "A-Level",
+    "American High School Diploma", "IB (Middle Years / Diploma)",
+    "CBSE", "UAE Ministry Curriculum", "University / Degree", "Test Preparation",
+  ],
+  US: [
+    "Elementary School", "Middle School", "High School", "AP (Advanced Placement)",
+    "SAT / ACT Prep", "IB (Middle Years / Diploma)", "College / University", "Test Preparation",
+  ],
+  SA: [
+    "Primary", "Middle School", "IGCSE", "GCSE", "A-Level",
+    "American High School Diploma", "IB (Middle Years / Diploma)",
+    "Saudi National Curriculum", "University / Degree", "Test Preparation",
+  ],
+  IN: [
+    "Primary", "Middle School", "CBSE", "ICSE", "IGCSE",
+    "IB (Middle Years / Diploma)", "JEE / NEET Prep", "University / Degree", "Test Preparation",
+  ],
+  CA: [
+    "Elementary", "Middle School", "High School", "AP (Advanced Placement)",
+    "IB (Middle Years / Diploma)", "College / University", "Test Preparation",
+  ],
+  AU: [
+    "Primary", "Middle School", "Senior Secondary (HSC/VCE/QCE)",
+    "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation",
+  ],
+};

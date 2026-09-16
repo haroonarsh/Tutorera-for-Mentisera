@@ -6,7 +6,7 @@ import City from "../models/City.model";
 import Locality from "../models/Locality.model";
 import MarketConfig from "../models/MarketConfig.model";
 import TutorProfile from "../models/TutorProfile.model";
-import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS } from "../config/geo/location";
+import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS, EDUCATION_LEVELS_BY_COUNTRY } from "../config/geo/location";
 import { ensureLaunchMarkets } from "../services/market.service";
 
 const pageSize = (value: unknown) => Math.min(Math.max(Number(value) || 25, 1), 100);
@@ -27,6 +27,11 @@ export const getCountries = async (_req: Request, res: Response): Promise<void> 
       languages: market.supportedLanguages, launchStatus: market.launchStatus, onlineEnabled: market.onlineEnabled,
       homeTuitionEnabled: market.homeTuitionEnabled, paymentsEnabled: market.paymentsEnabled,
       payoutsEnabled: market.payoutsEnabled, featureFlags: market.featureFlags,
+      // Market-relevant education levels first (e.g. GCSE/A-Level for GB
+      // instead of Matric/O-Level) - the top-level `levels` field below stays
+      // the Pakistan-flavored global list for backward compatibility with
+      // any caller that isn't yet reading this per-country field.
+      levels: EDUCATION_LEVELS_BY_COUNTRY[market.countryCode] || MASTER_LEVELS,
     };
   });
   res.json({ success: true, count: list.length, countries: list, subjects: MASTER_SUBJECTS, levels: MASTER_LEVELS, currencies: Object.values(SUPPORTED_CURRENCIES) });

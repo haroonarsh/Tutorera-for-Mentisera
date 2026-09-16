@@ -30,6 +30,10 @@ export interface CountryData {
   paymentsEnabled?: boolean;
   languages?: string[];
   featureFlags?: Record<string, boolean>;
+  /** Market-relevant education levels (e.g. GCSE/A-Level for GB vs Matric/
+   * O-Level for PK), returned per-country by GET /geo/countries. Falls back
+   * to the global (Pakistan-flavored) levels list when absent. */
+  levels?: string[];
 }
 
 export type Country = CountryData;
