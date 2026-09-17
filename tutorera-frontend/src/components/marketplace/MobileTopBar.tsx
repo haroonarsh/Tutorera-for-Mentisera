@@ -96,7 +96,12 @@ export default function MobileTopBar() {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1
+          {/* This is a mobile nav-bar label, not the page's actual heading -
+              using <h1> here collided with each page's real content <h1>,
+              giving most of the site two h1 elements (this one stayed in the
+              DOM at all viewport widths; only its visual display was hidden
+              above 768px via the .mobile-top-bar media query below). */}
+          <p
             style={{
               fontSize: "1rem",
               fontWeight: 800,
@@ -108,7 +113,7 @@ export default function MobileTopBar() {
             }}
           >
             {title}
-          </h1>
+          </p>
         </div>
       )}
 
