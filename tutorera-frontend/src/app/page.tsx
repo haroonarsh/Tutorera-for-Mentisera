@@ -9,6 +9,8 @@ import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
 import PaymentTrustSteps from "@/components/marketplace/PaymentTrustSteps";
 import AdBanner from "@/components/AdBanner";
 import GlobalTutoringIndex from "@/components/SEO/GlobalTutoringIndex";
+import TopTutorsSection from "@/components/TopTutorsSection";
+import { fetchTutors } from "@/lib/tutor-directory";
 import { ArrowRight, Star, MapPin } from "lucide-react";
 import s from "./page.module.css";
 
@@ -61,7 +63,13 @@ const blogPosts = [
   }
 ];
 
-export default function Home() {
+export default async function Home() {
+  // Server-fetched so the homepage's only links to individual tutor
+  // profiles (and their names/ratings) are present in the initial HTML,
+  // not added later by a client effect that a non-JS crawler would never
+  // see. Default sort on the /tutors endpoint is already -averageRating.
+  const { tutors: topTutors } = await fetchTutors({}, 3);
+
   return (
     <div className={s.page}>
       {/* 1. Marketplace Hero & 2. Quick Request Composer */}
@@ -89,6 +97,11 @@ export default function Home() {
 
       {/* 6b. Payment Trust / How Your Money Is Protected */}
       <PaymentTrustSteps />
+
+      {/* 6c. Meet Our Top Tutors - the homepage's only links to individual
+          tutor profiles; previously this section existed as a component
+          but was never actually rendered anywhere on the site. */}
+      <TopTutorsSection tutors={topTutors} />
 
       {/* 7. Popular Academic Subjects */}
       <section style={{ padding: "4rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0" }}>

@@ -1,40 +1,26 @@
 "use client";
-import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
 import { formatPKR } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
+import type { TutorProfile } from "@/types/tutor";
 import { MapPin,Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect,useState } from "react";
 
 const C = UI_COLORS;
 
-interface Tutor {
-  _id: string;
-  user: { _id: string; name: string; avatar: string; city: string; };
-  bio: string;
-  subjects: string[];
-  hourlyRate: number;
-  averageRating: number;
-  totalReviews: number;
-  isVerified: boolean;
-  teachingMode: string;
+interface Props {
+  /** Fetched server-side by the homepage (fetchTutors) and passed down, so
+   * this section's tutor names/links/ratings are present in the initial
+   * server-rendered HTML - this used to self-fetch via a client useEffect,
+   * which meant its content (and the only homepage links to individual
+   * tutor profiles) never existed for a crawler that doesn't execute JS.
+   * Still a client component for the hover effects below. */
+  tutors: TutorProfile[];
 }
 
-export default function TopTutorsSection() {
-  const [tutors, setTutors] = useState<Tutor[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get("/tutors?limit=3&sort=-averageRating")
-      .then(res => setTutors(res.data.tutors || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  // If no real tutors yet show nothing or placeholder
-  if (!loading && tutors.length === 0) return null;
+export default function TopTutorsSection({ tutors }: Props) {
+  if (tutors.length === 0) return null;
 
   return (
     <section style={{ padding: '5rem 1.5rem', backgroundColor: C.gray50 }}>
@@ -48,22 +34,7 @@ export default function TopTutorsSection() {
           </p>
         </div>
 
-        {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} style={{ backgroundColor: 'white', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb', animation: 'pulse 1.5s infinite' }}>
-                <div style={{ height: '160px', backgroundColor: '#f3f4f6' }} />
-                <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ height: '16px', backgroundColor: '#f3f4f6', borderRadius: '0.25rem', width: '60%' }} />
-                  <div style={{ height: '12px', backgroundColor: '#f3f4f6', borderRadius: '0.25rem', width: '80%' }} />
-                  <div style={{ height: '12px', backgroundColor: '#f3f4f6', borderRadius: '0.25rem', width: '40%' }} />
-                </div>
-              </div>
-            ))}
-            <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {tutors.map(tutor => (
               <div key={tutor._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s' }}
                 onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)')}
@@ -72,7 +43,10 @@ export default function TopTutorsSection() {
                 {/* Card Header */}
                 <div style={{ height: '160px', background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   {tutor.user?.avatar ? (
-                    <Image src={tutor.user.avatar} alt={tutor.user.name} width={80} height={80} sizes="80px" unoptimized
+                    <Image
+                      src={tutor.user.avatar}
+                      alt={`${tutor.user.name}, ${tutor.isVerified ? "verified " : ""}${tutor.subjects?.[0] || "tutor"}${tutor.user.city ? ` in ${tutor.user.city}` : ""}`}
+                      width={80} height={80} sizes="80px" unoptimized
                       style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)' }} />
                   ) : (
                     <div style={{ width: '80px', height: '80px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '2rem', fontWeight: '800', border: '3px solid rgba(255,255,255,0.3)' }}>
@@ -147,8 +121,7 @@ export default function TopTutorsSection() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
+        </div>
 
         <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
           <Link href="/tutors"
