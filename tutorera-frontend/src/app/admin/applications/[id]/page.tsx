@@ -16,13 +16,14 @@ type QueueRow = { _id: string };
 /** Small color-coded status badge reused across every document card, so an
  * admin can scan approve/pending/rejected at a glance instead of reading
  * plain "Current: <status>" text on each card. */
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status?: string }) {
+  const safeStatus = status ?? "not_submitted";
   const tone =
-    status === "approved" ? STATUS_COLORS.success :
-    status === "rejected" ? STATUS_COLORS.danger :
-    status === "pending" ? STATUS_COLORS.warning :
+    safeStatus === "approved" ? STATUS_COLORS.success :
+    safeStatus === "rejected" ? STATUS_COLORS.danger :
+    safeStatus === "pending" ? STATUS_COLORS.warning :
     STATUS_COLORS.neutral;
-  const label = status === "not_submitted" ? "Not submitted" : status === "not_required" ? "Not required" : status.charAt(0).toUpperCase() + status.slice(1);
+  const label = safeStatus === "not_submitted" ? "Not submitted" : safeStatus === "not_required" ? "Not required" : safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1);
   return (
     <span style={{
       display: "inline-block",
