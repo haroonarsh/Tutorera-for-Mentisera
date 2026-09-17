@@ -1,6 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 import s from "@/components/Tracking/tracking.module.css";
@@ -8,6 +10,36 @@ import { formatDateLong } from "@/lib/site";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 type Params = Promise<{ id: string }>;
+
+type QueueRow = { _id: string };
+
+/** Small color-coded status badge reused across every document card, so an
+ * admin can scan approve/pending/rejected at a glance instead of reading
+ * plain "Current: <status>" text on each card. */
+function StatusBadge({ status }: { status: string }) {
+  const tone =
+    status === "approved" ? STATUS_COLORS.success :
+    status === "rejected" ? STATUS_COLORS.danger :
+    status === "pending" ? STATUS_COLORS.warning :
+    STATUS_COLORS.neutral;
+  const label = status === "not_submitted" ? "Not submitted" : status === "not_required" ? "Not required" : status.charAt(0).toUpperCase() + status.slice(1);
+  return (
+    <span style={{
+      display: "inline-block",
+      background: tone.bg,
+      color: tone.color,
+      border: `1px solid ${tone.border}`,
+      borderRadius: 999,
+      padding: "3px 10px",
+      fontSize: 11,
+      fontWeight: 800,
+      textTransform: "uppercase",
+      letterSpacing: "0.04em",
+    }}>
+      {label}
+    </span>
+  );
+}
 
 interface ApplicationDetail {
   applicationId: string;
@@ -55,13 +87,33 @@ interface ApplicationDetail {
   history: { id: string; at: string; event: string; message: string; actor: string; actorRole: string }[];
 }
 
-export default function AdminApplicationDetailPage({ params }: { params: Params }) {
+function AdminApplicationDetailContent({ params }: { params: Params }) {
   const { id } = use(params);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reasonFor, setReasonFor] = useState<string>("");
   const [busyKey, setBusyKey] = useState<string>("");
+
+  // The filters/page an admin was browsing on the list page, carried through
+  // the URL so Prev/Next can step through the SAME filtered queue instead of
+  // requiring a trip back to the list for every application.
+  const queueQuery = searchParams.toString();
+  const [queue, setQueue] = useState<QueueRow[]>([]);
+  useEffect(() => {
+    const params = new URLSearchParams(queueQuery);
+    params.set("limit", "100");
+    api.get(`/tracking/admin/applications?${params.toString()}`)
+      .then(res => setQueue(res.data.applications || []))
+      .catch(() => setQueue([]));
+  }, [queueQuery]);
+  const queueIndex = queue.findIndex(r => r._id === id);
+  const goToQueueOffset = (offset: number) => {
+    const target = queue[queueIndex + offset];
+    if (target) router.push(`/admin/applications/${target._id}${queueQuery ? `?${queueQuery}` : ""}`);
+  };
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -93,6 +145,37 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
       await fetchDetail();
     } catch (err) {
       showError(err, `Failed to ${label.toLowerCase()}`);
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  // The most common admin action by far is "everything looks fine, approve
+  // it" - previously that meant clicking Approve separately on up to 5
+  // different cards. This does it in one click for whichever documents are
+  // actually awaiting review (not_submitted/not_required/approved/rejected
+  // are left untouched - only "pending" items move).
+  const handleApproveAllPending = async () => {
+    if (!data) return;
+    const pendingEndpoints: string[] = [];
+    if (data.profile.avatarVerificationStatus === "pending") pendingEndpoints.push("avatar");
+    if (data.profile.cnicVerificationStatus === "pending") pendingEndpoints.push("cnic");
+    if (data.profile.degreeVerificationStatus === "pending") pendingEndpoints.push("degree");
+    if (data.profile.demoVideoStatus === "pending") pendingEndpoints.push("demo-video");
+    if (data.profile.policeVerificationStatus === "pending") pendingEndpoints.push("police");
+    if (pendingEndpoints.length === 0) {
+      showError("Nothing is currently pending review.");
+      return;
+    }
+    setBusyKey("approve-all");
+    try {
+      for (const endpoint of pendingEndpoints) {
+        await api.patch(`/tracking/admin/applications/${id}/${endpoint}`, { status: "approved" });
+      }
+      showSuccess(`Approved ${pendingEndpoints.length} pending item${pendingEndpoints.length > 1 ? "s" : ""}`);
+      await fetchDetail();
+    } catch (err) {
+      showError(err, "Failed to approve all pending items");
     } finally {
       setBusyKey("");
     }
@@ -233,21 +316,86 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
     }
   };
 
+  const pendingCount = [
+    p.avatarVerificationStatus, p.cnicVerificationStatus, p.degreeVerificationStatus,
+    p.demoVideoStatus, p.policeVerificationStatus,
+  ].filter(st => st === "pending").length;
+
   return (
     <div style={{ padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: UI_COLORS.accent, margin: "0 0 6px" }}>Admin · Applications</p>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: TEXT_COLORS.primary, margin: "0 0 4px" }}>{data.tutorName}</h1>
-        <p style={{ color: TEXT_COLORS.muted, fontSize: 13, margin: "0 0 16px" }}>
-          {data.applicationId} · {data.tutorEmail} · Submitted {formatDateLong(p.createdAt)}
-        </p>
+        <Link href="/admin/applications" style={{ display: "inline-block", fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: UI_COLORS.accent, margin: "0 0 6px", textDecoration: "none" }}>
+          ← Back to Applications
+        </Link>
+
+        {/* Sticky review toolbar: keeps the applicant's identity, queue
+            position, Prev/Next, and the one-click approve action always
+            visible while scrolling through a long application. */}
+        <div style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: UI_COLORS.surface,
+          border: `1px solid ${UI_COLORS.border}`,
+          borderRadius: 12,
+          padding: "12px 16px",
+          marginBottom: 16,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+          alignItems: "center",
+          justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(2,21,80,0.06)",
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: TEXT_COLORS.primary, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{data.tutorName}</h1>
+            <p style={{ color: TEXT_COLORS.muted, fontSize: 12, margin: "2px 0 0" }}>
+              {data.applicationId} · {data.tutorEmail} · Submitted {formatDateLong(p.createdAt)}
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {pendingCount > 0 && (
+              <button
+                type="button"
+                disabled={busyKey === "approve-all"}
+                onClick={handleApproveAllPending}
+                style={{ ...btnSuccessStyle, padding: "8px 16px", fontSize: 13, opacity: busyKey === "approve-all" ? 0.7 : 1 }}
+              >
+                {busyKey === "approve-all" ? "Approving..." : `✓ Approve all pending (${pendingCount})`}
+              </button>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, borderLeft: `1px solid ${UI_COLORS.border}`, paddingLeft: 10, marginLeft: 2 }}>
+              <button
+                type="button"
+                disabled={queueIndex <= 0}
+                onClick={() => goToQueueOffset(-1)}
+                title="Previous application in this filtered list"
+                style={{ ...btnSecondaryStyle, opacity: queueIndex <= 0 ? 0.4 : 1, cursor: queueIndex <= 0 ? "not-allowed" : "pointer" }}
+              >
+                ← Prev
+              </button>
+              <span style={{ fontSize: 12, color: TEXT_COLORS.muted, minWidth: 70, textAlign: "center" }}>
+                {queueIndex >= 0 ? `${queueIndex + 1} of ${queue.length}` : ""}
+              </span>
+              <button
+                type="button"
+                disabled={queueIndex < 0 || queueIndex >= queue.length - 1}
+                onClick={() => goToQueueOffset(1)}
+                title="Next application in this filtered list"
+                style={{ ...btnSecondaryStyle, opacity: (queueIndex < 0 || queueIndex >= queue.length - 1) ? 0.4 : 1, cursor: (queueIndex < 0 || queueIndex >= queue.length - 1) ? "not-allowed" : "pointer" }}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className={`${s.grid} ${s.two}`} style={{ marginBottom: 16 }}>
           <div className={s.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <p className={s.cardTitle} style={{ margin: 0 }}>Profile photo</p>
             </div>
-            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.avatarVerificationStatus}</strong></p>
+            <div style={{ marginBottom: 8 }}><StatusBadge status={p.avatarVerificationStatus} /></div>
             {p.avatarRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.avatarRejectionReason}</p>}
             {data.tutorAvatar ? (
               // Avatars are uploaded as public Cloudinary assets (unlike
@@ -273,7 +421,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
                 <button type="button" onClick={() => openUploadModal("cnicBack")} style={btnUploadStyle}>+ Upload Back</button>
               </div>
             </div>
-            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.cnicVerificationStatus}</strong></p>
+            <div style={{ marginBottom: 8 }}><StatusBadge status={p.cnicVerificationStatus} /></div>
             {p.cnicRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.cnicRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={() => handleViewDocument("cnicFront")} style={btnSecondaryStyle}>View front</button>
@@ -291,7 +439,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               <p className={s.cardTitle} style={{ margin: 0 }}>Educational documents</p>
               <button type="button" onClick={() => openUploadModal("degree")} style={btnUploadStyle}>+ Upload Degree</button>
             </div>
-            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.degreeVerificationStatus}</strong></p>
+            <div style={{ marginBottom: 8 }}><StatusBadge status={p.degreeVerificationStatus} /></div>
             {p.degreeRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.degreeRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={() => handleViewDocument("degreeDoc")} style={btnSecondaryStyle}>View document</button>
@@ -308,7 +456,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               <p className={s.cardTitle} style={{ margin: 0 }}>Demo video</p>
               <button type="button" onClick={() => openUploadModal("videoIntro")} style={btnUploadStyle}>+ Upload / Add Video</button>
             </div>
-            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.demoVideoStatus}</strong></p>
+            <div style={{ marginBottom: 8 }}><StatusBadge status={p.demoVideoStatus} /></div>
             {p.demoVideoRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.demoVideoRejectionReason}</p>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <a href={p.videoIntro} target="_blank" rel="noreferrer" style={btnSecondaryStyle}>Open video URL</a>
@@ -325,7 +473,7 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
               <p className={s.cardTitle} style={{ margin: 0 }}>Police verification {isPoliceRequired ? "" : "(not required)"}</p>
               <button type="button" onClick={() => openUploadModal("policeCertificate")} style={btnUploadStyle}>+ Upload Police Doc</button>
             </div>
-            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.policeVerificationStatus}</strong></p>
+            <div style={{ marginBottom: 8 }}><StatusBadge status={p.policeVerificationStatus} /></div>
             {p.policeRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.policeRejectionReason}</p>}
             {isPoliceRequired && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -534,6 +682,14 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminApplicationDetailPage({ params }: { params: Params }) {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading application...</div>}>
+      <AdminApplicationDetailContent params={params} />
+    </Suspense>
   );
 }
 

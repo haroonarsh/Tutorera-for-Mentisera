@@ -30,6 +30,19 @@ const ALL_STATUSES: CanonicalStatus[] = [
   "HOME_TUITION_VERIFICATION_REQUIRED", "HOME_TUITION_ELIGIBLE", "REJECTED", "SUSPENDED", "RE_VERIFICATION_REQUIRED",
 ];
 
+/** Carries the current filters + page into the detail page's URL so it can
+ * rebuild the same filtered queue and offer Prev/Next navigation between
+ * applications without the admin bouncing back to this list each time. */
+function queueQueryString(filters: { status: string; marketplace: string; homeTuition: string; search: string }, page: number): string {
+  const params = new URLSearchParams();
+  if (filters.status !== "all") params.set("status", filters.status);
+  if (filters.marketplace !== "all") params.set("marketplace", filters.marketplace);
+  if (filters.homeTuition !== "all") params.set("homeTuition", filters.homeTuition);
+  if (filters.search.trim()) params.set("search", filters.search.trim());
+  params.set("page", String(page));
+  return params.toString();
+}
+
 function statusPillVariant(status: CanonicalStatus): string {
   if (status === "REJECTED" || status === "SUSPENDED") return s.danger || "";
   if (status === "ACTION_REQUIRED" || status === "RE_VERIFICATION_REQUIRED") return s.warn || "";
@@ -222,7 +235,12 @@ function ApplicationsContent() {
                         </span>
                       </td>
                       <td style={tdStyle}>
-                        <Link href={`/admin/applications/${row._id}`} style={{ ...btnPrimaryStyle, textDecoration: "none" }}>Review</Link>
+                        <Link
+                          href={`/admin/applications/${row._id}?${queueQueryString(filters, page)}`}
+                          style={{ ...btnPrimaryStyle, textDecoration: "none" }}
+                        >
+                          Review
+                        </Link>
                       </td>
                     </tr>
                   ))}
