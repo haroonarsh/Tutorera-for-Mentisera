@@ -1,10 +1,16 @@
 // components/tutors/Pagination.tsx
+import Link from "next/link";
 import { PaginationMeta } from "@/types/tutor";
 import styles from "./Pagination.module.css";
 
 interface PaginationProps {
   meta: PaginationMeta;
   onPageChange: (page: number) => void;
+  /** Builds a real, crawlable URL for a given page (current filters + that
+   * page number). Pagination was previously pure client state with no
+   * unique URL per page - page 2+ was invisible to any crawler that doesn't
+   * execute JS. */
+  hrefBuilder: (page: number) => string;
 }
 
 function buildPageList(current: number, total: number): (number | "...")[] {
@@ -22,17 +28,31 @@ function buildPageList(current: number, total: number): (number | "...")[] {
   return pages;
 }
 
-export default function Pagination({ meta, onPageChange }: PaginationProps) {
+export default function Pagination({ meta, onPageChange, hrefBuilder }: PaginationProps) {
   const totalPagesCount = meta.pages || meta.totalPages || 1;
   const pages = buildPageList(meta.page, totalPagesCount);
+
+  // Real users get instant client-side pagination (preventDefault + the
+  // existing fetch-in-place); a crawler, or anyone with JS off / opening in
+  // a new tab, still gets a working link to a real, unique, indexable URL.
+  function handleClick(page: number) {
+    return (e: React.MouseEvent) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      if (page < 1 || page > totalPagesCount) return;
+      onPageChange(page);
+    };
+  }
 
   return (
     <nav aria-label="Tutor results pagination">
       <div className={styles.wrap}>
-        <button
+        <Link
           className={styles.navBtn}
-          onClick={() => onPageChange(meta.page - 1)}
-          disabled={meta.page === 1}
+          href={hrefBuilder(meta.page - 1)}
+          onClick={handleClick(meta.page - 1)}
+          aria-disabled={meta.page === 1}
+          tabIndex={meta.page === 1 ? -1 : undefined}
           aria-label="Go to previous page"
         >
           <svg width={14} height={14} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -43,7 +63,7 @@ export default function Pagination({ meta, onPageChange }: PaginationProps) {
             />
           </svg>
           Prev
-        </button>
+        </Link>
 
         {pages.map((p, i) =>
           p === "..." ? (
@@ -51,9 +71,10 @@ export default function Pagination({ meta, onPageChange }: PaginationProps) {
               …
             </span>
           ) : (
-            <button
+            <Link
               key={p}
-              onClick={() => onPageChange(p as number)}
+              href={hrefBuilder(p as number)}
+              onClick={handleClick(p as number)}
               aria-label={`Page ${p}`}
               aria-current={meta.page === p ? "page" : undefined}
               className={`${styles.pageBtn} ${
@@ -61,14 +82,16 @@ export default function Pagination({ meta, onPageChange }: PaginationProps) {
               }`}
             >
               {p}
-            </button>
+            </Link>
           )
         )}
 
-        <button
+        <Link
           className={styles.navBtn}
-          onClick={() => onPageChange(meta.page + 1)}
-          disabled={meta.page === meta.pages}
+          href={hrefBuilder(meta.page + 1)}
+          onClick={handleClick(meta.page + 1)}
+          aria-disabled={meta.page === meta.pages}
+          tabIndex={meta.page === meta.pages ? -1 : undefined}
           aria-label="Go to next page"
         >
           Next
@@ -79,7 +102,7 @@ export default function Pagination({ meta, onPageChange }: PaginationProps) {
               clipRule="evenodd"
             />
           </svg>
-        </button>
+        </Link>
       </div>
 
       <p className={styles.meta} aria-live="polite">

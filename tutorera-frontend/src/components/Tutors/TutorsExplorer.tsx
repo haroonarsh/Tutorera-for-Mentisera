@@ -153,7 +153,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
           </div>
         </div>
         {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} matchScore={tutor.matchScore} />)}</div> : <EmptyState onReset={reset} />}
-        {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>}
+        {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} hrefBuilder={(page) => `/tutors?${query(filters, page, matchRequestId)}`} /></div>}
       </section>
     </div>
   </div>;

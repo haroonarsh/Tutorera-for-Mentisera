@@ -24,14 +24,17 @@
   font-family: inherit;
 }
 
-.navBtn:hover:not(:disabled) {
+.navBtn:hover:not([aria-disabled="true"]) {
   border-color: var(--color-digital-blue);
   color: var(--color-digital-blue);
 }
 
-.navBtn:disabled {
+/* Prev/Next render as <a> (real, crawlable links), not <button>, so the
+   disabled state is aria-disabled rather than the :disabled pseudo-class. */
+.navBtn[aria-disabled="true"] {
   color: #d1d5db;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .pageBtn {
