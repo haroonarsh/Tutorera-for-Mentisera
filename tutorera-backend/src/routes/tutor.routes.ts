@@ -16,13 +16,16 @@ import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, tutorProfileSchema } from "../validators/tutor.validator";
 import { validate as validateAvailability, saveAvailabilitySchema } from "../validators/availability.validator";
 import { uploadVerification } from "../middlewares/upload.middleware";
+import { cachePublic } from "../middlewares/cacheControl.middleware";
 
 const router = Router();
 
-// Public
-router.get("/", getAllTutors);
+// Public - shorter TTL than blog content since tutor verification status,
+// ratings, and availability change more often; still meaningfully cuts
+// repeated-crawl/SSR-revalidation load versus no caching at all.
+router.get("/", cachePublic(60), getAllTutors);
 router.get("/:tutorUserId/availability", getTutorAvailability);
-router.get("/:id", getTutorById);
+router.get("/:id", cachePublic(60), getTutorById);
 
 // Availability (tutor)
 router.post("/availability", protect, authorize("tutor"), validateAvailability(saveAvailabilitySchema), saveAvailability);
