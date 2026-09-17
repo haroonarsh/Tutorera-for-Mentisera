@@ -21,11 +21,11 @@ interface DocConfig {
 }
 
 const DOC_CONFIGS: DocConfig[] = [
-  { key: "cnicFront", label: "CNIC (Front Side)", hint: "Clear photo or scan of the front of your national ID — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "cnic" },
-  { key: "cnicBack", label: "CNIC (Back Side)", hint: "Clear photo or scan of the back of your national ID — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "cnic" },
+  { key: "cnicFront", label: "Identity Document (Front)", hint: "Clear photo or scan of the front of your government-issued identity document — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "cnic" },
+  { key: "cnicBack", label: "Identity Document (Back)", hint: "Clear photo or scan of the back of your government-issued identity document — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "cnic" },
   { key: "degree", label: "Degree / Educational Document", hint: "Scan of your highest degree certificate — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "degree" },
   { key: "videoIntro", label: "Demo Teaching Video", hint: "Re-record your 2-5 minute demo video in a well-lit environment — MP4 only", accept: ".mp4", componentKey: "demoVideo" },
-  { key: "policeCertificate", label: "Police Verification Certificate", hint: "Fresh police character certificate (required for home/in-person tuition) — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "police" },
+  { key: "policeCertificate", label: "Background & Safety Certificate", hint: "Current background or safety certificate required by your home-tuition market — PDF, JPG, PNG", accept: ".pdf,.jpg,.jpeg,.png", componentKey: "police" },
 ];
 
 function StatusBadge({ status }: { status: string }) {

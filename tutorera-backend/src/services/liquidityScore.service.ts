@@ -5,6 +5,7 @@ import Booking from "../models/Booking.model";
 
 interface LiquidityInput {
   countryCode?: string;
+  currency?: string;
   city?: string;
   subject?: string;
   teachingMode?: string;
@@ -25,6 +26,7 @@ interface LiquidityScore {
     fillRate: number;         // 0-1
     avgOffersPerRequest: number;
     avgSessionPrice: number;
+    currency: string | null;
     sampleSize: number;
   };
 }
@@ -48,7 +50,7 @@ function percentileScore(value: number, min: number, max: number): number {
 }
 
 export async function computeLiquidityScore(input: LiquidityInput): Promise<LiquidityScore> {
-  const { countryCode, city, subject, teachingMode } = input;
+  const { countryCode, city, subject, teachingMode, currency } = input;
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -56,6 +58,7 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
   const requestFilter: Record<string, unknown> = {};
   const tutorFilter: Record<string, unknown> = {};
   if (countryCode) requestFilter.countryCode = tutorFilter.countryCode = countryCode.toUpperCase();
+  if (currency) requestFilter.currency = tutorFilter.currency = currency.toUpperCase();
   if (city) requestFilter.city = tutorFilter.city = new RegExp(`^${escapeRegExp(city)}$`, "i");
   if (subject) {
     requestFilter.subject = new RegExp(`^${escapeRegExp(subject)}$`, "i");
@@ -90,6 +93,7 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
         request: { $in: recentRequestIds },
         createdAt: { $gte: thirtyDaysAgo },
         status: { $in: ["completed", "upcoming", "ongoing"] },
+        ...(currency ? { currency: currency.toUpperCase() } : {}),
       }).select("finalAgreedRate tutorPayout").lean()
     : [];
 
@@ -148,6 +152,7 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
       fillRate: Math.round(fillRate * 100) / 100,
       avgOffersPerRequest: Math.round(avgOffersPerRequest * 10) / 10,
       avgSessionPrice: Math.round(avgSessionPrice),
+      currency: currency?.toUpperCase() || null,
       sampleSize,
     },
   };
@@ -155,25 +160,27 @@ export async function computeLiquidityScore(input: LiquidityInput): Promise<Liqu
 
 export async function getAllLiquidityScores(countryCode?: string): Promise<Record<string, LiquidityScore>> {
   const filter: Record<string, unknown> = {};
-  if (countryCode) filter.countryCode = countryCode;
+  if (countryCode) filter.countryCode = countryCode.toUpperCase();
 
   const requests = await Request.find({
     ...filter,
     city: { $exists: true, $ne: "" },
     subject: { $exists: true, $ne: "" },
     status: { $nin: ["draft", "cancelled", "archived"] },
-  }).select("city subject teachingMode").lean();
-  const segments = new Map<string, { city: string; subject: string; teachingMode: "online" | "in-person" }>();
+  }).select("countryCode currency city subject teachingMode").lean();
+  const segments = new Map<string, { countryCode?: string; currency: string; city: string; subject: string; teachingMode: "online" | "in-person" }>();
   for (const request of requests) {
     const modes: Array<"online" | "in-person"> = request.teachingMode === "both" ? ["online", "in-person"] : [request.teachingMode];
     for (const teachingMode of modes) {
-      const key = `${request.city}|${request.subject}|${teachingMode}`;
-      segments.set(key.toLocaleLowerCase(), { city: request.city!, subject: request.subject, teachingMode });
+      const requestCurrency = (request.currency || "PKR").toUpperCase();
+      const requestCountryCode = request.countryCode?.toUpperCase();
+      const key = `${requestCountryCode || ""}|${requestCurrency}|${request.city}|${request.subject}|${teachingMode}`;
+      segments.set(key.toLocaleLowerCase(), { countryCode: requestCountryCode, currency: requestCurrency, city: request.city!, subject: request.subject, teachingMode });
     }
   }
   const scored = await Promise.all(Array.from(segments.values()).map(async (segment) => ({
-    key: `${segment.city}|${segment.subject}|${segment.teachingMode}`,
-    value: await computeLiquidityScore({ ...segment, countryCode }),
+    key: `${segment.countryCode || ""}|${segment.currency}|${segment.city}|${segment.subject}|${segment.teachingMode}`,
+    value: await computeLiquidityScore(segment),
   })));
   return Object.fromEntries(scored.map(({ key, value }) => [key, value]));
 }

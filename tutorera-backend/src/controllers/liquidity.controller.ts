@@ -3,13 +3,14 @@ import { AuthRequest } from "../types";
 import { computeLiquidityScore, getAllLiquidityScores } from "../services/liquidityScore.service";
 
 export const getLiquidityScore = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { city, subject, teachingMode } = req.query;
+  const { city, subject, teachingMode, currency } = req.query;
 
   const score = await computeLiquidityScore({
     city: city as string,
     subject: subject as string,
     teachingMode: teachingMode as string,
     countryCode: req.query.countryCode as string,
+    currency: currency as string,
   });
 
   res.status(200).json({ success: true, score });

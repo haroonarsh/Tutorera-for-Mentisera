@@ -825,14 +825,14 @@ export default function TutorOnboardingPage() {
                           <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.8rem' }}>✅ Selected: {cnicFront.name}</p>
                         ) : existingDocs.cnicFront ? (
                           <div>
-                            <p style={{ color: '#0329b2', fontSize: '0.8rem', fontWeight: 600 }}>📄 CNIC Front on file</p>
+                            <p style={{ color: '#0329b2', fontSize: '0.8rem', fontWeight: 600 }}>📄 Identity document front on file</p>
                             <p style={{ color: '#64748b', fontSize: '0.7rem' }}>Click to replace</p>
                           </div>
                         ) : (
                           <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload identity document front</p>
                         )}
                       </div>
-                      <input id="cnicFront" type="file" accept="image/*" onChange={e => setCnicFront(e.target.files?.[0] || null)} aria-label="upload" style={{ display: 'none' }} />
+                      <input id="cnicFront" type="file" accept="image/*" onChange={e => setCnicFront(e.target.files?.[0] || null)} aria-label="Upload identity document front" style={{ display: 'none' }} />
                     </div>
 
                     {/* CNIC Back */}
@@ -843,14 +843,14 @@ export default function TutorOnboardingPage() {
                           <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.8rem' }}>✅ Selected: {cnicBack.name}</p>
                         ) : existingDocs.cnicBack ? (
                           <div>
-                            <p style={{ color: '#0329b2', fontSize: '0.8rem', fontWeight: 600 }}>📄 CNIC Back on file</p>
+                            <p style={{ color: '#0329b2', fontSize: '0.8rem', fontWeight: 600 }}>📄 Identity document back on file</p>
                             <p style={{ color: '#64748b', fontSize: '0.7rem' }}>Click to replace</p>
                           </div>
                         ) : (
                           <p style={{ color: C.gray500, fontSize: '0.8rem' }}>Click to upload identity document back</p>
                         )}
                       </div>
-                      <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="image" style={{ display: 'none' }} />
+                      <input id="cnicBack" type="file" accept="image/*" onChange={e => setCnicBack(e.target.files?.[0] || null)} aria-label="Upload identity document back" style={{ display: 'none' }} />
                     </div>
                   </div>
                 </div>
@@ -902,7 +902,7 @@ export default function TutorOnboardingPage() {
                     ) : (
                       <>
                         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-                          {isOnlineOnly ? "Click to upload Police Certificate (Optional)" : "Click to upload Police Verification Report"}
+                          {isOnlineOnly ? "Click to upload background & safety certificate (optional)" : "Click to upload background & safety certificate"}
                         </p>
                         <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>PDF, JPG, PNG (max 5MB)</p>
                       </>

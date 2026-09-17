@@ -147,7 +147,7 @@ export default function PublicTrackPage({ params }: { params: Params }) {
         </div>
 
         <p style={{ textAlign: "center", color: "#64748b", fontSize: 12, marginTop: 24 }}>
-          This is a public tracking page. Sensitive tutor information (CNIC, document URLs, contact details, admin notes) is never shown.
+          This is a public tracking page. Sensitive tutor information (identity documents, document URLs, contact details, admin notes) is never shown.
         </p>
       </div>
     </div>

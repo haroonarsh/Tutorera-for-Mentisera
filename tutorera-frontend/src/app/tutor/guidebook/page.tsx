@@ -15,7 +15,7 @@ const guidebookSections = [
   { id: "documents", title: "5. Verification Documents", anchor: "documents" },
   { id: "resubmission", title: "6. Fixing a Rejected Document", anchor: "resubmission" },
   { id: "browse-requests", title: "7. Browsing Tuition Requests", anchor: "browse-requests" },
-  { id: "making-offers", title: "8. Making Offers & Bids", anchor: "making-offers" },
+  { id: "making-offers", title: "8. Making Offers", anchor: "making-offers" },
   { id: "negotiation", title: "9. Negotiation & Counter-Offers", anchor: "negotiation" },
   { id: "profile", title: "10. Building a Strong Profile", anchor: "profile" },
   { id: "communication", title: "11. Communicating With Students", anchor: "communication" },
@@ -223,13 +223,13 @@ export default function TutorGuidebookPage() {
                 Your complete guide to getting verified, winning students and getting paid on TUTORERA.
               </p>
               <p style={{ fontSize: "0.95rem", color: "#9ca3af", lineHeight: "1.6" }}>
-                TUTORERA is a marketplace operated by MENTISERA that connects tutors with students and parents. Students post what they need, you submit an offer, and the student compares tutors and chooses. This guide walks through onboarding, verification, bidding, teaching and getting paid.
+                TUTORERA is a marketplace operated by MENTISERA that connects tutors with students and parents. Students post what they need, you submit an offer, and the student compares tutors and chooses. This guide walks through onboarding, verification, offers, teaching and getting paid.
               </p>
               <Box variant="success" title="✓ On TUTORERA you can:">
                 <Ul
                   items={[
                     "Build a public tutor profile and get verified",
-                    "Browse and bid on live tuition requests",
+                    "Browse and send offers for live tuition requests",
                     "Negotiate rates directly with students",
                     "Teach online or in-person (Home Tuition)",
                     "Track bookings, earnings and payouts",
@@ -339,7 +339,7 @@ export default function TutorGuidebookPage() {
 
           {/* 8. Making Offers */}
           <Section id="making-offers">
-            <H2 num={8}>Making Offers & Bids</H2>
+            <H2 num={8}>Making Offers</H2>
             <P>Submit an offer with your proposed rate and a short message explaining your approach and relevant experience.</P>
             <Box variant="warning" title="⚠️ Offers that win are rarely just the cheapest. Strengthen yours with:">
               <Ul items={["A clear, specific message (not generic copy-paste)", "Relevant experience with the exact level/curriculum", "A realistic, competitive rate", "Fast response time", "A complete, verified profile"]} />
@@ -351,9 +351,9 @@ export default function TutorGuidebookPage() {
             <H2 num={9}>Negotiation & Counter-Offers</H2>
             <P>Students may counter your offer or compare it against other tutors. Example:</P>
             <Mono>
-              Student posts: Mathematics Home Tutor — PKR 18,000/month<br />
-              You offer: PKR 20,000<br />
-              Student counters: PKR 17,000<br />
+              Student posts: Mathematics Home Tutor — market currency 18,000/month<br />
+              You offer: market currency 20,000<br />
+              Student counters: market currency 17,000<br />
               You accept, counter again, or hold your rate
             </Mono>
             <P>Once a final rate is accepted by both sides, it becomes part of the booking record. Always confirm the pricing unit (per session vs. per month) and number of sessions before accepting.</P>
@@ -508,7 +508,7 @@ export default function TutorGuidebookPage() {
             <H2 num={25}>Recommended Tutor Checklist</H2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }} className="checklist-grid">
               <div style={{ background: "#f0fdf4", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #bbf7d0" }}>
-                <strong style={{ color: "#15803d", display: "block", marginBottom: "0.75rem" }}>✓ Before Bidding:</strong>
+                <strong style={{ color: "#15803d", display: "block", marginBottom: "0.75rem" }}>✓ Before Sending an Offer:</strong>
                 <ul style={{ margin: 0, paddingLeft: "1.5rem", color: "#166534", fontSize: "0.875rem" }}>
                   <li>Profile complete and verified</li>
                   <li>Demo video uploaded</li>

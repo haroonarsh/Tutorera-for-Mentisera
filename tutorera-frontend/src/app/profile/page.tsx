@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Camera, Save, User, Mail, Phone, MapPin, BookOpen } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
-import { useGeoData, convertToPKR } from "@/lib/geoService";
+import { useGeoData } from "@/lib/geoService";
 import { getCitiesForCountry } from "@/lib/location";
 
 const C = UI_COLORS;
@@ -429,11 +429,9 @@ export default function ProfilePage() {
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
-                    {tutorProfile?.currency && tutorProfile.currency !== "PKR" && Number(tutorForm.hourlyRate) > 0 && (
-                      <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
-                        ≈ Rs. {convertToPKR(Number(tutorForm.hourlyRate), tutorProfile.currency).amountPKR.toLocaleString()} PKR/hr (Settled in PKR)
-                      </p>
-                    )}
+                    <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#0329b2", fontWeight: 600 }}>
+                      Your rate is stored and negotiated in this market&apos;s currency.
+                    </p>
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Years of Experience</label>
@@ -467,15 +465,15 @@ export default function ProfilePage() {
                   }}>
                     {tutorForm.teachingMode === 'online' ? (
                       <span style={{ color: '#166534' }}>
-                        🟢 <strong>Online Tuition:</strong> No Police Verification required. You can teach students worldwide upon standard ID and Degree approval.
+                        🟢 <strong>Online Tuition:</strong> You can teach students worldwide after identity and education verification.
                       </span>
                     ) : tutorForm.teachingMode === 'in-person' ? (
                       <span style={{ color: '#92400e' }}>
-                        🛡️ <strong>Home Tuition:</strong> Police Verification Report / Character Certificate is strictly <strong>mandatory</strong> before you can accept in-person requests.
+                        🛡️ <strong>Home Tuition:</strong> The market&apos;s background and safety verification is required before you can accept in-person requests.
                       </span>
                     ) : (
                       <span style={{ color: '#92400e' }}>
-                        ⚡ <strong>Both (Online & Home):</strong> Online tuition is available immediately upon ID approval. Home Tuition requires an approved Police Verification Report.
+                        ⚡ <strong>Both (Online & Home):</strong> Online tuition is available after identity approval. Home tuition requires an approved background and safety check.
                       </span>
                     )}
                   </div>
@@ -528,12 +526,12 @@ export default function ProfilePage() {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Front Image</label>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Identity Document — Front</label>
                       <input type="file" accept="image/*" onChange={e => setCnicFrontFile(e.target.files?.[0] || null)}
                         style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>CNIC Back Image</label>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Identity Document — Back</label>
                       <input type="file" accept="image/*" onChange={e => setCnicBackFile(e.target.files?.[0] || null)}
                         style={{ width: '100%', padding: '0.5rem', border: '1.5px dashed #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8rem', backgroundColor: '#f9fafb' }} />
                     </div>

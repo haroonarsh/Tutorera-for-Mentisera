@@ -209,7 +209,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"} · Net PKR {(booking.tutorNet||booking.amount).toLocaleString()}
+          {money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")} · Net {money(booking.tutorNet||booking.amount)}
         </span>
         <span className={s.infoChip}>
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -334,7 +334,7 @@ function OpenRequestCard({
             </span>
           ) : request.bid ? (
             <Link href="/offers" className={s.btnOutline} style={{ textDecoration: "none" }}>
-              Offer sent: PKR {request.bid.amount.toLocaleString()}/{request.bid.pricingUnit || "hour"} · {request.bid.status.replaceAll("_", " ")}
+              Offer sent: {formatMoney(request.bid.amount, request.bid.currency || request.currency || "PKR", request.bid.pricingUnit || "hour")} · {request.bid.status.replaceAll("_", " ")}
             </Link>
           ) : (
             <button
@@ -482,7 +482,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           </div>
           <div style={{ textAlign: "right" }}>
             <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: C.primary }}>
-              PKR {profile.hourlyRate.toLocaleString()}<span style={{ fontSize: 12, color: TEXT_COLORS.muted, fontWeight: 400 }}>/hr</span>
+              {formatMoney(profile.hourlyRate, profile.currency || "PKR", "hour")}
             </p>
             <span className={`${s.badge} ${profile.verificationStatus === "approved" ? s.badgeApproved : s.badgePending}`}>
               {profile.verificationStatus === "approved" ? "✓ Verified" : profile.verificationStatus}

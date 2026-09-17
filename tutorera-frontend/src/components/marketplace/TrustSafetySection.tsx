@@ -6,7 +6,7 @@ const trustPillars = [
   {
     icon: UserCheck,
     title: "Verified Tutor Profiles",
-    desc: "Every tutor undergoes CNIC verification, educational credential screening, and teaching background checks.",
+    desc: "Every tutor undergoes identity-document verification, educational credential screening, and teaching background checks.",
     link: "/tutor-verification-standards"
   },
   {

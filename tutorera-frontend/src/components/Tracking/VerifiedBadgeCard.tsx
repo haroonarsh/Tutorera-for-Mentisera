@@ -11,7 +11,7 @@ export function VerifiedBadgeCard({ verified }: { verified: boolean }) {
         <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
           {verified
             ? "Active — issued after successful identity verification."
-            : "Pending — issued after CNIC verification is approved."}
+            : "Pending — issued after identity verification is approved."}
         </p>
       </div>
     </div>

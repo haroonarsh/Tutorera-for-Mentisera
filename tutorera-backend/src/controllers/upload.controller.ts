@@ -113,11 +113,11 @@ export const uploadVerificationDocs = async (
   const resubmittedDocs: string[] = [];
   const replacedAssets: { publicId: string; resourceType?: "video" }[] = [];
 
-  // ── CNIC Front (private — sensitive identity document) ──
+  // ── Identity document front (private — sensitive) ──
   if (files.cnicFront?.[0]) {
     const { valid, detectedType } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES);
     if (!valid) {
-      res.status(400).json({ success: false, message: `CNIC front file is invalid (detected: ${detectedType || "unknown"})` });
+      res.status(400).json({ success: false, message: `Identity document front file is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
     try {
@@ -127,22 +127,22 @@ export const uploadVerificationDocs = async (
       updateData.cnicSubmittedAt = new Date();
       updateData.cnicVerificationStatus = "pending";
       updateData.cnicRejectionReason = "";
-      resubmittedDocs.push("CNIC");
+      resubmittedDocs.push("Identity document");
       if (existingProfile.cnicFrontPublicId) replacedAssets.push({ publicId: existingProfile.cnicFrontPublicId });
     } catch (err: any) {
       if (err.message?.includes("content policy")) {
-        res.status(400).json({ success: false, message: "CNIC front image contains prohibited content and could not be uploaded." });
+        res.status(400).json({ success: false, message: "Identity document front image contains prohibited content and could not be uploaded." });
         return;
       }
       throw err;
     }
   }
 
-  // ── CNIC Back (private) ──
+  // ── Identity document back (private) ──
   if (files.cnicBack?.[0]) {
     const { valid, detectedType } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES);
     if (!valid) {
-      res.status(400).json({ success: false, message: `CNIC back file is invalid (detected: ${detectedType || "unknown"})` });
+      res.status(400).json({ success: false, message: `Identity document back file is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
     try {
@@ -151,11 +151,11 @@ export const uploadVerificationDocs = async (
       updateData.cnicBackPublicId = result.public_id;
       updateData.cnicVerificationStatus = "pending";
       updateData.cnicRejectionReason = "";
-      if (!resubmittedDocs.includes("CNIC")) resubmittedDocs.push("CNIC");
+      if (!resubmittedDocs.includes("Identity document")) resubmittedDocs.push("Identity document");
       if (existingProfile.cnicBackPublicId) replacedAssets.push({ publicId: existingProfile.cnicBackPublicId });
     } catch (err: any) {
       if (err.message?.includes("content policy")) {
-        res.status(400).json({ success: false, message: "CNIC back image contains prohibited content and could not be uploaded." });
+        res.status(400).json({ success: false, message: "Identity document back image contains prohibited content and could not be uploaded." });
         return;
       }
       throw err;
@@ -186,11 +186,11 @@ export const uploadVerificationDocs = async (
     if (previousPublicId) replacedAssets.push({ publicId: previousPublicId });
   }
 
-  // ── Police Certificate (private) ──
+  // ── Background and safety certificate (private) ──
   if (files.policeCertificate?.[0]) {
     const { valid, detectedType } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
     if (!valid) {
-      res.status(400).json({ success: false, message: `Police certificate file is invalid (detected: ${detectedType || "unknown"})` });
+      res.status(400).json({ success: false, message: `Background and safety certificate is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
     try {
@@ -200,11 +200,11 @@ export const uploadVerificationDocs = async (
       updateData.policeSubmittedAt = new Date();
       updateData.policeVerificationStatus = "pending";
       updateData.policeRejectionReason = "";
-      resubmittedDocs.push("Police verification");
+      resubmittedDocs.push("Background and safety certificate");
       if (existingProfile.policeCertificatePublicId) replacedAssets.push({ publicId: existingProfile.policeCertificatePublicId });
     } catch (err: any) {
       if (err.message?.includes("content policy")) {
-        res.status(400).json({ success: false, message: "Police certificate image contains prohibited content and could not be uploaded." });
+        res.status(400).json({ success: false, message: "Background and safety certificate contains prohibited content and could not be uploaded." });
         return;
       }
       throw err;
@@ -272,16 +272,16 @@ export const uploadVerificationDocs = async (
         }));
 
         const priorStatusFor: Record<string, string> = {
-          "CNIC": existingProfile.cnicVerificationStatus || "not_submitted",
+          "Identity document": existingProfile.cnicVerificationStatus || "not_submitted",
           "Educational document": existingProfile.degreeVerificationStatus || "not_submitted",
           "Demo video": existingProfile.demoVideoStatus || "not_submitted",
-          "Police verification": existingProfile.policeVerificationStatus || "not_submitted",
+          "Background and safety certificate": existingProfile.policeVerificationStatus || "not_submitted",
         };
         const eventFor: Record<string, { submitted: any; resubmitted: any }> = {
-          "CNIC": { submitted: "CNIC_SUBMITTED", resubmitted: "CNIC_RESUBMITTED" },
+          "Identity document": { submitted: "CNIC_SUBMITTED", resubmitted: "CNIC_RESUBMITTED" },
           "Educational document": { submitted: "EDUCATIONAL_DOCUMENTS_SUBMITTED", resubmitted: "EDUCATIONAL_DOCUMENTS_RESUBMITTED" },
           "Demo video": { submitted: "DEMO_VIDEO_SUBMITTED", resubmitted: "DEMO_VIDEO_RESUBMITTED" },
-          "Police verification": { submitted: "POLICE_VERIFICATION_SUBMITTED", resubmitted: "POLICE_VERIFICATION_RESUBMITTED" },
+          "Background and safety certificate": { submitted: "POLICE_VERIFICATION_SUBMITTED", resubmitted: "POLICE_VERIFICATION_RESUBMITTED" },
         };
         await Promise.all(resubmittedDocs.map((docType) => recordStatusEvent({
           tutorId: tutorUser._id.toString(), tutorProfileId: updated._id.toString(),

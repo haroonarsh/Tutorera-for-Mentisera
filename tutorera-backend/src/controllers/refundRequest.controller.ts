@@ -21,6 +21,10 @@ function today() {
   return new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function formatAmount(amount: number, currency?: string) {
+  return `${(currency || "PKR").toUpperCase()} ${Number(amount || 0).toLocaleString("en-US")}`;
+}
+
 export const submitRefundRequest = async (req: AuthRequest, res: Response): Promise<void> => {
   const { reason, details } = req.body;
   const bookingId = req.params.id as string;
@@ -49,6 +53,7 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
 
   const tutor = booking.tutor as unknown as { _id: string; name: string; email: string };
   const refundAmount = booking.studentTotal || booking.amount;
+  const refundDisplayAmount = formatAmount(refundAmount, booking.currency);
 
   const refundReq = await RefundRequest.create({
     student: req.user?._id,
@@ -71,7 +76,7 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
           <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Student</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(req.user?.name)} (${escapeHtml(req.user?.email)})</td></tr>
           <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Tutor</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(tutor.name)}</td></tr>
           <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Booking ID</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(bookingId)}</td></tr>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Amount</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">PKR ${refundAmount.toLocaleString()}</td></tr>
+          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Amount</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(refundDisplayAmount)}</td></tr>
           <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Reason</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(reasonLabel)}</td></tr>
           <tr><td style="padding:12px 16px;"><strong>Details</strong></td><td style="padding:12px 16px;">${escapeHtml(details || "—")}</td></tr>
         </table>
@@ -86,13 +91,13 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
     emailHeading: "Refund Request Received",
     emailSubheading: `Your refund request is being reviewed.`,
     firstName: req.user?.name,
-    openingMessage: `We received your refund request for PKR ${refundAmount.toLocaleString()} and will review it within 2–3 business days.`,
+    openingMessage: `We received your refund request for ${refundDisplayAmount} and will review it within 2–3 business days.`,
     mainMessage: `Reason: ${reasonLabel}.${details ? ` Details: ${details}` : ""} If approved, the refund will be processed to your original payment method within 5–7 business days.`,
     transaction: {
       referenceId: `REF-${bookingId}`,
       date: today(),
       status: "Under Review",
-      amount: `PKR ${refundAmount.toLocaleString()}`,
+      amount: refundDisplayAmount,
     },
     cta: { label: "View Booking", url: "https://tutorera.ac.pk/dashboard" },
     additionalInformation: "Refunds are processed to the original payment method. For questions, contact hello@mentisera.pk.",
@@ -111,7 +116,7 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
 
 export const getMyRefundRequests = async (req: AuthRequest, res: Response): Promise<void> => {
   const requests = await RefundRequest.find({ student: req.user?._id })
-    .populate("booking", "schedule teachingMode amount studentTotal createdAt")
+    .populate("booking", "schedule teachingMode amount studentTotal currency createdAt")
     .populate("tutor", "name")
     .sort("-createdAt");
 
@@ -136,11 +141,11 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
   const { status, adminNote } = req.body;
 
   const refundReq = await RefundRequest.findById(req.params.id)
-    .populate<{ student: { name: string; email: string }; booking: { studentTotal: number; amount: number } }>(
+    .populate<{ student: { name: string; email: string }; booking: { studentTotal: number; amount: number; currency?: string } }>(
       "student",
       "name email"
     )
-    .populate("booking", "studentTotal amount");
+    .populate("booking", "studentTotal amount currency");
 
   if (!refundReq) {
     res.status(404).json({ success: false, message: "Refund request not found." });
@@ -161,7 +166,9 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
   }
 
   if (status === "approved" || status === "rejected") {
-    const refundAmount = (refundReq.booking as unknown as { studentTotal: number; amount: number }).studentTotal || refundReq.amount;
+    const refundBooking = refundReq.booking as unknown as { studentTotal: number; amount: number; currency?: string };
+    const refundAmount = refundBooking.studentTotal || refundReq.amount;
+    const refundDisplayAmount = formatAmount(refundAmount, refundBooking.currency);
     const statusLabel = status === "approved" ? "Approved" : "Not Approved";
     const emailHtml = renderTransactionalEmail({
       subject: `TUTORERA® — Refund Request ${statusLabel}`,
@@ -171,7 +178,7 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
       firstName: student.name,
       openingMessage:
         status === "approved"
-          ? `Your refund request of PKR ${refundAmount.toLocaleString()} has been approved.`
+          ? `Your refund request of ${refundDisplayAmount} has been approved.`
           : `After review, we were unable to approve your refund request at this time.`,
       mainMessage:
         status === "approved"
@@ -181,7 +188,7 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
         referenceId: `REF-${refundReq._id}`,
         date: today(),
         status: status === "approved" ? "Approved" : "Rejected",
-        amount: `PKR ${refundAmount.toLocaleString()}`,
+        amount: refundDisplayAmount,
       },
       cta: { label: "Contact Support", url: "https://tutorera.ac.pk/contact" },
       additionalInformation:

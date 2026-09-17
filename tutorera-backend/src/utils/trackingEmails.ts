@@ -63,27 +63,27 @@ export const educationalDocumentsRejectedEmail = (tutorName: string, reason: str
 export const cnicVerifiedEmail = (tutorName: string, args: CtaArgs) => {
   const subject = "ID verification complete - TUTORERA";
   const innerHtml = `
-    <h2 style="color:#16a34a;margin:0 0 12px;">CNIC verification complete 🛡️</h2>
+    <h2 style="color:#16a34a;margin:0 0 12px;">Identity verification complete 🛡️</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
-    <p style="color:#374151;">Your CNIC has been successfully verified. Your TUTORERA® Verified Badge is now active.</p>
+    <p style="color:#374151;">Your identity document has been successfully verified. Your TUTORERA® Verified Badge is now active.</p>
     ${trackingCta(args)}
   `;
-  return { subject, html: wrap(innerHtml, subject, "Verification Update", "Your CNIC has been verified and your badge is now active.") };
+  return { subject, html: wrap(innerHtml, subject, "Verification Update", "Your identity document has been verified and your badge is now active.") };
 };
 
 export const cnicRejectedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
   const subject = "ID verification needs attention - TUTORERA";
   const innerHtml = `
-    <h2 style="color:#d97706;margin:0 0 12px;">CNIC verification needs attention</h2>
+    <h2 style="color:#d97706;margin:0 0 12px;">Identity verification needs attention</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
-    <p style="color:#374151;">We were unable to verify your CNIC. Please upload a clearer image.</p>
+    <p style="color:#374151;">We were unable to verify your identity document. Please upload a clearer image.</p>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin:16px 0;">
       <p style="color:#1f2937;margin:0 0 4px;font-weight:700;">Reason</p>
-      <p style="color:#374151;margin:0;font-size:14px;">${escapeHtml(reason || "Uploaded image was unclear. Please upload a clearer photo of your CNIC.")}</p>
+      <p style="color:#374151;margin:0;font-size:14px;">${escapeHtml(reason || "Uploaded image was unclear. Please upload a clearer photo of your identity document.")}</p>
     </div>
-    ${trackingCta(args, "Upload New CNIC")}
+    ${trackingCta(args, "Upload New Identity Document")}
   `;
-  return { subject, html: wrap(innerHtml, subject, "Action Required", "Your CNIC needs attention — please re-upload a clearer image.") };
+  return { subject, html: wrap(innerHtml, subject, "Action Required", "Your identity document needs attention — please re-upload a clearer image.") };
 };
 
 export const demoVideoApprovedEmail = (tutorName: string, args: CtaArgs) => {
@@ -113,29 +113,29 @@ export const demoVideoRejectedEmail = (tutorName: string, reason: string, args: 
 };
 
 export const policeVerifiedEmail = (tutorName: string, args: CtaArgs) => {
-  const subject = "Police verification complete - TUTORERA";
+  const subject = "Background and safety verification complete - TUTORERA";
   const innerHtml = `
-    <h2 style="color:#16a34a;margin:0 0 12px;">Police verification approved 🛡️</h2>
+    <h2 style="color:#16a34a;margin:0 0 12px;">Background and safety verification approved 🛡️</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
-    <p style="color:#374151;">Your police verification has been approved. You may now offer Home and In-Person Tuition through TUTORERA®.</p>
+    <p style="color:#374151;">Your background and safety verification has been approved. You may now offer Home and In-Person Tuition through TUTORERA®.</p>
     ${trackingCta(args)}
   `;
-  return { subject, html: wrap(innerHtml, subject, "Verification Update", "Your police verification is complete — home and in-person tuition are now active.") };
+  return { subject, html: wrap(innerHtml, subject, "Verification Update", "Your background and safety verification is complete — home and in-person tuition are now active.") };
 };
 
 export const policeRejectedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
-  const subject = "Police verification needs attention - TUTORERA";
+  const subject = "Background and safety verification needs attention - TUTORERA";
   const innerHtml = `
-    <h2 style="color:#d97706;margin:0 0 12px;">Police verification needs attention</h2>
+    <h2 style="color:#d97706;margin:0 0 12px;">Background and safety verification needs attention</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
-    <p style="color:#374151;">We could not approve your police verification. Please submit a fresh certificate.</p>
+    <p style="color:#374151;">We could not approve your background and safety verification. Please submit a current certificate.</p>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin:16px 0;">
       <p style="color:#1f2937;margin:0 0 4px;font-weight:700;">Reason</p>
-      <p style="color:#374151;margin:0;font-size:14px;">${escapeHtml(reason || "Please submit a fresh police verification certificate.")}</p>
+      <p style="color:#374151;margin:0;font-size:14px;">${escapeHtml(reason || "Please submit a current background and safety certificate.")}</p>
     </div>
-    ${trackingCta(args, "Submit Police Verification")}
+    ${trackingCta(args, "Submit Background & Safety Certificate")}
   `;
-  return { subject, html: wrap(innerHtml, subject, "Action Required", "Your police verification needs attention — please submit a new certificate.") };
+  return { subject, html: wrap(innerHtml, subject, "Action Required", "Your background and safety verification needs attention — please submit a new certificate.") };
 };
 
 export const marketplaceActivatedEmail = (tutorName: string, args: CtaArgs) => {
@@ -165,7 +165,7 @@ export const homeTuitionActivatedEmail = (tutorName: string, args: CtaArgs) => {
   const innerHtml = `
     <h2 style="color:#16a34a;margin:0 0 12px;">Home tuition approved 🏠</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
-    <p style="color:#374151;">Your police verification has been approved. You are now eligible to respond to Home and In-Person Tuition opportunities on TUTORERA®.</p>
+    <p style="color:#374151;">Your background and safety verification has been approved. You are now eligible to respond to Home and In-Person Tuition opportunities on TUTORERA®.</p>
     ${trackingCta(args)}
   `;
   return { subject, html: wrap(innerHtml, subject, "Verification Update", "Home tuition access has been approved — you're now eligible for in-person requests.") };

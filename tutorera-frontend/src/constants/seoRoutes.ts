@@ -31,5 +31,4 @@ export const CANONICAL_HOST = "tutorera.ac.pk";
 export const REDIRECT_HOSTS = new Set([
   "www.tutorera.ac.pk",
   "tutorera.mentisera.pk",
-  "tutorera-frontend.vercel.app",
 ]);

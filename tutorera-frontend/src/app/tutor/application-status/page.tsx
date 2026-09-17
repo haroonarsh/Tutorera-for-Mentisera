@@ -113,7 +113,7 @@ export default function TutorApplicationStatusPage() {
           (() => {
             const vc = payload.verificationComponents;
             const rejectedItems = [
-              vc.cnic.status === "rejected" && "CNIC",
+              vc.cnic.status === "rejected" && "Identity document",
               vc.degree.status === "rejected" && "Degree document",
               vc.demoVideo.status === "rejected" && "Demo video",
               vc.police.status === "rejected" && "Police certificate",
@@ -173,7 +173,7 @@ export default function TutorApplicationStatusPage() {
             </div>
             <div className={s.progressBar}><div style={{ width: `${payload.progress.percent}%` }} /></div>
             <p style={{ margin: "12px 0 0", fontSize: 13, color: "#64748b" }}>
-              {payload.progress.completed} of {payload.progress.total} verification weight complete. Some items (e.g. demo video, CNIC) require admin review.
+              {payload.progress.completed} of {payload.progress.total} verification weight complete. Some items (e.g. demo video, identity document) require admin review.
             </p>
           </div>
           <div className={s.card}>

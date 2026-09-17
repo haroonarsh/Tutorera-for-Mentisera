@@ -17,8 +17,6 @@ https://tutorera.ac.pk
 
 Production traffic must resolve through Cloudflare Workers/OpenNext using the Worker routes in `wrangler.jsonc`.
 
-The legacy Vercel preview host is not the canonical product domain. If a Vercel project is retained for emergency redirects only, it must redirect to `https://tutorera.ac.pk` and emit `X-Robots-Tag: noindex, nofollow, noarchive`.
-
 ## Local Setup
 
 ### 1. Clone the repo

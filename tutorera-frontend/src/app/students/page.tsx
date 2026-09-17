@@ -116,7 +116,7 @@ export default function StudentsLandingPage() {
                 Verified Educators
               </h3>
               <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.6 }}>
-                Every tutor undergoes manual degree screening and identity checks. In-person home tutors must hold an approved Police Verification Report.
+                Every tutor undergoes manual degree screening and identity checks. In-person home tutors must hold the approved background and safety verification required in their market.
               </p>
             </div>
 

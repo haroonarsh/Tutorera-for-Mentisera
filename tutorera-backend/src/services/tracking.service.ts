@@ -459,8 +459,8 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
     reasons.push({
       key: "police",
       title: "Background and safety verification needs to be re-submitted",
-      body: profile.policeRejectionReason || "Your police verification certificate could not be accepted. Please submit a fresh certificate.",
-      cta: { label: "Re-submit police verification", href: RESUBMIT_URL },
+      body: profile.policeRejectionReason || "Your background and safety certificate could not be accepted. Please submit a current certificate.",
+      cta: { label: "Re-submit background & safety certificate", href: RESUBMIT_URL },
     });
   }
   if (policeIsRequired(profile) && profile.policeVerificationStatus !== "approved" && profile.policeVerificationStatus !== "pending" && profile.policeVerificationStatus !== "rejected") {
@@ -472,7 +472,7 @@ function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
       key: "policeMissing",
       title: "Background and safety verification required",
       body: "Background and safety verification is mandatory before you can provide home or in-person tuition through TUTORERA.",
-      cta: { label: "Submit police verification", href: RESUBMIT_URL },
+      cta: { label: "Submit background & safety certificate", href: RESUBMIT_URL },
     });
   }
   if (reasons.length === 0) return null;
@@ -533,7 +533,7 @@ export async function buildAuthenticatedTrackingPayload(
     if (!policeIsRequired(profile)) return "Home tuition is not required for your teaching mode.";
     if (homeTuitionEligible) return null;
     if (profile.policeVerificationStatus === "approved") return null;
-    if (!profile.policeCertificate) return "Submit your police verification certificate.";
+    if (!profile.policeCertificate) return "Submit your background and safety certificate.";
     if (profile.policeVerificationStatus === "pending") return "Background and safety verification is under review.";
     if (profile.policeVerificationStatus === "rejected") return "Background and safety verification was rejected.";
     return "Marketplace requirements must be completed first.";

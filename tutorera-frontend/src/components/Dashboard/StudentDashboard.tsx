@@ -293,7 +293,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
               { label: "Student Marketplace Fee", value: money(booking.studentFee || 0) },
               { label: "Tax", value: money(booking.tax || 0) },
               { label: "Total Payable", value: money(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
-              { label: "Currency", value: "PKR — Pakistani Rupees" },
+              { label: "Currency", value: booking.currency || booking.request?.currency || "PKR" },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: C.surface, borderRadius: '0.375rem', border: `1px solid ${STATUS_COLORS.success.border}`, flexWrap: 'wrap', gap: '0.25rem' }}>
                 <span style={{ fontSize: '0.7rem', color: UI_COLORS.success, fontWeight: 600 }}>{item.label}</span>
@@ -310,7 +310,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
         </DashCard>
       )}
 
-      <details style={{marginBottom:"0.75rem",background:C.gray50,padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:TEXT_COLORS.muted,marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
+      <details style={{marginBottom:"0.75rem",background:C.gray50,padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>{money(booking.finalAgreedRate || booking.amount || booking.totalAmount || 0, booking.pricingUnit||"hour")}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>{money(booking.subtotal || booking.amount || booking.totalAmount || 0)}</b></span><span>Student fee: <b>{money(booking.studentFee||0)}</b></span><span>Total: <b>{money(booking.studentTotal || booking.amount || booking.totalAmount || 0)}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:TEXT_COLORS.muted,marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
 
       {/* Claim submitted confirmation */}
       {claimSubmitted && (
@@ -369,7 +369,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
       )}
 
       <div className={s.infoRow}>
-        <span className={s.infoChip}>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</span>
+        <span className={s.infoChip}>{money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")}</span>
         <span className={s.infoChip}>{booking.schedule}</span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
@@ -620,7 +620,7 @@ function RequestCard({
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          Budget: PKR {request.budget.toLocaleString()}/hr
+          Budget: {formatMoney(request.budget, request.currency || "PKR", request.pricingUnit || "hour")}
         </span>
         <span className={s.infoChip}>{request.teachingMode}</span>
         <span className={s.infoChip}>{request.schedule}</span>
@@ -714,7 +714,7 @@ function RequestCard({
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 6 }}>
                         <div>
                           <p className={s.bidTutorName}>{bid.tutor.name}</p>
-                          <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/{bid.pricingUnit || "hour"}</p>
+                          <p className={s.bidAmount}>{formatMoney(bid.amount, bid.currency || request.currency || "PKR", bid.pricingUnit || "hour")}</p>
                         </div>
                         {bid.matchScore ? (
                           <MatchScoreBadge

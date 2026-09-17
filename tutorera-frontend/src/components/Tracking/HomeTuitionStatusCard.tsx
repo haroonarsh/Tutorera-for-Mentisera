@@ -12,7 +12,7 @@ export function HomeTuitionStatusCard({ eligibility, required }: { eligibility: 
           <span className={s.eligibilityStatus}>Not required (Online Tutor)</span>
         </div>
         <p className={s.eligibilityMessage}>
-          Your teaching mode is <strong>Online Only</strong>. <strong>No Police Verification is required</strong> for online tuition. To offer in-person Home Tuition, you must submit an official Police Verification Report.
+          Your teaching mode is <strong>Online Only</strong>. No background and safety certificate is required for online tuition. To offer in-person Home Tuition, submit the background and safety certificate required in your market.
         </p>
       </div>
     );
@@ -27,8 +27,8 @@ export function HomeTuitionStatusCard({ eligibility, required }: { eligibility: 
       </div>
       <p className={s.eligibilityMessage}>
         {eligibility.eligible
-          ? "🛡️ Verified Police Character Certificate approved. You are authorized to accept and conduct Home Tuition."
-          : (eligibility.reasonIfBlocked || "⚠️ Mandatory Police Verification Report required before you can accept Home Tuition requests.")}
+          ? "🛡️ Background and safety certificate approved. You are authorized to accept and conduct Home Tuition."
+          : (eligibility.reasonIfBlocked || "⚠️ Background and safety verification is required before you can accept Home Tuition requests.")}
       </p>
       {eligibility.since && (
         <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>Since {new Date(eligibility.since).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}</p>
