@@ -1047,7 +1047,9 @@ export default async function TutorProfilePage({ params }: Props) {
               <div style={{ background: "#F8FAFC", padding: "1rem", borderRadius: 10 }}>
                 <span style={{ color: "#64748b", fontSize: "0.8rem", fontWeight: 600 }}>LANGUAGES</span>
                 <p style={{ color: "#021550", fontWeight: 700, margin: "0.25rem 0 0" }}>
-                  {tutor.languages?.join(", ") || "English, Urdu"}
+                  {tutor.languages && tutor.languages.length > 0
+                    ? tutor.languages.map((l) => l.language).filter(Boolean).join(", ")
+                    : "English"}
                 </p>
               </div>
 

@@ -21,7 +21,9 @@ export interface TutorProfile {
   currency?: string;
   serviceAreas?: string[];
   travelRadiusKm?: number;
-  languages?: string[];
+  // Stored on TutorProfile as { language, proficiency } objects, not plain
+  // strings - a caller that just wants the names should map .language.
+  languages?: { language: string; proficiency: string }[];
   curricula?: string[];
   teachingMode: "online" | "in-person" | "both";
   levels: string[];
