@@ -14,6 +14,7 @@ interface ApplicationDetail {
   tutorUserId: string;
   tutorName: string;
   tutorEmail: string;
+  tutorAvatar?: string;
   isActive: boolean;
   profile: {
     _id: string;
@@ -43,6 +44,8 @@ interface ApplicationDetail {
     demoVideoRejectionReason: string;
     policeVerificationStatus: string;
     policeRejectionReason: string;
+    avatarVerificationStatus: string;
+    avatarRejectionReason: string;
     marketplaceEligible: boolean;
     homeTuitionEligible: boolean;
     suspendedAt: string | null;
@@ -240,6 +243,28 @@ export default function AdminApplicationDetailPage({ params }: { params: Params 
         </p>
 
         <div className={`${s.grid} ${s.two}`} style={{ marginBottom: 16 }}>
+          <div className={s.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <p className={s.cardTitle} style={{ margin: 0 }}>Profile photo</p>
+            </div>
+            <p style={{ fontSize: 13, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>Current: <strong>{p.avatarVerificationStatus}</strong></p>
+            {p.avatarRejectionReason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "0 0 8px" }}>Last reason: {p.avatarRejectionReason}</p>}
+            {data.tutorAvatar ? (
+              // Avatars are uploaded as public Cloudinary assets (unlike
+              // CNIC/degree/police, which are private/authenticated), so
+              // this can render directly rather than going through
+              // handleViewDocument()'s signed-URL lookup.
+              <img src={data.tutorAvatar} alt="Tutor profile photo" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, marginBottom: 8, display: "block" }} />
+            ) : (
+              <p style={{ fontSize: 12, color: TEXT_COLORS.muted, margin: "0 0 8px" }}>No photo uploaded yet.</p>
+            )}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button disabled={busyKey === "avatar-approved"} onClick={() => handleAction("avatar", "approved", "Profile photo")} style={btnSuccessStyle}>Approve</button>
+              <button disabled={busyKey === "avatar-rejected"} onClick={() => handleAction("avatar", "rejected", "Profile photo")} style={btnDangerStyle}>Reject</button>
+              <button disabled={busyKey === "avatar-pending"} onClick={() => handleAction("avatar", "pending", "Profile photo")} style={btnSecondaryStyle}>Mark pending</button>
+            </div>
+          </div>
+
           <div className={s.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <p className={s.cardTitle} style={{ margin: 0 }}>CNIC verification</p>

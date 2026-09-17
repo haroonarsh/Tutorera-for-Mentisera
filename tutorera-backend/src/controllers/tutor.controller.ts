@@ -22,6 +22,7 @@ import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const VIDEO_TYPES = ["video/mp4"];
 
 // Cloudinary outages/misconfig used to bubble up as an uncaught rejection,
@@ -424,6 +425,32 @@ export const saveOnboardingStep = async (
       res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
       return;
     }
+
+    // Profile photo is mandatory for every tutor still going through initial
+    // onboarding - grandfathered tutors who already completed onboarding
+    // before this requirement existed are never blocked by it (see the
+    // pre-save hook in TutorProfile.model.ts for the matching allApproved
+    // logic). A tutor re-visiting step 1 who already submitted a photo in a
+    // prior attempt (avatarVerificationStatus !== "not_submitted") doesn't
+    // need to re-upload every time.
+    const needsAvatar = !profile.onboardingComplete && profile.avatarVerificationStatus === "not_submitted";
+    let avatarUrl = "";
+    if (files?.avatar?.[0]) {
+      const { valid, detectedType } = await verifyFileSignature(files.avatar[0].buffer, IMAGE_TYPES);
+      if (!valid) {
+        res.status(400).json({ success: false, message: `Profile photo is invalid (detected: ${detectedType || "unknown"})` });
+        return;
+      }
+      // Cloudinary public id isn't tracked on User yet (pre-existing gap on
+      // the general avatar-upload path too), so it isn't captured here.
+      const result = await safeUploadToCloudinary(files.avatar[0].buffer, "tutorera/avatars", "image", false);
+      avatarUrl = result.secure_url;
+    } else if (needsAvatar) {
+      res.status(400).json({ success: false, message: "A profile photo is required to continue." });
+      return;
+    }
+
+    const resubmitAvatar = Boolean(avatarUrl) && (profile.avatarVerificationStatus === "rejected" || profile.avatarVerificationStatus === "approved");
     const resolvedCity = (locationReferences.city as string | undefined) || parsedData.city;
     const resolvedTimezone = parsedData.timezone || (locationReferences.timezone as string | undefined) || market.timezone;
     updateData = {
@@ -439,6 +466,8 @@ export const saveOnboardingStep = async (
       dateOfBirth: parsedData.dateOfBirth,
       languages: parsedData.languages || [{ language: "English", proficiency: "Fluent" }],
       onboardingStep: 2,
+      ...(avatarUrl && { avatarVerificationStatus: "pending" as const, avatarSubmittedAt: new Date() }),
+      ...(resubmitAvatar && { avatarRejectionReason: "" }),
     };
     await User.findByIdAndUpdate(req.user?._id, {
       name: parsedData.fullName,
@@ -449,7 +478,31 @@ export const saveOnboardingStep = async (
       timezone: resolvedTimezone,
       currency: market.currency,
       ...locationReferences,
+      ...(avatarUrl && { avatar: avatarUrl }),
     });
+
+    if (resubmitAvatar) {
+      const tutorUser = await User.findById(req.user?._id).select("name email applicationId");
+      if (tutorUser) {
+        const { subject, html } = documentResubmittedEmail(tutorUser.name, "Profile photo", {
+          applicationId: tutorUser.applicationId || "TUT-PENDING",
+          statusUrl: `${process.env.CLIENT_URL || "https://tutorera.ac.pk"}/tutor/application-status`,
+        });
+        await sendEmail({ to: tutorUser.email, subject, html }).catch((emailErr) => {
+          console.error("[TutorApplicationTracking] Avatar resubmission email failed:", emailErr);
+        });
+        await NotificationService.publishEvent("system_admin", "admin.tutor_document_resubmitted", {
+          tutorName: tutorUser.name,
+          tutorEmail: tutorUser.email,
+          applicationId: tutorUser.applicationId,
+          documentLabel: "Profile photo",
+          title: "Document resubmitted",
+          message: `${tutorUser.name} resubmitted their profile photo for re-review.`,
+          type: "verification",
+          link: "/admin/applications",
+        }).catch((err) => console.error("[TutorApplicationTracking] Admin avatar-resubmission alert failed:", err));
+      }
+    }
   }
 
   else if (stepNum === 2) {
@@ -869,6 +922,16 @@ export const saveOnboardingStep = async (
           }
         }
         const profileForEvents = updated;
+        if (profileForEvents.avatarVerificationStatus !== "not_submitted") {
+          await recordStatusEvent({
+            tutorId: tutorUser._id.toString(),
+            tutorProfileId: profileForEvents._id.toString(),
+            actor: { name: tutorUser.name, role: "tutor", id: tutorUser._id.toString() },
+            event: "AVATAR_SUBMITTED",
+            message: "Profile photo submitted for review",
+            isPublic: true,
+          });
+        }
         if (profileForEvents.education?.[0]?.degreeDoc) {
           await recordStatusEvent({
             tutorId: tutorUser._id.toString(),

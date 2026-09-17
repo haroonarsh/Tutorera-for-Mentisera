@@ -332,6 +332,7 @@ export const getApplicationDetail = async (req: AuthRequest, res: Response): Pro
       tutorUserId: user._id,
       tutorName: user.name,
       tutorEmail: user.email,
+      tutorAvatar: user.avatar,
       isActive: user.isActive,
       profile,
       history: history.map(h => ({
@@ -406,6 +407,77 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
   }
   await logAudit({
     action: `cnic_${status}`,
+    actor: actor.name,
+    actorId: actor.id,
+    entity: "TutorProfile",
+    targetId: profile._id.toString(),
+    targetName: user.name,
+    metadata: reason ? { reason } : undefined,
+  });
+  await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
+  res.status(200).json({ success: true, profile });
+};
+
+export const updateAvatar = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const { status, reason } = req.body;
+  if (!["approved", "rejected", "pending"].includes(status)) {
+    res.status(400).json({ success: false, message: "Invalid status" });
+    return;
+  }
+  if (status === "rejected" && !String(reason || "").trim()) {
+    res.status(400).json({ success: false, message: "A rejection reason is required so the tutor can correct the photo." });
+    return;
+  }
+  const { user, profile } = data;
+  profile.avatarVerificationStatus = status;
+  profile.avatarRejectionReason = status === "rejected" ? (reason || "") : "";
+  profile.avatarReviewedAt = new Date();
+  profile.lastStatusChangeAt = new Date();
+  await profile.save({ validateModifiedOnly: true });
+
+  const actor = actorFromReq(req);
+  if (status === "approved") {
+    await recordStatusEvent({
+      tutorId: user._id.toString(),
+      tutorProfileId: profile._id.toString(),
+      actor,
+      event: "AVATAR_VERIFIED",
+      message: "Profile photo verified",
+      statusAfter: "approved",
+    });
+    await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
+      document: "Profile photo", ctaArgs: ctaArgs(user), title: "🛡️ Profile photo verified", message: "Your profile photo is approved.", link: "/tutor/application-status", type: "verification"
+    });
+  } else if (status === "rejected") {
+    await recordStatusEvent({
+      tutorId: user._id.toString(),
+      tutorProfileId: profile._id.toString(),
+      actor,
+      event: "AVATAR_REJECTED",
+      message: `Profile photo rejected${reason ? `: ${reason}` : ""}`,
+      statusAfter: "rejected",
+    });
+    await setAccountStatus(user._id.toString(), "submitted");
+    await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
+      document: "Profile photo", reason: reason || "", ctaArgs: ctaArgs(user), title: "Action required: profile photo re-upload", message: reason || "Please re-upload your profile photo.", link: "/tutor/application-status", type: "verification"
+    });
+  } else if (status === "pending") {
+    await recordStatusEvent({
+      tutorId: user._id.toString(),
+      tutorProfileId: profile._id.toString(),
+      actor,
+      event: "AVATAR_PENDING",
+      message: `Profile photo marked as pending for review`,
+      statusAfter: "pending",
+    });
+    await NotificationService.publishEvent(user._id.toString(), "verification.pending", {
+      title: "📄 Document Pending", message: "Your profile photo has been reset to pending review.", link: "/tutor/application-status", type: "verification"
+    });
+  }
+  await logAudit({
+    action: `avatar_${status}`,
     actor: actor.name,
     actorId: actor.id,
     entity: "TutorProfile",

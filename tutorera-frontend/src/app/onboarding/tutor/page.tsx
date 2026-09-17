@@ -38,6 +38,9 @@ interface ExistingDocsState {
   policeRejectionReason?: string;
   verificationStatus?: string;
   rejectionReason?: string;
+  avatarVerificationStatus?: string;
+  avatarRejectionReason?: string;
+  onboardingComplete?: boolean;
 }
 
 export default function TutorOnboardingPage() {
@@ -77,6 +80,11 @@ export default function TutorOnboardingPage() {
   const levels = (selectedCountryLevels && selectedCountryLevels.length > 0) ? selectedCountryLevels : geo.levels && geo.levels.length > 0 ? geo.levels : [
     "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"
   ];
+
+  // A profile photo is mandatory (and admin-approved) for every tutor still
+  // going through initial onboarding; grandfathered tutors who already
+  // completed onboarding before this requirement existed are never blocked.
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   // Step 2
   const [step2, setStep2] = useState({ degree: "", institution: "", year: "" });
@@ -185,6 +193,9 @@ export default function TutorOnboardingPage() {
               policeRejectionReason: p.policeRejectionReason,
               verificationStatus: p.verificationStatus,
               rejectionReason: p.rejectionReason,
+              avatarVerificationStatus: p.avatarVerificationStatus,
+              avatarRejectionReason: p.avatarRejectionReason,
+              onboardingComplete: Boolean(p.onboardingComplete),
             };
             setExistingDocs(docs);
 
@@ -197,6 +208,8 @@ export default function TutorOnboardingPage() {
               setCurrentStep(5);
             } else if (p.degreeVerificationStatus === "rejected") {
               setCurrentStep(2);
+            } else if (p.avatarVerificationStatus === "rejected") {
+              setCurrentStep(1);
             }
           }
         })
@@ -258,7 +271,19 @@ export default function TutorOnboardingPage() {
         if (!step1.fullName || !step1.phone || !step1.city) {
           setError("Please fill all required fields."); setSaving(false); return;
         }
+        const needsAvatar = !existingDocs.onboardingComplete
+          && (!existingDocs.avatarVerificationStatus || existingDocs.avatarVerificationStatus === "not_submitted")
+          && !user?.avatar;
+        if (needsAvatar && !avatarFile) {
+          setError("Please upload a profile photo to continue."); setSaving(false); return;
+        }
+        if (existingDocs.avatarVerificationStatus === "rejected" && !avatarFile) {
+          setError(`Your profile photo was rejected (${existingDocs.avatarRejectionReason || "Action required"}). Please select a new photo to re-submit.`);
+          setSaving(false);
+          return;
+        }
         formData.append("data", JSON.stringify(step1));
+        if (avatarFile) formData.append("avatar", avatarFile);
       }
 
       else if (currentStep === 2) {
@@ -381,7 +406,8 @@ export default function TutorOnboardingPage() {
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1rem', overflowX: 'auto' }}>
         <div style={{ maxWidth: '750px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 'fit-content', padding: '0 0.5rem' }}>
           {STEPS.map((step, idx) => {
-            const hasRejectionOnStep = (step.number === 2 && existingDocs.degreeVerificationStatus === "rejected") ||
+            const hasRejectionOnStep = (step.number === 1 && existingDocs.avatarVerificationStatus === "rejected") ||
+              (step.number === 2 && existingDocs.degreeVerificationStatus === "rejected") ||
               (step.number === 5 && (existingDocs.cnicVerificationStatus === "rejected" || existingDocs.demoVideoStatus === "rejected" || existingDocs.policeVerificationStatus === "rejected"));
 
             return (
@@ -523,6 +549,43 @@ export default function TutorOnboardingPage() {
                       <option value="other">Other</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
+                      Profile Photo {!existingDocs.onboardingComplete && '*'}
+                    </label>
+                    {existingDocs.avatarVerificationStatus && existingDocs.avatarVerificationStatus !== 'not_submitted' && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.avatarVerificationStatus === 'approved' ? '#16a34a' : existingDocs.avatarVerificationStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
+                        {existingDocs.avatarVerificationStatus === 'approved' ? '✓ Approved' : existingDocs.avatarVerificationStatus === 'rejected' ? '✗ Rejected' : '⏳ Pending review'}
+                      </span>
+                    )}
+                  </div>
+                  {existingDocs.avatarVerificationStatus === 'rejected' && (
+                    <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: '0 0 0.5rem' }}>
+                      <strong>Admin feedback:</strong> {existingDocs.avatarRejectionReason || "Please upload a clear, front-facing photo of yourself."}
+                    </p>
+                  )}
+                  <div style={{ border: '2px dashed #e5e7eb', borderRadius: '0.5rem', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', backgroundColor: C.gray50 }}
+                    onClick={() => document.getElementById('avatarFile')?.click()}
+                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = C.accent; }}
+                    onDragLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+                    {avatarFile ? (
+                      <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ Selected: {avatarFile.name}</p>
+                    ) : user?.avatar && existingDocs.avatarVerificationStatus && existingDocs.avatarVerificationStatus !== 'not_submitted' ? (
+                      <div>
+                        <p style={{ color: '#0329b2', fontSize: '0.875rem', fontWeight: 600 }}>📷 Photo already uploaded</p>
+                        <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem' }}>Click here if you wish to upload a new replacement photo</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Click to upload or drag & drop</p>
+                        <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>JPG, PNG, WEBP (max 5MB) - a clear, front-facing photo, required for admin verification</p>
+                      </>
+                    )}
+                  </div>
+                  <input id="avatarFile" type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => setAvatarFile(e.target.files?.[0] || null)} aria-label="avatarFile" style={{ display: 'none' }} />
                 </div>
               </div>
             </div>

@@ -111,7 +111,9 @@ describe("Tutor onboarding — full E2E flow with real Cloudinary uploads", () =
     expect(statusBefore.body.onboardingStep).toBe(1);
     expect(statusBefore.body.onboardingComplete).toBe(false);
 
-    // 2. Step 1 — Personal Info & Global Location
+    // 2. Step 1 — Personal Info & Global Location, with a mandatory profile
+    // photo (required for every tutor still going through initial
+    // onboarding - see tutor.controller.ts's needsAvatar check).
     const step1 = await agent
       .post("/api/v1/tutors/onboarding/step")
       .set(auth)
@@ -127,10 +129,12 @@ describe("Tutor onboarding — full E2E flow with real Cloudinary uploads", () =
           dateOfBirth: "1995-01-01",
           languages: [{ language: "English", proficiency: "Fluent" }],
         })
-      );
+      )
+      .attach("avatar", PNG_1X1, "profile-photo.png");
     expect(step1.status).toBe(200);
     expect(step1.body.success).toBe(true);
     expect(step1.body.profile.onboardingStep).toBe(2);
+    expect(step1.body.profile.avatarVerificationStatus).toBe("pending");
 
     // 3. Step 2 — Education, with a real degree-certificate upload.
     // This is the exact step and payload shape shown in the production bug

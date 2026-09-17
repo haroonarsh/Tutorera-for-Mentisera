@@ -85,14 +85,22 @@ export interface ITutorProfile extends Document {
   demoVideoRejectionReason: string;
   policeVerificationStatus: "not_required" | "not_submitted" | "pending" | "approved" | "rejected";
   policeRejectionReason: string;
+  // "not_submitted" forever means either the tutor hasn't reached step 1
+  // yet, or (grandfathering) they completed onboarding before this
+  // requirement existed - the pre-save hook only requires this to be
+  // "approved" for full verification when it's actually been submitted.
+  avatarVerificationStatus: "not_submitted" | "pending" | "approved" | "rejected";
+  avatarRejectionReason: string;
   cnicSubmittedAt: Date;
   degreeSubmittedAt: Date;
   demoVideoSubmittedAt: Date;
   policeSubmittedAt: Date;
+  avatarSubmittedAt: Date;
   cnicReviewedAt: Date;
   degreeReviewedAt: Date;
   demoVideoReviewedAt: Date;
   policeReviewedAt: Date;
+  avatarReviewedAt: Date;
 
   // Eligibility & lifecycle
   marketplaceEligible: boolean;
@@ -212,14 +220,18 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     demoVideoRejectionReason: { type: String, default: "" },
     policeVerificationStatus: { type: String, enum: ["not_required", "not_submitted", "pending", "approved", "rejected"], default: "not_required" },
     policeRejectionReason: { type: String, default: "" },
+    avatarVerificationStatus: { type: String, enum: ["not_submitted", "pending", "approved", "rejected"], default: "not_submitted" },
+    avatarRejectionReason: { type: String, default: "" },
     cnicSubmittedAt: { type: Date },
     degreeSubmittedAt: { type: Date },
     demoVideoSubmittedAt: { type: Date },
     policeSubmittedAt: { type: Date },
+    avatarSubmittedAt: { type: Date },
     cnicReviewedAt: { type: Date },
     degreeReviewedAt: { type: Date },
     demoVideoReviewedAt: { type: Date },
     policeReviewedAt: { type: Date },
+    avatarReviewedAt: { type: Date },
 
     // Eligibility & lifecycle
     marketplaceEligible: { type: Boolean, default: false },
@@ -288,11 +300,17 @@ tutorProfileSchema.pre("save", function () {
     p.levels = normalizeEducationLevels(p.levels) as any;
   }
   repairInvalidLocation(p);
+  // avatarVerificationStatus "not_submitted" means either a tutor who
+  // hasn't reached onboarding step 1 yet, or (grandfathering) one who
+  // completed onboarding before the mandatory-photo requirement existed -
+  // only require approval here once a photo has actually been submitted,
+  // so existing verified tutors are never retroactively downgraded.
   const allApproved =
     p.cnicVerificationStatus === "approved" &&
     p.degreeVerificationStatus === "approved" &&
     p.demoVideoStatus === "approved" &&
-    (!policeIsRequired(p) || p.policeVerificationStatus === "approved");
+    (!policeIsRequired(p) || p.policeVerificationStatus === "approved") &&
+    (p.avatarVerificationStatus === "not_submitted" || p.avatarVerificationStatus === "approved");
 
   if (allApproved) {
     p.verificationStatus = "approved";

@@ -9,6 +9,7 @@ import {
   updateDegree,
   updateDemoVideo,
   updatePolice,
+  updateAvatar,
   setMarketplaceEligibility,
   setHomeTuitionEligibility,
   setSuspended,
@@ -34,6 +35,7 @@ router.patch("/admin/applications/:id/cnic", protect, authorize("admin"), update
 router.patch("/admin/applications/:id/degree", protect, authorize("admin"), updateDegree);
 router.patch("/admin/applications/:id/demo-video", protect, authorize("admin"), updateDemoVideo);
 router.patch("/admin/applications/:id/police", protect, authorize("admin"), updatePolice);
+router.patch("/admin/applications/:id/avatar", protect, authorize("admin"), updateAvatar);
 router.patch("/admin/applications/:id/marketplace", protect, authorize("admin"), setMarketplaceEligibility);
 router.patch("/admin/applications/:id/home-tuition", protect, authorize("admin"), setHomeTuitionEligibility);
 router.patch("/admin/applications/:id/suspended", protect, authorize("admin"), setSuspended);
