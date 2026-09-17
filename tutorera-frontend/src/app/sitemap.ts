@@ -51,19 +51,22 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       ...Object.keys(LEVELS).map((slug) => `/tutors/level/${slug}`),
     ].map((path) => ({ url: `${SITE_URL}${path}`, lastModified, changeFrequency: "daily", priority: 0.8 }));
 
-    const countryHubResults = await Promise.all(
-      TARGET_COUNTRIES.map(async (code) => {
-        const { total } = await fetchTutors({ countryCode: code.toUpperCase() }, 1);
-        return code === "pk" || total > 0
-          ? {
-              url: `${SITE_URL}/${code}/tutors`,
-              lastModified,
-              changeFrequency: "daily" as const,
-              priority: 0.85,
-            }
-          : null;
-      })
-    );
+    const countryHubResults = (
+      await Promise.all(
+        TARGET_COUNTRIES.map(async (code) => {
+          const { total } = await fetchTutors({ countryCode: code.toUpperCase() }, 1);
+          if (code !== "pk" && total === 0) return [];
+          return [
+            // The country landing page itself ((countries)/[countryCode]) was
+            // previously missing from the sitemap entirely - only its /tutors
+            // sub-page was included, even though it's the main entry point
+            // for that market and has its own content/metadata.
+            { url: `${SITE_URL}/${code}`, lastModified, changeFrequency: "daily" as const, priority: 0.9 },
+            { url: `${SITE_URL}/${code}/tutors`, lastModified, changeFrequency: "daily" as const, priority: 0.85 },
+          ];
+        })
+      )
+    ).flat();
 
     const homeTutorResults = await Promise.all(
       HOME_TUTOR_CITY_SLUGS.map(async (citySlug) => {
@@ -107,7 +110,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
     return [
       ...staticPages,
       ...directories,
-      ...countryHubResults.filter((page): page is NonNullable<typeof page> => page !== null),
+      ...countryHubResults,
       ...homeTutorResults.filter((page): page is NonNullable<typeof page> => page !== null),
       ...research,
       ...blog,

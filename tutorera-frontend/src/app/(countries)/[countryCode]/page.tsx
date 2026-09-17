@@ -59,8 +59,33 @@ export default async function CountryLandingPage({ params }: Props) {
     .filter((c) => c.total > 0)
     .sort((a, b) => b.total - a.total);
 
+  // This landing page previously had no structured data of its own -
+  // only the global Organization schema from the root layout applied to
+  // it, same as every other page - despite being the main entry point
+  // for each market. Matches the WebPage/BreadcrumbList pattern already
+  // used on this country's /tutors sub-page.
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: `TUTORERA - ${country.name}`,
+    description: `Find verified tutors and teaching opportunities in ${country.name}, priced in ${country.currency}.`,
+    url: `${SITE_URL}/${countryCode.toLowerCase()}`,
+    isPartOf: { "@id": `${SITE_URL}/#organization` },
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: country.name, item: `${SITE_URL}/${countryCode.toLowerCase()}` },
+      ],
+    },
+  };
+
   return (
     <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
       <div style={{
         background: "#021550",
         color: "white",
