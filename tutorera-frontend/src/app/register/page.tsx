@@ -18,8 +18,7 @@ const FALLBACK_MARKETS = [{ code: "PK", name: "Pakistan", phoneCode: "+92" }, { 
 function RegisterForm() {
   const geo = useGeoData();
   const launchMarkets = geo.countries.length > 0 ? geo.countries : FALLBACK_MARKETS;
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "", countryCode: "PK", preferredLanguage: "en" });
-  const [citySuggestions, setCitySuggestions] = useState<Array<{ _id?: string; name: string }>>([]);
+  const [form, setForm] = useState({ email: "", password: "", role: "student" as "student" | "tutor" | "parent", countryCode: "PK", preferredLanguage: "en" });
   const [referralCode, setReferralCode] = useState("");
   const [referralApplied, setReferralApplied] = useState(false);
   const [referralMsg, setReferralMsg] = useState("");
@@ -35,17 +34,6 @@ function RegisterForm() {
     const ref = searchParams.get("ref");
     if (ref) setReferralCode(ref.toUpperCase());
   }, [searchParams]);
-
-  useEffect(() => {
-    let active = true;
-    const timer = setTimeout(async () => {
-      try {
-        const response = await api.get("/geo/cities", { params: { country: form.countryCode, q: form.city, limit: 20 } });
-        if (active) setCitySuggestions(response.data.cities || []);
-      } catch { if (active) setCitySuggestions([]); }
-    }, 250);
-    return () => { active = false; clearTimeout(timer); };
-  }, [form.countryCode, form.city]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -137,15 +125,6 @@ function RegisterForm() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
 
-          {/* Name */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Full Name</label>
-            <input name="name" type="text" value={form.name} onChange={handleChange} required placeholder="Muhammad Ahmad"
-              style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
-              onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
-          </div>
-
           {/* Email */}
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Email address</label>
@@ -161,37 +140,6 @@ function RegisterForm() {
               {launchMarkets.map((market) => <option key={market.code} value={market.code}>{market.name} ({market.phoneCode})</option>)}
             </select>
             {form.countryCode !== "PK" && <p style={{ margin: '.45rem 0 0', color: C.gray500, fontSize: '.78rem', lineHeight: 1.5 }}>Discovery beta: profiles, requests, offers, and negotiation are available. Acceptance and payment are not available yet.</p>}
-          </div>
-
-          {/* Phone + City */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone</label>
-              <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder={`${launchMarkets.find((market) => market.code === form.countryCode)?.phoneCode} …`}
-                style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
-                onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>City</label>
-              {/* Free-text input with autocomplete suggestions from the
-                  common-cities list, instead of a locked <select> — the
-                  student can type any city, including ones not listed. */}
-              <input
-                name="city"
-                type="text"
-                list="city-suggestions"
-                value={form.city}
-                onChange={handleChange}
-                placeholder="e.g. Islamabad"
-                autoComplete="off"
-                style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: form.city ? C.primary : C.gray500, backgroundColor: 'white' }}
-                onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
-              <datalist id="city-suggestions">
-                {citySuggestions.map((city) => <option key={city._id || city.name} value={city.name} />)}
-              </datalist>
-            </div>
           </div>
 
           {/* Password */}

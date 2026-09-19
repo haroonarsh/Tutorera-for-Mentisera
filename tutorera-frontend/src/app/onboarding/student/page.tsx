@@ -96,7 +96,7 @@ export default function StudentOnboardingPage() {
 
   const validateStep = () => {
     if (currentStep === 1) {
-      if (!step1.fullName || !step1.phone || !step1.city) {
+      if (!step1.fullName || !step1.phone || !step1.city || !step1.dateOfBirth) {
         setError("Please fill all required fields."); return false;
       }
     }
@@ -253,6 +253,17 @@ export default function StudentOnboardingPage() {
                       <option value="female">Female</option>
                       <option value="other">Other</option>
                     </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Date of Birth *</label>
+                    <input
+                      type="date"
+                      value={step1.dateOfBirth}
+                      onChange={e => setStep1({ ...step1, dateOfBirth: e.target.value })}
+                      max={new Date().toISOString().split("T")[0]}
+                      style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+                      onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                   </div>
                 </div>
               </div>

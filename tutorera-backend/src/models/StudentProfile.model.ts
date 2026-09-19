@@ -45,8 +45,26 @@ const studentProfileSchema = new Schema<IStudentProfile>(
     regionCode: { type: String, uppercase: true, trim: true },
     postalCode: { type: String, trim: true },
     location: {
-      type: { type: String, enum: ["Point"], default: "Point" },
-      coordinates: { type: [Number] },
+      // No default on `type` either. Mongoose applies schema-level path
+      // defaults to a newly-created document on an upsert insert regardless
+      // of what the update payload contains — so even with no `location`
+      // key sent at all, `type: "Point"` was still being stamped onto the
+      // new document, leaving a partial GeoJSON Point (type but no
+      // coordinates) that the 2dsphere index rejects just as hard as the
+      // earlier { type: "Point", coordinates: [] } shape did. Leaving both
+      // subpaths default-free means `location` stays fully absent unless
+      // explicitly and completely supplied — and 2dsphere indexes are
+      // sparse by default, so a document with no location field is simply
+      // excluded from the index rather than erroring.
+      type: { type: String, enum: ["Point"] },
+      // default: undefined is required here — Mongoose auto-defaults every
+      // Array-type schema path to [] unless explicitly overridden, entirely
+      // independent of the `type` field above. Without this, a document
+      // created with no location data still ends up with
+      // { coordinates: [] } (no `type` this time, but still an invalid,
+      // incomplete GeoJSON shape) and the 2dsphere index rejects it the
+      // same way.
+      coordinates: { type: [Number], default: undefined },
     },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
     region: { type: Schema.Types.ObjectId, ref: "Region", index: true },
@@ -83,15 +101,17 @@ studentProfileSchema.index({ countryCode: 1, currency: 1, teachingModePreference
 studentProfileSchema.index({ user: 1 });
 studentProfileSchema.index({ location: "2dsphere" });
 
-// location.type defaults to "Point" whenever the location subdocument exists
-// at all, even if coordinates was never populated. MongoDB's 2dsphere index
-// then rejects EVERY save of that document with "Can't extract geo keys" -
-// not just location updates - because it can't build an index entry from an
-// incomplete GeoJSON Point. Strip an invalid location out before validation.
-studentProfileSchema.pre("validate", function () {
-  const p = this as any;
-  if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
-    p.location = undefined;
+// The onboarding controller writes via findOneAndUpdate({ upsert: true }),
+// which is QUERY middleware, not document middleware — a pre("validate")
+// hook (document middleware) never fires on this path and silently does
+// nothing here. This hook strips an invalid/empty location out of the
+// update payload itself before Mongo ever tries to build a 2dsphere index
+// entry from it, whether the write creates a new document or updates one.
+studentProfileSchema.pre("findOneAndUpdate", function () {
+  const update = this.getUpdate() as any;
+  if (!update) return;
+  if (update.location && (!Array.isArray(update.location.coordinates) || update.location.coordinates.length !== 2)) {
+    delete update.location;
   }
 });
 
