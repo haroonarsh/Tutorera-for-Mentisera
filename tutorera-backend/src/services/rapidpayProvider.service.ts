@@ -131,7 +131,8 @@ export const rapidpayProvider = {
           timeout: 15_000,
         }
       );
-
+      console.log("Rapid Gateway raw response:", JSON.stringify(response.data));
+      
       const checkoutUrl = response.data?.checkout_url || response.data?.checkoutUrl;
       if (!checkoutUrl || typeof checkoutUrl !== "string") {
         throw new Error("Rapid Gateway returned no checkout URL");
