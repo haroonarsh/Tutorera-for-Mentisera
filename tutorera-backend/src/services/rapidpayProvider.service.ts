@@ -143,6 +143,7 @@ export const rapidpayProvider = {
 
       const status = error?.response?.status;
       const gatewayMessage = error?.response?.data?.message || error?.response?.data?.error;
+      console.error("Rapid Gateway raw error:", { status: error?.response?.status, data: error?.response?.data, message: error?.message });
       const wrapped = new Error(
         gatewayMessage ? `Rapid Gateway checkout failed: ${gatewayMessage}` : "Rapid Gateway checkout failed"
       ) as Error & { statusCode?: number; code?: string };
