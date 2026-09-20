@@ -27,25 +27,25 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     { key: "GROQ_API_KEY" },
     { key: "GOOGLE_CLIENT_ID" },
     { key: "GOOGLE_CLIENT_SECRET" },
-    // {
-    //     key: "RAPID_GATEWAY_SECRET_KEY",
-    //     validate: (v) => (v.length < 12 ? "appears too short for a gateway secret" : null),
-    // },
+    {
+        key: "RAPID_GATEWAY_SECRET_KEY",
+        validate: (v) => (v.length < 12 ? "appears too short for a gateway secret" : null),
+    },
     {
         key: "RAPID_GATEWAY_WEBHOOK_SECRET",
         validate: (v) => (v.length < 16 ? "must be at least 16 characters" : null),
     },
-    // {
-    //     key: "RAPID_GATEWAY_WEBHOOK_URL",
-    //     validate: (v) => {
-    //         try {
-    //             const url = new URL(v);
-    //             return url.protocol !== "https:" ? "must use HTTPS" : null;
-    //         } catch {
-    //             return "must be a valid absolute URL";
-    //         }
-    //     },
-    // },
+    {
+        key: "RAPID_GATEWAY_WEBHOOK_URL",
+        validate: (v) => {
+            try {
+                const url = new URL(v);
+                return url.protocol !== "https:" ? "must use HTTPS" : null;
+            } catch {
+                return "must be a valid absolute URL";
+            }
+        },
+    },
 ];
 
 export function validateEnv(): void {
