@@ -9,7 +9,7 @@ describe("Rapid Gateway direct integration", () => {
     process.env.RAPID_GATEWAY_SECRET_KEY = "rg_test_secret_key_123456";
     process.env.RAPID_GATEWAY_WEBHOOK_SECRET = "rg_webhook_secret_123456789";
     process.env.RAPID_GATEWAY_WEBHOOK_URL = "https://api.example.test/api/v1/payments/webhook";
-    process.env.RAPID_GATEWAY_API_BASE_URL = "https://secure.rapid-gateway.com";
+    process.env.RAPID_GATEWAY_API_BASE_URL = "https://api.rapidgateway.pk";
   });
 
   afterEach(() => {
@@ -50,9 +50,9 @@ describe("Rapid Gateway direct integration", () => {
       },
     });
 
-    expect(checkoutUrl).toBe("https://checkout.rapid-gateway.com/test/rg_payment_test_1");
+    expect(checkoutUrl).toBe("https://checkout.rapidgateway.pk/test/rg_payment_test_1");
     expect(post).toHaveBeenCalledWith(
-      "https://secure.rapid-gateway.com/v1/payments",
+      "https://api.rapidgateway.pk/v1/payments",
       expect.objectContaining({
         amount: 100,
         currency: "PKR",

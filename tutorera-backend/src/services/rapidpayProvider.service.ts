@@ -10,7 +10,7 @@ export interface RapidpayCheckoutParams {
   metadata?: Record<string, unknown>;
 }
 
-const DEFAULT_API_BASE_URL = "https://secure.rapid-gateway.com";
+const DEFAULT_API_BASE_URL = "https://api.rapidgateway.pk";
 const DEFAULT_METHODS = ["card", "raast", "easypaisa", "jazzcash"];
 const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
 
