@@ -34,7 +34,7 @@ Set the required application variables, including the Rapid Gateway server-side 
 RAPID_GATEWAY_SECRET_KEY=<merchant secret key>
 RAPID_GATEWAY_WEBHOOK_SECRET=<webhook signing secret>
 RAPID_GATEWAY_WEBHOOK_URL=https://your-api.example.com/api/v1/payments/webhook
-RAPID_GATEWAY_API_BASE_URL=https://api.rapidgateway.pk
+RAPID_GATEWAY_API_BASE_URL=https://secure.rapid-gateway.com
 ```
 
 `RAPID_GATEWAY_SECRET_KEY` and `RAPID_GATEWAY_WEBHOOK_SECRET` must stay on the backend. They must never be exposed through `NEXT_PUBLIC_*`, browser JavaScript, or the frontend repository.
