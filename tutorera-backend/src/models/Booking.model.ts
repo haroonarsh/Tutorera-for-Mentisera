@@ -14,17 +14,6 @@ export interface IBooking extends Document {
   scheduleTimezone?: string;
   scheduledStartAt?: Date;
   scheduledEndAt?: Date;
-  // Structured recurrence data — mirrors Request.model.ts's fields of the
-  // same name. Previously this data existed on the Request document but was
-  // silently dropped when finalizeBidAcceptance built the Booking, leaving
-  // only the free-text `schedule` string (e.g. "MonL12pm, Wed: 12pm,
-  // Fri:4pm") with nothing structured behind it to compute real calendar
-  // occurrence dates, reminders, or Google Meet events from.
-  preferredDays?: string[];
-  preferredStartTime?: string;
-  sessionDurationMinutes?: number;
-  sessionsPerWeek?: number;
-  expectedStartDate?: Date;
   pricingUnit: "hour" | "session" | "month" | "course";
   sessionCount: number;
   subtotal: number;
@@ -69,11 +58,6 @@ const bookingSchema = new Schema<IBooking>(
     scheduleTimezone: { type: String, trim: true },
     scheduledStartAt: { type: Date, index: true },
     scheduledEndAt: { type: Date },
-    preferredDays: [{ type: String }],
-    preferredStartTime: { type: String },
-    sessionDurationMinutes: { type: Number, min: 15, max: 480 },
-    sessionsPerWeek: { type: Number, min: 1, max: 14 },
-    expectedStartDate: { type: Date },
     pricingUnit: { type: String, enum: ["hour", "session", "month", "course"], default: "hour" },
     sessionCount: { type: Number, default: 1, min: 1 },
     subtotal: { type: Number, required: true },
