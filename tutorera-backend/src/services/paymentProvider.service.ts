@@ -136,7 +136,7 @@ export async function recordPaymentLedger(args: {
   const gatewayFee = accounting.gatewayFee || 0;
   const doc = {
     provider,
-    providerEventId: args.providerEventId,
+    ...(args.providerEventId && { providerEventId: args.providerEventId }),
     providerTransactionId: args.providerTransactionId,
     eventType: args.eventType,
     status: args.status,
@@ -149,8 +149,6 @@ export async function recordPaymentLedger(args: {
     gatewayFee,
     refundAmount: args.eventType === "payment.refunded" ? args.amount : 0,
     tutorPayable: accounting.tutorNet,
-    // The gateway's own processing cost is absorbed from the platform's
-    // margin - never deducted from the tutor's payout (tutorPayable above).
     platformNet: accounting.platformFee - gatewayFee,
     settlementStatus,
     feeSnapshot: snapshot || {},
