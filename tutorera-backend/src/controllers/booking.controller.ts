@@ -9,6 +9,7 @@ import { logAudit } from "../utils/logAudit";
 import { sendNotification } from "../utils/socket";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
+import { computeNextOccurrence } from "../utils/scheduleOccurrences";
 
 // @desc    Get my bookings
 // @route   GET /api/bookings
@@ -27,17 +28,38 @@ export const getMyBookings = async (req: AuthRequest, res: Response): Promise<vo
   const total = await Booking.countDocuments(filter);
 
   const bookings = await Booking.find(filter)
-    .populate("student", "name avatar")
-    .populate("tutor", "name avatar")
-    .populate("request", "subject level status")
-    .sort("-createdAt")
-    .skip(skip)
-    .limit(limitNum);
+  .populate("student", "name avatar")
+  .populate("tutor", "name avatar")
+  .populate("request", "subject level status")
+  .sort("-createdAt")
+  .skip(skip)
+  .limit(limitNum);
+
+  // Attach a computed real next-occurrence date/time alongside the raw
+  // schedule string. Bookings created before this fix have no structured
+  // recurrence data (preferredDays/preferredStartTime), so
+  // computeNextOccurrence() correctly returns null for them — the frontend
+  // falls back to displaying the existing `schedule` text as before, no
+  // crash, no special-casing needed per booking.
+  const bookingsWithOccurrence = bookings.map((booking) => {
+    const nextOccurrence = computeNextOccurrence({
+      preferredDays: booking.preferredDays,
+      preferredStartTime: booking.preferredStartTime,
+      sessionDurationMinutes: booking.sessionDurationMinutes,
+      expectedStartDate: booking.expectedStartDate,
+      scheduleTimezone: booking.scheduleTimezone,
+    });
+
+    return {
+      ...booking.toObject(),
+      nextOccurrence, // { startAt, endAt, dayLabel, dateLabel, timeLabel } or null
+    };
+  });
 
   res.status(200).json({
     success: true,
     total,
-    bookings,
+    bookings: bookingsWithOccurrence,
     pagination: {
       total,
       page: pageNum,

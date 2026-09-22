@@ -370,7 +370,11 @@ function BookingCard({ booking, onClaimSubmitted }: {
 
       <div className={s.infoRow}>
         <span className={s.infoChip}>{money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")}</span>
-        <span className={s.infoChip}>{booking.schedule}</span>
+        <span className={s.infoChip}>
+          {booking.nextOccurrence
+            ? `${booking.nextOccurrence.dayLabel}, ${booking.nextOccurrence.dateLabel} · ${booking.nextOccurrence.timeLabel}`
+            : booking.schedule}
+        </span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
