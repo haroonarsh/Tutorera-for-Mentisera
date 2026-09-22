@@ -869,6 +869,11 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         scheduleTimezone: request.scheduleTimezone || request.timezone,
         scheduledStartAt: request.scheduledStartAt,
         scheduledEndAt: request.scheduledEndAt,
+        preferredDays: request.preferredDays,
+        preferredStartTime: request.preferredStartTime,
+        sessionDurationMinutes: request.sessionDurationMinutes,
+        sessionsPerWeek: request.sessionsPerWeek,
+        expectedStartDate: request.expectedStartDate,
         pricingUnit: bid.pricingUnit || "hour",
         sessionCount: 1,
         ...fees,
@@ -883,7 +888,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         // was ever created — no manual confirmation step needed.
         paymentStatus: "confirmed",
         paymentNote: "Paid via authorized payment gateway before booking creation",
-      }], { session });
+      } as any], { session });
       const booking = bookingArr[0];
       await syncStudentTutorRelationship(booking as any, session);
 
