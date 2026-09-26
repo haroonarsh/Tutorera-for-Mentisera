@@ -59,9 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       api
         .get("/auth/me")
         .then((res) => setUser(res.data.user))
-        .catch(() => {
-          localStorage.removeItem("token");
-          setUser(null);
+        .catch((err) => {
+          // Only clear session on explicit 401 (token expired/invalid), not on 429 rate limit or network glitch
+          if (err?.response?.status === 401) {
+            localStorage.removeItem("token");
+            setUser(null);
+          }
         })
         .finally(() => setLoading(false));
     } else {

@@ -4,10 +4,14 @@ import jwt from "jsonwebtoken";
 // General API-wide limiter — generous, just to stop obvious abuse/scraping
 export const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 300,
+    max: 3000,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: "Too many requests. Please try again later." },
+    skip: (req) => {
+      const path = req.originalUrl || req.url || "";
+      return path.includes("/auth/login") || path.includes("/auth/register") || path.includes("/auth/google");
+    },
 });
 
 // Strict limiter for login — prevent brute-force password guessing
