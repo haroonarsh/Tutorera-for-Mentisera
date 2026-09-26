@@ -39,21 +39,23 @@ export const requirePermission = (permission: Permission) => {
       return;
     }
 
+    // Gracefully treat legacy role="admin" users as super_admin when adminRole is absent
+    const effectiveAdminRole: AdminRole = (req.user.adminRole as AdminRole) || "super_admin";
+
     // Reject explicitly invalid adminRole values (prevents privilege escalation)
-    if (!req.user.adminRole || !VALID_ADMIN_ROLES.includes(req.user.adminRole as AdminRole)) {
+    if (!VALID_ADMIN_ROLES.includes(effectiveAdminRole)) {
       logger.warn(
         { userId: req.user._id, adminRole: req.user.adminRole, path: req.originalUrl },
-        "RBAC: rejected request with missing or unknown adminRole"
+        "RBAC: rejected request with unknown adminRole"
       );
       res.status(403).json({
         success: false,
         code: "INVALID_ADMIN_ROLE",
-        message: "Your administrative role is missing or not recognized. Contact your system administrator to assign you a role.",
+        message: "Your administrative role is not recognized. Contact your system administrator to assign you a role.",
       });
       return;
     }
 
-    const effectiveAdminRole = req.user.adminRole as AdminRole;
     const userPerms = req.user.adminPermissions || [];
 
     if (!hasPermission(effectiveAdminRole, userPerms, permission)) {

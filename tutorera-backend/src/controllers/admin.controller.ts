@@ -622,14 +622,34 @@ export const uploadTutorDocsAdmin = async (
 // @access  Private (admin)
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   const { role, search, page = "1", limit = "20" } = req.query;
-  const filter: Record<string, unknown> = { isDeleted: { $ne: true } };
-  if (req.countryScopeCode) filter.countryCode = req.countryScopeCode;
-  if (role && role !== "all") filter.role = role;
+  const andClauses: Record<string, unknown>[] = [{ isDeleted: { $ne: true } }];
+
+  if (req.countryScopeCode) {
+    andClauses.push({ countryCode: req.countryScopeCode });
+  }
+
+  if (role && role !== "all") {
+    if (role === "admin") {
+      andClauses.push({
+        $or: [
+          { role: "admin" },
+          { role: "super_admin" },
+          { adminRole: { $exists: true, $ne: null } },
+        ],
+      });
+    } else {
+      andClauses.push({ role });
+    }
+  }
 
   if (search && (search as string).trim()) {
     const searchRegex = new RegExp((search as string).trim(), "i");
-    filter.$or = [{ name: searchRegex }, { email: searchRegex }];
+    andClauses.push({
+      $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }],
+    });
   }
+
+  const filter = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));

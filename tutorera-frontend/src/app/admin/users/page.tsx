@@ -35,35 +35,33 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [enforcementAction, setEnforcementAction] = useState<"suspend" | "ban" | "reinstate">("suspend");
   const [enforcementReason, setEnforcementReason] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const fetchUsers = (page: number = 1, searchTerm: string = search, role: string = roleFilter) => {
     setLoading(true);
+    setLoadError("");
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (searchTerm.trim()) params.set("search", searchTerm.trim());
     if (role !== "all") params.set("role", role);
     api.get(`/admin/users?${params.toString()}`)
       .then(res => {
-        setUsers(res.data.users);
-        setPagination({ page: res.data.page, pages: res.data.pages, total: res.data.total });
+        setUsers(res.data.users || []);
+        setPagination({ page: res.data.page || 1, pages: res.data.pages || 1, total: res.data.total || 0 });
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error("Failed to load users:", err);
+        setLoadError(err?.response?.data?.message || err?.message || "Failed to load users. Please check administrative permissions.");
+        setUsers([]);
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchUsers(1); }, []);
-
-  // Debounced search
+  // Debounced search & role change
   useEffect(() => {
-    const timer = setTimeout(() => fetchUsers(1, search, roleFilter), 400);
+    const timer = setTimeout(() => fetchUsers(1, search, roleFilter), 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
-
-  // Immediate refetch on role filter change
-  useEffect(() => {
-    fetchUsers(1, search, roleFilter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleFilter]);
+  }, [search, roleFilter]);
 
   const handleToggleStatus = async (user: User) => {
     setSelectedUser(user);
@@ -111,8 +109,8 @@ export default function UsersPage() {
             onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
             onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {["all", "student", "tutor", "admin"].map(role => (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {["all", "student", "tutor", "parent", "admin"].map(role => (
             <button key={role} onClick={() => setRoleFilter(role)}
               style={{ padding: '0.5rem 1rem', borderRadius: '999px', border: roleFilter === role ? 'none' : `1px solid ${C.border}`, backgroundColor: roleFilter === role ? C.primary : C.surface, color: roleFilter === role ? C.surface : C.gray500, fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}>
               {role}
@@ -120,6 +118,19 @@ export default function UsersPage() {
           ))}
         </div>
       </div>
+
+      {loadError && (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', borderRadius: '0.75rem', backgroundColor: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: STATUS_COLORS.danger.color, fontWeight: '600' }}>
+            ⚠️ {loadError}
+          </p>
+          <button
+            onClick={() => fetchUsers(1, search, roleFilter)}
+            style={{ padding: '0.4rem 0.85rem', borderRadius: '0.375rem', backgroundColor: STATUS_COLORS.danger.color, color: 'white', border: 'none', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, overflow: 'visible' }}>
 
@@ -136,7 +147,15 @@ export default function UsersPage() {
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : users.length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>No users found.</div>
+          <div style={{ padding: '3rem', textAlign: 'center', color: C.gray500 }}>
+            <p style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>👥</p>
+            <p style={{ margin: 0, fontWeight: '600', color: C.primary }}>No users found</p>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+              {roleFilter !== "all" || search
+                ? `No accounts match the current filter (${roleFilter !== "all" ? `role: ${roleFilter}` : ""}${search ? ` search: "${search}"` : ""}).`
+                : "No registered accounts exist yet."}
+            </p>
+          </div>
         ) : (
           users.map((user, idx) => (
             <div key={user._id} style={{ borderBottom: idx < users.length - 1 ? `1px solid ${C.border}` : 'none' }}>
