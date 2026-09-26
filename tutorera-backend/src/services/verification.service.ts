@@ -201,6 +201,7 @@ export async function approveComponent(
   }
 
   const component = item.component as VerificationComponent;
+  const previousStatus = item.status;
   const statusField = getComponentField(component);
   const reviewedField = getComponentReviewedField(component);
 
@@ -219,7 +220,7 @@ export async function approveComponent(
     admin: new mongoose.Types.ObjectId(actor.id),
     component,
     decision: "approved",
-    previousStatus: "pending",
+    previousStatus,
     newStatus: "approved",
   });
 
@@ -278,6 +279,7 @@ export async function rejectComponent(
   }
 
   const component = item.component as VerificationComponent;
+  const previousStatus = item.status;
   const statusField = getComponentField(component);
   const rejectionField = getComponentRejectionField(component);
   const reviewedField = getComponentReviewedField(component);
@@ -299,7 +301,7 @@ export async function rejectComponent(
     admin: new mongoose.Types.ObjectId(actor.id),
     component,
     decision: "rejected",
-    previousStatus: "pending",
+    previousStatus,
     newStatus: "rejected",
     rejectionReason: rejectionReason.trim(),
   });
@@ -347,6 +349,7 @@ export async function escalateReviewItem(
     throw new Error("Review item not found");
   }
 
+  const previousStatus = item.status;
   item.status = "escalated";
   item.autoEscalated = true;
   item.adminNotes = item.adminNotes
@@ -360,7 +363,7 @@ export async function escalateReviewItem(
     admin: new mongoose.Types.ObjectId(actor.id),
     component: item.component,
     decision: "escalated",
-    previousStatus: item.status,
+    previousStatus,
     newStatus: "escalated",
   });
 
@@ -414,4 +417,27 @@ async function cleanupDuplicateQueueItems(
     component: component as any,
     _id: { $ne: current._id },
   });
+}
+
+/** Keep the operational review queue aligned when a reviewer acts from the
+ * application case view instead of the dedicated queue. The profile remains
+ * the source of truth; this merely prevents the two admin surfaces drifting. */
+export async function syncReviewQueueComponent(
+  tutorProfileId: string,
+  component: VerificationComponent,
+  status: "pending" | "in_review" | "approved" | "rejected" | "escalated",
+  rejectionReason?: string
+): Promise<void> {
+  if (status === "pending") {
+    await syncReviewQueueForProfile(tutorProfileId);
+    return;
+  }
+
+  const item = await TutorDocumentReview.findOne({ tutorProfile: tutorProfileId, component });
+  if (!item || item.status === status) return;
+
+  item.status = status;
+  item.completedAt = status === "approved" || status === "rejected" ? new Date() : undefined;
+  item.rejectionReason = status === "rejected" ? (rejectionReason || "").trim() : "";
+  await item.save();
 }

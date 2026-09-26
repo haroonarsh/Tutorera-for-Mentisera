@@ -18,7 +18,7 @@ const FALLBACK_MARKETS = [{ code: "PK", name: "Pakistan", phoneCode: "+92" }, { 
 function RegisterForm() {
   const geo = useGeoData();
   const launchMarkets = geo.countries.length > 0 ? geo.countries : FALLBACK_MARKETS;
-  const [form, setForm] = useState({ email: "", password: "", role: "student" as "student" | "tutor" | "parent", countryCode: "PK", preferredLanguage: "en" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", countryCode: "PK", preferredLanguage: "en" });
   const [referralCode, setReferralCode] = useState("");
   const [referralApplied, setReferralApplied] = useState(false);
   const [referralMsg, setReferralMsg] = useState("");
@@ -124,6 +124,14 @@ function RegisterForm() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+
+          <div>
+            <label htmlFor="name" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Full name</label>
+            <input id="name" name="name" type="text" value={form.name} onChange={handleChange} required autoComplete="name" placeholder="Your full name"
+              style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
+              onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+          </div>
 
           {/* Email */}
           <div>

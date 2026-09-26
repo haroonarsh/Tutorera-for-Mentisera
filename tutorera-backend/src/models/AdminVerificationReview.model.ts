@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export type VerificationComponent =
+  | "avatar"
   | "cnic"
   | "degree"
   | "demoVideo"
@@ -31,7 +32,7 @@ const adminVerificationReviewSchema = new Schema<IAdminVerificationReview>(
     admin: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     component: {
       type: String,
-      enum: ["cnic", "degree", "demoVideo", "police"],
+      enum: ["avatar", "cnic", "degree", "demoVideo", "police"],
       required: true,
       index: true,
     },

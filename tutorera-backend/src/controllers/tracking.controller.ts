@@ -3,6 +3,7 @@ import { AuthRequest } from "../types";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
+import AdminVerificationReview from "../models/AdminVerificationReview.model";
 import { logAudit } from "../utils/logAudit";
 import { NotificationService } from "../services/notification.service";
 import {
@@ -37,6 +38,7 @@ import {
 } from "../utils/trackingEmails";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
+import { syncReviewQueueComponent } from "../services/verification.service";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 const APPLICATION_STATUS_URL = `${TRACKING_BASE_URL}/tutor/application-status`;
@@ -46,6 +48,16 @@ function ctaArgs(user: { applicationId?: string; name: string }) {
     applicationId: user.applicationId || "TUT-PENDING",
     statusUrl: APPLICATION_STATUS_URL,
   };
+}
+
+async function recordDocumentDecision(input: { userId: string; profileId: string; adminId?: string; component: "avatar" | "cnic" | "degree" | "demoVideo" | "police"; previousStatus?: string; status?: string; reason?: string }) {
+  if (!input.adminId || (input.status !== "approved" && input.status !== "rejected")) return;
+  await AdminVerificationReview.create({
+    tutor: input.userId, tutorProfile: input.profileId, admin: input.adminId,
+    component: input.component, decision: input.status,
+    previousStatus: input.previousStatus, newStatus: input.status,
+    rejectionReason: input.status === "rejected" ? (input.reason || "").trim() : undefined,
+  });
 }
 
 function maskIp(ip: string | undefined): string {
@@ -324,7 +336,10 @@ export const getApplicationDetail = async (req: AuthRequest, res: Response): Pro
   const data = await loadProfileOr404(req, res);
   if (!data) return;
   const { user, profile } = data;
-  const history = await TutorApplicationStatusHistory.find({ tutor: user._id }).sort({ createdAt: -1 }).limit(50);
+  const [history, reviewHistory] = await Promise.all([
+    TutorApplicationStatusHistory.find({ tutor: user._id }).sort({ createdAt: -1 }).limit(50),
+    AdminVerificationReview.find({ tutorProfile: profile._id }).populate("admin", "name email").sort({ createdAt: -1 }).limit(100).lean(),
+  ]);
   res.status(200).json({
     success: true,
     application: {
@@ -343,6 +358,12 @@ export const getApplicationDetail = async (req: AuthRequest, res: Response): Pro
         actor: h.actor,
         actorRole: h.actorRole,
       })),
+      reviewHistory: reviewHistory.map((review: any) => ({
+        id: review._id.toString(), component: review.component, decision: review.decision,
+        previousStatus: review.previousStatus || null, newStatus: review.newStatus,
+        rejectionReason: review.rejectionReason || null, internalNotes: review.internalNotes || null,
+        reviewedAt: review.createdAt, reviewedBy: review.admin?.name || "System",
+      })),
     },
   });
 };
@@ -360,6 +381,7 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
     return;
   }
   const { user, profile } = data;
+  const previousDocumentStatus = profile.cnicVerificationStatus;
   profile.cnicVerificationStatus = status;
   profile.cnicRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.cnicReviewedAt = new Date();
@@ -367,6 +389,8 @@ export const updateCnic = async (req: AuthRequest, res: Response): Promise<void>
   await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
+  await recordDocumentDecision({ userId: user._id.toString(), profileId: profile._id.toString(), adminId: actor.id, component: "cnic", previousStatus: previousDocumentStatus, status, reason });
+  await syncReviewQueueComponent(profile._id.toString(), "cnic", status, reason);
   if (status === "approved") {
     await recordStatusEvent({
       tutorId: user._id.toString(),
@@ -431,6 +455,7 @@ export const updateAvatar = async (req: AuthRequest, res: Response): Promise<voi
     return;
   }
   const { user, profile } = data;
+  const previousDocumentStatus = profile.avatarVerificationStatus;
   profile.avatarVerificationStatus = status;
   profile.avatarRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.avatarReviewedAt = new Date();
@@ -438,6 +463,7 @@ export const updateAvatar = async (req: AuthRequest, res: Response): Promise<voi
   await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
+  await recordDocumentDecision({ userId: user._id.toString(), profileId: profile._id.toString(), adminId: actor.id, component: "avatar", previousStatus: previousDocumentStatus, status, reason });
   if (status === "approved") {
     await recordStatusEvent({
       tutorId: user._id.toString(),
@@ -502,6 +528,7 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     return;
   }
   const { user, profile } = data;
+  const previousDocumentStatus = profile.degreeVerificationStatus;
   profile.degreeVerificationStatus = status;
   profile.degreeRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.degreeReviewedAt = new Date();
@@ -509,6 +536,8 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
   await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
+  await recordDocumentDecision({ userId: user._id.toString(), profileId: profile._id.toString(), adminId: actor.id, component: "degree", previousStatus: previousDocumentStatus, status, reason });
+  await syncReviewQueueComponent(profile._id.toString(), "degree", status, reason);
   if (status === "approved") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "EDUCATIONAL_DOCUMENTS_VERIFIED", message: "Educational documents verified", statusAfter: "approved" });
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
@@ -544,6 +573,7 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
     return;
   }
   const { user, profile } = data;
+  const previousDocumentStatus = profile.demoVideoStatus;
   profile.demoVideoStatus = status;
   profile.demoVideoRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.demoVideoReviewedAt = new Date();
@@ -551,6 +581,8 @@ export const updateDemoVideo = async (req: AuthRequest, res: Response): Promise<
   await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
+  await recordDocumentDecision({ userId: user._id.toString(), profileId: profile._id.toString(), adminId: actor.id, component: "demoVideo", previousStatus: previousDocumentStatus, status, reason });
+  await syncReviewQueueComponent(profile._id.toString(), "demoVideo", status, reason);
   if (status === "approved") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "DEMO_VIDEO_APPROVED", message: "Demo video approved", statusAfter: "approved" });
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
@@ -586,6 +618,7 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
     return;
   }
   const { user, profile } = data;
+  const previousDocumentStatus = profile.policeVerificationStatus;
   profile.policeVerificationStatus = status;
   profile.policeRejectionReason = status === "rejected" ? (reason || "") : "";
   profile.policeReviewedAt = new Date();
@@ -593,6 +626,8 @@ export const updatePolice = async (req: AuthRequest, res: Response): Promise<voi
   await profile.save({ validateModifiedOnly: true });
 
   const actor = actorFromReq(req);
+  await recordDocumentDecision({ userId: user._id.toString(), profileId: profile._id.toString(), adminId: actor.id, component: "police", previousStatus: previousDocumentStatus, status, reason });
+  await syncReviewQueueComponent(profile._id.toString(), "police", status, reason);
   if (status === "approved") {
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "POLICE_VERIFICATION_APPROVED", message: "Police verification approved", statusAfter: "approved" });
     await NotificationService.publishEvent(user._id.toString(), "home_tuition.eligibility_granted", {
@@ -890,6 +925,20 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
 
     const now = new Date();
     profile.lastStatusChangeAt = now;
+    const componentForDocument = documentType === "cnicFront" || documentType === "cnicBack"
+      ? "cnic" as const
+      : documentType === "degree"
+      ? "degree" as const
+      : documentType === "policeCertificate"
+      ? "police" as const
+      : "demoVideo" as const;
+    const previousStatus = componentForDocument === "cnic"
+      ? profile.cnicVerificationStatus
+      : componentForDocument === "degree"
+      ? profile.degreeVerificationStatus
+      : componentForDocument === "police"
+      ? profile.policeVerificationStatus
+      : profile.demoVideoStatus;
 
     if (documentType === "cnicFront") {
       profile.cnicFront = secureUrl;
@@ -935,6 +984,20 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
     }
 
     await profile.save({ validateModifiedOnly: true });
+
+    // Uploading with immediate approval is still a review decision. Persist it
+    // in the same immutable decision stream as actions taken from the queue.
+    if (autoApprove) {
+      await recordDocumentDecision({
+        userId: user._id.toString(),
+        profileId: profile._id.toString(),
+        adminId: actor.id,
+        component: componentForDocument,
+        previousStatus,
+        status: "approved",
+      });
+    }
+    await syncReviewQueueComponent(profile._id.toString(), componentForDocument, autoApprove ? "approved" : "pending");
 
     const eventName: any =
       documentType === "cnicFront" || documentType === "cnicBack"
