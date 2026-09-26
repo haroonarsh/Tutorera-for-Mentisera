@@ -180,13 +180,18 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   await profile.save({ validateBeforeSave: false });
 
   if (status === "approved") {
-    const activeAgreement = await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: "active" });
+    const activeAgreement = await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } });
     if (!activeAgreement) {
+      profile.agreementAcceptanceRequired = true;
+      profile.agreementAcceptedAt = undefined as any;
+      profile.agreementVersion = "TTA-2026.1";
+      await profile.save({ validateBeforeSave: false });
       await TutorAgreement.create({
         tutor: tutorUser._id,
         tutorProfile: profile._id,
         approvedHourlyRate: profile.hourlyRate,
         currency: profile.currency || "PKR",
+        version: "TTA-2026.1",
         approvedBy: req.user?._id,
         approvedAt: now,
       });

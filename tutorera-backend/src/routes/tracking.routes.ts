@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getApplicationStatus,
   rotateTrackingToken,
+  acceptTutorAgreement,
   getPublicTracking,
   listApplications,
   getApplicationDetail,
@@ -26,6 +27,7 @@ const router = Router();
 // ─── Tutor authenticated ────────────────────────────────────────────────────
 router.get("/application-status", protect, authorize("tutor"), getApplicationStatus);
 router.post("/application-status/rotate-token", protect, authorize("tutor"), tutorRotateLimiter, rotateTrackingToken);
+router.post("/application-status/accept-agreement", protect, authorize("tutor"), acceptTutorAgreement);
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 router.get("/admin/applications", protect, authorize("admin"), listApplications);

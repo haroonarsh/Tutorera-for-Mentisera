@@ -154,16 +154,16 @@ export const marketplaceActivatedEmail = (tutorName: string, args: CtaArgs) => {
 export const tutorMarketplaceAgreementEmail = (tutorName: string, args: CtaArgs & { hourlyRate?: number; currency?: string }) => {
   const currency = args.currency || "PKR";
   const rate = args.hourlyRate ? `${currency} ${args.hourlyRate.toLocaleString()} per hour` : "the rate shown on your approved tutor profile";
-  const subject = "Your approved TUTORERA Tutor Marketplace Agreement";
+  const subject = "Action required: accept your TUTORERA Tutor Agreement";
   const innerHtml = `
-    <h2 style="color:#021550;margin:0 0 12px;">Your tutor application is approved</h2>
+    <h2 style="color:#021550;margin:0 0 12px;">Your application is approved — agreement acceptance required</h2>
     <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
-    <p style="color:#374151;">Your approved public starting rate is <strong>${escapeHtml(rate)}</strong>. By using your approved tutor profile, you confirm the Tutor Marketplace Agreement, including independent-contractor status, professional standards, safeguarding rules, and booking/payout terms.</p>
+    <p style="color:#374151;">Your approved public starting rate is <strong>${escapeHtml(rate)}</strong>. Before marketplace activation, review and expressly accept Agreement Version TTA-2026.1, including independent-contractor status, professional standards, safeguarding rules, and booking/payout terms.</p>
     <p style="color:#374151;">Every accepted offer and booking records its own final agreed rate, deductions, tax, payout timing, and cancellation terms. That booking fee snapshot controls the transaction.</p>
     <p style="color:#374151;"><a href="${SITE_URL}/terms/tutors" style="color:#0329B2;font-weight:700;">Read the Tutor Marketplace Agreement</a></p>
-    ${trackingCta(args, "View Approved Profile Status")}
+    <div style="text-align:center;margin:24px 0 0;"><a href="${SITE_URL}/tutor/accept-agreement" style="display:inline-block;background:#0329B2;color:#fff;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px;">Review and Accept Agreement</a></div>
   `;
-  return { subject, html: wrap(innerHtml, subject, "Tutor Agreement", "Your tutor application is approved and your platform agreement is ready.") };
+  return { subject, html: wrap(innerHtml, subject, "Tutor Agreement", "Your application is approved. Accept the agreement to activate your tutor account.") };
 };
 
 export const marketplaceDeactivatedEmail = (tutorName: string, reason: string, args: CtaArgs) => {

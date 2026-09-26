@@ -75,6 +75,9 @@ export interface ITutorProfile extends Document {
   verificationStatus: "pending" | "approved" | "rejected";
   rejectionReason: string;
   isVerified: boolean;
+  agreementAcceptanceRequired?: boolean;
+  agreementAcceptedAt?: Date;
+  agreementVersion?: string;
   isTestAccount: boolean;
 
   // Per-component verification (Tutor Application Tracking)
@@ -211,6 +214,9 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     verificationStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     rejectionReason: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
+    agreementAcceptanceRequired: { type: Boolean, default: false },
+    agreementAcceptedAt: { type: Date },
+    agreementVersion: { type: String, trim: true },
     // Kept on the profile as well as User so every public profile query can
     // exclude test/demo records without relying on a populated user document.
     isTestAccount: { type: Boolean, default: false, index: true },

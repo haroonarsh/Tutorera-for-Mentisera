@@ -226,6 +226,7 @@ export function isMarketplaceEligible(profile: ITutorProfile): boolean {
     profile.cnicVerificationStatus === "approved" &&
     profile.degreeVerificationStatus === "approved" &&
     profile.verificationStatus === "approved" &&
+    (!profile.agreementAcceptanceRequired || Boolean(profile.agreementAcceptedAt)) &&
     !profile.suspendedAt &&
     !profile.reVerificationRequired
   );
@@ -430,6 +431,9 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
 
 function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   const RESUBMIT_URL = "/tutor/resubmit-docs";
+  if (profile.agreementAcceptanceRequired && !profile.agreementAcceptedAt) {
+    return { title: "Accept your Tutor Agreement", body: "Your application is approved. Review and accept Agreement Version TTA-2026.1 to activate marketplace access.", cta: { label: "Review agreement", href: "/tutor/accept-agreement" } };
+  }
   const reasons: { key: string; title: string; body: string; cta: { label: string; href: string } }[] = [];
   if (profile.cnicVerificationStatus === "rejected") {
     reasons.push({
@@ -521,6 +525,7 @@ export async function buildAuthenticatedTrackingPayload(
   const marketplaceBlockReason = (() => {
     if (profile.suspendedAt) return "Your profile is currently suspended.";
     if (profile.reVerificationRequired) return "Re-verification is required before marketplace access resumes.";
+    if (profile.agreementAcceptanceRequired && !profile.agreementAcceptedAt) return "Accept the Tutor Marketplace Agreement to activate marketplace access.";
     if (!profile.onboardingComplete) return "Complete onboarding to unlock the marketplace.";
     if (profile.cnicVerificationStatus !== "approved") return "Identity document verification is required.";
     if (profile.demoVideoStatus !== "approved") return "Demo video approval is required.";

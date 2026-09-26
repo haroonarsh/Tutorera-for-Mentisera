@@ -126,6 +126,37 @@ export const rotateTrackingToken = async (req: AuthRequest, res: Response): Prom
   });
 };
 
+export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user || req.user.role !== "tutor") {
+    res.status(403).json({ success: false, message: "Tutor access required." });
+    return;
+  }
+  const confirmations = req.body?.confirmations;
+  if (!confirmations?.informationAccurate || !confirmations?.agreementAccepted || !confirmations?.policiesAccepted || !confirmations?.independentProvider || !confirmations?.feesUnderstood || !confirmations?.electronicRecordsConsent) {
+    res.status(400).json({ success: false, message: "Every agreement confirmation is required before activation." });
+    return;
+  }
+  const profile = await TutorProfile.findOne({ user: req.user._id });
+  const agreement = profile && await TutorAgreement.findOne({ tutor: req.user._id, tutorProfile: profile._id, status: "pending_acceptance" }).sort({ createdAt: -1 });
+  if (!profile || !agreement) {
+    res.status(404).json({ success: false, message: "No agreement awaiting acceptance was found." });
+    return;
+  }
+  const now = new Date();
+  agreement.status = "active";
+  agreement.acceptedAt = now;
+  agreement.acceptanceIp = maskIp(req.ip);
+  agreement.acceptanceUserAgent = req.headers["user-agent"]?.toString().slice(0, 500);
+  await agreement.save();
+  profile.agreementAcceptedAt = now;
+  profile.agreementVersion = agreement.version;
+  await profile.save({ validateModifiedOnly: true });
+  await recordStatusEvent({ tutorId: req.user._id.toString(), tutorProfileId: profile._id.toString(), actor: { name: req.user.name, role: "tutor", id: req.user._id.toString() }, event: "PROFILE_APPROVED", message: `Tutor Agreement ${agreement.version} accepted electronically`, isPublic: false, statusAfter: "approved" });
+  await logAudit({ action: "tutor_agreement_accepted", actor: req.user.name, actorId: req.user._id.toString(), entity: "TutorAgreement", targetId: agreement._id.toString(), targetName: req.user.name, metadata: { version: agreement.version, confirmations } });
+  await syncMarketplaceAndHomeTuition({ name: req.user.name, role: "tutor", id: req.user._id.toString() }, req.user, profile);
+  res.status(200).json({ success: true, message: "Agreement accepted. Your marketplace access is now being activated." });
+};
+
 // ─── Public token endpoint ────────────────────────────────────────────────────
 
 export const getPublicTracking = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -814,9 +845,13 @@ export async function syncMarketplaceAndHomeTuition(actor: { name: string; role:
     profile.lastStatusChangeAt = now;
     await profile.save({ validateModifiedOnly: true });
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "PROFILE_APPROVED", message: "Tutor application approved after all mandatory marketplace documents were verified", statusAfter: "approved" });
-    const existingAgreement = await TutorAgreement.findOne({ tutor: user._id, tutorProfile: profile._id, status: "active" });
+    const existingAgreement = await TutorAgreement.findOne({ tutor: user._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } });
     if (!existingAgreement) {
-      await TutorAgreement.create({ tutor: user._id, tutorProfile: profile._id, approvedHourlyRate: profile.hourlyRate, currency: profile.currency || "PKR", approvedBy: actor.role === "admin" && actor.id ? actor.id : undefined, approvedAt: now });
+      profile.agreementAcceptanceRequired = true;
+      profile.agreementAcceptedAt = undefined as any;
+      profile.agreementVersion = "TTA-2026.1";
+      await profile.save({ validateModifiedOnly: true });
+      await TutorAgreement.create({ tutor: user._id, tutorProfile: profile._id, version: "TTA-2026.1", approvedHourlyRate: profile.hourlyRate, currency: profile.currency || "PKR", approvedBy: actor.role === "admin" && actor.id ? actor.id : undefined, approvedAt: now });
       await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
         document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency,
         ctaArgs: ctaArgs(user), title: "Tutor application approved", message: "Your Tutor Marketplace Agreement and approved rate are ready.", link: "/tutor/application-status", type: "verification",
