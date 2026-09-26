@@ -107,6 +107,7 @@ export class NotificationService {
           if (payload.document === "DemoVideo") return trackingTemplates.demoVideoApprovedEmail(name, payload.ctaArgs);
           if (payload.document === "Police") return trackingTemplates.policeVerifiedEmail(name, payload.ctaArgs);
           if (payload.document === "Marketplace") return trackingTemplates.marketplaceActivatedEmail(name, payload.ctaArgs);
+          if (payload.document === "All") return trackingTemplates.tutorMarketplaceAgreementEmail(name, { ...payload.ctaArgs, hourlyRate: payload.hourlyRate, currency: payload.currency });
           return trackingTemplates.educationalDocumentsVerifiedEmail(name, payload.ctaArgs); // fallback
       },
       "verification_rejected": (name: string, payload: any) => {

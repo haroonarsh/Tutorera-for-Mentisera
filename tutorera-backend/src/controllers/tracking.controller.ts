@@ -4,6 +4,7 @@ import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
 import AdminVerificationReview from "../models/AdminVerificationReview.model";
+import TutorAgreement from "../models/TutorAgreement.model";
 import { logAudit } from "../utils/logAudit";
 import { NotificationService } from "../services/notification.service";
 import {
@@ -799,6 +800,29 @@ export const getApplicationHistory = async (req: AuthRequest, res: Response): Pr
 
 export async function syncMarketplaceAndHomeTuition(actor: { name: string; role: "system" | "tutor" | "admin"; id?: string }, user: any, profile: any) {
   const now = new Date();
+  // Individual document decisions must be able to complete the application;
+  // previously `isMarketplaceEligible()` required an already-approved profile,
+  // making automatic completion impossible after the final document approval.
+  const coreDocumentsApproved = profile.onboardingComplete &&
+    profile.cnicVerificationStatus === "approved" &&
+    profile.degreeVerificationStatus === "approved" &&
+    profile.demoVideoStatus === "approved" &&
+    !profile.suspendedAt && !profile.reVerificationRequired;
+  if (coreDocumentsApproved && profile.verificationStatus !== "approved") {
+    profile.verificationStatus = "approved";
+    profile.isVerified = true;
+    profile.lastStatusChangeAt = now;
+    await profile.save({ validateModifiedOnly: true });
+    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "PROFILE_APPROVED", message: "Tutor application approved after all mandatory marketplace documents were verified", statusAfter: "approved" });
+    const existingAgreement = await TutorAgreement.findOne({ tutor: user._id, tutorProfile: profile._id, status: "active" });
+    if (!existingAgreement) {
+      await TutorAgreement.create({ tutor: user._id, tutorProfile: profile._id, approvedHourlyRate: profile.hourlyRate, currency: profile.currency || "PKR", approvedBy: actor.role === "admin" && actor.id ? actor.id : undefined, approvedAt: now });
+      await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
+        document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency,
+        ctaArgs: ctaArgs(user), title: "Tutor application approved", message: "Your Tutor Marketplace Agreement and approved rate are ready.", link: "/tutor/application-status", type: "verification",
+      });
+    }
+  }
   const mpEligible = isMarketplaceEligible(profile);
   const htEligible = isHomeTuitionEligible(profile);
   if (mpEligible && !profile.marketplaceEligible) {

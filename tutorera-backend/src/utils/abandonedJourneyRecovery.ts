@@ -5,6 +5,8 @@ import TutorProfile from "../models/TutorProfile.model";
 import User from "../models/User.model";
 import { NotificationService } from "../services/notification.service";
 import { logAudit } from "./logAudit";
+import sendEmail from "./sendEmail";
+import { tutorApplicationCompletionReminderEmail } from "./recoveryEmailTemplates";
 
 
 const MILESTONES = [7, 3, 1] as const;
@@ -24,6 +26,18 @@ async function alreadyLogged(eventType: string, relatedEntityType: string, relat
   return EmailLog.exists({ eventType, relatedEntityType, relatedEntityId });
 }
 
+function tutorMissingItems(profile: any): Array<{ label: string; href: string }> {
+  const missing: Array<{ label: string; href: string }> = [];
+  if (!profile.fullName || !profile.phone || !profile.city) missing.push({ label: "Personal details and location", href: "/onboarding/tutor?step=1" });
+  if (!profile.education?.[0]?.degree || !profile.education?.[0]?.institution || !profile.education?.[0]?.degreeDoc) missing.push({ label: "Qualification and educational document", href: "/onboarding/tutor?step=2" });
+  if (!profile.experience || !profile.subjects?.length || !profile.levels?.length) missing.push({ label: "Teaching experience, subjects, and levels", href: "/onboarding/tutor?step=3" });
+  if (!profile.bio || !profile.hourlyRate || !profile.availability?.length) missing.push({ label: "Profile, hourly rate, and availability", href: "/onboarding/tutor?step=4" });
+  if (!profile.cnicFront || !profile.cnicBack || profile.cnicVerificationStatus !== "approved") missing.push({ label: "Identity document (front and back)", href: "/onboarding/tutor?step=5" });
+  if (!profile.videoIntro || profile.demoVideoStatus !== "approved") missing.push({ label: "Demo video", href: "/onboarding/tutor?step=5" });
+  if ((profile.teachingMode === "in-person" || profile.teachingMode === "both") && (!profile.policeCertificate || profile.policeVerificationStatus !== "approved")) missing.push({ label: "Background and safety document for Home Tuition", href: "/onboarding/tutor?step=5" });
+  return missing;
+}
+
 export async function processAbandonedJourneyRecovery() {
   const now = new Date();
   let tutorApplicationReminders = 0;
@@ -31,36 +45,26 @@ export async function processAbandonedJourneyRecovery() {
   let paymentReminders = 0;
 
   const incompleteProfiles = await TutorProfile.find({
-    onboardingComplete: false,
     updatedAt: { $lte: new Date(now.getTime() - DAY_MS) },
-  }).select("user onboardingStep remindersSent updatedAt").limit(200);
+    verificationStatus: { $ne: "approved" },
+  }).select("user onboardingStep updatedAt fullName phone city education experience subjects levels bio hourlyRate availability teachingMode cnicFront cnicBack cnicVerificationStatus videoIntro demoVideoStatus policeCertificate policeVerificationStatus").limit(200);
 
   for (const profile of incompleteProfiles) {
     const user = await User.findOne({ _id: profile.user, role: "tutor", isActive: true }).select("name email");
     if (!user?.email) continue;
 
-    const prior = await EmailLog.find({
-      relatedEntityType: "TutorProfile",
-      relatedEntityId: profile._id.toString(),
-      eventType: /^profile_abandoned_/,
-    }).select("eventType").lean();
-    const sentDays = daysFromEvents(prior);
-    const day = milestoneFor(now.getTime() - profile.updatedAt.getTime(), sentDays);
-    if (!day) continue;
-
-    const eventType = `profile_abandoned_${day}d`;
-    if (await alreadyLogged(eventType, "TutorProfile", profile._id.toString())) continue;
-
-    const hours = day * 24;
-    const eventName = `tutor.application_abandoned_${hours}h`;
-    
-    await NotificationService.publishEvent(user._id.toString(), eventName, {
-      day,
-      onboardingStep: profile.onboardingStep,
-      subject: `Finish your tutor application`,
-      html: `You left your application at step ${profile.onboardingStep}. Please finish it.` // This will be overriden by the template mapped in NotificationService
+    const missingItems = tutorMissingItems(profile);
+    if (!missingItems.length) continue;
+    const lastDaily = await EmailLog.findOne({ relatedEntityType: "TutorProfile", relatedEntityId: profile._id.toString(), eventType: "tutor_application_completion_reminder_daily" }).sort({ createdAt: -1 }).select("createdAt").lean();
+    if (lastDaily?.createdAt && now.getTime() - new Date(lastDaily.createdAt).getTime() < 20 * 60 * 60 * 1000) continue;
+    const { subject, html } = tutorApplicationCompletionReminderEmail(user.name, missingItems);
+    await sendEmail({
+      to: user.email, subject, html, userId: user._id.toString(),
+      eventType: "tutor_application_completion_reminder_daily",
+      templateId: "tutor_application_completion_reminder",
+      relatedEntityType: "TutorProfile", relatedEntityId: profile._id.toString(),
     });
-    await logAudit({ action: eventType, actor: "system", entity: "TutorProfile", targetId: profile._id.toString() });
+    await logAudit({ action: "tutor_application_completion_reminder_daily", actor: "system", entity: "TutorProfile", targetId: profile._id.toString(), metadata: { missingItems: missingItems.map(item => item.label) } });
     tutorApplicationReminders++;
   }
 

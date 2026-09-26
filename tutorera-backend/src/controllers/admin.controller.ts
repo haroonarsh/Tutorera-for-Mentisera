@@ -19,6 +19,7 @@ import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
+import TutorAgreement from "../models/TutorAgreement.model";
 import MarketConfig from "../models/MarketConfig.model";
 import { NotificationService } from "../services/notification.service";
 import { EMAIL_EVENTS } from "../utils/emailEvents";
@@ -153,6 +154,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   };
   const io = req.app.get("io");
   const now = new Date();
+  let agreementCreated = false;
 
   const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
     (profile as any)[`${kind}VerificationStatus`] = status;
@@ -177,6 +179,21 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   // without running whole-document validation.
   await profile.save({ validateBeforeSave: false });
 
+  if (status === "approved") {
+    const activeAgreement = await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: "active" });
+    if (!activeAgreement) {
+      await TutorAgreement.create({
+        tutor: tutorUser._id,
+        tutorProfile: profile._id,
+        approvedHourlyRate: profile.hourlyRate,
+        currency: profile.currency || "PKR",
+        approvedBy: req.user?._id,
+        approvedAt: now,
+      });
+      agreementCreated = true;
+    }
+  }
+
   await recordStatusEvent({
     tutorId: tutorUser._id.toString(),
     tutorProfileId: profile._id.toString(),
@@ -190,8 +207,8 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   });
 
   try {
-    if (status === "approved") {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
+    if (status === "approved" && agreementCreated) {
+      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency, ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
     } else {
       await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
     }

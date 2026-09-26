@@ -106,6 +106,7 @@ export default function TutorOnboardingPage() {
   });
   const [availability, setAvailability] = useState<{ day: string; slots: string[] }[]>([]);
   const [pricingInsight, setPricingInsight] = useState<{ min: number | null; max: number | null; median: number | null; count: number } | null>(null);
+  const [feePreview, setFeePreview] = useState<{ tutorNet: number; tutorFee: number; tax: number; currency: string } | null>(null);
 
   // Step 5
   const [cnicFront, setCnicFront] = useState<File | null>(null);
@@ -232,6 +233,22 @@ export default function TutorOnboardingPage() {
       .catch(() => setPricingInsight(null));
   }, [currentStep, step1.city, selectedSubjects]);
 
+  useEffect(() => {
+    const requestedStep = Number(new URLSearchParams(window.location.search).get("step"));
+    if (requestedStep >= 1 && requestedStep <= 5) setCurrentStep(requestedStep);
+  }, []);
+
+  useEffect(() => {
+    const rate = Number(step4.hourlyRate);
+    if (!Number.isFinite(rate) || rate <= 0) { setFeePreview(null); return; }
+    const timer = window.setTimeout(() => {
+      api.get(`/tutors/onboarding/financial-preview?rate=${encodeURIComponent(String(rate))}`)
+        .then(res => setFeePreview(res.data?.fees || null))
+        .catch(() => setFeePreview(null));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [step4.hourlyRate, step1.countryCode, step4.teachingMode]);
+
   const toggleItem = (arr: string[], item: string, setter: (v: string[]) => void) => {
     if (arr.includes(item)) setter(arr.filter(i => i !== item));
     else setter([...arr, item]);
@@ -290,6 +307,9 @@ export default function TutorOnboardingPage() {
         if (!step2.degree || !step2.institution || !step2.year) {
           setError("Please fill all required fields."); setSaving(false); return;
         }
+        if (!degreeDoc && !existingDocs.degreeDoc) {
+          setError("Your degree certificate or transcript is mandatory for marketplace visibility."); setSaving(false); return;
+        }
         formData.append("data", JSON.stringify(step2));
         if (degreeDoc) formData.append("degreeDoc", degreeDoc);
       }
@@ -323,6 +343,11 @@ export default function TutorOnboardingPage() {
 
         if (!hasCnicFront || !hasCnicBack) {
           setError("Please upload both sides of your identity document.");
+          setSaving(false);
+          return;
+        }
+        if (!videoIntro && !existingDocs.videoIntro) {
+          setError("A demo video URL is mandatory for marketplace visibility. Please provide a public video link.");
           setSaving(false);
           return;
         }
@@ -485,6 +510,25 @@ export default function TutorOnboardingPage() {
             </div>
           )}
 
+          <aside aria-label="Application requirements and earnings" style={{ marginBottom: '1.5rem', border: '1px solid #bfdbfe', background: '#f8fbff', borderRadius: '0.75rem', padding: '1rem' }}>
+            <h2 style={{ color: C.primary, fontSize: '1rem', margin: '0 0 .4rem', fontWeight: 800 }}>Application requirements for your teaching format</h2>
+            <p style={{ margin: '0 0 .6rem', color: '#475569', fontSize: '.8rem', lineHeight: 1.5 }}>
+              <strong>Marketplace Visibility:</strong> profile photo, qualification details and certificate, identity document front and back, and demo video are mandatory. Upload your photo in Step 1, qualification evidence in Step 2, and identity/video evidence in Step 5.
+            </p>
+            <p style={{ margin: '0 0 .6rem', color: '#475569', fontSize: '.8rem', lineHeight: 1.5 }}>
+              <strong>Online Tuition:</strong> uses the Marketplace Visibility documents. <strong>Home Tuition:</strong> also requires the mandatory Background &amp; Safety document in Step 5 before eligibility can be approved.
+            </p>
+            <div style={{ borderTop: '1px solid #dbeafe', paddingTop: '.65rem', color: C.primary, fontSize: '.82rem' }}>
+              <strong>Estimated earnings per hour</strong>
+              {feePreview ? <div style={{ marginTop: '.35rem', display: 'grid', gap: 3 }}>
+                <span>Quoted rate: {feePreview.currency} {Number(step4.hourlyRate).toLocaleString()}</span>
+                <span>Platform deduction: {feePreview.currency} {feePreview.tutorFee.toLocaleString()} {feePreview.tax ? `+ tax ${feePreview.currency} ${feePreview.tax.toLocaleString()}` : ''}</span>
+                <span style={{ color: '#047857', fontWeight: 800 }}>Estimated tutor receive: {feePreview.currency} {feePreview.tutorNet.toLocaleString()}</span>
+              </div> : <p style={{ margin: '.35rem 0 0', color: '#64748b' }}>Enter an hourly rate in Step 4 to see your estimated receive amount.</p>}
+              <p style={{ margin: '.45rem 0 0', color: '#64748b', fontSize: '.72rem', lineHeight: 1.4 }}>The final rate, deductions, payout timing, and cancellation terms are captured in the accepted booking&apos;s fee snapshot. Payment is released under the applicable payout process.</p>
+            </div>
+          </aside>
+
           {/* ── STEP 1 ── */}
           {currentStep === 1 && (
             <div>
@@ -493,7 +537,7 @@ export default function TutorOnboardingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Full Name *</label>
-                  <input value={step1.fullName} onChange={e => setStep1({ ...step1, fullName: e.target.value })} placeholder="Muhammad Ahmad"
+                  <input title="Enter your legal name exactly as it appears on your identity document." value={step1.fullName} onChange={e => setStep1({ ...step1, fullName: e.target.value })} placeholder="Muhammad Ahmad"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -526,14 +570,14 @@ export default function TutorOnboardingPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone *</label>
-                    <input value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })} placeholder="e.g. +44 20 1234 5678"
+                    <input title="Enter a reachable mobile number with your country code so TUTORERA can contact you about verification." value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })} placeholder="e.g. +44 20 1234 5678"
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Date of Birth</label>
-                    <input type="date" value={step1.dateOfBirth} onChange={e => setStep1({ ...step1, dateOfBirth: e.target.value })}
+                    <input title="Provide your date of birth for identity and safeguarding checks." type="date" value={step1.dateOfBirth} onChange={e => setStep1({ ...step1, dateOfBirth: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -613,21 +657,21 @@ export default function TutorOnboardingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Degree / Qualification *</label>
-                  <input value={step2.degree} onChange={e => setStep2({ ...step2, degree: e.target.value })} placeholder="e.g. BS Mathematics"
+                  <input title="State the qualification shown on the certificate or transcript you upload below." value={step2.degree} onChange={e => setStep2({ ...step2, degree: e.target.value })} placeholder="e.g. BS Mathematics"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Institution *</label>
-                  <input value={step2.institution} onChange={e => setStep2({ ...step2, institution: e.target.value })} placeholder="e.g. COMSATS University Islamabad"
+                  <input title="Enter the awarding school, college, or university exactly as shown on your document." value={step2.institution} onChange={e => setStep2({ ...step2, institution: e.target.value })} placeholder="e.g. COMSATS University Islamabad"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Graduation Year *</label>
-                  <input type="number" value={step2.year} onChange={e => setStep2({ ...step2, year: e.target.value })} placeholder="e.g. 2022" min="1990" max="2030"
+                  <input title="Enter the year this qualification was awarded or completed." type="number" value={step2.year} onChange={e => setStep2({ ...step2, year: e.target.value })} placeholder="e.g. 2022" min="1990" max="2030"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -673,14 +717,14 @@ export default function TutorOnboardingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Years of Experience</label>
-                  <input type="number" value={step3.experience} onChange={e => setStep3({ ...step3, experience: e.target.value })} placeholder="e.g. 3" min="0" max="50"
+                  <input title="Enter your total years of relevant teaching or tutoring experience." type="number" value={step3.experience} onChange={e => setStep3({ ...step3, experience: e.target.value })} placeholder="e.g. 3" min="0" max="50"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Previous Institutions (comma separated)</label>
-                  <input value={step3.previousInstitutions} onChange={e => setStep3({ ...step3, previousInstitutions: e.target.value })} placeholder="e.g. Beaconhouse, LGS, KIPS"
+                  <input title="List previous teaching institutions separated by commas. Leave blank if none." value={step3.previousInstitutions} onChange={e => setStep3({ ...step3, previousInstitutions: e.target.value })} placeholder="e.g. Beaconhouse, LGS, KIPS"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -719,7 +763,7 @@ export default function TutorOnboardingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Bio / Introduction *</label>
-                  <textarea value={step4.bio} onChange={e => setStep4({ ...step4, bio: e.target.value })} rows={4}
+                  <textarea title="Describe your teaching style, relevant expertise, and the outcomes you help learners achieve. Do not include private contact details." value={step4.bio} onChange={e => setStep4({ ...step4, bio: e.target.value })} rows={4}
                     placeholder="Tell students about yourself, your teaching style, and what makes you a great tutor..."
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, resize: 'vertical', fontFamily: 'inherit' }}
                     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
@@ -730,7 +774,7 @@ export default function TutorOnboardingPage() {
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
                       Hourly Rate ({step1.currency || "PKR"}) *
                     </label>
-                    <input type="number" value={step4.hourlyRate} onChange={e => setStep4({ ...step4, hourlyRate: e.target.value })} placeholder={step1.currency === "PKR" ? "e.g. 2000" : "e.g. 50"}
+                    <input title="Set your proposed hourly rate. The earnings panel shows the current estimated amount you receive after applicable deductions." type="number" value={step4.hourlyRate} onChange={e => setStep4({ ...step4, hourlyRate: e.target.value })} placeholder={step1.currency === "PKR" ? "e.g. 2000" : "e.g. 50"}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -747,7 +791,7 @@ export default function TutorOnboardingPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Teaching Mode *</label>
-                    <select title="teachingMode" value={step4.teachingMode} onChange={e => setStep4({ ...step4, teachingMode: e.target.value as "online" | "in-person" | "both" })}
+                    <select title="Choose where you will teach. Home Tuition and Both require the Background & Safety document in Step 5." value={step4.teachingMode} onChange={e => setStep4({ ...step4, teachingMode: e.target.value as "online" | "in-person" | "both" })}
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: 'white' }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
@@ -922,7 +966,7 @@ export default function TutorOnboardingPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>
-                      Demo Video URL <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Recommended)</span>
+                      Demo Video URL <span style={{ color: '#ef4444', fontWeight: '700' }}>(Mandatory for Marketplace Visibility)</span>
                     </label>
                     {existingDocs.videoIntro && (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.demoVideoStatus === 'approved' ? '#16a34a' : existingDocs.demoVideoStatus === 'rejected' ? '#dc2626' : '#d97706' }}>
@@ -940,6 +984,7 @@ export default function TutorOnboardingPage() {
                   )}
 
                   <input
+                    title="Provide a public video link where you introduce yourself, explain your teaching approach, and identify the subjects you teach."
                     type="url"
                     value={videoIntro}
                     onChange={e => setVideoIntro(e.target.value)}

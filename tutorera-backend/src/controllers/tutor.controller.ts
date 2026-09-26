@@ -20,10 +20,29 @@ import { resolveLocationReferences } from "../services/locationReference.service
 import { resolveMarket } from "../services/market.service";
 import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
+import { calculateMarketplaceFees } from "../services/pricing.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const VIDEO_TYPES = ["video/mp4"];
+
+/** Preview the authoritative booking fee calculation while a tutor chooses an
+ * asking rate. This never creates a fee commitment; every accepted offer
+ * retains its own immutable fee snapshot. */
+export const getOnboardingFinancialPreview = async (req: AuthRequest, res: Response): Promise<void> => {
+  const rate = Number(req.query.rate);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    res.status(400).json({ success: false, message: "A positive hourly rate is required." });
+    return;
+  }
+  const profile = await TutorProfile.findOne({ user: req.user?._id }).select("countryCode currency teachingMode").lean();
+  const fees = await calculateMarketplaceFees(rate, {
+    countryCode: profile?.countryCode || req.user?.countryCode || "PK",
+    currency: profile?.currency || req.user?.currency || "PKR",
+    teachingMode: (profile?.teachingMode || "online") as "online" | "in-person" | "both",
+  });
+  res.status(200).json({ success: true, fees });
+};
 
 // Cloudinary outages/misconfig used to bubble up as an uncaught rejection,
 // which the global error handler renders as an opaque "Something went wrong"
@@ -571,6 +590,10 @@ export const saveOnboardingStep = async (
       degreeDocUrl = result.secure_url;
       degreeDocPublicId = result.public_id;
     }
+    if (!degreeDocUrl && !profile.education?.[0]?.degreeDoc) {
+      res.status(400).json({ success: false, message: "A degree certificate or transcript is required for marketplace visibility." });
+      return;
+    }
 
     const education = [{
       degree: parsedData.degree,
@@ -751,6 +774,10 @@ export const saveOnboardingStep = async (
         success: false,
         message: "CNIC front and back images are required to complete your application.",
       });
+      return;
+    }
+    if (!videoIntroUrl && !profile.videoIntro) {
+      res.status(400).json({ success: false, message: "A demo video URL is required for marketplace visibility." });
       return;
     }
 

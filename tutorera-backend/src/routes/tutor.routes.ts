@@ -6,6 +6,7 @@ import {
   getAllTutors,
   saveOnboardingStep,
   getOnboardingStatus,
+  getOnboardingFinancialPreview,
 } from "../controllers/tutor.controller";
 import {
   saveAvailability,
@@ -33,6 +34,7 @@ router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 
 // Onboarding
 router.get("/onboarding/status", protect, authorize("tutor"), getOnboardingStatus);
+router.get("/onboarding/financial-preview", protect, authorize("tutor"), getOnboardingFinancialPreview);
 router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.fields([
   { name: "avatar", maxCount: 1 },
   { name: "degreeDoc", maxCount: 1 },

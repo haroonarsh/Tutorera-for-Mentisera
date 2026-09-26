@@ -148,6 +148,24 @@ export const marketplaceActivatedEmail = (tutorName: string, args: CtaArgs) => {
   return { subject, html: wrap(innerHtml, subject, "Marketplace Update", `Congratulations ${tutorName} — your profile is now live on TUTORERA!`) };
 };
 
+/** Approval email doubles as the tutor's platform-agreement record. The
+ * exact fee for each accepted booking remains the immutable booking snapshot;
+ * this document records the approved public starting rate only. */
+export const tutorMarketplaceAgreementEmail = (tutorName: string, args: CtaArgs & { hourlyRate?: number; currency?: string }) => {
+  const currency = args.currency || "PKR";
+  const rate = args.hourlyRate ? `${currency} ${args.hourlyRate.toLocaleString()} per hour` : "the rate shown on your approved tutor profile";
+  const subject = "Your approved TUTORERA Tutor Marketplace Agreement";
+  const innerHtml = `
+    <h2 style="color:#021550;margin:0 0 12px;">Your tutor application is approved</h2>
+    <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
+    <p style="color:#374151;">Your approved public starting rate is <strong>${escapeHtml(rate)}</strong>. By using your approved tutor profile, you confirm the Tutor Marketplace Agreement, including independent-contractor status, professional standards, safeguarding rules, and booking/payout terms.</p>
+    <p style="color:#374151;">Every accepted offer and booking records its own final agreed rate, deductions, tax, payout timing, and cancellation terms. That booking fee snapshot controls the transaction.</p>
+    <p style="color:#374151;"><a href="${SITE_URL}/terms/tutors" style="color:#0329B2;font-weight:700;">Read the Tutor Marketplace Agreement</a></p>
+    ${trackingCta(args, "View Approved Profile Status")}
+  `;
+  return { subject, html: wrap(innerHtml, subject, "Tutor Agreement", "Your tutor application is approved and your platform agreement is ready.") };
+};
+
 export const marketplaceDeactivatedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
   const subject = "Marketplace visibility paused - TUTORERA";
   const innerHtml = `

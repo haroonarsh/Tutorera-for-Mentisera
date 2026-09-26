@@ -37,6 +37,30 @@ export const tutorApplicationAbandonedEmail = (name: string, stage: number, step
   return { subject, html };
 };
 
+/** A completion-aware reminder. Unlike the legacy abandoned-flow series, this
+ * is safe to send daily because it lists only the tutor's current blockers. */
+export const tutorApplicationCompletionReminderEmail = (
+  name: string,
+  missingItems: Array<{ label: string; href: string }>
+) => {
+  const subject = "Complete your tutor application - TUTORERA";
+  const rows = missingItems.map(item => `<li style="margin:0 0 8px;"><a href="https://tutorera.ac.pk${item.href}" style="color:#0329B2;font-weight:700;text-decoration:none;">${item.label}</a></li>`).join("");
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Tutor Application",
+    emailHeading: "A few application items still need attention",
+    emailSubheading: "Complete only the items listed below to move your application forward.",
+    firstName: name,
+    openingMessage: "Your tutor application is not complete yet. We will stop these reminders as soon as every required profile detail and document is complete.",
+    mainMessage: `<ul style="padding-left:20px;margin:16px 0;color:#374151;">${rows}</ul>`,
+    cta: { label: "Continue Application", url: "https://tutorera.ac.pk/onboarding/tutor" },
+    additionalInformation: "Document review can take time. You only need to act where an item is listed above.",
+    includeSecurityNotice: false,
+    deliverability: "This reminder was sent because your TUTORERA tutor application still has required items outstanding.",
+  });
+  return { subject, html };
+};
+
 export const studentRequestAbandonedEmail = (name: string, stage: number, subjectName?: string) => {
   const subjectDisplay = subjectName ? `for ${subjectName}` : "";
   const isFinal = stage >= 7 || stage === 3;
