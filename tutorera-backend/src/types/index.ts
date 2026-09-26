@@ -28,6 +28,7 @@ export interface IUser extends Document {
   isVerified: boolean;
   isApproved: boolean;
   isActive: boolean;
+  isTestAccount?: boolean;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
   referralCode?: string;

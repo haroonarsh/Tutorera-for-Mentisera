@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
+import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchSeoInventory, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
 import { getEditorialArticles, getEditorialCategories, categoryToSlug } from "@/lib/editorial-content";
+import { assessTutorSeoQuality } from "@/lib/tutor-seo";
 
 const routes = [
   "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
@@ -9,7 +10,7 @@ const routes = [
   "payment-process", "refund-policy", "safety-policy", "services", "student-journey", "subjects", "tutors", "terms", "privacy", "complaint-process", "cancellation-policy",
   "tutor-verification-standards", "in-person-home-tuition-terms", "review-policy", "editorial-policy", "academic-standards",
   "content-review-policy", "research-methodology", "tutor-screening-policy", "governance",
-  "tuition-requests", "tuition-requests/pk", "tuition-requests/pk/lahore", "tuition-requests/pk/islamabad", "tuition-requests/pk/karachi",
+  "tuition-requests",
 ];
 
 const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
@@ -28,8 +29,6 @@ const TUTOR_SITEMAP_CAP = 20000;
 export async function generateSitemaps() {
   return [
     { id: 'core' },
-    { id: 'local' },
-    { id: 'demand' },
     { id: 'tutors' },
   ];
 }
@@ -38,6 +37,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
   const lastModified = new Date(); // In the future this should come from database max(updatedAt)
 
   if (id === 'core') {
+    const inventory = await fetchSeoInventory();
     const staticPages: MetadataRoute.Sitemap = routes.map((route) => ({
       url: `${SITE_URL}/${route}`,
       lastModified,
@@ -45,17 +45,21 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       priority: route === "" ? 1 : route === "tutors" || route === "online-tutors" ? 0.9 : 0.7,
     }));
     
+    // Do not publish an indexable directory just because a location/subject
+    // exists in a lookup table. Three public profiles is the shared minimum
+    // inventory threshold for a standalone commercial landing page.
+    const eligible = (items: { value: string }[]) => new Set(items.map((item) => item.value.toLowerCase()));
+    const subjectInventory = eligible(inventory.subjects), cityInventory = eligible(inventory.cities), levelInventory = eligible(inventory.levels);
     const directories: MetadataRoute.Sitemap = [
-      ...Object.keys(SUBJECTS).map((slug) => `/tutors/subject/${slug}`),
-      ...Object.keys(CITIES).map((slug) => `/tutors/city/${slug}`),
-      ...Object.keys(LEVELS).map((slug) => `/tutors/level/${slug}`),
-    ].map((path) => ({ url: `${SITE_URL}${path}`, lastModified, changeFrequency: "daily", priority: 0.8 }));
+      ...Object.entries(SUBJECTS).filter(([, value]) => subjectInventory.has(value.toLowerCase())).map(([slug]) => `/tutors/subject/${slug}`),
+      ...Object.entries(CITIES).filter(([, value]) => cityInventory.has(value.toLowerCase())).map(([slug]) => `/tutors/city/${slug}`),
+      ...Object.entries(LEVELS).filter(([, value]) => levelInventory.has(value.toLowerCase())).map(([slug]) => `/tutors/level/${slug}`),
+    ].map((path) => ({ url: `${SITE_URL}${path}`, lastModified, changeFrequency: "daily" as const, priority: 0.8 }));
 
     const countryHubResults = (
       await Promise.all(
         TARGET_COUNTRIES.map(async (code) => {
-          const { total } = await fetchTutors({ countryCode: code.toUpperCase() }, 1);
-          if (code !== "pk" && total === 0) return [];
+          if (!inventory.countries.some((item) => item.value.toUpperCase() === code.toUpperCase())) return [];
           return [
             // The country landing page itself ((countries)/[countryCode]) was
             // previously missing from the sitemap entirely - only its /tutors
@@ -72,7 +76,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       HOME_TUTOR_CITY_SLUGS.map(async (citySlug) => {
         const city = CITIES[citySlug];
         const { total } = await fetchTutors({ countryCode: "PK", city, teachingMode: "in-person" }, 1);
-        return total > 0
+        return total >= 3
           ? {
               url: `${SITE_URL}/pk/home-tutors/${citySlug}`,
               lastModified,
@@ -117,71 +121,12 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
     ];
   }
 
-  if (id === 'local') {
-    const TOP_LEVEL_SLUGS = ["primary", "matric", "o-level", "igcse", "a-level"] as const;
-    const [cityResults, levelResults] = await Promise.all([
-      Promise.all(
-        PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
-          LOCAL_SUBJECT_SLUGS.map(async (subjectSlug) => {
-            const city = CITIES[citySlug];
-            const subject = SUBJECTS[subjectSlug];
-            const { total } = await fetchTutors({ city, subject }, 1);
-            return total > 0
-              ? {
-                  url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`,
-                  lastModified,
-                  changeFrequency: "daily" as const,
-                  priority: 0.85,
-                }
-              : null;
-          })
-        )
-      ),
-      Promise.all(
-        PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
-          LOCAL_SUBJECT_SLUGS.slice(0, 5).flatMap((subjectSlug) =>
-            TOP_LEVEL_SLUGS.map(async (levelSlug) => {
-              const city = CITIES[citySlug];
-              const subject = SUBJECTS[subjectSlug];
-              const level = LEVELS[levelSlug];
-              const { total } = await fetchTutors({ city, subject, level }, 1);
-              return total > 0
-                ? {
-                    url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}/${levelSlug}`,
-                    lastModified,
-                    changeFrequency: "daily" as const,
-                    priority: 0.8,
-                  }
-                : null;
-            })
-          )
-        )
-      ),
-    ]);
-    return [...cityResults, ...levelResults].filter((page): page is NonNullable<typeof page> => page !== null);
-  }
-
-  if (id === 'demand') {
-    const TARGET_DEMAND_SLUGS = PRIMARY_CITY_SLUGS.flatMap((citySlug) =>
-      LOCAL_SUBJECT_SLUGS.map((subjectSlug) => ({ citySlug, subjectSlug }))
-    );
-
-    const tuitionRequestDemandPages: MetadataRoute.Sitemap = TARGET_DEMAND_SLUGS.map(({ citySlug, subjectSlug }) => ({
-      url: `${SITE_URL}/tuition-requests/pk/${citySlug}/${subjectSlug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-    }));
-    
-    return tuitionRequestDemandPages;
-  }
-
   if (id === 'tutors') {
     // See the TUTOR_SITEMAP_CAP comment above generateSitemaps() for why this is one
     // large shard rather than several - re-attempt splitting once tutor count approaches
     // this cap AND a Next.js version upgrade is confirmed to have fixed the matcher bug.
     const { tutors } = await fetchTutors({}, TUTOR_SITEMAP_CAP);
-    const profiles: MetadataRoute.Sitemap = tutors.map((tutor) => ({
+    const profiles: MetadataRoute.Sitemap = tutors.filter((tutor) => assessTutorSeoQuality(tutor).indexable).map((tutor) => ({
       url: `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`,
       lastModified: tutor.lastActiveAt ? new Date(tutor.lastActiveAt) : lastModified,
       changeFrequency: "weekly",

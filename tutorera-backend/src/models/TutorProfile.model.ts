@@ -75,6 +75,7 @@ export interface ITutorProfile extends Document {
   verificationStatus: "pending" | "approved" | "rejected";
   rejectionReason: string;
   isVerified: boolean;
+  isTestAccount: boolean;
 
   // Per-component verification (Tutor Application Tracking)
   cnicVerificationStatus: "not_submitted" | "pending" | "approved" | "rejected";
@@ -210,6 +211,9 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     verificationStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     rejectionReason: { type: String, default: "" },
     isVerified: { type: Boolean, default: false },
+    // Kept on the profile as well as User so every public profile query can
+    // exclude test/demo records without relying on a populated user document.
+    isTestAccount: { type: Boolean, default: false, index: true },
 
     // Per-component verification
     cnicVerificationStatus: { type: String, enum: ["not_submitted", "pending", "approved", "rejected"], default: "not_submitted" },

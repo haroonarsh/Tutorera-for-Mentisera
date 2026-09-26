@@ -38,6 +38,8 @@ export interface TutorDirectoryResponse {
   pages: number;
 }
 
+export interface SeoInventory { countries: { value: string; total: number }[]; cities: { value: string; total: number }[]; subjects: { value: string; total: number }[]; levels: { value: string; total: number }[]; citySubjects: { city: string; subject: string; total: number }[]; }
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
 
 export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24, page = 1): Promise<TutorDirectoryResponse> {
@@ -53,6 +55,17 @@ export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24, 
   } catch (error) {
     console.error("Unable to load the public tutor directory", error);
     return { tutors: [], total: 0, page: 1, pages: 1 };
+  }
+}
+
+export async function fetchSeoInventory(): Promise<SeoInventory> {
+  try {
+    const response = await fetch(`${API_URL}/public/seo-inventory`, { next: { revalidate: 900 } });
+    if (!response.ok) throw new Error("SEO inventory unavailable");
+    const data = await response.json();
+    return data;
+  } catch {
+    return { countries: [], cities: [], subjects: [], levels: [], citySubjects: [] };
   }
 }
 

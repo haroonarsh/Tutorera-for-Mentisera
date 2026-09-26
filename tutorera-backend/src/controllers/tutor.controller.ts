@@ -177,20 +177,39 @@ export const getTutorById = async (
       "name email avatar phone city countryCode countryName timezone currency"
     ));
 
-  if (!profile) {
+  // Detail pages must apply the same public-visibility policy as listings.
+  // Previously anyone who knew an ObjectId or historical slug could expose a
+  // rejected, inactive, or test/demo profile even though /tutors hid it.
+  const user = profile?.user as any;
+  const userLooksLikeTest = /\b(test|testing|demo|sample|placeholder|dummy)\b/i.test(
+    `${user?.name || ""} ${user?.email || ""}`
+  );
+  const isPublicProfile = Boolean(
+    profile &&
+      profile.verificationStatus === "approved" &&
+      profile.isVerified === true &&
+      profile.isTestAccount !== true &&
+      user?.isActive !== false &&
+      user?.isDeleted !== true &&
+      user?.isTestAccount !== true &&
+      !userLooksLikeTest
+  );
+
+  if (!isPublicProfile) {
     res.status(404).json({ success: false, message: "Tutor not found" });
     return;
   }
 
-  let responseMinutes = profile.averageResponseMinutes;
+  const publicProfile = profile!;
+  let responseMinutes = publicProfile.averageResponseMinutes;
   if (!responseMinutes) {
-    responseMinutes = await computeAndStoreTutorResponseTime((profile.user as any)._id?.toString() || profile.user.toString());
+    responseMinutes = await computeAndStoreTutorResponseTime((publicProfile.user as any)._id?.toString() || publicProfile.user.toString());
   }
 
   res.status(200).json({
     success: true,
     profile: {
-      ...profile.toObject(),
+      ...publicProfile.toObject(),
       averageResponseMinutes: responseMinutes,
       responseTimeFormatted: formatResponseTime(responseMinutes),
     },
@@ -240,7 +259,23 @@ export const getAllTutors = async (
   // Build filter object
   const filter: Record<string, unknown> = {
     verificationStatus: "approved",
+    isVerified: true,
+    isTestAccount: { $ne: true },
   };
+
+  // Older production records predate isTestAccount. Exclude only accounts
+  // with unmistakable QA/demo markers while administrators migrate them to
+  // the explicit flag; normal names are never filtered by this safeguard.
+  const testUsers = await User.find({
+    $or: [
+      { isTestAccount: true },
+      { name: /\b(test|testing|demo|sample|placeholder|dummy)\b/i },
+      { email: /@(test|example)\.|\.(test|example)$/i },
+    ],
+  }).select("_id").lean();
+  if (testUsers.length > 0) {
+    filter.user = { $nin: testUsers.map((user) => user._id) };
+  }
 
   const andClauses: Record<string, unknown>[] = [];
 

@@ -73,6 +73,9 @@ const userSchema = new Schema<IUser>(
     isVerified: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    // Explicitly marks non-production accounts created by seeds, QA, or
+    // demonstrations. Public marketplace queries must never surface them.
+    isTestAccount: { type: Boolean, default: false, index: true },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
     referralCode: { type: String, unique: true, sparse: true },

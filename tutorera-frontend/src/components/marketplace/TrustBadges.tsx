@@ -1,6 +1,7 @@
 "use client";
 import { Award,BookOpen,ShieldCheck,Users } from "lucide-react";
 import { useEffect,useState } from "react";
+import api from "@/lib/axios";
 
 interface Stats {
   totalTutors: number;
@@ -26,9 +27,8 @@ function usePublicStats() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/public/stats")
-      .then(r => r.json())
-      .then(data => {
+    api.get("/public/stats")
+      .then(({ data }) => {
         if (!cancelled && data.success) setStats(data.stats);
       })
       .catch(() => {})
@@ -68,23 +68,16 @@ export default function TrustBadges() {
 
   const badges: TrustBadgeItem[] = [
     {
-      icon: ShieldCheck,
-      value: stats?.verifiedPercent ?? 0,
-      label: "% Tutors Verified",
-      color: "#16a34a",
-      bg: "#f0fdf4",
-    },
-    {
       icon: Users,
       value: stats?.verifiedTutors ?? 0,
-      label: "Verified Tutors",
+      label: "Public Verified Tutors",
       color: "#0329B2",
       bg: "#EEF5FF",
     },
     {
       icon: Award,
       value: stats?.policeVerified ?? 0,
-      label: "Police Checks Done",
+      label: "Background Reviews Recorded",
       color: "#7c3aed",
       bg: "#f5f3ff",
     },
@@ -138,7 +131,7 @@ export default function TrustBadges() {
                 lineHeight: 1,
               }}>
                 <StatCounter value={typeof badge.value === "number" ? badge.value : 0} loading={loading} />
-                {badge.label.includes("%") ? "%" : "+"}
+                +
               </p>
               <p style={{
                 margin: "2px 0 0",
