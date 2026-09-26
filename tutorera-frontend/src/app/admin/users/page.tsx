@@ -1,7 +1,7 @@
 "use client";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
-import { UserCheck, UserX, Search } from "lucide-react";
+import { ShieldAlert, Search } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
 
@@ -14,6 +14,7 @@ interface User {
   role: string;
   city: string;
   isActive: boolean;
+  moderationStatus?: "active" | "suspended" | "banned" | "deleted";
   isVerified: boolean;
   createdAt: string;
 }
@@ -31,6 +32,9 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [enforcementAction, setEnforcementAction] = useState<"suspend" | "ban" | "reinstate">("suspend");
+  const [enforcementReason, setEnforcementReason] = useState("");
 
   const fetchUsers = (page: number = 1, searchTerm: string = search, role: string = roleFilter) => {
     setLoading(true);
@@ -61,12 +65,22 @@ export default function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter]);
 
-  const handleToggleStatus = async (id: string) => {
-    setActionLoading(id);
+  const handleToggleStatus = async (user: User) => {
+    setSelectedUser(user);
+    setEnforcementAction(user.moderationStatus === "suspended" ? "reinstate" : "suspend");
+    setEnforcementReason("");
+  };
+  const submitEnforcement = async () => {
+    if (!selectedUser || !enforcementReason.trim()) return;
+    const action = enforcementAction;
+    const reason = enforcementReason.trim();
+    setActionLoading(selectedUser._id);
     try {
-      await api.patch(`/admin/users/${id}/status`);
-      setUsers(prev => prev.map(u => u._id === id ? { ...u, isActive: !u.isActive } : u));
-      showSuccess("User status updated");
+      const result = await api.post(`/admin/users/${selectedUser._id}/enforcement`, { action, reason });
+      const updated = result.data.user;
+      setUsers(prev => prev.map(u => u._id === updated._id ? { ...u, isActive: updated.isActive, moderationStatus: updated.moderationStatus } : u));
+      showSuccess(`Account ${action === "reinstate" ? "reinstated" : "suspended"}.`);
+      setSelectedUser(null);
     } catch (err) {
       showError(err, "Failed to update user status");
     } finally {
@@ -150,14 +164,14 @@ export default function UsersPage() {
                 <span style={{ fontSize: '0.8rem', color: C.gray500 }}>{user.city || "—"}</span>
 
                 {/* Status */}
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? C.success : STATUS_COLORS.danger.color }}>
-                  {user.isActive ? "Active" : "Inactive"}
+                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: (user.moderationStatus || (user.isActive ? "active" : "suspended")) === "active" ? C.success : STATUS_COLORS.danger.color }}>
+                  {user.moderationStatus || (user.isActive ? "active" : "suspended")}
                 </span>
 
                 {/* Action */}
-                <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? STATUS_COLORS.danger.bg : STATUS_COLORS.success.bg, color: user.isActive ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color, width: 'fit-content' }}>
-                  {user.isActive ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
+                <button onClick={() => handleToggleStatus(user)} disabled={actionLoading === user._id || user.moderationStatus === "banned" || user.moderationStatus === "deleted"}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color, width: 'fit-content' }}>
+                  <ShieldAlert size={13} /> {user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"}
                 </button>
               </div>
 
@@ -182,14 +196,14 @@ export default function UsersPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: C.gray500 }}>{user.city || "No city"}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: user.isActive ? C.success : STATUS_COLORS.danger.color }}>
-                      • {user.isActive ? "Active" : "Inactive"}
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: (user.moderationStatus || (user.isActive ? "active" : "suspended")) === "active" ? C.success : STATUS_COLORS.danger.color }}>
+                      • {user.moderationStatus || (user.isActive ? "active" : "suspended")}
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => handleToggleStatus(user._id)} disabled={actionLoading === user._id}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: user.isActive ? STATUS_COLORS.danger.bg : STATUS_COLORS.success.bg, color: user.isActive ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color }}>
-                      {user.isActive ? "Deactivate" : "Activate"}
+                    <button onClick={() => handleToggleStatus(user)} disabled={actionLoading === user._id || user.moderationStatus === "banned" || user.moderationStatus === "deleted"}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.75rem', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: STATUS_COLORS.warning.bg, color: STATUS_COLORS.warning.color }}>
+                      {user.moderationStatus === "suspended" ? "Reinstate" : "Suspend"}
                     </button>
                   </div>
                 </div>
@@ -213,6 +227,23 @@ export default function UsersPage() {
             style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: `1px solid ${C.border}`, backgroundColor: C.surface, color: pagination.page >= pagination.pages ? C.border : C.primary, fontWeight: '600', fontSize: '0.85rem', cursor: pagination.page >= pagination.pages ? 'not-allowed' : 'pointer' }}>
             Next →
           </button>
+        </div>
+      )}
+      {selectedUser && (
+        <div role="dialog" aria-modal="true" aria-labelledby="account-enforcement-title" style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(2,21,80,.58)", display: "grid", placeItems: "center", padding: 16 }}>
+          <form onSubmit={(event) => { event.preventDefault(); submitEnforcement(); }} style={{ width: "min(100%, 480px)", background: C.surface, borderRadius: 12, padding: 24, boxShadow: "0 20px 48px rgba(2,21,80,.28)" }}>
+            <h2 id="account-enforcement-title" style={{ color: C.primary, marginTop: 0 }}>Account enforcement</h2>
+            <p style={{ color: C.gray500 }}>Record a reason for action on {selectedUser.name}. Bans require a linked safety case in the API.</p>
+            <label style={{ display: "block", fontWeight: 700, color: C.primary }}>Action
+              <select value={enforcementAction} onChange={(event) => setEnforcementAction(event.target.value as typeof enforcementAction)} style={{ display: "block", width: "100%", marginTop: 6, padding: 10, border: `1px solid ${C.border}`, borderRadius: 6 }}>
+                <option value="suspend">Suspend access</option>{selectedUser.moderationStatus === "suspended" && <option value="reinstate">Reinstate account</option>}
+              </select>
+            </label>
+            <label style={{ display: "block", fontWeight: 700, color: C.primary, marginTop: 14 }}>Reason
+              <textarea autoFocus required maxLength={1000} value={enforcementReason} onChange={(event) => setEnforcementReason(event.target.value)} style={{ display: "block", width: "100%", minHeight: 100, boxSizing: "border-box", marginTop: 6, padding: 10, border: `1px solid ${C.border}`, borderRadius: 6 }} />
+            </label>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}><button type="button" onClick={() => setSelectedUser(null)}>Cancel</button><button type="submit" disabled={!enforcementReason.trim() || actionLoading === selectedUser._id}>{actionLoading === selectedUser._id ? "Saving…" : "Confirm"}</button></div>
+          </form>
         </div>
       )}
       <style>{`

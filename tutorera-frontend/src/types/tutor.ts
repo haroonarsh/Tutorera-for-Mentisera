@@ -48,6 +48,18 @@ export interface TutorProfile {
   averageResponseMinutes?: number;
   responseTimeFormatted?: string;
   lastActiveAt?: string;
+  payoutAccount?: PayoutAccount;
+}
+
+export interface PayoutAccount {
+  method: "bank_transfer" | "raast" | "easypaisa" | "jazzcash" | "other";
+  accountTitle: string;
+  accountNumber: string;
+  bankName?: string;
+  branchCode?: string;
+  swiftCode?: string;
+  routingNumber?: string;
+  notes?: string;
 }
 
 export interface FiltersState {

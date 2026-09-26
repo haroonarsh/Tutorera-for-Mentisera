@@ -519,6 +519,10 @@ export const listSafetyCases = async (req: AuthRequest, res: Response): Promise<
   if (severity) filter.severity = severity;
   if (category) filter.category = category;
 
+  if (req.countryScopeCode) {
+    const users = await User.find({ countryCode: req.countryScopeCode }).select("_id").lean();
+    filter.reportedUser = { $in: users.map((user) => user._id) };
+  }
   const cases = await SafetyCase.find(filter)
     .populate("reporter", "name email avatar")
     .populate("reportedUser", "name email avatar role")
@@ -561,17 +565,18 @@ export const resolveSafetyCase = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  if (["account_suspended", "account_banned"].includes(actionTaken)) {
+    res.status(422).json({ success: false, code: "USE_ACCOUNT_ENFORCEMENT", message: "Use the account enforcement endpoint so the action is permission-checked and immutably audited." });
+    return;
+  }
+
   safetyCase.status = "resolved";
   safetyCase.actionTaken = actionTaken || "none";
   safetyCase.resolutionSummary = resolutionSummary;
   safetyCase.resolvedAt = new Date();
 
-  // If action is suspend/ban, update reported user
-  if (["account_suspended", "account_banned"].includes(actionTaken)) {
-    await User.findByIdAndUpdate(safetyCase.reportedUser, { isActive: false });
-  }
-
   await safetyCase.save();
+  await logAudit({ action: "safety_case_resolved", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "SafetyCase", targetId: safetyCase._id.toString(), targetName: safetyCase.caseId, metadata: { actionTaken, resolutionSummary } });
   res.json({ success: true, message: "Safety case resolved successfully." });
 };
 

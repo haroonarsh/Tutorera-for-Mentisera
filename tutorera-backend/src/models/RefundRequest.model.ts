@@ -10,6 +10,7 @@ export type RefundReason =
 
 export interface IRefundRequest extends Document {
   student: Types.ObjectId;
+  parent?: Types.ObjectId;
   booking: Types.ObjectId;
   tutor: Types.ObjectId;
   amount: number;
@@ -25,6 +26,7 @@ export interface IRefundRequest extends Document {
 const refundRequestSchema = new Schema<IRefundRequest>(
   {
     student: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    parent: { type: Schema.Types.ObjectId, ref: "User" },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", required: true },
     amount: { type: Number, required: true },
@@ -42,6 +44,7 @@ const refundRequestSchema = new Schema<IRefundRequest>(
 );
 
 refundRequestSchema.index({ student: 1, createdAt: -1 });
+refundRequestSchema.index({ parent: 1, createdAt: -1 });
 refundRequestSchema.index({ status: 1, createdAt: -1 });
 refundRequestSchema.index({ booking: 1 }, { unique: true });
 

@@ -156,6 +156,9 @@ export class AtRiskRequestService {
     if (!reqDoc) {
       return { success: false, message: "Request not found." };
     }
+    if (!["open", "published", "receiving_offers", "negotiating"].includes(reqDoc.status)) {
+      return { success: false, message: "This request is not eligible for an at-risk rescue action." };
+    }
 
     const studentId = reqDoc.student?._id ? reqDoc.student._id.toString() : reqDoc.student.toString();
 
@@ -197,12 +200,14 @@ export class AtRiskRequestService {
     }
 
     if (action === "extend") {
+      if ((reqDoc.extensionCount || 0) >= (reqDoc.maxExtensions || 2)) {
+        return { success: false, message: "This request has reached its extension limit." };
+      }
       const currentExpiry = reqDoc.expiresAt && reqDoc.expiresAt.getTime() > Date.now()
         ? reqDoc.expiresAt
         : new Date();
       reqDoc.expiresAt = new Date(currentExpiry.getTime() + 7 * 86400000);
       reqDoc.extensionCount = (reqDoc.extensionCount || 0) + 1;
-      reqDoc.status = "open";
       await reqDoc.save();
 
       if (io) {

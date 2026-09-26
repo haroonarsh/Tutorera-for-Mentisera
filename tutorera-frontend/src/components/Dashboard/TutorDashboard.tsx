@@ -11,6 +11,7 @@ import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
 import AvailabilityManager from "./AvailabilityManager";
 import RatingModal from "./RatingModal";
+import CancelBookingModal from "./CancelBookingModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { formatMoney } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
@@ -118,12 +119,34 @@ function TutorApplicationStatusCard() {
 
 // ─── Booking Card (tutor perspective) ────────────────────────────────────────
 
-function BookingCard({ booking }: { booking: DashBooking }) {
+function BookingCard({
+  booking,
+  onBookingUpdated,
+  onCancelBooking,
+}: {
+  booking: DashBooking;
+  onBookingUpdated?: () => void;
+  onCancelBooking?: () => void;
+}) {
   const [creatingChat, setCreatingChat] = useState(false);
+  const [startingSession, setStartingSession] = useState(false);
   const [showStudentRatingModal, setShowStudentRatingModal] = useState(false);
   const [studentRated, setStudentRated] = useState(false);
   const router = useRouter();
   const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "PKR", unit);
+
+  const handleStartSession = async () => {
+    setStartingSession(true);
+    try {
+      await axiosInstance.patch(`/bookings/${booking._id}/status`, { status: "ongoing" });
+      showSuccess("Session marked as in progress.");
+      onBookingUpdated?.();
+    } catch (err) {
+      showError(err, "Failed to start session.");
+    } finally {
+      setStartingSession(false);
+    }
+  };
 
   const handleRateStudent = async (rating: number, comment: string) => {
     try {
@@ -177,17 +200,42 @@ function BookingCard({ booking }: { booking: DashBooking }) {
 
       {/* Action buttons row */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-      <DashButton
-        variant="secondary"
-        size="sm"
-        onClick={handleChatClick}
-        disabled={creatingChat}
-        style={{ marginBottom: '0.5rem' }}
-      >
-        {creatingChat ? "Opening..." : "💬 Chat"}
-      </DashButton>
+        {/* ── Start session for tutor ── */}
+        {booking.status === "upcoming" && (
+          <DashButton
+            variant="success"
+            size="sm"
+            onClick={handleStartSession}
+            disabled={startingSession}
+            style={{ marginBottom: '0.5rem' }}
+          >
+            {startingSession ? "Starting..." : "▶ Start Session"}
+          </DashButton>
+        )}
 
-      {/* ── NEW: Need Help button ── */}
+        {/* ── Cancel booking for tutor ── */}
+        {booking.status === "upcoming" && (
+          <DashButton
+            variant="danger"
+            size="sm"
+            onClick={onCancelBooking}
+            style={{ marginBottom: '0.5rem', color: STATUS_COLORS.danger.color }}
+          >
+            ✕ Cancel Booking
+          </DashButton>
+        )}
+
+        <DashButton
+          variant="secondary"
+          size="sm"
+          onClick={handleChatClick}
+          disabled={creatingChat}
+          style={{ marginBottom: '0.5rem' }}
+        >
+          {creatingChat ? "Opening..." : "💬 Chat"}
+        </DashButton>
+
+        {/* ── Need Help button ── */}
         <button type="button" className={s.btnWarning} style={{ marginBottom: '0.5rem' }} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
         </button>
@@ -568,6 +616,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
   const [loadingRec, setLoadingRec] = useState(false);
   const [requests, setRequests]     = useState<DashRequest[]>([]);
   const [directRequests, setDirectRequests] = useState<DashDirectRequest[]>([]);
+  const [selectedBookingForCancel, setSelectedBookingForCancel] = useState<DashBooking | null>(null);
   const [loadingD, setLoadingD]     = useState(false);
   const [profile, setProfile]       = useState<TutorProfileData | null>(null);
   const [loadingB, setLoadingB]     = useState(true);
@@ -846,7 +895,14 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
               />
             ) : (
               <>
-                {bookings.map((b) => <BookingCard key={b._id} booking={b} />)}
+                {bookings.map((b) => (
+                  <BookingCard
+                    key={b._id}
+                    booking={b}
+                    onBookingUpdated={fetchBookings}
+                    onCancelBooking={() => setSelectedBookingForCancel(b)}
+                  />
+                ))}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                     <DashButton variant="secondary" size="md" onClick={loadMoreBookings} disabled={loadingMoreBookings}>
@@ -1004,6 +1060,16 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
           </section>
         )}
       </div>
+
+      {selectedBookingForCancel && (
+        <CancelBookingModal
+          bookingId={selectedBookingForCancel._id}
+          bookingTitle={typeof selectedBookingForCancel.request === "object" ? selectedBookingForCancel.request.subject : "Tutoring Session"}
+          userRole="tutor"
+          onClose={() => setSelectedBookingForCancel(null)}
+          onSuccess={fetchBookings}
+        />
+      )}
     </>
   );
 }

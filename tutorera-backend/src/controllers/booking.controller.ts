@@ -77,10 +77,11 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   const userId = req.user?._id;
   const isStudent = req.user?.role === "student";
   const isTutor = req.user?.role === "tutor";
+  const isParent = req.user?.role === "parent";
 
   const booking = await Booking.findOne({
     _id: req.params.id,
-    $or: [{ student: userId }, { tutor: userId }],
+    $or: [{ student: userId }, { tutor: userId }, { parent: userId }],
   });
 
   if (!booking) {
@@ -89,15 +90,16 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
   }
 
   // ── Explicit, role-restricted state machine ──
-  // Students may only cancel an upcoming booking.
+  // Students and parents may only cancel an upcoming booking.
   // Tutors may only start (mark ongoing) an upcoming booking, or cancel it.
   // Nobody but admin can mark a booking "completed" — that's a payment-sensitive transition.
   const allowedTransitions: Record<string, string[]> = {
     student: ["cancelled"],
+    parent: ["cancelled"],
     tutor: ["ongoing", "cancelled"],
   };
 
-  const actorRole = isStudent ? "student" : isTutor ? "tutor" : null;
+  const actorRole = isStudent ? "student" : isTutor ? "tutor" : isParent ? "parent" : null;
   if (!actorRole || !allowedTransitions[actorRole].includes(status)) {
     res.status(403).json({
       success: false,

@@ -622,7 +622,8 @@ export const uploadTutorDocsAdmin = async (
 // @access  Private (admin)
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   const { role, search, page = "1", limit = "20" } = req.query;
-  const filter: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { isDeleted: { $ne: true } };
+  if (req.countryScopeCode) filter.countryCode = req.countryScopeCode;
   if (role && role !== "all") filter.role = role;
 
   if (search && (search as string).trim()) {
@@ -644,24 +645,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void
 // @route   PATCH /api/admin/users/:id/status
 // @access  Private (admin)
 export const toggleUserStatus = async (req: AuthRequest, res: Response): Promise<void> => {
-  const user = await User.findById(req.params.id);
-  if (!user) {
-    res.status(404).json({ success: false, message: "User not found" });
-    return;
-  }
-  user.isActive = !user.isActive;
-  await user.save();
-
-  await logAudit({
-    action: user.isActive ? "user_activated" : "user_deactivated",
-    actor: req.user?.name || "Admin",
-    actorId: req.user?._id?.toString(),
-    entity: "User",
-    targetId: user._id.toString(),
-    targetName: user.name,
-  });
-
-  res.status(200).json({ success: true, message: `User ${user.isActive ? "activated" : "deactivated"}` });
+  res.status(410).json({ success: false, code: "ACCOUNT_ENFORCEMENT_REQUIRED", message: "Use the account enforcement endpoint with an explicit action and reason." });
 };
 
 // @desc    Get all bookings
@@ -1061,7 +1045,19 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
       currencyTotals,
     },
     total: bookings.length,
-    bookings,
+    bookings: await (async () => {
+      const tutorIds = bookings.map((b) => (b.tutor as any)?._id).filter(Boolean);
+      const tutorProfiles = await TutorProfile.find({ user: { $in: tutorIds } }).select("user payoutAccount").lean();
+      const profileMap = new Map(tutorProfiles.map((p) => [p.user.toString(), p.payoutAccount]));
+      return bookings.map((b) => {
+        const obj = b.toObject();
+        const tutorId = (b.tutor as any)?._id?.toString();
+        if (tutorId && profileMap.has(tutorId)) {
+          (obj as any).tutorPayoutAccount = profileMap.get(tutorId);
+        }
+        return obj;
+      });
+    })(),
   });
 };
 

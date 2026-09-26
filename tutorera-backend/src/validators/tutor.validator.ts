@@ -19,6 +19,16 @@ export const tutorProfileSchema = z.object({
   })).optional(),
   teachingMode: z.enum(["online", "in-person", "both"]).optional(),
   city: z.string().optional(),
+  payoutAccount: z.object({
+    method: z.enum(["bank_transfer", "raast", "easypaisa", "jazzcash", "other"]).default("bank_transfer"),
+    accountTitle: z.string().max(100).optional(),
+    accountNumber: z.string().max(50).optional(),
+    bankName: z.string().max(100).optional(),
+    branchCode: z.string().max(20).optional(),
+    swiftCode: z.string().max(20).optional(),
+    routingNumber: z.string().max(30).optional(),
+    notes: z.string().max(300).optional(),
+  }).optional(),
 });
 
 export type TutorProfileInput = z.infer<typeof tutorProfileSchema>;

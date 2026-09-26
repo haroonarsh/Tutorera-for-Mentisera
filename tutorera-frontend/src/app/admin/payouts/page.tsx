@@ -22,6 +22,16 @@ interface Booking {
   payoutNote?: string;
   teachingMode?: string;
   createdAt: string;
+  tutorPayoutAccount?: {
+    method?: "bank" | "easypaisa" | "jazzcash" | "other";
+    accountTitle?: string;
+    accountNumber?: string;
+    bankName?: string;
+    branchCode?: string;
+    swiftCode?: string;
+    routingNumber?: string;
+    notes?: string;
+  };
 }
 
 interface Stats {
@@ -214,6 +224,26 @@ export default function PayoutsPage() {
                   {booking.tutor?.phone && (
                     <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>{booking.tutor.phone}</p>
                   )}
+                  {booking.tutorPayoutAccount?.accountNumber ? (
+                    <div style={{ marginTop: '0.35rem', padding: '0.3rem 0.5rem', borderRadius: '0.375rem', backgroundColor: C.gray50, border: `1px solid ${C.border}`, fontSize: '0.72rem' }}>
+                      <span style={{ fontWeight: '700', color: C.primary, textTransform: 'capitalize' }}>
+                        {booking.tutorPayoutAccount.method || "Account"}:
+                      </span>{" "}
+                      <span style={{ color: C.gray600 }}>
+                        {booking.tutorPayoutAccount.bankName ? `${booking.tutorPayoutAccount.bankName} - ` : ""}
+                        {booking.tutorPayoutAccount.accountNumber}
+                      </span>
+                      {booking.tutorPayoutAccount.accountTitle && (
+                        <div style={{ color: C.gray500, fontSize: '0.68rem', marginTop: '0.1rem' }}>
+                          Title: {booking.tutorPayoutAccount.accountTitle}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '0.25rem', fontSize: '0.7rem', color: STATUS_COLORS.warning.color, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <span>⚠️ No payout account set</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Student */}
@@ -298,6 +328,15 @@ export default function PayoutsPage() {
                     <p style={{ color: C.gray500, fontSize: '0.75rem', margin: '0.1rem 0 0' }}>
                       Tutor · {booking.tutor?.email}
                     </p>
+                    {booking.tutorPayoutAccount?.accountNumber ? (
+                      <p style={{ color: C.primary, fontSize: '0.72rem', margin: '0.2rem 0 0', fontWeight: '500' }}>
+                        💳 {booking.tutorPayoutAccount.method?.toUpperCase()}: {booking.tutorPayoutAccount.bankName ? `${booking.tutorPayoutAccount.bankName} ` : ""}{booking.tutorPayoutAccount.accountNumber}
+                      </p>
+                    ) : (
+                      <p style={{ color: STATUS_COLORS.warning.color, fontSize: '0.7rem', margin: '0.2rem 0 0' }}>
+                        ⚠️ No payout account set
+                      </p>
+                    )}
                   </div>
                   <span style={{
                     fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem',

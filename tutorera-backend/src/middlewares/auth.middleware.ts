@@ -38,8 +38,16 @@ export const protect = async (
       return;
     }
 
-    if (!user.isActive) {
-      res.status(403).json({ success: false, message: "Your account has been deactivated" });
+    if (!user.isActive || user.isDeleted || user.moderationStatus === "deleted") {
+      res.status(403).json({ success: false, code: "ACCOUNT_DELETED", message: "This account is no longer available" });
+      return;
+    }
+    if (user.moderationStatus === "banned") {
+      res.status(403).json({ success: false, code: "ACCOUNT_BANNED", message: "This account has been permanently restricted" });
+      return;
+    }
+    if (user.moderationStatus === "suspended" && (!user.suspendedUntil || user.suspendedUntil > new Date())) {
+      res.status(403).json({ success: false, code: "ACCOUNT_SUSPENDED", message: "This account is temporarily suspended" });
       return;
     }
 
@@ -74,7 +82,7 @@ export const optionalAuth = async (
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
     const user = await User.findById(decoded.id);
-    if (user && user.isActive) {
+    if (user && user.isActive && !user.isDeleted && user.moderationStatus !== "banned" && user.moderationStatus !== "deleted" && !(user.moderationStatus === "suspended" && (!user.suspendedUntil || user.suspendedUntil > new Date()))) {
       req.user = user;
     }
     // If suspended, silently proceed as if logged out — no error, since this route is public anyway

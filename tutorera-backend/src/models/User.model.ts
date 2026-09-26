@@ -73,6 +73,16 @@ const userSchema = new Schema<IUser>(
     isVerified: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    // Account enforcement is deliberately distinct from tutor-profile eligibility.
+    // `isActive` remains the fast authentication gate for backwards compatibility.
+    moderationStatus: { type: String, enum: ["active", "suspended", "banned", "deleted"], default: "active", index: true },
+    suspendedAt: { type: Date },
+    suspendedUntil: { type: Date },
+    bannedAt: { type: Date },
+    moderationReason: { type: String, trim: true, maxlength: 1000 },
+    moderatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    moderationCase: { type: Schema.Types.ObjectId, ref: "SafetyCase" },
+    sessionInvalidBefore: { type: Date },
     // Explicitly marks non-production accounts created by seeds, QA, or
     // demonstrations. Public marketplace queries must never surface them.
     isTestAccount: { type: Boolean, default: false, index: true },
@@ -131,6 +141,7 @@ const userSchema = new Schema<IUser>(
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date },
     deletionReason: { type: String },
+    deletedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );

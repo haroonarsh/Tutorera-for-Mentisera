@@ -7,7 +7,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 type MoneyByCurrency = { currency: string; marketplaceGMV: number; platformRevenue: number; averageAgreedRate: number };
 type Metrics = Record<string, number | null> & { lossReasons?: Record<string, number>; moneyByCurrency?: MoneyByCurrency[] };
-type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; currency?: string; status?: string; lossReason?: string; lossReasonDetail?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; student?: { name?: string } };
+type RequestRow = { _id: string; subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; currency?: string; status?: string; lossReason?: string; lossReasonDetail?: string; moderationStatus?: string; moderationReason?: string; student?: { name?: string } };
 type OfferRow = { _id: string; amount?: number; initialStudentRate?: number; pricingUnit?: string; status?: string; flaggedForModeration?: boolean; moderationReasons?: string[]; tutor?: { name?: string }; request?: { subject?: string; city?: string; level?: string; teachingMode?: string; budget?: number; status?: string; currency?: string } };
 type HistoryRow = { _id: string; senderRole?: string; amount?: number; message?: string; status?: string; flaggedForModeration?: boolean; createdAt?: string };
 
@@ -80,6 +80,7 @@ export default function Page() {
   const [selected, setSelected] = useState<{ offer: OfferRow; history: HistoryRow[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [requestActionLoading, setRequestActionLoading] = useState<string | null>(null);
   const modalRef = useFocusTrap(Boolean(selected), () => setSelected(null));
 
   useEffect(() => {
@@ -119,6 +120,19 @@ export default function Page() {
     } catch {
       setLoadError("Could not load this negotiation. Please try again.");
     }
+  }
+
+  async function moderateRequest(request: RequestRow, action: "approve" | "hold" | "restore") {
+    const reason = window.prompt(`Reason to ${action} this request:`)?.trim();
+    if (!reason) return;
+    setRequestActionLoading(`${request._id}-${action}`);
+    try {
+      const result = await api.post(`/admin/marketplace/requests/${request._id}/moderation`, { action, reason });
+      const updated = result.data.request;
+      setRequests((current) => current.map((item) => item._id === updated._id ? { ...item, status: updated.status, moderationStatus: updated.moderationStatus, moderationReason: updated.moderationReason } : item));
+    } catch (error: any) {
+      setLoadError(error?.response?.data?.message || "Could not update this request.");
+    } finally { setRequestActionLoading(null); }
   }
 
   return (
@@ -206,8 +220,11 @@ export default function Page() {
             <article key={request._id} style={panel}>
               <strong>{request.subject || "Tuition request"}</strong>
               <p style={muted}>{request.student?.name || "Student"} - {request.city || "Online"} - {request.level || "Any level"} - {request.teachingMode || "mode open"} - {formatMoney(request.budget, request.currency)} - {request.status || "status pending"}</p>
+              {request.moderationStatus && request.moderationStatus !== "none" && <p style={{ ...muted, color: STATUS_COLORS.warning.color }}>Moderation: {request.moderationStatus}{request.moderationReason ? ` — ${request.moderationReason}` : ""}</p>}
               {request.lossReason && <p style={{ ...muted, color: STATUS_COLORS.warning.color }}>Loss reason: {lossReasonLabels[request.lossReason] || request.lossReason}{request.lossReasonDetail ? ` — ${request.lossReasonDetail}` : ""}</p>}
-              {request.flaggedForModeration && <p style={{ color: STATUS_COLORS.warning.color, fontSize: 13 }}>Flags: {(request.moderationReasons || []).join(", ") || "manual review"}</p>}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {request.moderationStatus === "held" ? <button onClick={() => moderateRequest(request, "restore")} disabled={requestActionLoading === `${request._id}-restore`} style={button}>Restore</button> : <><button onClick={() => moderateRequest(request, "approve")} disabled={requestActionLoading === `${request._id}-approve`} style={button}>Approve review</button><button onClick={() => moderateRequest(request, "hold")} disabled={requestActionLoading === `${request._id}-hold`} style={button}>Place on hold</button></>}
+              </div>
             </article>
           ))}
         </div>

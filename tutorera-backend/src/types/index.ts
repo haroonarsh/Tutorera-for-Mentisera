@@ -4,7 +4,8 @@ import { Document, Types } from "mongoose";
 // User Roles
 export type UserRole = "student" | "tutor" | "admin" | "pending" | "parent";
 export type AuthProvider = "local" | "google";
-export type AccountStatus = "registered" | "onboarding" | "profile_complete" | "submitted" | "verified" | "rejected";
+export type AccountStatus = "registered" | "onboarding" | "profile_complete" | "submitted" | "verified" | "rejected" | "suspended" | "banned" | "deleted";
+export type ModerationStatus = "active" | "suspended" | "banned" | "deleted";
 
 // User Document Interface
 export interface IUser extends Document {
@@ -28,6 +29,14 @@ export interface IUser extends Document {
   isVerified: boolean;
   isApproved: boolean;
   isActive: boolean;
+  moderationStatus?: ModerationStatus;
+  suspendedAt?: Date;
+  suspendedUntil?: Date;
+  bannedAt?: Date;
+  moderationReason?: string;
+  moderatedBy?: Types.ObjectId;
+  moderationCase?: Types.ObjectId;
+  sessionInvalidBefore?: Date;
   isTestAccount?: boolean;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
@@ -69,6 +78,7 @@ export interface IUser extends Document {
   isDeleted?: boolean;
   deletedAt?: Date;
   deletionReason?: string;
+  deletedBy?: Types.ObjectId;
 
   createdAt: Date;
   updatedAt: Date;

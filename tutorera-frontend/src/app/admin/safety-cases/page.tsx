@@ -62,6 +62,18 @@ function SafetyCasesContent() {
     if (!selectedCase) return;
     setSubmitting(true);
     try {
+      if (resolutionAction === "account_suspended" || resolutionAction === "account_banned") {
+        await api.post(`/admin/users/${selectedCase.reportedUser._id}/enforcement`, {
+          action: resolutionAction === "account_suspended" ? "suspend" : "ban",
+          reason: resolutionSummary.trim(),
+          safetyCaseId: selectedCase._id,
+        });
+        showSuccess(`Safety case ${selectedCase.caseId} resolved and account enforcement applied.`);
+        setSelectedCase(null);
+        setResolutionSummary("");
+        fetchCases();
+        return;
+      }
       await api.post(`/admin/safety/cases/${selectedCase._id}/resolve`, {
         actionTaken: resolutionAction,
         resolutionSummary,

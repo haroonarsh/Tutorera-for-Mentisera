@@ -110,7 +110,7 @@ export interface DashBooking {
   schedule?: string;
   teachingMode?: string;
   isFirstSession?: boolean;
-  paymentStatus?: "pending" | "paid" | "refunded" | "failed";
+  paymentStatus?: "pending" | "received" | "confirmed" | "paid" | "refunded" | "partially_refunded" | "failed" | "chargeback" | "disputed";
   status: "pending" | "confirmed" | "upcoming" | "in_progress" | "completed" | "cancelled" | "disputed";
   scheduledAt?: string;
   nextOccurrence?: {
@@ -120,6 +120,30 @@ export interface DashBooking {
     dateLabel: string;
     timeLabel: string;
   } | null;
+  createdAt: string;
+}
+
+export interface DashRefundRequest {
+  _id: string;
+  booking: {
+    _id: string;
+    schedule?: string;
+    teachingMode?: string;
+    amount?: number;
+    studentTotal?: number;
+    currency?: string;
+    createdAt?: string;
+  } | string;
+  tutor: {
+    _id?: string;
+    name?: string;
+  };
+  amount: number;
+  reason: "tutor_cancelled" | "session_not_delivered" | "quality_issue" | "scheduling_conflict" | "duplicate_charge" | "other" | string;
+  details?: string;
+  status: "pending" | "approved" | "rejected" | "processed";
+  adminNote?: string;
+  processedAt?: string;
   createdAt: string;
 }
 

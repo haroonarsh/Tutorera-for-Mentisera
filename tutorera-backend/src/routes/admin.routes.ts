@@ -70,6 +70,8 @@ import verificationRoutes from "./admin/verification.routes";
 import subjectRoutes from "./admin/subject.routes";
 import emailTemplateRoutes from "./admin/emailTemplate.routes";
 import promoCodeRoutes from "./admin/promoCode.routes";
+import { enforceAccountAction, getAccountEnforcementHistory } from "../controllers/accountModeration.controller";
+import { moderateRequest, getRequestModerationHistory } from "../controllers/requestModeration.controller";
 
 const router = Router();
 
@@ -79,7 +81,11 @@ router.use(enforceCountryScope);
 // Control Tower & Liquidity
 router.get("/control-tower/pulse", requirePermission("system.monitor"), getControlTowerPulse);
 router.get("/at-risk/requests", requirePermission("request.read"), listAtRiskRequests);
-router.post("/at-risk/requests/:id/action", requirePermission("request.extend"), handleAtRiskAction);
+router.post("/at-risk/requests/:id/action", requirePermission("request.read"), handleAtRiskAction);
+router.post("/requests/:id/moderation", requirePermission("request.moderate"), moderateRequest);
+router.get("/requests/:id/moderation-history", requirePermission("request.read"), getRequestModerationHistory);
+router.post("/marketplace/requests/:id/moderation", requirePermission("request.moderate"), moderateRequest);
+router.get("/marketplace/requests/:id/moderation-history", requirePermission("request.read"), getRequestModerationHistory);
 router.get("/supply-gaps", requirePermission("analytics.read"), getSupplyGapsIntelligence);
 
 // Finance & Reconciliation
@@ -123,15 +129,8 @@ router.get("/analytics", requirePermission("analytics.read"), getAnalytics);
 router.get("/global-analytics", requirePermission("analytics.read"), getGlobalAnalytics);
 router.get("/marketplace-analytics", requirePermission("matching.read"), getMarketplaceAnalytics);
 router.get("/marketplace/requests", requirePermission("request.read"), listMarketplaceRequests);
-router.get("/marketplace/offers", requirePermission("matching.read"), listMarketplaceOffers);
-router.get("/marketplace/offers/:id", requirePermission("matching.read"), getMarketplaceOfferDetail);
-router.get("/verifications", requirePermission("tutor.read"), getPendingVerifications);
-router.get("/payouts", requirePermission("payout.read"), getPayouts);
-router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
-router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
-router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
-router.get("/marketplace-analytics", requirePermission("matching.read"), getMarketplaceAnalytics);
-router.get("/marketplace/requests", requirePermission("request.read"), listMarketplaceRequests);
+router.post("/marketplace/requests/:id/moderation", requirePermission("request.moderate"), moderateRequest);
+router.get("/marketplace/requests/:id/moderation-history", requirePermission("request.read"), getRequestModerationHistory);
 router.get("/marketplace/offers", requirePermission("matching.read"), listMarketplaceOffers);
 router.get("/marketplace/offers/:id", requirePermission("matching.read"), getMarketplaceOfferDetail);
 router.get("/verifications", requirePermission("tutor.read"), getPendingVerifications);
@@ -147,6 +146,8 @@ router.patch("/verify/bulk", requirePermission("tutor.verify"), bulkVerifyTutors
 router.patch("/verify/:id", requirePermission("tutor.verify"), verifyTutor);
 router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
+router.post("/users/:id/enforcement", requirePermission("users.read"), enforceAccountAction);
+router.get("/users/:id/enforcement-history", requirePermission("users.read"), getAccountEnforcementHistory);
 import { uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
 const verificationFields = uploadVerificationMulter.fields([
   { name: "cnicFront", maxCount: 1 },

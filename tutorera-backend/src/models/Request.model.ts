@@ -35,6 +35,12 @@ export interface IRequest extends Document {
   repostedFromRequestId?: Types.ObjectId;
   archivedAt?: Date;
   legalHold?: boolean;
+  moderationStatus?: "none" | "held" | "approved" | "rejected" | "cancelled";
+  moderationReason?: string;
+  moderatedBy?: Types.ObjectId;
+  moderatedAt?: Date;
+  moderationCase?: Types.ObjectId;
+  moderationPreviousStatus?: string;
   expiryWarningSentAt?: Date;
   day5InterventionSentAt?: Date;
   lossReason?: "no_tutor_supply" | "no_tutor_response" | "budget_mismatch" | "offers_too_expensive" | "location_restriction" | "student_abandoned" | "student_cancelled" | "payment_failed" | "tutor_cancelled" | "request_expired" | "other";
@@ -122,6 +128,12 @@ const requestSchema = new Schema<IRequest>(
     repostedFromRequestId: { type: Schema.Types.ObjectId, ref: "Request" },
     archivedAt: { type: Date },
     legalHold: { type: Boolean, default: false },
+    moderationStatus: { type: String, enum: ["none", "held", "approved", "rejected", "cancelled"], default: "none", index: true },
+    moderationReason: { type: String, trim: true, maxlength: 1000 },
+    moderatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    moderatedAt: { type: Date },
+    moderationCase: { type: Schema.Types.ObjectId, ref: "SafetyCase" },
+    moderationPreviousStatus: { type: String },
     expiryWarningSentAt: { type: Date },
     day5InterventionSentAt: { type: Date },
     lossReason: {
@@ -150,6 +162,7 @@ requestSchema.index({ student: 1, status: 1, createdAt: -1 });
 requestSchema.index({ teachingMode: 1, countryCode: 1, status: 1, expiresAt: 1 });
 requestSchema.index({ countryCode: 1, cityRef: 1, currency: 1, status: 1, createdAt: -1 });
 requestSchema.index({ lossReason: 1, lossClassifiedAt: -1 });
+requestSchema.index({ moderationStatus: 1, countryCode: 1, updatedAt: -1 });
 requestSchema.index({ location: "2dsphere" });
 
 // location.type defaults to "Point" whenever the location subdocument exists

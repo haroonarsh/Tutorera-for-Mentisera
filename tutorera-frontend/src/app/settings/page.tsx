@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import { Camera, Save, Shield, Monitor, Smartphone } from "lucide-react";
+import { Camera, Save, Shield, Monitor, Smartphone, Landmark, CreditCard } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 
@@ -24,12 +24,34 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
 
+  const [payoutAccount, setPayoutAccount] = useState({
+    method: "bank_transfer",
+    accountTitle: "",
+    accountNumber: "",
+    bankName: "",
+    branchCode: "",
+    swiftCode: "",
+    notes: "",
+  });
+  const [savingPayout, setSavingPayout] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) router.push("/login");
     if (user) {
       api.get("/auth/me").then(res => {
         setProfile({ name: res.data.user.name || "", phone: res.data.user.phone || "" });
       }).catch(() => {});
+
+      if (user.role === "tutor") {
+        api.get("/tutors/profile/me").then(res => {
+          if (res.data?.profile?.payoutAccount) {
+            setPayoutAccount(prev => ({
+              ...prev,
+              ...res.data.profile.payoutAccount,
+            }));
+          }
+        }).catch(() => {});
+      }
     }
   }, [user, loading, router]);
 
@@ -49,6 +71,25 @@ export default function SettingsPage() {
       setTimeout(() => setSuccess(""), 3000);
     } catch { setError("Failed to update profile."); }
     finally { setSaving(false); }
+  };
+
+  const handlePayoutSave = async () => {
+    if (!payoutAccount.accountTitle.trim() || !payoutAccount.accountNumber.trim()) {
+      setError("Please provide both Account Title and Account / IBAN Number.");
+      return;
+    }
+    setSavingPayout(true);
+    setError("");
+    setSuccess("");
+    try {
+      await api.post("/tutors/profile", { payoutAccount });
+      setSuccess("Payout receiving details updated successfully!");
+      setTimeout(() => setSuccess(""), 4000);
+    } catch {
+      setError("Failed to save payout account details. Please try again.");
+    } finally {
+      setSavingPayout(false);
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -125,6 +166,110 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Payout & Banking Details — Tutors only */}
+        {user.role === "tutor" && (
+          <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Landmark size={18} color="#0329b2" /> Payout & Banking Destination
+            </h2>
+            <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Specify where TUTORERA should release your session earnings. Payouts are transferred under standard settlement cycles.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Payout Method
+                </label>
+                <select
+                  value={payoutAccount.method}
+                  onChange={e => setPayoutAccount({ ...payoutAccount, method: e.target.value })}
+                  style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, backgroundColor: C.surface }}
+                >
+                  <option value="bank_transfer">Bank Transfer (IBAN / Account)</option>
+                  <option value="raast">Raast ID</option>
+                  <option value="jazzcash">JazzCash Mobile Account</option>
+                  <option value="easypaisa">EasyPaisa Mobile Account</option>
+                  <option value="other">Other Digital Payment</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Account Title (as on bank/wallet) *
+                </label>
+                <input
+                  type="text"
+                  value={payoutAccount.accountTitle}
+                  onChange={e => setPayoutAccount({ ...payoutAccount, accountTitle: e.target.value })}
+                  placeholder="e.g. Muhammad Ali"
+                  style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Account / IBAN / Wallet Number *
+                </label>
+                <input
+                  type="text"
+                  value={payoutAccount.accountNumber}
+                  onChange={e => setPayoutAccount({ ...payoutAccount, accountNumber: e.target.value })}
+                  placeholder="e.g. PK36MEZN0001234567890101"
+                  style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Bank or Provider Name
+                </label>
+                <input
+                  type="text"
+                  value={payoutAccount.bankName}
+                  onChange={e => setPayoutAccount({ ...payoutAccount, bankName: e.target.value })}
+                  placeholder="e.g. Meezan Bank, HBL, Standard Chartered"
+                  style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Branch / Swift / Routing (optional)
+                </label>
+                <input
+                  type="text"
+                  value={payoutAccount.branchCode}
+                  onChange={e => setPayoutAccount({ ...payoutAccount, branchCode: e.target.value })}
+                  placeholder="Branch code or SWIFT BIC"
+                  style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Special Transfer Notes (optional)
+                </label>
+                <input
+                  type="text"
+                  value={payoutAccount.notes}
+                  onChange={e => setPayoutAccount({ ...payoutAccount, notes: e.target.value })}
+                  placeholder="Any special routing instructions"
+                  style={{ width: '100%', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handlePayoutSave}
+              disabled={savingPayout}
+              style={{ backgroundColor: savingPayout ? '#93c5fd' : '#0329b2', color: 'white', padding: '0.65rem 1.5rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.875rem', cursor: savingPayout ? 'not-allowed' : 'pointer' }}
+            >
+              {savingPayout ? "Saving Details..." : "Save Payout Destination"}
+            </button>
+          </div>
+        )}
 
         {/* Device Sessions */}
         <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>

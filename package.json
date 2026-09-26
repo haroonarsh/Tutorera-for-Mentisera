@@ -1,0 +1,16 @@
+{
+  "name": "tutorera-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tutorera platform root workspace",
+  "scripts": {
+    "dev": "npm --prefix tutorera-frontend run dev",
+    "dev:all": "node -e \"const { spawn } = require('child_process'); const b = spawn('npm', ['--prefix', 'tutorera-backend', 'run', 'dev'], { stdio: 'inherit', shell: true }); const f = spawn('npm', ['--prefix', 'tutorera-frontend', 'run', 'dev'], { stdio: 'inherit', shell: true }); process.on('SIGINT', () => { b.kill(); f.kill(); process.exit(); });\"",
+    "dev:frontend": "npm --prefix tutorera-frontend run dev",
+    "dev:backend": "npm --prefix tutorera-backend run dev",
+    "build": "npm --prefix tutorera-backend run build && npm --prefix tutorera-frontend run build",
+    "build:frontend": "npm --prefix tutorera-frontend run build",
+    "build:backend": "npm --prefix tutorera-backend run build",
+    "test": "npm --prefix tutorera-backend test"
+  }
+}

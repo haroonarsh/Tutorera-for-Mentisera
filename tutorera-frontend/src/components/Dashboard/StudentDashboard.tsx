@@ -4,11 +4,13 @@ import { UI_COLORS, STATUS_COLORS, TEXT_COLORS, SPACING } from "@/lib/brand";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import axiosInstance from "@/lib/axios";
-import { DashRequest, DashBid, DashBooking } from "@/types/dashboard";
+import { DashRequest, DashBid, DashBooking, DashRefundRequest } from "@/types/dashboard";
 import PostRequestModal from "./PostRequestModal";
+import RefundRequestModal from "./RefundRequestModal";
+import CancelBookingModal from "./CancelBookingModal";
 import s from "@/app/dashboard/dashboard.module.css";
 import { useRouter } from "next/navigation";
-import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award } from "lucide-react";
+import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award, RotateCcw } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import { showSuccess, showError } from "@/lib/toast";
@@ -105,9 +107,18 @@ function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; si
 
 // ─── Booking Card ─────────────────────────────────────────────────────────────
 
-function BookingCard({ booking, onClaimSubmitted }: {
+function BookingCard({
+  booking,
+  refundRequest,
+  onClaimSubmitted,
+  onRequestRefund,
+  onCancelBooking,
+}: {
   booking: DashBooking;
+  refundRequest?: DashRefundRequest;
   onClaimSubmitted?: () => void;
+  onRequestRefund?: () => void;
+  onCancelBooking?: () => void;
 }) {
   const [creatingChat, setCreatingChat] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
@@ -258,7 +269,71 @@ function BookingCard({ booking, onClaimSubmitted }: {
             😕 Not Satisfied?
           </DashButton>
         )}
+
+        {/* ── Request Refund button — for confirmed/paid bookings where refund hasn't been requested ── */}
+        {(booking.paymentStatus === "confirmed" || booking.paymentStatus === "received") && !refundRequest && (
+          <button
+            type="button"
+            className={s.btnWarning}
+            onClick={onRequestRefund}
+            title="Request a refund review under the platform refund policy"
+          >
+            🔄 Request Refund
+          </button>
+        )}
+
+        {/* ── Cancel Booking button — for upcoming bookings ── */}
+        {booking.status === "upcoming" && (
+          <DashButton
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={onCancelBooking}
+            style={{ color: STATUS_COLORS.danger.color }}
+          >
+            ✕ Cancel Booking
+          </DashButton>
+        )}
       </div>
+
+      {/* ── Refund Request Status Banner ── */}
+      {refundRequest && (
+        <DashCard
+          padding="sm"
+          style={{
+            background:
+              refundRequest.status === "approved" || refundRequest.status === "processed"
+                ? STATUS_COLORS.success.bg
+                : refundRequest.status === "rejected"
+                ? STATUS_COLORS.danger.bg
+                : STATUS_COLORS.warning.bg,
+            borderColor:
+              refundRequest.status === "approved" || refundRequest.status === "processed"
+                ? STATUS_COLORS.success.border
+                : refundRequest.status === "rejected"
+                ? STATUS_COLORS.danger.border
+                : STATUS_COLORS.warning.border,
+            marginBottom: "0.75rem",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+            <strong style={{ fontSize: "0.8rem", color: TEXT_COLORS.primary, display: "flex", alignItems: "center", gap: 6 }}>
+              <RotateCcw size={14} />
+              Refund Request:{" "}
+              <span style={{ textTransform: "capitalize" }}>
+                {refundRequest.status === "pending" ? "Under Review" : refundRequest.status}
+              </span>
+            </strong>
+            <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>
+              Submitted {timeAgo(refundRequest.createdAt)}
+            </span>
+          </div>
+          <p style={{ fontSize: "0.75rem", color: TEXT_COLORS.secondary, margin: "4px 0 0" }}>
+            Reason: <b>{refundRequest.reason.replace(/_/g, " ")}</b>
+            {refundRequest.adminNote && <span> · Admin note: <i>{refundRequest.adminNote}</i></span>}
+          </p>
+        </DashCard>
+      )}
 
       {booking.status === "completed" && (
         <DashCard padding="sm" accent={C.accent} style={{ background: `linear-gradient(135deg, ${C.accentLight} 0%, ${C.card} 100%)`, borderColor: STATUS_COLORS.info.border, marginBottom: "0.75rem" }}>
@@ -852,7 +927,7 @@ function RequestCard({
 
 // ─── Student Dashboard ────────────────────────────────────────────────────────
 
-type Tab = "requests" | "bookings" | "favourites";
+type Tab = "requests" | "bookings" | "favourites" | "refunds";
 
 interface Props {
   userName: string;
@@ -872,11 +947,15 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
   const [requestFilter, setRequestFilter] = useState<"active" | "expired" | "all">("active");
+  const [refundRequests, setRefundRequests] = useState<DashRefundRequest[]>([]);
+  const [loadingRefunds, setLoadingRefunds] = useState(false);
+  const [selectedBookingForRefund, setSelectedBookingForRefund] = useState<DashBooking | null>(null);
+  const [selectedBookingForCancel, setSelectedBookingForCancel] = useState<DashBooking | null>(null);
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
-    if (requestedTab === "requests" || requestedTab === "bookings" || requestedTab === "favourites") {
-      setTab(requestedTab);
+    if (requestedTab === "requests" || requestedTab === "bookings" || requestedTab === "favourites" || requestedTab === "refunds") {
+      setTab(requestedTab as Tab);
     }
   }, []);
 
@@ -914,6 +993,18 @@ const fetchRequests = useCallback(async () => {
     finally { setLoadingB(false); }
   }, []);
 
+  const fetchRefundRequests = useCallback(async () => {
+    setLoadingRefunds(true);
+    try {
+      const res = await axiosInstance.get("/bookings/refund-requests");
+      setRefundRequests(res.data.refundRequests ?? []);
+    } catch {
+      setRefundRequests([]);
+    } finally {
+      setLoadingRefunds(false);
+    }
+  }, []);
+
   const loadMoreBookings = async () => {
     if (loadingMoreBookings) return;
     setLoadingMoreBookings(true);
@@ -930,7 +1021,11 @@ const fetchRequests = useCallback(async () => {
     }
   };
 
-  useEffect(() => { fetchRequests(); fetchBookings(); }, [fetchRequests, fetchBookings]);
+  useEffect(() => {
+    fetchRequests();
+    fetchBookings();
+    fetchRefundRequests();
+  }, [fetchRequests, fetchBookings, fetchRefundRequests]);
 
   const now = useCurrentTime();
   const activeRequests = requests.filter(r => !r.isExpired && r.status !== "expired" && (!r.expiresAt || !now || new Date(r.expiresAt).getTime() > now));
@@ -1031,6 +1126,13 @@ const fetchRequests = useCallback(async () => {
           className={`${s.tab} ${tab === "bookings" ? s.tabActive : ""}`}
         >
           My Bookings
+        </button>
+        <button
+          onClick={() => setTab("refunds")}
+          aria-current={tab === "refunds" ? "true" : undefined}
+          className={`${s.tab} ${tab === "refunds" ? s.tabActive : ""}`}
+        >
+          🔄 Refund Requests {refundRequests.length > 0 && `(${refundRequests.length})`}
         </button>
         <button
           onClick={() => setTab("favourites")}
@@ -1151,7 +1253,21 @@ const fetchRequests = useCallback(async () => {
               <EmptyState icon="📅" title="No bookings yet" description="Accept a tutor offer from your requests to create a booking." />
             ) : (
               <>
-                {bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)}
+                {bookings.map((b) => {
+                  const req = refundRequests.find((r) =>
+                    typeof r.booking === "object" ? r.booking?._id === b._id : r.booking === b._id
+                  );
+                  return (
+                    <BookingCard
+                      key={b._id}
+                      booking={b}
+                      refundRequest={req}
+                      onClaimSubmitted={fetchBookings}
+                      onRequestRefund={() => setSelectedBookingForRefund(b)}
+                      onCancelBooking={() => setSelectedBookingForCancel(b)}
+                    />
+                  );
+                })}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                     <DashButton type="button" variant="secondary" onClick={loadMoreBookings} disabled={loadingMoreBookings}>
@@ -1160,6 +1276,81 @@ const fetchRequests = useCallback(async () => {
                   </div>
                 )}
               </>
+            )}
+          </section>
+        )}
+
+        {/* Tab: Refund Requests */}
+        {tab === "refunds" && (
+          <section aria-label="My refund requests">
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>Refund Requests</h2>
+            </div>
+
+            {loadingRefunds ? (
+              <div className={s.spinner} />
+            ) : refundRequests.length === 0 ? (
+              <EmptyState
+                icon="🔄"
+                title="No refund requests"
+                description="Eligible confirmed or paid bookings can be submitted for refund review directly from the My Bookings tab."
+                action={{ label: "View Bookings", onClick: () => setTab("bookings") }}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {refundRequests.map((rf) => {
+                  const bkg = typeof rf.booking === "object" ? rf.booking : null;
+                  const bkgId = bkg?._id || (typeof rf.booking === "string" ? rf.booking : "—");
+                  const currency = bkg?.currency || "PKR";
+                  const statusTone =
+                    rf.status === "approved" || rf.status === "processed"
+                      ? "success"
+                      : rf.status === "rejected"
+                      ? "danger"
+                      : "warning";
+                  return (
+                    <DashCard key={rf._id} padding="md">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <strong style={{ fontSize: "1rem", color: TEXT_COLORS.primary }}>
+                              {formatMoney(rf.amount, currency)}
+                            </strong>
+                            <StatusBadge tone={statusTone}>
+                              {rf.status === "pending" ? "Under Review" : rf.status}
+                            </StatusBadge>
+                          </div>
+                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: TEXT_COLORS.muted }}>
+                            Booking reference: <b>{bkgId}</b> · Tutor: {rf.tutor?.name || "Tutor"}
+                          </p>
+                        </div>
+                        <span style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted }}>
+                          Requested {timeAgo(rf.createdAt)}
+                        </span>
+                      </div>
+
+                      <div style={{ background: UI_COLORS.gray50, padding: "0.75rem 1rem", borderRadius: "0.5rem", fontSize: "0.8rem", marginBottom: "0.5rem" }}>
+                        <p style={{ margin: 0, color: TEXT_COLORS.primary }}>
+                          <span style={{ fontWeight: 700 }}>Reason: </span>
+                          {rf.reason.replace(/_/g, " ")}
+                        </p>
+                        {rf.details && (
+                          <p style={{ margin: "4px 0 0", color: TEXT_COLORS.secondary, fontStyle: "italic" }}>
+                            &ldquo;{rf.details}&rdquo;
+                          </p>
+                        )}
+                      </div>
+
+                      {rf.adminNote && (
+                        <div style={{ background: STATUS_COLORS.info.bg, border: `1px solid ${STATUS_COLORS.info.border}`, padding: "0.6rem 0.85rem", borderRadius: "0.5rem", fontSize: "0.78rem" }}>
+                          <strong style={{ color: STATUS_COLORS.info.color }}>Admin resolution note: </strong>
+                          <span style={{ color: TEXT_COLORS.secondary }}>{rf.adminNote}</span>
+                        </div>
+                      )}
+                    </DashCard>
+                  );
+                })}
+              </div>
             )}
           </section>
         )}
@@ -1197,6 +1388,31 @@ const fetchRequests = useCallback(async () => {
         <PostRequestModal
           onClose={() => setShowModal(false)}
           onSuccess={fetchRequests}
+        />
+      )}
+
+      {selectedBookingForRefund && (
+        <RefundRequestModal
+          booking={selectedBookingForRefund}
+          onClose={() => setSelectedBookingForRefund(null)}
+          onSuccess={() => {
+            fetchRefundRequests();
+            fetchBookings();
+          }}
+        />
+      )}
+
+      {selectedBookingForCancel && (
+        <CancelBookingModal
+          bookingId={selectedBookingForCancel._id}
+          bookingTitle={typeof selectedBookingForCancel.request === "object" ? selectedBookingForCancel.request.subject : "Tutoring Session"}
+          userRole="student"
+          isPaid={selectedBookingForCancel.paymentStatus === "confirmed" || selectedBookingForCancel.paymentStatus === "received"}
+          onClose={() => setSelectedBookingForCancel(null)}
+          onSuccess={() => {
+            fetchBookings();
+            fetchRefundRequests();
+          }}
         />
       )}
     </>

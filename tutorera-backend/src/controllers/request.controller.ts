@@ -313,7 +313,7 @@ export const getMyRequests = async (req: AuthRequest, res: Response): Promise<vo
         ["open", "published", "receiving_offers"].includes(obj.status) &&
         Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() > now) &&
         (obj.extensionCount || 0) < (obj.maxExtensions || MAX_REQUEST_EXTENSIONS);
-      const canRepost = obj.status === "expired" || obj.status === "cancelled" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
+      const canRepost = obj.status === "expired" || obj.status === "cancelled" || obj.status === "closed" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
       const secondsRemaining = obj.expiresAt ? Math.max(0, Math.floor((new Date(obj.expiresAt).getTime() - now) / 1000)) : 0;
       return {
         ...obj,
@@ -337,14 +337,20 @@ export const cancelRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(404).json({ success: false, message: "Request not found" });
     return;
   }
+  if (!["draft", "open", "published", "receiving_offers", "negotiating"].includes(request.status)) {
+    res.status(409).json({ success: false, message: "This request can no longer be cancelled in its current state." });
+    return;
+  }
   request.status = "cancelled";
   await request.save();
+  await Bid.updateMany({ request: request._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } }, { $set: { status: "not_selected" } });
   await classifyRequestLoss({
     requestId: request._id,
     explicitReason: "student_cancelled",
     detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
     signals: { source: "student_cancel_request" },
   });
+  await logAudit({ action: "tuition_request_cancelled_by_student", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request.id, metadata: { reason: req.body?.reason } });
   res.status(200).json({ success: true, message: "Request cancelled" });
 };
 
@@ -1447,6 +1453,10 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(404).json({ success: false, message: "Original request not found." });
     return;
   }
+  if (!["expired", "cancelled", "closed"].includes(oldRequest.status) && !(oldRequest.expiresAt && oldRequest.expiresAt <= new Date())) {
+    res.status(409).json({ success: false, message: "Only expired, cancelled, or closed requests can be reposted." });
+    return;
+  }
 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MARKETPLACE_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
@@ -1533,7 +1543,7 @@ export const closeRequest = async (req: AuthRequest, res: Response): Promise<voi
     return;
   }
 
-  request.status = "cancelled";
+  request.status = "closed";
   await request.save();
   await classifyRequestLoss({
     requestId: request._id,

@@ -56,6 +56,17 @@ export interface ITutorProfile extends Document {
     slots: string[];
   }[];
 
+  payoutAccount?: {
+    method: "bank_transfer" | "raast" | "easypaisa" | "jazzcash" | "other";
+    accountTitle: string;
+    accountNumber: string;
+    bankName?: string;
+    branchCode?: string;
+    swiftCode?: string;
+    routingNumber?: string;
+    notes?: string;
+  };
+
   // Step 5 — Verification
   cnicFront: string;
   cnicFrontPublicId: string;
@@ -207,6 +218,22 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     identityDocumentType: { type: String, trim: true, default: "identity_document" },
     identityDocumentSubtype: { type: String, trim: true, select: false },
     safetyVerificationType: { type: String, trim: true, default: "background_safety_verification" },
+
+    // Payout Destination
+    payoutAccount: {
+      method: {
+        type: String,
+        enum: ["bank_transfer", "raast", "easypaisa", "jazzcash", "other"],
+        default: "bank_transfer",
+      },
+      accountTitle: { type: String, default: "" },
+      accountNumber: { type: String, default: "" },
+      bankName: { type: String, default: "" },
+      branchCode: { type: String, default: "" },
+      swiftCode: { type: String, default: "" },
+      routingNumber: { type: String, default: "" },
+      notes: { type: String, default: "" },
+    },
 
     // Status
     onboardingStep: { type: Number, default: 1 },

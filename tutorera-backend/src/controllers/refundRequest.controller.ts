@@ -36,8 +36,8 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
 
   const booking = await Booking.findOne({
     _id: bookingId,
-    student: req.user?._id,
-    paymentStatus: "confirmed",
+    $or: [{ student: req.user?._id }, { parent: req.user?._id }],
+    paymentStatus: { $in: ["confirmed", "received"] },
   }).populate<{ tutor: { _id: string; name: string; email: string } }>("tutor", "name email");
 
   if (!booking) {
@@ -56,7 +56,8 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
   const refundDisplayAmount = formatAmount(refundAmount, booking.currency);
 
   const refundReq = await RefundRequest.create({
-    student: req.user?._id,
+    student: booking.student,
+    parent: booking.parent || (req.user?.role === "parent" ? req.user?._id : undefined),
     booking: new Types.ObjectId(bookingId),
     tutor: tutor._id,
     amount: refundAmount,
@@ -115,7 +116,9 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
 };
 
 export const getMyRefundRequests = async (req: AuthRequest, res: Response): Promise<void> => {
-  const requests = await RefundRequest.find({ student: req.user?._id })
+  const requests = await RefundRequest.find({
+    $or: [{ student: req.user?._id }, { parent: req.user?._id }],
+  })
     .populate("booking", "schedule teachingMode amount studentTotal currency createdAt")
     .populate("tutor", "name")
     .sort("-createdAt");

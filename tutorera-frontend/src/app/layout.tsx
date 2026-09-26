@@ -193,7 +193,7 @@ export default function RootLayout({
   };
 
   return (
-     <html lang="en">
+     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="google-adsense-account" content="ca-pub-2559940686225219" />
         <script
@@ -235,7 +235,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <SkipLink />
         {/* Google Tag Manager (noscript) */}
         <noscript>

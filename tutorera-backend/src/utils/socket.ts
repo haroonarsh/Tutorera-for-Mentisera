@@ -30,9 +30,9 @@ export const initSocket = (httpServer: HttpServer): Server => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
 
-      const user = await User.findById(decoded.id).select("isActive role");
+      const user = await User.findById(decoded.id).select("isActive isDeleted moderationStatus suspendedUntil role");
       if (!user) return next(new Error("User no longer exists"));
-      if (!user.isActive) return next(new Error("Account is deactivated"));
+      if (!user.isActive || user.isDeleted || user.moderationStatus === "banned" || user.moderationStatus === "deleted" || (user.moderationStatus === "suspended" && (!user.suspendedUntil || user.suspendedUntil > new Date()))) return next(new Error("Account access is restricted"));
 
       socket.data.userId = decoded.id;
       socket.data.role = user.role;

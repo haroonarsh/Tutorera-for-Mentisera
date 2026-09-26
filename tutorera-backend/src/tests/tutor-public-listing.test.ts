@@ -12,7 +12,7 @@ describe("GET /tutors (public listing field projection)", () => {
   it("includes bio, experience, videoIntro, and granular verification statuses", async () => {
     const user = await User.create({
       name: "Amina Verified",
-      email: "amina-verified@test.com",
+      email: "amina-verified@tutorera-sample.net",
       password: "password123",
       role: "tutor",
     });
@@ -20,6 +20,8 @@ describe("GET /tutors (public listing field projection)", () => {
     await TutorProfile.create({
       user: user._id,
       fullName: "Amina Verified",
+      isVerified: true,
+      verificationStatus: "approved",
       bio: "Ten years teaching O-Level Physics.",
       experience: 10,
       subjects: ["Physics"],
