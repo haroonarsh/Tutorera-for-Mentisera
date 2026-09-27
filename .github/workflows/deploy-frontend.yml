@@ -8,6 +8,11 @@ on:
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  SLACK_WEBHOOK_DEPLOY: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -35,7 +40,7 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.CLOUDFLARE_API_TOKEN != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: tutorera-frontend
@@ -50,13 +55,16 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
+        if: env.CLOUDFLARE_API_TOKEN != ''
         run: npm install --ignore-scripts
 
       - name: Build with OpenNextJS
+        if: env.CLOUDFLARE_API_TOKEN != ''
         run: npm run build
 
       - name: Deploy to Cloudflare
         id: deploy
+        if: env.CLOUDFLARE_API_TOKEN != ''
         run: |
           npm run deploy
         env:
@@ -65,6 +73,7 @@ jobs:
           WRANGLER_SEND_METRICS: false
 
       - name: Health check
+        if: env.CLOUDFLARE_API_TOKEN != ''
         run: |
           FRONTEND_URL="https://tutorera.ac.pk"
           for i in {1..30}; do
@@ -79,7 +88,7 @@ jobs:
           echo "⚠️ Frontend deployment completed (health check timed out)"
 
       - name: Slack notification - Success
-        if: success()
+        if: success() && env.SLACK_WEBHOOK_DEPLOY != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
@@ -98,7 +107,7 @@ jobs:
             }
 
       - name: Slack notification - Failure
-        if: failure()
+        if: failure() && env.SLACK_WEBHOOK_DEPLOY != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}

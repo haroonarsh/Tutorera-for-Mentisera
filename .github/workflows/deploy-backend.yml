@@ -11,6 +11,7 @@ on:
 env:
   RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
   RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+  SLACK_WEBHOOK_DEPLOY: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
 
 jobs:
   build-and-test:
@@ -44,7 +45,7 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.RENDER_SERVICE_ID != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +53,7 @@ jobs:
           fetch-depth: 0
 
       - name: Deploy to Render
+        if: env.RENDER_SERVICE_ID != ''
         run: |
           curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
@@ -60,29 +62,24 @@ jobs:
               "gitCommitSha": "${{ github.sha }}"
             }'
 
-      - name: Wait for deployment
+      - name: Health check
+        if: env.RENDER_SERVICE_ID != ''
         run: |
-          for i in {1..60}; do
-            DEPLOY_STATUS=$(curl -s https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }} \
-              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" | jq -r '.service.deploy.status // "unknown"')
-
-            echo "Deployment status: $DEPLOY_STATUS"
-
-            if [ "$DEPLOY_STATUS" = "live" ]; then
-              echo "✅ Deployment successful!"
+          BACKEND_URL="https://api.tutorera.ac.pk/health"
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend is live at $BACKEND_URL"
               exit 0
-            elif [ "$DEPLOY_STATUS" = "build_failed" ] || [ "$DEPLOY_STATUS" = "deploy_failed" ]; then
-              echo "❌ Deployment failed!"
-              exit 1
             fi
-
-            sleep 10
+            echo "Attempt $i: Status $STATUS, retrying..."
+            sleep 20
           done
           echo "⏱️ Deployment timed out after 10 minutes"
           exit 1
 
       - name: Slack notification - Success
-        if: success()
+        if: success() && env.SLACK_WEBHOOK_DEPLOY != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
@@ -101,13 +98,13 @@ jobs:
             }
 
       - name: Slack notification - Failure
-        if: failure()
+        if: failure() && env.SLACK_WEBHOOK_DEPLOY != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
           payload: |
             {
-              "text": "❌ Backend deployment to Render failed",
+              "text": "❌ Backend deployed to Render failed",
               "blocks": [
                 {
                   "type": "section",
