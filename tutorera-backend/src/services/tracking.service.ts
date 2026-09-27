@@ -355,7 +355,7 @@ export function computeCanonicalStatus(profile: ITutorProfile): CanonicalStatus 
 
   // NON-NEGOTIABLE: If application cleared admin approval, but agreement has not yet been accepted,
   // the canonical status MUST be APPROVED_PENDING_AGREEMENT.
-  if (profile.verificationStatus === "approved" && !agreementSigned) {
+  if ((profile.verificationStatus === "approved" || profile.tutorStatus === "approved_pending_agreement") && !agreementSigned) {
     return "APPROVED_PENDING_AGREEMENT";
   }
 
@@ -548,6 +548,28 @@ export async function buildAuthenticatedTrackingPayload(
     user.trackingTokenCreatedAt = new Date();
     await user.save();
     opts.includePlainToken = t.plaintext;
+  }
+
+  // Self-heal: If an admin approved the profile or all core marketplace documents are verified,
+  // ensure the profile is marked approved_pending_agreement until the legal agreement is signed.
+  const coreDocsApproved =
+    profile.cnicVerificationStatus === "approved" &&
+    profile.degreeVerificationStatus === "approved" &&
+    profile.demoVideoStatus === "approved" &&
+    !profile.suspendedAt &&
+    !profile.reVerificationRequired;
+
+  const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
+
+  if ((coreDocsApproved || profile.verificationStatus === "approved") && !agreementSigned) {
+    if (profile.verificationStatus !== "approved" || profile.tutorStatus !== "approved_pending_agreement") {
+      profile.verificationStatus = "approved";
+      profile.isVerified = true;
+      profile.tutorStatus = "approved_pending_agreement";
+      profile.agreementAcceptanceRequired = true;
+      profile.marketplaceEligible = false;
+      await profile.save({ validateBeforeSave: false });
+    }
   }
 
   const canonicalStatus = computeCanonicalStatus(profile);

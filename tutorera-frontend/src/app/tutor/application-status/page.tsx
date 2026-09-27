@@ -108,6 +108,46 @@ export default function TutorApplicationStatusPage() {
           submittedAt={payload.submittedAt}
         />
 
+        {(payload.canonicalStatus === "APPROVED_PENDING_AGREEMENT" || payload.canonicalStatus === "AGREEMENT_PENDING" || payload.canonicalStatus === "AGREEMENT_REACCEPTANCE_REQUIRED") && (
+          <div style={{
+            background: "linear-gradient(135deg, #0284C7 0%, #0369A1 100%)",
+            borderRadius: 16,
+            padding: "24px 28px",
+            color: "#FFFFFF",
+            marginBottom: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.25)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 24 }}>🎉</span>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: "#fff" }}>Application Approved by Admin!</h2>
+            </div>
+            <p style={{ margin: 0, fontSize: 14, color: "#E0F2FE", lineHeight: 1.6 }}>
+              Congratulations! All your submitted credentials and documents have been reviewed and approved. To activate your profile on the TUTORERA marketplace and start receiving students, please review and electronically sign your Tutor Marketplace Agreement.
+            </p>
+            <div style={{ marginTop: 8 }}>
+              <Link
+                href="/tutor/accept-agreement"
+                style={{
+                  display: "inline-block",
+                  background: "#FFFFFF",
+                  color: "#0369A1",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  padding: "10px 22px",
+                  borderRadius: 999,
+                  textDecoration: "none",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                }}
+              >
+                Review &amp; Sign Agreement Now →
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Rejection alert — shown when any component is rejected */}
         {payload.verificationComponents && (
           (() => {

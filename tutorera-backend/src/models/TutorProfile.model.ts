@@ -407,14 +407,15 @@ tutorProfileSchema.pre("save", function () {
   // completed onboarding before the mandatory-photo requirement existed -
   // only require approval here once a photo has actually been submitted,
   // so existing verified tutors are never retroactively downgraded.
-  const allApproved =
-    p.cnicVerificationStatus === "approved" &&
-    p.degreeVerificationStatus === "approved" &&
-    p.demoVideoStatus === "approved" &&
-    (!policeIsRequired(p) || p.policeVerificationStatus === "approved") &&
-    (p.avatarVerificationStatus === "not_submitted" || p.avatarVerificationStatus === "approved");
+  // Core marketplace documents: CNIC, Degree, and Demo Video are the mandatory
+  // credentials for marketplace approval. Police clearance only gates home tuition.
+  const coreApproved =
+    (p.cnicVerificationStatus === "approved" &&
+      p.degreeVerificationStatus === "approved" &&
+      p.demoVideoStatus === "approved") ||
+    p.verificationStatus === "approved";
 
-  if (allApproved) {
+  if (coreApproved) {
     p.verificationStatus = "approved";
     p.isVerified = true;
     if (p.suspendedAt) {
@@ -432,7 +433,7 @@ tutorProfileSchema.pre("save", function () {
     } else if (p.tutorStatus !== "suspended" && p.tutorStatus !== "reverification_required") {
       p.tutorStatus = "active";
     }
-  } else if (p.verificationStatus !== "rejected") {
+  } else if (p.verificationStatus !== "rejected" && p.verificationStatus !== "approved") {
     p.verificationStatus = "pending";
     p.isVerified = false;
     p.marketplaceEligible = false;

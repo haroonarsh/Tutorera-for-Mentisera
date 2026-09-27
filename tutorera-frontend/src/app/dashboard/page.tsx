@@ -88,7 +88,66 @@ function LoadingScreen() {
 
 // ─── Pending approval screen ──────────────────────────────────────────────────
 
-function PendingApprovalScreen() {
+function PendingApprovalScreen({ canonicalStatus }: { canonicalStatus?: string | null }) {
+  const isAgreementPending =
+    canonicalStatus === "APPROVED_PENDING_AGREEMENT" ||
+    canonicalStatus === "AGREEMENT_PENDING" ||
+    canonicalStatus === "AGREEMENT_REACCEPTANCE_REQUIRED";
+
+  if (isAgreementPending) {
+    return (
+      <GateScreen
+        icon="🎉"
+        iconTone="info"
+        title="Application Approved — Agreement Pending"
+        actions={<>
+          <DashButton variant="primary" href="/tutor/accept-agreement">📝 Review & Sign Agreement Now →</DashButton>
+          <DashButton variant="secondary" href="/tutor/application-status">🔍 View Application Status</DashButton>
+        </>}
+      >
+        <p style={{ color: TEXT_COLORS.muted, fontSize: "0.95rem", lineHeight: 1.7, marginBottom: "2rem" }}>
+          Congratulations! Your tutor application credentials and documents have been verified and approved by the TUTORERA team.
+          To complete your activation and begin matching with students on the marketplace, please review and electronically sign your Tutor Marketplace Agreement.
+        </p>
+
+        {/* Steps */}
+        <div style={{ backgroundColor: C.gray50, borderRadius: "0.75rem", padding: "1.25rem", marginBottom: "2rem", textAlign: "left" }}>
+          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: TEXT_COLORS.primary, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Activation Checklist</p>
+          {[
+            { icon: "✅", text: "Profile submitted successfully", done: true },
+            { icon: "✅", text: "Admin reviewed and approved documents", done: true },
+            { icon: "📝", text: "Review & sign Tutor Agreement", active: true },
+            { icon: "🚀", text: "Marketplace activation & student matching", pending: true },
+          ].map((step, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0", borderBottom: i < 3 ? `1px solid ${C.border}` : "none" }}>
+              <span style={{ fontSize: "1rem", flexShrink: 0 }}>{step.icon}</span>
+              <span style={{ fontSize: "0.85rem", color: step.active ? TEXT_COLORS.primary : step.done ? TEXT_COLORS.success : TEXT_COLORS.muted, fontWeight: step.active ? 700 : step.done ? 600 : 400 }}>
+                {step.text}
+              </span>
+              {step.active && (
+                <span style={{ marginLeft: "auto", backgroundColor: STATUS_COLORS.info.bg, color: STATUS_COLORS.info.color, fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "999px", flexShrink: 0 }}>
+                  Action Required
+                </span>
+              )}
+              {step.done && (
+                <span style={{ marginLeft: "auto", backgroundColor: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "999px", flexShrink: 0 }}>
+                  Completed
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: "0.8rem", color: TEXT_COLORS.muted }}>
+          Questions? Contact us at{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: C.accent, fontWeight: 600 }}>
+            {SUPPORT_EMAIL}
+          </a>
+        </p>
+      </GateScreen>
+    );
+  }
+
   return (
     <GateScreen
       icon="⏳"
@@ -193,6 +252,7 @@ export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
+  const [canonicalStatus, setCanonicalStatus] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>("");
   const [checkingStatus, setCheckingStatus] = useState(true);
 
@@ -222,8 +282,25 @@ export default function DashboardPage() {
         const res = await api.get("/tracking/application-status");
         const payload = res.data?.payload;
         const eligible = payload?.marketplaceEligibility?.eligible;
-        const canonicalStatus = payload?.canonicalStatus;
-        setVerificationStatus(eligible ? "approved" : (canonicalStatus === "REJECTED" || canonicalStatus === "SUSPENDED" || canonicalStatus === "ACTION_REQUIRED" ? "rejected" : "pending"));
+        const currentCanonicalStatus = payload?.canonicalStatus;
+        setCanonicalStatus(currentCanonicalStatus || null);
+        const isAgreementPending =
+          currentCanonicalStatus === "APPROVED_PENDING_AGREEMENT" ||
+          currentCanonicalStatus === "AGREEMENT_PENDING" ||
+          currentCanonicalStatus === "AGREEMENT_REACCEPTANCE_REQUIRED";
+
+        if (eligible || isAgreementPending) {
+          setVerificationStatus("approved");
+        } else if (
+          currentCanonicalStatus === "REJECTED" ||
+          currentCanonicalStatus === "SUSPENDED" ||
+          currentCanonicalStatus === "ACTION_REQUIRED" ||
+          currentCanonicalStatus === "RE_VERIFICATION_REQUIRED"
+        ) {
+          setVerificationStatus("rejected");
+        } else {
+          setVerificationStatus("pending");
+        }
         setRejectionReason(payload?.marketplaceEligibility?.reasonIfBlocked || payload?.actionRequired?.body || "");
       } catch (err: any) {
         if (err.response?.status === 404) {
@@ -248,7 +325,7 @@ export default function DashboardPage() {
    // Tutor-specific verification gates
    if (user.role === "tutor") {
      if (verificationStatus === "pending") {
-       return <PendingApprovalScreen />;
+       return <PendingApprovalScreen canonicalStatus={canonicalStatus} />;
      }
      if (verificationStatus === "rejected") {
        return <RejectedScreen reason={rejectionReason} />;
