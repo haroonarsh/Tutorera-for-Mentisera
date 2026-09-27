@@ -14,6 +14,7 @@ import {
   seedDefaultLegalAgreements,
 } from "../services/legalAgreement.service";
 import { generateContractPdf } from "../services/contractPdf.service";
+import { generateToken } from "../utils/generateToken";
 
 describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
   let publishedAgreement: any;
@@ -238,19 +239,17 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
     let tutorProfileId: string;
 
     beforeEach(async () => {
-      const email = `e2e-tutor-${Date.now()}@tutorera-test.pk`;
-      const regRes = await request(app)
-        .post("/api/v1/auth/register")
-        .send({
-          name: "Muhammad Haroon",
-          email,
-          password: "SecurePassword123!",
-          role: "tutor",
-          countryCode: "PK",
-        });
+      const email = `e2e-tutor-${Date.now()}-${Math.random()}@tutorera-test.pk`;
+      const user = await User.create({
+        name: "Muhammad Haroon",
+        email,
+        password: "SecurePassword123!",
+        role: "tutor",
+        countryCode: "PK",
+      });
 
-      tutorToken = regRes.body.token;
-      tutorUserId = regRes.body.user.id || regRes.body.user._id;
+      tutorToken = generateToken(user._id.toString(), user.role);
+      tutorUserId = user._id.toString();
 
       const profile = await TutorProfile.create({
         user: tutorUserId,
@@ -450,16 +449,15 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
 
       const acceptanceId = acceptRes.body.acceptanceId;
 
-      // Register an attacker tutor
-      const otherRes = await request(app)
-        .post("/api/v1/auth/register")
-        .send({
-          name: "Attacker Tutor",
-          email: `attacker-${Date.now()}@test.pk`,
-          password: "Password123!",
-          role: "tutor",
-        });
-      const otherToken = otherRes.body.token;
+      // Create an attacker tutor
+      const otherUser = await User.create({
+        name: "Attacker Tutor",
+        email: `attacker-${Date.now()}-${Math.random()}@test.pk`,
+        password: "Password123!",
+        role: "tutor",
+        countryCode: "PK",
+      });
+      const otherToken = generateToken(otherUser._id.toString(), otherUser.role);
 
       // Attacker attempts to download victim's contract PDF
       const idorRes = await request(app)

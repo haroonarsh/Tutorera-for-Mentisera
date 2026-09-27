@@ -35,7 +35,13 @@ describe("liquidity scoring contracts", () => {
     // the four individual component statuses - setting it directly without
     // also approving cnic/degree/demoVideo gets silently overwritten back to
     // "pending" on save, so approve those too to get a real "approved" tutor.
-    const approvedComponents = { cnicVerificationStatus: "approved" as const, degreeVerificationStatus: "approved" as const, demoVideoStatus: "approved" as const };
+    const approvedComponents = {
+      cnicVerificationStatus: "approved" as const,
+      degreeVerificationStatus: "approved" as const,
+      demoVideoStatus: "approved" as const,
+      agreementAcceptedAt: new Date(),
+      agreementVersion: "TTA-2026.1",
+    };
     await TutorProfile.create([
       { user: mathTutor._id, fullName: mathTutor.name, countryCode: "PK", city: "Lahore", subjects: ["Mathematics"], teachingMode: "online", ...approvedComponents, marketplaceEligible: true },
       { user: physicsTutor._id, fullName: physicsTutor.name, countryCode: "PK", city: "Lahore", subjects: ["Physics"], teachingMode: "online", ...approvedComponents, marketplaceEligible: true },
@@ -55,8 +61,8 @@ describe("liquidity scoring contracts", () => {
 
     const scores = await getAllLiquidityScores("PK");
     expect(Object.keys(scores).sort()).toEqual([
-      "Karachi|Physics|in-person",
-      "Lahore|Mathematics|online",
+      "PK|PKR|Karachi|Physics|in-person",
+      "PK|PKR|Lahore|Mathematics|online",
     ]);
   });
 });
