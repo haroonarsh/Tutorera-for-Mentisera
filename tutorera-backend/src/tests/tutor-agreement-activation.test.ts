@@ -19,6 +19,10 @@ import { generateToken } from "../utils/generateToken";
 describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
   let publishedAgreement: any;
 
+  beforeAll(() => {
+    process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret-key-at-least-32-chars-long";
+  });
+
   beforeEach(async () => {
     publishedAgreement = await seedDefaultLegalAgreements();
   });

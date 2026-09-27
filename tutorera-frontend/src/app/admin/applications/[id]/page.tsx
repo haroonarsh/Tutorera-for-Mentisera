@@ -100,8 +100,6 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
   const [reasonFor, setReasonFor] = useState<string>("");
   const [documentReasons, setDocumentReasons] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string>("");
-  const [agreementCompliance, setAgreementCompliance] = useState<any>(null);
-  const [downloadingContractPdf, setDownloadingContractPdf] = useState<boolean>(false);
 
   // The filters/page an admin was browsing on the list page, carried through
   // the URL so Prev/Next can step through the SAME filtered queue instead of

@@ -3,6 +3,11 @@ import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
+// Ensure critical test environment variables are always defined across all test suites
+process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret-key-at-least-32-chars-long";
+process.env.JWT_EXPIRE = process.env.JWT_EXPIRE || "7d";
+process.env.NODE_ENV = "test";
+
 // acceptBid() uses a real MongoDB session/transaction (session.withTransaction),
 // and transactions only work against a replica set — a single standalone
 // in-memory MongoDB instance will reject them. MongoMemoryReplSet spins up a

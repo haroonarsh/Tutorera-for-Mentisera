@@ -7,16 +7,10 @@ import { formatDateLong } from "@/lib/site";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import {
   Scale,
-  ShieldCheck,
-  FileText,
   Download,
-  CheckCircle2,
-  Clock,
   Search,
   Plus,
-  AlertTriangle,
   Eye,
-  Building2,
 } from "lucide-react";
 
 interface AgreementItem {
