@@ -123,13 +123,55 @@ function OffersContent() {
 
   useEffect(() => {
     const payment = searchParams.get("payment");
+    const offerId = searchParams.get("offer");
     if (!payment) return;
-    if (payment === "success") {
+
+    if (payment === "success" && offerId) {
+      // Swich's Payment Session has no push webhook — the booking is only
+      // finalized once THIS confirm call succeeds, so this replaces the old
+      // "show a toast and hope the webhook already fired" behavior. See
+      // payment.controller.ts's confirmSwichPayment / paymentProvider.service.ts's
+      // confirmCheckout.
       showSuccess("Payment received! Confirming your booking now — this can take a few seconds.");
-      load();
-      const retry = setTimeout(load, 3000);
       router.replace("/offers");
-      return () => clearTimeout(retry);
+
+      const basketId = `BID-${offerId}`;
+      let cancelled = false;
+      let attempt = 0;
+
+      const poll = async () => {
+        if (cancelled) return;
+        attempt += 1;
+        try {
+          const res = await api.post("/payments/swich/confirm", { basketId });
+          if (res.data?.confirmed) {
+            showSuccess("Booking confirmed!");
+            load();
+            return;
+          }
+          // sessionStatus "Pending" means Swich hasn't settled the payment
+          // yet (e.g. bank transfer can take longer than card) — keep
+          // checking a few more times before giving up and telling the
+          // student to check back later rather than polling forever.
+          if (res.data?.sessionStatus === "Pending" && attempt < 6 && !cancelled) {
+            setTimeout(poll, 3000);
+          } else if (res.data?.sessionStatus && res.data.sessionStatus !== "Pending") {
+            // Failed / Expired / Cancelled — nothing more to wait for.
+            showError(new Error(res.data.sessionStatus), "Payment was not completed. You can try accepting the offer again.");
+            load();
+          }
+        } catch (e) {
+          if (attempt < 3 && !cancelled) {
+            setTimeout(poll, 3000);
+          } else {
+            showError(e, "We couldn't confirm your payment automatically. If money was deducted, contact support with your offer reference.");
+            load();
+          }
+        }
+      };
+
+      poll();
+      return () => { cancelled = true; };
     } else if (payment === "failed") {
       showError(new Error("Payment failed"), "Payment failed or was cancelled. You can try accepting the offer again.");
       router.replace("/offers");

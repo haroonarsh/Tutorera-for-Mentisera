@@ -135,10 +135,12 @@ export const renewOffer = async (req: AuthRequest, res: Response): Promise<void>
   await logAudit({ action: "offer_renewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: offer.id, metadata: { renewalCount: offer.renewalCount } }); res.json({ success: true, message: "Offer renewed for 24 hours.", offer });
 };
 
-// @desc    Accept an offer — reserves it and starts a Rapid Gateway checkout.
+// @desc    Accept an offer — reserves it and starts a Swich payment session.
 //          The booking is NOT created here anymore; it's created by
 //          finalizeBidAcceptance (request.controller.ts) once payment is
-//          confirmed via webhook. This is the REAL accept path the live
+//          confirmed via confirmSwichPayment (payments/swich/confirm),
+//          which the frontend calls when the customer returns to
+//          successUrl/failureUrl. This is the REAL accept path the live
 //          "Accept" button on the Offers page calls.
 export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void> => {
   const offerId = new Types.ObjectId(req.params.id as string);
@@ -263,9 +265,11 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         currency: offer.currency || request.currency || "PKR",
         customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
-        // Same "BID-" prefix the webhook handler already branches on —
+        // "BID-" prefix — confirmSwichPayment (payment.controller.ts)
+        // branches on this same prefix to tell an accept-offer checkout
+        // apart from an existing-booking checkout (createBookingCheckout).
         // Offer and Bid are the same collection, so this is fully
-        // compatible with the existing payment.controller.ts webhook logic.
+        // compatible with that logic.
         basketId: `BID-${offer._id.toString()}`,
         bidId: offer._id.toString(),
         studentId: request.student.toString(),
@@ -308,7 +312,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         return;
       }
 
-      console.error("Failed to create Rapid Gateway checkout for offer acceptance:", err);
+      console.error("Failed to create Swich checkout for offer acceptance:", err);
       res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
     }
   } catch (error: any) {
@@ -396,7 +400,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
     res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });
   } catch (err: any) {
-    console.error("Failed to create retry checkout:", err);
+    console.error("Failed to create Swich retry checkout:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
   }
 };

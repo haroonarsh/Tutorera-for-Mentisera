@@ -67,7 +67,7 @@ There is no payment Cloudflare Worker and no direct database write path outside 
 | POST | /api/v1/requests | Create tuition request |
 | POST | /api/v1/requests/:id/bids | Place bid |
 | GET | /api/v1/bookings | Get my bookings |
-| POST | /api/v1/payments/booking/:bookingId/checkout | Create Rapid Gateway checkout |
+| POST | /api/v1/payments/booking/:bookingId/checkout | Create Swich checkout |
 | POST | /api/v1/payments/webhook | Receive signed Rapid Gateway webhook |
 | GET | /api/v1/payments/history | Get payment history |
 | POST | /api/v1/reviews/:tutorId | Create review |

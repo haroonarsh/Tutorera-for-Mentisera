@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
-import { rapidpayProvider } from "./rapidpayProvider.service";
+import { swichProvider } from "./swichProvider.service";
 
-export type PaymentProviderName = "rapidpay";
+export type PaymentProviderName = "swich";
 export type LedgerProviderName = PaymentProviderName | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
@@ -30,21 +30,11 @@ export interface CheckoutParams {
   metadata?: Record<string, unknown>;
 }
 
-export interface ProviderWebhookEvent {
-  provider: PaymentProviderName;
-  eventId: string;
-  eventType: string;
-  merchantTransactionId: string;
-  status: string;
-  amount: number;
-  currency: string;
-}
-
 export const paymentProvider = {
-  name: "rapidpay" as PaymentProviderName,
+  name: "swich" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
-    const checkoutUrl = await rapidpayProvider.createCheckout({
+    const { checkoutUrl, paymentSessionGuid } = await swichProvider.createCheckout({
       amount: params.amount,
       currency: params.currency,
       reference: params.basketId,
@@ -62,6 +52,11 @@ export const paymentProvider = {
       }
     });
 
+    // paymentSessionGuid is stored here, in the ledger's metadata, because
+    // it's the only durable record that exists at checkout-creation time —
+    // no Booking exists yet for the BID- flow, and this ledger row is
+    // looked up again later (by basketId/providerTransactionId) from the
+    // new confirm-payment endpoint to retrieve it for the status-check call.
     await recordPaymentLedger({
       providerTransactionId: params.basketId,
       eventType: "checkout.created",
@@ -73,30 +68,33 @@ export const paymentProvider = {
       studentId: params.studentId,
       tutorId: params.tutorId,
       feeSnapshot: params.feeSnapshot,
-      metadata: { checkoutUrl, ...(params.metadata || {}) },
+      metadata: { checkoutUrl, paymentSessionGuid, ...(params.metadata || {}) },
     });
 
     return checkoutUrl;
   },
 
-  verifyWebhookSignature: rapidpayProvider.verifyWebhookSignature,
+  /**
+   * Pull-based confirmation — Swich's Payment Session product has no
+   * documented push webhook (unlike the Rapid Gateway integration this
+   * replaced), so this is called from a dedicated confirm endpoint hit on
+   * the frontend's successURL/failedURL return, not from a webhook route.
+   */
+  async confirmCheckout(basketId: string): Promise<{ confirmed: boolean; sessionStatus: string; amount: number; currency: string }> {
+    const ledgerEntry = await PaymentLedger.findOne({ providerTransactionId: basketId, eventType: "checkout.created" }).sort("-createdAt");
+    const paymentSessionGuid = (ledgerEntry?.metadata as any)?.paymentSessionGuid;
+    if (!paymentSessionGuid) {
+      const error = new Error("No payment session found for this transaction") as Error & { statusCode?: number };
+      error.statusCode = 404;
+      throw error;
+    }
 
-  normalizeWebhook(body: {
-    eventId: string;
-    eventType: string;
-    merchantTransactionId: string;
-    status: string;
-    amount: number;
-    currency?: string;
-  }): ProviderWebhookEvent {
+    const session = await swichProvider.getPaymentSessionStatus(paymentSessionGuid);
     return {
-      provider: "rapidpay",
-      eventId: body.eventId,
-      eventType: body.eventType,
-      merchantTransactionId: body.merchantTransactionId,
-      status: body.status,
-      amount: body.amount,
-      currency: body.currency || "PKR",
+      confirmed: session.sessionStatus === "Success",
+      sessionStatus: session.sessionStatus,
+      amount: session.amount,
+      currency: session.currency,
     };
   },
 };
@@ -134,6 +132,7 @@ export async function recordPaymentLedger(args: {
   const provider = args.provider || paymentProvider.name;
   const settlementStatus = args.settlementStatus || (args.status === "succeeded" ? "expected" : "unsettled");
   const gatewayFee = accounting.gatewayFee || 0;
+
   const doc = {
     provider,
     ...(args.providerEventId && { providerEventId: args.providerEventId }),
@@ -152,20 +151,20 @@ export async function recordPaymentLedger(args: {
     platformNet: accounting.platformFee - gatewayFee,
     settlementStatus,
     feeSnapshot: snapshot || {},
-    booking: args.bookingId ? new Types.ObjectId(args.bookingId) : undefined,
-    bid: args.bidId ? new Types.ObjectId(args.bidId) : undefined,
-    student: args.studentId ? new Types.ObjectId(args.studentId) : undefined,
-    tutor: args.tutorId ? new Types.ObjectId(args.tutorId) : undefined,
+    ...(args.bookingId && { booking: new Types.ObjectId(args.bookingId) }),
+    ...(args.bidId && { bid: new Types.ObjectId(args.bidId) }),
+    ...(args.studentId && { student: new Types.ObjectId(args.studentId) }),
+    ...(args.tutorId && { tutor: new Types.ObjectId(args.tutorId) }),
     metadata: args.metadata || {},
   };
 
-  if (args.providerEventId) {
-    return PaymentLedger.findOneAndUpdate(
-      { provider, providerEventId: args.providerEventId },
-      { $setOnInsert: doc },
-      { upsert: true, new: true }
-    );
-  }
+  const filter = args.providerEventId
+    ? { provider, providerEventId: args.providerEventId }
+    : { providerTransactionId: args.providerTransactionId, eventType: args.eventType };
 
-  return PaymentLedger.create(doc);
+  return PaymentLedger.findOneAndUpdate(
+    filter,
+    { $setOnInsert: doc },
+    { upsert: true, new: true }
+  );
 }

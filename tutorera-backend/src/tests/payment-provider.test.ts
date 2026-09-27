@@ -1,43 +1,51 @@
 import axios from "axios";
-import crypto from "crypto";
 import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { paymentProvider } from "../services/paymentProvider.service";
-import { rapidpayProvider } from "../services/rapidpayProvider.service";
+import { swichProvider } from "../services/swichProvider.service";
 
-describe("Rapid Gateway direct integration", () => {
+describe("Swich Payment Session integration", () => {
   beforeEach(() => {
-    process.env.RAPID_GATEWAY_SECRET_KEY = "rg_test_secret_key_123456";
-    process.env.RAPID_GATEWAY_WEBHOOK_SECRET = "rg_webhook_secret_123456789";
-    process.env.RAPID_GATEWAY_WEBHOOK_URL = "https://api.example.test/api/v1/payments/webhook";
-    process.env.RAPID_GATEWAY_API_BASE_URL = "https://secure.rapid-gateway.com";
+    process.env.SWICH_CLIENT_ID = "swich_test_client_id";
+    process.env.SWICH_CLIENT_SECRET = "swich_test_client_secret_123456";
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete process.env.RAPID_GATEWAY_SECRET_KEY;
-    delete process.env.RAPID_GATEWAY_WEBHOOK_SECRET;
-    delete process.env.RAPID_GATEWAY_WEBHOOK_URL;
-    delete process.env.RAPID_GATEWAY_API_BASE_URL;
+    delete process.env.SWICH_CLIENT_ID;
+    delete process.env.SWICH_CLIENT_SECRET;
   });
 
-  it("creates checkout directly through Rapid Gateway with an idempotency key", async () => {
-    const post = jest.spyOn(axios, "post").mockResolvedValue({
-      data: {
-        id: "rg_payment_test_1",
-        checkout_url: "https://checkout.rapid-gateway.com/test/rg_payment_test_1",
-      },
-    } as any);
+  it("fetches a token then creates a payment session with the confirmed field shape", async () => {
+    const post = jest.spyOn(axios, "post").mockImplementation(async (url: string) => {
+      if (url.includes("/connect/token")) {
+        return {
+          data: { access_token: "swich_test_access_token", token_type: "Bearer", expires_in: 3600 },
+        } as any;
+      }
+      if (url.includes("/gateway/paymentsession/initiate")) {
+        return {
+          data: {
+            status: "SUCCESS",
+            code: "0000",
+            message: "Payment session created successfully.",
+            timestamp: "2026-08-27T10:15:32",
+            url: "https://paymentsession.swichnow.com/PaymentSession?Id=test-session-guid-123",
+          },
+        } as any;
+      }
+      throw new Error(`Unexpected POST to ${url}`);
+    });
 
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: 100,
       currency: "PKR",
       customerMobileNo: "03001234567",
       customerEmail: "student@example.test",
-      basketId: "BOOKING-1001",
+      basketId: "BID-test1001",
       description: "Test checkout",
       successUrl: "https://example.test/success",
       failureUrl: "https://example.test/failure",
-      checkoutUrl: "https://example.test/checkout",
+      checkoutUrl: "https://example.test/processing",
       feeSnapshot: {
         subtotal: 100,
         studentFee: 0,
@@ -50,66 +58,92 @@ describe("Rapid Gateway direct integration", () => {
       },
     });
 
-    expect(checkoutUrl).toBe("https://checkout.rapid-gateway.com/test/rg_payment_test_1");
+    expect(checkoutUrl).toBe("https://paymentsession.swichnow.com/PaymentSession?Id=test-session-guid-123");
+
+    // Confirmed real contract: token request is JSON (not form-urlencoded),
+    // hits the separate sandbox-auth host, not the main api host.
     expect(post).toHaveBeenCalledWith(
-      "https://api.rapid-gateway.com/v1/payments",
+      "https://sandbox-auth.swichnow.com/connect/token",
+      expect.objectContaining({
+        client_id: "swich_test_client_id",
+        client_secret: "swich_test_client_secret_123456",
+        grant_type: "client_credentials",
+      }),
+      expect.anything()
+    );
+
+    // Confirmed real contract: payment session creation body shape.
+    expect(post).toHaveBeenCalledWith(
+      "https://sandbox-api.swichnow.com/gateway/paymentsession/initiate",
       expect.objectContaining({
         amount: 100,
         currency: "PKR",
-        methods: ["card", "raast", "easypaisa", "jazzcash"],
-        customer: {
+        billReferenceNo: "BID-test1001",
+        successURL: "https://example.test/success",
+        failedURL: "https://example.test/failure",
+        categoryList: expect.arrayContaining(["ewallet", "visamastercardpayment", "bankaccount", "rtpnowpayment"]),
+        customerDetails: expect.objectContaining({
           email: "student@example.test",
-          phone: "+923001234567",
-        },
-        return_url: "https://example.test/success",
-        webhook_url: "https://api.example.test/api/v1/payments/webhook?reference=BOOKING-1001",
+          msisdn: "03001234567",
+        }),
+        // Required-but-empty for one-off payments per Swich's own docs.
+        recurringDetails: expect.objectContaining({ recurringPaymentType: 0 }),
       }),
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: "Bearer rg_test_secret_key_123456",
-          "Idempotency-Key": "BOOKING-1001",
+          Authorization: "Bearer swich_test_access_token",
         }),
       })
     );
   });
 
-  it("rejects unsupported non-PKR checkout before contacting Rapid Gateway", async () => {
+  it("rejects unsupported non-PKR checkout before contacting Swich", async () => {
     const post = jest.spyOn(axios, "post");
 
     await expect(
-      rapidpayProvider.createCheckout({
+      swichProvider.createCheckout({
         amount: 100,
         currency: "AED",
-        reference: "BOOKING-AED-1",
+        reference: "BID-aed-1",
         metadata: {
           studentMobileNo: "+971500000000",
           studentEmail: "student@example.test",
           successUrl: "https://example.test/success",
         },
       })
-    ).rejects.toMatchObject({ code: "RAPID_GATEWAY_CURRENCY_UNSUPPORTED", statusCode: 409 });
+    ).rejects.toMatchObject({ code: "SWICH_CURRENCY_UNSUPPORTED", statusCode: 409 });
 
     expect(post).not.toHaveBeenCalled();
   });
 
-  it("verifies timestamped Rapid Gateway HMAC signatures and rejects stale deliveries", () => {
-    const rawBody = Buffer.from(JSON.stringify({ eventId: "evt_1", eventType: "transaction.completed" }));
-    const timestamp = String(Math.floor(Date.now() / 1000));
-    const signature = crypto
-      .createHmac("sha256", process.env.RAPID_GATEWAY_WEBHOOK_SECRET as string)
-      .update(`${timestamp}.${rawBody.toString("utf8")}`)
-      .digest("hex")
-      .toUpperCase();
+  it("confirms a successful payment session via poll (no webhook — Swich Payment Session has none documented)", async () => {
+    jest.spyOn(axios, "post").mockResolvedValue({
+      data: { access_token: "swich_test_access_token", token_type: "Bearer", expires_in: 3600 },
+    } as any);
+    const get = jest.spyOn(axios, "get").mockResolvedValue({
+      data: {
+        status: "SUCCESS",
+        paymentSessionGuid: "test-session-guid-123",
+        amount: 100,
+        currency: "PKR",
+        billReferenceNo: "BID-test1001",
+        sessionStatus: "Success",
+        remainingAttempts: 9,
+        remainingSeconds: 1000,
+        createdAt: "2026-08-27T10:15:32",
+        expiryAt: "2026-08-27T10:45:32",
+      },
+    } as any);
 
-    expect(rapidpayProvider.verifyWebhookSignature(rawBody, signature, timestamp)).toBe(true);
+    const result = await swichProvider.getPaymentSessionStatus("test-session-guid-123");
 
-    const staleTimestamp = String(Math.floor(Date.now() / 1000) - 10 * 60);
-    const staleSignature = crypto
-      .createHmac("sha256", process.env.RAPID_GATEWAY_WEBHOOK_SECRET as string)
-      .update(`${staleTimestamp}.${rawBody.toString("utf8")}`)
-      .digest("hex")
-      .toUpperCase();
-
-    expect(rapidpayProvider.verifyWebhookSignature(rawBody, staleSignature, staleTimestamp)).toBe(false);
+    expect(result.sessionStatus).toBe("Success");
+    expect(get).toHaveBeenCalledWith(
+      "https://sandbox-api.swichnow.com/gateway/paymentsession/get",
+      expect.objectContaining({
+        params: { paymentSessionGuid: "test-session-guid-123" },
+        headers: expect.objectContaining({ Authorization: "Bearer swich_test_access_token" }),
+      })
+    );
   });
 });
