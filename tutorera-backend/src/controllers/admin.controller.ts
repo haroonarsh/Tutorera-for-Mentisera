@@ -30,6 +30,8 @@ import {
   isHomeTuitionEligible,
   recordStatusEvent,
 } from "../services/tracking.service";
+import { syncTutorActivation } from "../services/tutorActivation.service";
+import { getApplicableAgreement } from "../services/legalAgreement.service";
 import {
   marketplaceActivatedEmail,
   marketplaceDeactivatedEmail,
@@ -232,30 +234,30 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   });
 
   await sendNotification(io, tutorUser._id.toString(), {
-    title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
+    title: status === "approved" ? "🎉 Application Approved — Agreement Pending" : "❌ Profile Rejected",
     message: status === "approved"
-      ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
+      ? "Congratulations! Your tutor application has been approved. Please review and accept the Tutor Marketplace Agreement to activate your marketplace profile."
       : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
     type: "verification",
-    link: "/tutor/application-status",
+    link: status === "approved" ? "/tutor/accept-agreement" : "/tutor/application-status",
   });
 
   // Sync marketplace + home-tuition eligibility through the same path the
   // per-component endpoints use, so the tutor sees accurate status on their
   // application-tracking page.
-  const mpEligible = isMarketplaceEligible(profile);
   const htEligible = isHomeTuitionEligible(profile);
   const cta = { applicationId: tutorUser.applicationId || "TUT-PENDING" };
-  if (mpEligible && !profile.marketplaceEligible) {
+  const activation = await syncTutorActivation(tutorUser._id);
+  if (activation.activated && !profile.marketplaceEligible) {
     profile.marketplaceEligible = true;
     profile.marketplaceEligibleAt = now;
     await profile.save({ validateBeforeSave: false });
-    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
+    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after contract acceptance" });
     try {
       await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
     } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
-    await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/tutor/application-status" });
-  } else if (!mpEligible && profile.marketplaceEligible) {
+    await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/dashboard" });
+  } else if (!activation.activated && profile.marketplaceEligible) {
     profile.marketplaceEligible = false;
     profile.marketplaceEligibleAt = undefined as any;
     await profile.save({ validateBeforeSave: false });
@@ -387,28 +389,28 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       });
 
       await sendNotification(io, tutorUser._id.toString(), {
-        title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
+        title: status === "approved" ? "🎉 Application Approved — Agreement Pending" : "❌ Profile Rejected",
         message:
           status === "approved"
-            ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
+            ? "Congratulations! Your tutor application has been approved. Please review and accept the Tutor Marketplace Agreement to activate your marketplace profile."
             : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
         type: "verification",
-        link: "/tutor/application-status",
+        link: status === "approved" ? "/tutor/accept-agreement" : "/tutor/application-status",
       });
 
-      const mpEligible = isMarketplaceEligible(profile);
+      const activation = await syncTutorActivation(tutorUser._id);
       const htEligible = isHomeTuitionEligible(profile);
       const cta = { applicationId: tutorUser.applicationId || "TUT-PENDING" };
-      if (mpEligible && !profile.marketplaceEligible) {
+      if (activation.activated && !profile.marketplaceEligible) {
         profile.marketplaceEligible = true;
         profile.marketplaceEligibleAt = now;
         await profile.save({ validateBeforeSave: false });
-        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
+        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after agreement acceptance" });
         try {
           await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
         } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
-        await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/tutor/application-status" });
-      } else if (!mpEligible && profile.marketplaceEligible) {
+        await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/dashboard" });
+      } else if (!activation.activated && profile.marketplaceEligible) {
         profile.marketplaceEligible = false;
         profile.marketplaceEligibleAt = undefined as any;
         await profile.save({ validateBeforeSave: false });

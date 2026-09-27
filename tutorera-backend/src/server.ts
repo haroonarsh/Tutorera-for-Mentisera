@@ -11,6 +11,7 @@ import { processAbandonedJourneyRecovery } from "./utils/abandonedJourneyRecover
 import { processRequestLifecycle } from "./services/requestLifecycle.service";
 import { processPendingPayouts } from "./services/payout.service";
 import { refreshRates } from "./services/exchangeRate.service";
+import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
 
 dotenv.config();
 
@@ -27,8 +28,10 @@ const io = initSocket(httpServer);
 // Make io available in routes
 app.set("io", io);
 
-// Connect DB
-connectDB();
+// Connect DB & seed legal agreements
+connectDB().then(() => {
+  seedDefaultLegalAgreements().catch(err => logger.error({ err }, "Initial legal agreement seed failed"));
+});
 
 const PORT = process.env.PORT || 5000;
 const server = httpServer.listen(PORT, () => {

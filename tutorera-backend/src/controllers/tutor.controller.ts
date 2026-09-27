@@ -197,17 +197,22 @@ export const getTutorById = async (
     ));
 
   // Detail pages must apply the same public-visibility policy as listings.
-  // Previously anyone who knew an ObjectId or historical slug could expose a
-  // rejected, inactive, or test/demo profile even though /tutors hid it.
+  // Unactivated tutors, unapproved applications, and those with unsigned
+  // agreements must NEVER appear publicly or be indexed by search engines.
   const user = profile?.user as any;
   const userLooksLikeTest = /\b(test|testing|demo|sample|placeholder|dummy)\b/i.test(
     `${user?.name || ""} ${user?.email || ""}`
   );
+  const agreementSigned = Boolean(profile?.agreementAcceptedAt) || profile?.legacyAgreementStatus === "accepted" || profile?.marketplaceEligible === true;
   const isPublicProfile = Boolean(
     profile &&
       profile.verificationStatus === "approved" &&
       profile.isVerified === true &&
+      agreementSigned &&
       profile.isTestAccount !== true &&
+      !profile.suspendedAt &&
+      profile.tutorStatus !== "suspended" &&
+      profile.tutorStatus !== "terminated" &&
       user?.isActive !== false &&
       user?.isDeleted !== true &&
       user?.isTestAccount !== true &&
@@ -275,11 +280,18 @@ export const getAllTutors = async (
     matchRequestId,
   } = req.query;
 
-  // Build filter object
+  // Build filter object: Strictly gate search results to active tutors who
+  // cleared verification AND signed their legal agreement.
   const filter: Record<string, unknown> = {
     verificationStatus: "approved",
     isVerified: true,
+    suspendedAt: { $exists: false },
     isTestAccount: { $ne: true },
+    $or: [
+      { agreementAcceptedAt: { $exists: true, $ne: null } },
+      { legacyAgreementStatus: "accepted" },
+      { marketplaceEligible: true },
+    ],
   };
 
   // Older production records predate isTestAccount. Exclude only accounts

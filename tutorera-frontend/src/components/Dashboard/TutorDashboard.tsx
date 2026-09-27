@@ -20,6 +20,7 @@ import CommissionCalculator from "./CommissionCalculator";
 import { Sparkles, Calculator } from "lucide-react";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 import { DashCard, DashButton, StatusBadge, EmptyState } from "./ui";
+import TutorAgreementCard from "./TutorAgreementCard";
 
 const C = UI_COLORS;
 
@@ -69,47 +70,70 @@ function TutorApplicationStatusCard() {
 
   if (loading || error || !data) return null;
 
-  const isActionRequired = data.canonicalStatus === "ACTION_REQUIRED" || data.canonicalStatus === "RE_VERIFICATION_REQUIRED" || data.actionRequired != null;
+  const isAgreementPending = data.canonicalStatus === "APPROVED_PENDING_AGREEMENT";
+  const isActionRequired = !isAgreementPending && (data.canonicalStatus === "ACTION_REQUIRED" || data.canonicalStatus === "RE_VERIFICATION_REQUIRED" || data.actionRequired != null);
   const isSuccess = data.canonicalStatus === "APPROVED_FOR_MARKETPLACE" || data.canonicalStatus === "HOME_TUITION_ELIGIBLE";
   const isDanger = data.canonicalStatus === "REJECTED" || data.canonicalStatus === "SUSPENDED";
-  const cardClass = `${s.dashboardCard || ""} ${isActionRequired ? s.dashboardCardWarning || "" : isDanger ? s.dashboardCardDanger || "" : isSuccess ? s.dashboardCardSuccess || "" : ""}`.trim();
+  const cardClass = `${s.dashboardCard || ""} ${isAgreementPending ? s.dashboardCardSuccess || "" : isActionRequired ? s.dashboardCardWarning || "" : isDanger ? s.dashboardCardDanger || "" : isSuccess ? s.dashboardCardSuccess || "" : ""}`.trim();
 
   return (
     <div className={cardClass} style={{
-      background: isActionRequired ? `linear-gradient(135deg, ${STATUS_COLORS.warning.color} 0%, ${C.orange} 100%)` :
+      background: isAgreementPending ? `linear-gradient(135deg, #0284C7 0%, #1E3A8A 100%)` :
+                  isActionRequired ? `linear-gradient(135deg, ${STATUS_COLORS.warning.color} 0%, ${C.orange} 100%)` :
                   isDanger ? `linear-gradient(135deg, ${STATUS_COLORS.danger.color} 0%, ${C.error} 100%)` :
                   isSuccess ? `linear-gradient(135deg, ${STATUS_COLORS.success.color} 0%, ${C.success} 100%)` :
                   `linear-gradient(135deg, ${C.primary} 0%, ${C.accent} 100%)`,
       color: "#fff",
       borderRadius: 16,
-      padding: "18px 20px",
+      padding: "20px 22px",
       marginBottom: 16,
+      boxShadow: isAgreementPending ? "0 8px 20px rgba(2, 132, 199, 0.25)" : "none",
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <div>
-          <p style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800, color: "rgba(255,255,255,0.7)", margin: "0 0 4px" }}>My tutor application</p>
-          <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#fff" }}>{data.canonicalStatusLabel}</h3>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", margin: "4px 0 0" }}>
-            Application ID: <strong>{data.applicationId}</strong> · Last updated {new Date(data.lastUpdatedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 260 }}>
+          <p style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800, color: isAgreementPending ? "#BAE6FD" : "rgba(255,255,255,0.7)", margin: "0 0 4px" }}>
+            {isAgreementPending ? "🎉 Final Step · Application Approved" : "My tutor application"}
+          </p>
+          <h3 style={{ fontSize: 19, fontWeight: 800, margin: 0, color: "#fff" }}>
+            {isAgreementPending ? "Action Required: Review & Sign Tutor Agreement" : data.canonicalStatusLabel}
+          </h3>
+          <p style={{ fontSize: 13, color: isAgreementPending ? "#F0F9FF" : "rgba(255,255,255,0.85)", margin: "6px 0 0", lineHeight: 1.4 }}>
+            {isAgreementPending
+              ? "Your application credentials and documents have been approved by our team! Execute your electronic contract to activate your marketplace profile."
+              : `Application ID: ${data.applicationId} · Last updated ${new Date(data.lastUpdatedAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}`}
           </p>
         </div>
         <div style={{ minWidth: 120, textAlign: "right" }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", margin: 0 }}>Verification</p>
           <p style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: 0 }}>{data.progress.percent}%</p>
           <div style={{ height: 6, background: "rgba(255,255,255,0.18)", borderRadius: 999, overflow: "hidden", marginTop: 4 }}>
-            <div style={{ width: `${data.progress.percent}%`, height: "100%", background: "rgba(255,255,255,0.85)" }} />
+            <div style={{ width: `${data.progress.percent}%`, height: "100%", background: "#fff" }} />
           </div>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <Link href="/tutor/application-status" style={{
-          background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)",
-          borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
-        }}>Track Application →</Link>
-        {isActionRequired && (
-          <Link href={data.actionRequired?.cta.href || "/onboarding/tutor"} style={{
-            background: C.surface, color: STATUS_COLORS.warning.color, borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
-          }}>Complete Verification →</Link>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+        {isAgreementPending ? (
+          <>
+            <Link href="/tutor/accept-agreement" style={{
+              background: "#FFFFFF", color: "#0284C7", borderRadius: 999, padding: "9px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none", boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            }}>Review &amp; Sign Agreement Now →</Link>
+            <Link href="/tutor/application-status" style={{
+              background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)",
+              borderRadius: 999, padding: "9px 16px", fontSize: 12, fontWeight: 700, textDecoration: "none",
+            }}>View Full Status →</Link>
+          </>
+        ) : (
+          <>
+            <Link href="/tutor/application-status" style={{
+              background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)",
+              borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
+            }}>Track Application →</Link>
+            {isActionRequired && (
+              <Link href={data.actionRequired?.cta.href || "/onboarding/tutor"} style={{
+                background: C.surface, color: STATUS_COLORS.warning.color, borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none",
+              }}>Complete Verification →</Link>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -509,6 +533,9 @@ function DirectRequestCard({
 function ProfileSection({ profile }: { profile: TutorProfileData }) {
   return (
     <div>
+      {/* Legal Contract & Compliance Status */}
+      <TutorAgreementCard />
+
       {/* Top card */}
       <div className={s.card} style={{ marginBottom: 16 }}>
         <div className={s.personRow}>

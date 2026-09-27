@@ -37,6 +37,7 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/onboarding": "student.read",
   "/admin/tutors": "tutor.read",
   "/admin/applications": "tutor.read",
+  "/admin/agreements": "tutor.read",
   "/admin/matching": "matching.read",
   "/admin/analytics": "analytics.read",
   "/admin/contacts": "student.read",

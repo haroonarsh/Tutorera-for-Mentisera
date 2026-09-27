@@ -8,6 +8,7 @@ import { showSuccess, showError } from "@/lib/toast";
 import s from "@/components/Tracking/tracking.module.css";
 import { formatDateLong } from "@/lib/site";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import TutorAgreementComplianceAdminCard from "@/components/admin/TutorAgreementComplianceAdminCard";
 
 type Params = Promise<{ id: string }>;
 
@@ -99,6 +100,8 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
   const [reasonFor, setReasonFor] = useState<string>("");
   const [documentReasons, setDocumentReasons] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string>("");
+  const [agreementCompliance, setAgreementCompliance] = useState<any>(null);
+  const [downloadingContractPdf, setDownloadingContractPdf] = useState<boolean>(false);
 
   // The filters/page an admin was browsing on the list page, carried through
   // the URL so Prev/Next can step through the SAME filtered queue instead of
@@ -126,11 +129,44 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
     }
   };
 
+  const fetchAgreementCompliance = async (tutorUserId: string) => {
+    try {
+      const res = await api.get(`/admin/agreements/tutors/${tutorUserId}`);
+      setAgreementCompliance(res.data);
+    } catch {
+      setAgreementCompliance(null);
+    }
+  };
+
+  const handleDownloadContractPdf = async (acceptanceId: string) => {
+    setDownloadingContractPdf(true);
+    try {
+      const res = await api.get(`/tutor/agreements/${acceptanceId}/pdf`, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TUTORERA-Contract-${data?.tutorName || "Tutor"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showSuccess("Signed agreement PDF downloaded.");
+    } catch (err) {
+      showError(err, "Failed to download contract PDF");
+    } finally {
+      setDownloadingContractPdf(false);
+    }
+  };
+
   const fetchDetail = async () => {
     setLoading(true);
     try {
       const res = await api.get(`/tracking/admin/applications/${id}`);
       setData(res.data.application);
+      if (res.data.application?.tutorUserId) {
+        fetchAgreementCompliance(res.data.application.tutorUserId);
+      }
     } catch {
       setError("Failed to load application");
     } finally {
@@ -617,6 +653,16 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
             </div>
           </div>
         </div>
+
+
+
+
+        {/* Legal Agreement & Compliance Evidence Card */}
+        <TutorAgreementComplianceAdminCard
+          tutorUserId={data.tutorUserId}
+          tutorName={data.tutorName}
+          verificationStatus={p.verificationStatus}
+        />
 
         <div className={s.card}>
           <p className={s.cardTitle} style={{ marginBottom: 12 }}>Application history</p>

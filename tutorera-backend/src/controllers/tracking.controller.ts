@@ -127,34 +127,18 @@ export const rotateTrackingToken = async (req: AuthRequest, res: Response): Prom
 };
 
 export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.user || req.user.role !== "tutor") {
-    res.status(403).json({ success: false, message: "Tutor access required." });
-    return;
+  // Delegate directly to the authoritative legal agreement acceptance handler
+  const { acceptTutorAgreement: legalAccept } = await import("./legalAgreement.controller");
+  // Normalize legacy confirmation keys if passed by older frontend clients
+  if (req.body?.confirmations) {
+    if (req.body.confirmations.policiesAccepted && !req.body.confirmations.safeguardingAccepted) {
+      req.body.confirmations.safeguardingAccepted = req.body.confirmations.policiesAccepted;
+    }
+    if (req.body.confirmations.feesUnderstood && !req.body.confirmations.feesTaxesUnderstood) {
+      req.body.confirmations.feesTaxesUnderstood = req.body.confirmations.feesUnderstood;
+    }
   }
-  const confirmations = req.body?.confirmations;
-  if (!confirmations?.informationAccurate || !confirmations?.agreementAccepted || !confirmations?.policiesAccepted || !confirmations?.independentProvider || !confirmations?.feesUnderstood || !confirmations?.electronicRecordsConsent) {
-    res.status(400).json({ success: false, message: "Every agreement confirmation is required before activation." });
-    return;
-  }
-  const profile = await TutorProfile.findOne({ user: req.user._id });
-  const agreement = profile && await TutorAgreement.findOne({ tutor: req.user._id, tutorProfile: profile._id, status: "pending_acceptance" }).sort({ createdAt: -1 });
-  if (!profile || !agreement) {
-    res.status(404).json({ success: false, message: "No agreement awaiting acceptance was found." });
-    return;
-  }
-  const now = new Date();
-  agreement.status = "active";
-  agreement.acceptedAt = now;
-  agreement.acceptanceIp = maskIp(req.ip);
-  agreement.acceptanceUserAgent = req.headers["user-agent"]?.toString().slice(0, 500);
-  await agreement.save();
-  profile.agreementAcceptedAt = now;
-  profile.agreementVersion = agreement.version;
-  await profile.save({ validateModifiedOnly: true });
-  await recordStatusEvent({ tutorId: req.user._id.toString(), tutorProfileId: profile._id.toString(), actor: { name: req.user.name, role: "tutor", id: req.user._id.toString() }, event: "PROFILE_APPROVED", message: `Tutor Agreement ${agreement.version} accepted electronically`, isPublic: false, statusAfter: "approved" });
-  await logAudit({ action: "tutor_agreement_accepted", actor: req.user.name, actorId: req.user._id.toString(), entity: "TutorAgreement", targetId: agreement._id.toString(), targetName: req.user.name, metadata: { version: agreement.version, confirmations } });
-  await syncMarketplaceAndHomeTuition({ name: req.user.name, role: "tutor", id: req.user._id.toString() }, req.user, profile);
-  res.status(200).json({ success: true, message: "Agreement accepted. Your marketplace access is now being activated." });
+  return legalAccept(req, res);
 };
 
 // ─── Public token endpoint ────────────────────────────────────────────────────

@@ -41,6 +41,7 @@ import tutoringIndexRoutes from "./routes/tutoringIndex.routes";
 import publicRoutes from "./routes/public.routes";
 import pricingRoutes from "./routes/pricing.routes";
 import featureFlagRoutes from "./routes/featureFlag.routes";
+import legalAgreementRoutes from "./routes/legalAgreement.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -133,6 +134,7 @@ apiRouter.use("/public", publicRoutes);
 apiRouter.use("/matching", matchingRoutes);
 apiRouter.use("/pricing", pricingRoutes);
 apiRouter.use("/feature-flags", featureFlagRoutes);
+apiRouter.use("/", legalAgreementRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);

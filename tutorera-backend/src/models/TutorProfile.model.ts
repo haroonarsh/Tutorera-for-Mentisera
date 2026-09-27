@@ -1,6 +1,24 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { EDUCATION_LEVELS, normalizeEducationLevels, normalizeEducationLevel } from "../config/educationLevels";
 
+export type TutorStatus =
+  | "registered"
+  | "profile_incomplete"
+  | "profile_complete"
+  | "documents_pending"
+  | "under_verification"
+  | "admin_review"
+  | "changes_requested"
+  | "rejected"
+  | "approved_pending_agreement"
+  | "agreement_pending"
+  | "active"
+  | "suspended"
+  | "reverification_required"
+  | "agreement_reacceptance_required"
+  | "deactivated"
+  | "terminated";
+
 export interface ITutorProfile extends Document {
   user: Types.ObjectId;
 
@@ -80,7 +98,24 @@ export interface ITutorProfile extends Document {
   identityDocumentSubtype?: string;
   safetyVerificationType?: string;
 
-  // Status
+  // Status & Lifecycle State Machine
+  tutorStatus?:
+    | "registered"
+    | "profile_incomplete"
+    | "profile_complete"
+    | "documents_pending"
+    | "under_verification"
+    | "admin_review"
+    | "changes_requested"
+    | "rejected"
+    | "approved_pending_agreement"
+    | "agreement_pending"
+    | "active"
+    | "suspended"
+    | "reverification_required"
+    | "agreement_reacceptance_required"
+    | "deactivated"
+    | "terminated";
   onboardingStep: number;
   onboardingComplete: boolean;
   verificationStatus: "pending" | "approved" | "rejected";
@@ -89,6 +124,7 @@ export interface ITutorProfile extends Document {
   agreementAcceptanceRequired?: boolean;
   agreementAcceptedAt?: Date;
   agreementVersion?: string;
+  legacyAgreementStatus?: "none" | "legacy_unrecorded" | "reacceptance_pending" | "accepted";
   isTestAccount: boolean;
 
   // Per-component verification (Tutor Application Tracking)
@@ -235,7 +271,36 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       notes: { type: String, default: "" },
     },
 
-    // Status
+    // Status & State Machine
+    tutorStatus: {
+      type: String,
+      enum: [
+        "registered",
+        "profile_incomplete",
+        "profile_complete",
+        "documents_pending",
+        "under_verification",
+        "admin_review",
+        "changes_requested",
+        "rejected",
+        "approved_pending_agreement",
+        "agreement_pending",
+        "active",
+        "suspended",
+        "reverification_required",
+        "agreement_reacceptance_required",
+        "deactivated",
+        "terminated",
+      ],
+      default: "registered",
+      index: true,
+    },
+    legacyAgreementStatus: {
+      type: String,
+      enum: ["none", "legacy_unrecorded", "reacceptance_pending", "accepted"],
+      default: "none",
+      index: true,
+    },
     onboardingStep: { type: Number, default: 1 },
     onboardingComplete: { type: Boolean, default: false },
     verificationStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
@@ -352,11 +417,36 @@ tutorProfileSchema.pre("save", function () {
   if (allApproved) {
     p.verificationStatus = "approved";
     p.isVerified = true;
+    if (p.suspendedAt) {
+      p.tutorStatus = "suspended";
+      p.marketplaceEligible = false;
+    } else if (p.reVerificationRequired) {
+      p.tutorStatus = "reverification_required";
+      p.marketplaceEligible = false;
+    } else if (!p.agreementAcceptedAt) {
+      // NON-NEGOTIABLE RULE: admin/document approval does NOT make a tutor active!
+      // Must be approved_pending_agreement until explicit electronic contract acceptance succeeds.
+      p.tutorStatus = "approved_pending_agreement";
+      p.agreementAcceptanceRequired = true;
+      p.marketplaceEligible = false;
+    } else if (p.tutorStatus !== "suspended" && p.tutorStatus !== "reverification_required") {
+      p.tutorStatus = "active";
+    }
   } else if (p.verificationStatus !== "rejected") {
     p.verificationStatus = "pending";
     p.isVerified = false;
+    p.marketplaceEligible = false;
+    if (p.suspendedAt) {
+      p.tutorStatus = "suspended";
+    } else if (!p.onboardingComplete) {
+      p.tutorStatus = (p.onboardingStep || 1) <= 1 ? "profile_incomplete" : "documents_pending";
+    } else {
+      p.tutorStatus = "under_verification";
+    }
   } else {
     p.isVerified = false;
+    p.marketplaceEligible = false;
+    p.tutorStatus = "rejected";
   }
 });
 

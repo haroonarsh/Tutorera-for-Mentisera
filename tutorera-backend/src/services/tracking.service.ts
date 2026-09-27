@@ -15,6 +15,9 @@ export type CanonicalStatus =
   | "UNDER_REVIEW"
   | "ACTION_REQUIRED"
   | "VERIFICATION_IN_PROGRESS"
+  | "APPROVED_PENDING_AGREEMENT"
+  | "AGREEMENT_PENDING"
+  | "AGREEMENT_REACCEPTANCE_REQUIRED"
   | "APPROVED_FOR_MARKETPLACE"
   | "HOME_TUITION_VERIFICATION_REQUIRED"
   | "HOME_TUITION_ELIGIBLE"
@@ -130,6 +133,9 @@ const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   UNDER_REVIEW: "Under review",
   ACTION_REQUIRED: "Action required",
   VERIFICATION_IN_PROGRESS: "Verification in progress",
+  APPROVED_PENDING_AGREEMENT: "Application approved — Agreement pending",
+  AGREEMENT_PENDING: "Agreement acceptance required",
+  AGREEMENT_REACCEPTANCE_REQUIRED: "Updated agreement reacceptance required",
   APPROVED_FOR_MARKETPLACE: "Approved for marketplace",
   HOME_TUITION_VERIFICATION_REQUIRED: "Home tuition verification required",
   HOME_TUITION_ELIGIBLE: "Home tuition eligible",
@@ -219,6 +225,7 @@ function hasPolice(profile: ITutorProfile): boolean {
 }
 
 export function isMarketplaceEligible(profile: ITutorProfile): boolean {
+  const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
   return Boolean(
     profile.isVerified &&
     profile.onboardingComplete &&
@@ -226,9 +233,12 @@ export function isMarketplaceEligible(profile: ITutorProfile): boolean {
     profile.cnicVerificationStatus === "approved" &&
     profile.degreeVerificationStatus === "approved" &&
     profile.verificationStatus === "approved" &&
-    (!profile.agreementAcceptanceRequired || Boolean(profile.agreementAcceptedAt)) &&
+    agreementSigned &&
     !profile.suspendedAt &&
-    !profile.reVerificationRequired
+    !profile.reVerificationRequired &&
+    profile.tutorStatus !== "suspended" &&
+    profile.tutorStatus !== "reverification_required" &&
+    profile.tutorStatus !== "terminated"
   );
 }
 
@@ -337,6 +347,18 @@ export function computeCanonicalStatus(profile: ITutorProfile): CanonicalStatus 
   if (profile.reVerificationRequired) return "RE_VERIFICATION_REQUIRED";
   if (profile.verificationStatus === "rejected") return "REJECTED";
 
+  const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
+
+  if (profile.tutorStatus === "agreement_reacceptance_required") {
+    return "AGREEMENT_REACCEPTANCE_REQUIRED";
+  }
+
+  // NON-NEGOTIABLE: If application cleared admin approval, but agreement has not yet been accepted,
+  // the canonical status MUST be APPROVED_PENDING_AGREEMENT.
+  if (profile.verificationStatus === "approved" && !agreementSigned) {
+    return "APPROVED_PENDING_AGREEMENT";
+  }
+
   if (isHomeTuitionEligible(profile)) return "HOME_TUITION_ELIGIBLE";
 
   if (isMarketplaceEligible(profile)) {
@@ -431,8 +453,20 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
 
 function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   const RESUBMIT_URL = "/tutor/resubmit-docs";
-  if (profile.agreementAcceptanceRequired && !profile.agreementAcceptedAt) {
-    return { title: "Accept your Tutor Agreement", body: "Your application is approved. Review and accept Agreement Version TTA-2026.1 to activate marketplace access.", cta: { label: "Review agreement", href: "/tutor/accept-agreement" } };
+  const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
+  if (profile.verificationStatus === "approved" && !agreementSigned) {
+    return {
+      title: "Accept Your Tutor Marketplace Agreement",
+      body: "Congratulations! Your application has been approved. Review and electronically accept the Tutor Marketplace Agreement (TTA-2026.1) to activate your account and marketplace access.",
+      cta: { label: "Review & Accept Agreement", href: "/tutor/accept-agreement" },
+    };
+  }
+  if (profile.tutorStatus === "agreement_reacceptance_required") {
+    return {
+      title: "Action Required: Updated Tutor Agreement",
+      body: "TUTORERA has published an updated Tutor Marketplace Agreement. Please review and accept the updated terms to maintain active bidding privileges.",
+      cta: { label: "Review Updated Agreement", href: "/tutor/accept-agreement" },
+    };
   }
   const reasons: { key: string; title: string; body: string; cta: { label: string; href: string } }[] = [];
   if (profile.cnicVerificationStatus === "rejected") {

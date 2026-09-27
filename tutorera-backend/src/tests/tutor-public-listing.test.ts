@@ -22,6 +22,8 @@ describe("GET /tutors (public listing field projection)", () => {
       fullName: "Amina Verified",
       isVerified: true,
       verificationStatus: "approved",
+      agreementAcceptedAt: new Date(),
+      marketplaceEligible: true,
       bio: "Ten years teaching O-Level Physics.",
       experience: 10,
       subjects: ["Physics"],
