@@ -127,44 +127,11 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
     }
   };
 
-  const fetchAgreementCompliance = async (tutorUserId: string) => {
-    try {
-      const res = await api.get(`/admin/agreements/tutors/${tutorUserId}`);
-      setAgreementCompliance(res.data);
-    } catch {
-      setAgreementCompliance(null);
-    }
-  };
-
-  const handleDownloadContractPdf = async (acceptanceId: string) => {
-    setDownloadingContractPdf(true);
-    try {
-      const res = await api.get(`/tutor/agreements/${acceptanceId}/pdf`, { responseType: "blob" });
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `TUTORERA-Contract-${data?.tutorName || "Tutor"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      showSuccess("Signed agreement PDF downloaded.");
-    } catch (err) {
-      showError(err, "Failed to download contract PDF");
-    } finally {
-      setDownloadingContractPdf(false);
-    }
-  };
-
   const fetchDetail = async () => {
     setLoading(true);
     try {
       const res = await api.get(`/tracking/admin/applications/${id}`);
       setData(res.data.application);
-      if (res.data.application?.tutorUserId) {
-        fetchAgreementCompliance(res.data.application.tutorUserId);
-      }
     } catch {
       setError("Failed to load application");
     } finally {

@@ -212,7 +212,7 @@ describe("Tutor onboarding — full E2E flow with real Cloudinary uploads", () =
       .post("/api/v1/tutors/onboarding/step")
       .set(auth)
       .field("step", "5")
-      .field("data", JSON.stringify({}))
+      .field("data", JSON.stringify({ demoVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }))
       .attach("cnicFront", PNG_1X1, "cnic-front.png")
       .attach("cnicBack", MINIMAL_PDF, "cnic-back.pdf");
 
