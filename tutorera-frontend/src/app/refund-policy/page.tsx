@@ -42,7 +42,7 @@ export default function RefundPolicyPage() {
           <div className={s.grid}>
             <article className={s.card}>
               <h2>Refund request period and method</h2>
-              <p>Customers should request refund review as soon as possible after the issue occurs and include the booking reference, transaction reference, amount paid in PKR, screenshots or communication evidence where relevant, and a short explanation.</p>
+              <p>Customers should request refund review as soon as possible after the issue occurs and include the booking reference, transaction reference, amount paid in the booking currency, screenshots or communication evidence where relevant, and a short explanation.</p>
               <p>Approved refunds are processed back through the original payment method where supported, or through another documented method approved by TUTORERA support. Because students currently pay no marketplace service fee, refund review focuses on the paid tutoring amount and any actual payment-provider deductions that cannot be reversed.</p>
             </article>
             <article className={s.card}>

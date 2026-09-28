@@ -63,6 +63,7 @@ export interface RankedRequestMatch {
   tier: "excellent" | "great" | "good" | "fair" | "strong" | "other";
   scoreBreakdown: Record<string, number>;
   reasons: string[];
+  isInvited?: boolean;
 }
 
 export interface RankedOffersResult {
@@ -632,14 +633,14 @@ export class MatchingService {
    */
   public static async getRecommendedRequestsForTutor(
     tutor: ITutorProfile,
-    options: { limit?: number } = {}
+    options: { limit?: number; tutorUserId?: string } = {}
   ): Promise<RankedRequestMatch[]> {
     const config = await this.getActiveConfig();
     const limit = options.limit || 20;
 
     // Build base request candidate query — strictly unexpired fresh demand
     const activeStates = ["open", "published", "receiving_offers", "negotiating"];
-    const query: Record<string, any> = {
+    const standardQuery: Record<string, any> = {
       status: { $in: activeStates },
       isDirect: false,
       expiresAt: { $gt: new Date() },
@@ -647,20 +648,31 @@ export class MatchingService {
 
     // Mode filter
     if (tutor.teachingMode === "online") {
-      query.teachingMode = { $in: ["online", "both"] };
+      standardQuery.teachingMode = { $in: ["online", "both"] };
     } else if (tutor.teachingMode === "in-person") {
-      query.teachingMode = { $in: ["in-person", "both"] };
-      query.countryCode = tutor.countryCode;
+      standardQuery.teachingMode = { $in: ["in-person", "both"] };
+      standardQuery.countryCode = tutor.countryCode;
       if (tutor.city) {
-        query.city = new RegExp(`^${tutor.city.trim()}$`, "i");
+        standardQuery.city = new RegExp(`^${tutor.city.trim()}$`, "i");
       }
     }
 
     // Subject filter
     const tutorSubs = (tutor.subjects || []).map((s) => new RegExp(`^${escapeRegExp(s.trim())}$`, "i"));
     if (tutorSubs.length > 0) {
-      query.subject = { $in: tutorSubs };
+      standardQuery.subject = { $in: tutorSubs };
     }
+
+    // A direct invitation is deliberate student intent. It remains subject to
+    // safety, freshness and state rules, but should not disappear merely because
+    // an otherwise useful profile has incomplete matching metadata.
+    const invitedQuery = options.tutorUserId ? {
+      status: { $in: activeStates },
+      isDirect: false,
+      expiresAt: { $gt: new Date() },
+      invitedTutors: new Types.ObjectId(options.tutorUserId),
+    } : null;
+    const query = invitedQuery ? { $or: [standardQuery, invitedQuery] } : standardQuery;
 
     const candidateRequests = await Request.find(query)
       .populate("student", "name avatar city countryCode countryName")
@@ -670,18 +682,20 @@ export class MatchingService {
 
     const scoredPromises = candidateRequests.map(async (reqDoc) => {
       const match = await this.calculateMatchScore(reqDoc as any, tutor, config);
-      if (!match || match.score < config.thresholds.notificationMinimum) return null;
+      const isInvited = Boolean(options.tutorUserId && (reqDoc as any).invitedTutors?.some((id: any) => id.toString() === options.tutorUserId));
+      if (!match || (!isInvited && match.score < config.thresholds.notificationMinimum)) return null;
       return {
         request: reqDoc,
         matchScore: match.score,
         tier: match.tier,
         scoreBreakdown: match.scoreBreakdown,
         reasons: match.reasons,
+        isInvited,
       };
     });
 
     const results = (await Promise.all(scoredPromises)).filter(Boolean) as RankedRequestMatch[];
-    results.sort((a, b) => b.matchScore - a.matchScore);
+    results.sort((a, b) => Number(Boolean(b.isInvited)) - Number(Boolean(a.isInvited)) || b.matchScore - a.matchScore);
     return results.slice(0, limit);
   }
 

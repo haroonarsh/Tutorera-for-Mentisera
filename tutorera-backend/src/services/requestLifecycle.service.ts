@@ -11,7 +11,7 @@ import Review from "../models/Review.model";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
 import sendEmail from "../utils/sendEmail";
-import { reviewRequestEmail } from "../utils/emailTemplates";
+import { requestExpiredEmail, requestExpiringEmail, reviewRequestEmail } from "../utils/emailTemplates";
 import logger from "../config/logger";
 import { classifyRequestLoss } from "./requestLoss.service";
 import {
@@ -70,6 +70,17 @@ export async function sendExpiryWarnings(io?: any): Promise<number> {
           type: "bid",
           link: "/dashboard",
         });
+      }
+
+      const requester = await User.findById(reqDoc.student).select("name email").lean();
+      if (requester?.email) {
+        const mail = requestExpiringEmail(requester.name || "there", reqDoc.subject, EXPIRY_WARNING_HOURS);
+        try {
+          await sendEmail({ to: requester.email, subject: mail.subject, html: mail.html, userId: requester._id.toString(), eventType: "request.expiring", relatedEntityType: "Request", relatedEntityId: reqDoc._id.toString() });
+        } catch (err) {
+          // sendEmail records the failure; lifecycle state must remain durable when a provider is unavailable.
+          logger.error({ err, requestId: reqDoc._id }, "Failed to deliver request expiry-warning email");
+        }
       }
 
       reqDoc.expiryWarningSentAt = now;
@@ -193,7 +204,7 @@ export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: 
       const activeBidUpdate = await Bid.updateMany(
         {
           request: reqDoc._id,
-          status: { $in: ["pending", "submitted", "viewed"] },
+          status: { $in: ["pending", "submitted", "viewed", "countered"] },
         },
         {
           $set: { status: "expired" },
@@ -224,6 +235,20 @@ export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: 
             type: "bid",
             link: "/offers",
           });
+        }
+      }
+
+      const [requester, totalBids] = await Promise.all([
+        User.findById(reqDoc.student).select("name email").lean(),
+        Bid.countDocuments({ request: reqDoc._id }),
+      ]);
+      if (requester?.email) {
+        const mail = requestExpiredEmail(requester.name || "there", reqDoc.subject, totalBids > 0);
+        try {
+          await sendEmail({ to: requester.email, subject: mail.subject, html: mail.html, userId: requester._id.toString(), eventType: "request.expired", relatedEntityType: "Request", relatedEntityId: reqDoc._id.toString() });
+        } catch (err) {
+          // The request is already expired and audit processing must still complete.
+          logger.error({ err, requestId: reqDoc._id }, "Failed to deliver request-expired email");
         }
       }
 

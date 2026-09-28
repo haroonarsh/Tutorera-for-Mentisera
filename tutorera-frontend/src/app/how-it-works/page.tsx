@@ -6,7 +6,7 @@ import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
   title: "How It Works",
-  description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
+  description: "Students and parents post a learning requirement and preferred budget. Eligible tutors submit offers to compare before a tutor is chosen.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -35,7 +35,7 @@ export default function HowItWorksPage() {
     <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works</h1>
-        <p>TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.</p>
+        <p>TUTORERA is a student-first tutoring marketplace: students and parents post a learning requirement and preferred budget, then eligible tutors can submit offers to compare before a tutor is chosen.</p>
       </section>
 
       <section className={s.container}>

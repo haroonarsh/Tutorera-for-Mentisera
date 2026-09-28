@@ -40,6 +40,7 @@ type Offer = {
   message: string;
   availability?: string;
   renewalCount?: number;
+  shortlistedAt?: string;
   matchScore?: number;
   profile?: {
     averageRating?: number;
@@ -94,6 +95,10 @@ import CounterOfferSheet from "@/components/marketplace/CounterOfferSheet";
 
 function OffersContent() {
   const { user } = useAuth();
+  const isRequester = user?.role === "student" || user?.role === "parent";
+  // Negotiations store the demand-side actor as "student" for compatibility;
+  // a parent who owns a requirement has the same authority in the UI.
+  const negotiationRole = user?.role === "tutor" ? "tutor" : "student";
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [countering, setCountering] = useState<Offer | null>(null);
@@ -182,7 +187,7 @@ function OffersContent() {
   }, [searchParams, load, router]);
 
   async function view(o: Offer) {
-    if (user?.role === "student" && o.status === "submitted") {
+    if (isRequester && o.status === "submitted") {
       try {
         await api.post(`/offers/${o._id}/view`);
         setOffers((rows) => rows.map((row) => (row._id === o._id ? { ...row, status: "viewed" } : row)));
@@ -201,6 +206,21 @@ function OffersContent() {
       load();
     } catch (e) {
       showError(e, "Unable to update offer.");
+    }
+  }
+
+  async function toggleShortlist(o: Offer) {
+    try {
+      const res = await api.post(`/offers/${o._id}/shortlist`);
+      const shortlisted = Boolean(res.data?.shortlisted);
+      setOffers((rows) => rows.map((row) => (
+        row._id === o._id
+          ? { ...row, shortlistedAt: shortlisted ? (res.data?.offer?.shortlistedAt || new Date().toISOString()) : undefined }
+          : row
+      )));
+      showSuccess(shortlisted ? "Offer saved to your shortlist." : "Offer removed from your shortlist.");
+    } catch (e) {
+      showError(e, "Unable to update your shortlist.");
     }
   }
 
@@ -335,7 +355,7 @@ function OffersContent() {
           {sortedOffers.map((o) => {
             const last = o.history[o.history.length - 1];
             const tutorCanAccept = user?.role === "tutor" && last?.senderRole === "student";
-            const canCounter = active.includes(o.status) && o.request.allowCounterOffers && last?.senderRole !== user?.role;
+            const canCounter = active.includes(o.status) && o.request.allowCounterOffers && last?.senderRole !== negotiationRole;
             const fees = calculateMarketplaceFees(o.amount);
             const timeLeft = now === null ? "Calculating" : remaining(o.expiresAt, now);
             const isAccepted = o.status === "accepted";
@@ -411,7 +431,7 @@ function OffersContent() {
                     30-minute hold hasn't expired yet */}
                 {o.status === "payment_pending" && (
                   <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "0.75rem 1rem", borderRadius: "0.5rem", fontSize: "0.825rem", color: "#1d4ed8", marginBottom: "1rem" }}>
-                    {user?.role === "student"
+                    {isRequester
                       ? "Payment in progress. If your last attempt didn't go through, you can pick up where you left off."
                       : "The student is completing payment for this offer. The booking will be created once payment is confirmed."}
                   </div>
@@ -446,7 +466,7 @@ function OffersContent() {
                 {/* Action Buttons */}
                 {active.includes(o.status) && (
                   <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "center", marginTop: "1rem" }}>
-                    {(user?.role === "student" || tutorCanAccept) && (
+                    {(isRequester || tutorCanAccept) && (
                       <button
                         onClick={() => action(o, "accept")}
                         style={{
@@ -469,6 +489,27 @@ function OffersContent() {
                         }}
                       >
                         <CheckCircle size={18} /> Accept {offerMoney(o, o.amount)}
+                      </button>
+                    )}
+
+                    {isRequester && (
+                      <button
+                        type="button"
+                        onClick={() => toggleShortlist(o)}
+                        aria-pressed={Boolean(o.shortlistedAt)}
+                        style={{
+                          background: o.shortlistedAt ? "#eff6ff" : "white",
+                          color: "#0329b2",
+                          border: "1.5px solid #93c5fd",
+                          padding: "0.85rem 1.15rem",
+                          borderRadius: "0.625rem",
+                          fontWeight: 800,
+                          fontSize: "0.88rem",
+                          cursor: "pointer",
+                          minHeight: "48px",
+                        }}
+                      >
+                        {o.shortlistedAt ? "Shortlisted" : "Shortlist"}
                       </button>
                     )}
 
@@ -537,7 +578,7 @@ function OffersContent() {
                   </div>
                 )}
 
-                {o.status === "payment_pending" && user?.role === "student" && (
+                {o.status === "payment_pending" && isRequester && (
                   <button
                     onClick={() => retryPayment(o)}
                     style={{

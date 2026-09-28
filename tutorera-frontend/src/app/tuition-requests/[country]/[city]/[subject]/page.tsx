@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const subjectLabel = slugToLabel(subject, SUBJECTS);
   const title = `${subjectLabel} Tuition in ${cityLabel}, ${countryName} | TUTORERA`;
   const description = `Browse open ${subjectLabel} tuition requests from students in ${cityLabel}, ${countryName}. Submit your offer today.`;
-  return { title, description, alternates: { canonical: `/tuition-requests/${country}/${city}/${subject}` } };
+  return { title, description, alternates: { canonical: `/tuition-requests/${country}/${city}/${subject}` }, robots: { index: false, follow: true } };
 }
 
 export default async function SubjectTuitionRequestsPage({ params, searchParams }: Props) {
@@ -60,7 +60,7 @@ export default async function SubjectTuitionRequestsPage({ params, searchParams 
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `${subjectLabel} tuition requests in ${cityLabel}, ${countryName}`,
-    description: `Active ${subjectLabel} tuition requests from verified students in ${cityLabel}, ${countryName}. Tutors can submit offers directly.`,
+    description: `A privacy-safe view of ${subjectLabel} tutoring opportunities in ${cityLabel}, ${countryName}.`,
     url: `https://tutorera.ac.pk/tuition-requests/${country}/${city}/${subject}`,
     isPartOf: {
       "@type": "WebSite",
@@ -72,7 +72,6 @@ export default async function SubjectTuitionRequestsPage({ params, searchParams 
       name: `${subjectLabel} tutoring`,
       description: `Tuition requests for ${subjectLabel} in ${cityLabel}`,
     },
-    numberOfItems: result.total,
   };
 
   return (

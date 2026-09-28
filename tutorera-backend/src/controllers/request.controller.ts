@@ -20,6 +20,7 @@ import { convertToPKR } from "../config/countries";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { previewPromoDiscount, getAppliedPromoForBasket, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
+import AuditLog from "../models/AuditLog.model";
 import { MatchingService } from "../services/matching.service";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import { computeAndStoreTutorResponseTime } from "../services/tutorStats.service";
@@ -36,6 +37,19 @@ import {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function publicRequestShape(request: Record<string, any>) {
+  // Invitation recipients and learner identifiers are internal routing data.
+  // They must never be sent through browsing/search endpoints.
+  const { invitedTutors, learner, description, area, ...safeRequest } = request;
+  return {
+    ...safeRequest,
+    // A free-text description can inadvertently contain a house number or
+    // other identifying detail. Tutors receive the structured requirement;
+    // precise logistics stay private until a booking is confirmed.
+    description: "Learning goals will be shared after a tutor is selected.",
+  };
 }
 
 /**
@@ -58,6 +72,23 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   if (!user) {
     res.status(404).json({ success: false, message: "User not found." });
     return;
+  }
+  if (containsContactInfo(`${req.body.description || ""}\n${req.body.learningObjectives || ""}`)) {
+    res.status(422).json({ success: false, code: "CONTACT_DETAILS_NOT_ALLOWED", message: "Do not include phone numbers, email addresses, or off-platform contact details in a tuition requirement." });
+    return;
+  }
+  let learnerId: Types.ObjectId | undefined;
+  if (user.role === "parent" && req.body.learnerType === "child" && !req.body.learnerId) {
+    res.status(422).json({ success: false, message: "Select one of your linked learners before posting this requirement." });
+    return;
+  }
+  if (user.role === "parent" && req.body.learnerId) {
+    if (!Types.ObjectId.isValid(req.body.learnerId)) { res.status(422).json({ success: false, message: "Select a valid linked learner." }); return; }
+    const linked = await ParentProfile.exists({ user: user._id, "children.studentUser": new Types.ObjectId(req.body.learnerId) });
+    if (!linked) { res.status(403).json({ success: false, message: "You can only post a requirement for a learner linked to your account." }); return; }
+    learnerId = new Types.ObjectId(req.body.learnerId);
+  } else if (user.role !== "parent") {
+    learnerId = user._id as Types.ObjectId;
   }
 
   const market = await resolveMarket(req.body.countryCode || user.countryCode || "PK");
@@ -107,11 +138,14 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     return;
   }
   const createData = { ...req.body };
+  // learnerId is an authorization input, not a free-form persisted field.
+  delete createData.learnerId;
   if (typeof createData.lat === "number" && typeof createData.lng === "number") {
     createData.location = { type: "Point", coordinates: [createData.lng, createData.lat] };
   }
   const request = await Request.create({
     student: req.user?._id,
+    ...(learnerId && { learner: learnerId }),
     ...createData,
     ...locationReferences,
     countryCode: market.countryCode,
@@ -288,14 +322,14 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
           Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount currency status expiresAt pricingUnit createdAt").lean(),
           Bid.countDocuments({ request: request._id, status: { $nin: ["withdrawn", "rejected"] } }),
         ]);
-        return { ...request.toObject(), bid, offersCount };
+        return { ...publicRequestShape(request.toObject()), bid, offersCount };
       })
     );
     res.status(200).json({ success: true, total, page: pageNum, requests: requestsWithOffer });
     return;
   }
 
-  res.status(200).json({ success: true, total, page: pageNum, requests });
+  res.status(200).json({ success: true, total, page: pageNum, requests: requests.map((request) => publicRequestShape(request.toObject())) });
 };
 
 // @desc    Get my requests (student)
@@ -318,6 +352,10 @@ export const getMyRequests = async (req: AuthRequest, res: Response): Promise<vo
       return {
         ...obj,
         offersCount,
+        invitedTutorCount: obj.invitedTutors?.length || 0,
+        // Internal recipient IDs are not needed by the browser once a request
+        // is rendered; expose only the owner-facing count.
+        invitedTutors: undefined,
         isExpired,
         canExtend,
         canRepost,
@@ -326,6 +364,64 @@ export const getMyRequests = async (req: AuthRequest, res: Response): Promise<vo
     })
   );
   res.status(200).json({ success: true, requests: enriched });
+};
+
+// @desc    Get privacy-safe lifecycle events for a requirement owner or a tutor who offered.
+// @route   GET /api/requests/:id/timeline
+export const getRequestTimeline = async (req: AuthRequest, res: Response): Promise<void> => {
+  const requestId = String(req.params.id);
+  if (!Types.ObjectId.isValid(requestId)) { res.status(422).json({ success: false, message: "A valid tuition request ID is required." }); return; }
+  const request = await Request.findById(requestId).select("student subject status createdAt updatedAt").lean();
+  if (!request) { res.status(404).json({ success: false, message: "Tuition request not found." }); return; }
+  const userId = req.user?._id?.toString();
+  const ownsRequest = request.student.toString() === userId;
+  const hasOffer = !ownsRequest && req.user?.role === "tutor" && Boolean(await Bid.exists({ request: request._id, tutor: req.user?._id }));
+  if (!ownsRequest && !hasOffer && req.user?.role !== "admin") { res.status(403).json({ success: false, message: "Not authorized to view this requirement timeline." }); return; }
+  const offerIds = (await Bid.find({ request: request._id }).select("_id").lean()).map((offer) => offer._id.toString());
+  const events = await AuditLog.find({ $or: [
+    { entity: "Request", targetId: request._id.toString() },
+    ...(offerIds.length ? [{ entity: "Bid", targetId: { $in: offerIds } }] : []),
+  ] })
+    .select("action actor actorId createdAt metadata")
+    .sort({ createdAt: 1 })
+    .lean();
+  // Audit metadata can contain internal IDs and moderation fields. Expose an
+  // intentionally small public event shape; admins retain full audit access.
+  res.json({
+    success: true,
+    request: { id: request._id, subject: request.subject, status: request.status },
+    events: events.map((event) => ({
+      id: event._id,
+      action: event.action,
+      actor: event.actorId?.toString() === request.student.toString() ? "Requirement owner" : event.actor === "System" ? "TUTORERA" : "TUTORERA team",
+      createdAt: event.createdAt,
+    })),
+  });
+};
+
+// @desc Invite a verified tutor to one of the student's active requirements.
+// @route POST /api/requests/:id/invitations
+export const inviteTutorToRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  const tutorId = String(req.body?.tutorId || "");
+  if (!Types.ObjectId.isValid(tutorId)) { res.status(422).json({ success: false, message: "A valid tutor is required." }); return; }
+  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id, status: { $in: ["open", "published", "receiving_offers", "negotiating"] }, isDirect: { $ne: true } });
+  if (!request) { res.status(404).json({ success: false, message: "An active tuition requirement was not found." }); return; }
+  const TutorProfile = (await import("../models/TutorProfile.model")).default;
+  const tutorProfile = await TutorProfile.findOne({ user: tutorId });
+  if (!tutorProfile || !isMarketplaceEligible(tutorProfile)) { res.status(422).json({ success: false, message: "This tutor is not currently eligible for marketplace invitations." }); return; }
+  // `$addToSet` alone avoids duplicate values, but its result would not tell
+  // two simultaneous browser requests apart. The `$ne` guard makes the second
+  // write fail deterministically, so it cannot create a second notification or
+  // audit entry.
+  const updated = await Request.findOneAndUpdate(
+    { _id: request._id, student: req.user?._id, invitedTutors: { $ne: new Types.ObjectId(tutorId) } },
+    { $addToSet: { invitedTutors: new Types.ObjectId(tutorId) } },
+    { new: true }
+  );
+  if (!updated) { res.status(409).json({ success: false, message: "This tutor has already been invited." }); return; }
+  await sendNotification(req.app.get("io"), tutorId, { title: "Invitation to a tuition requirement", message: `A student invited you to submit an offer for ${updated.subject}.`, type: "bid", link: "/browse-requests" });
+  await logAudit({ action: "tutor_invited_to_requirement", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: updated.id, metadata: { tutorId } });
+  res.status(201).json({ success: true, message: "Tutor invited to submit an offer.", requestId: updated.id, invitedTutorCount: updated.invitedTutors?.length || 0 });
 };
 
 // @desc    Cancel request
@@ -840,8 +936,9 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         { session }
       );
 
+      const bookingStudent = request.learner || request.student;
       const existingBookingsCount = await Booking.countDocuments({
-        student: request.student,
+        student: bookingStudent,
         tutor: bid.tutor,
       }).session(session);
 
@@ -861,10 +958,12 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         recomputeGatewayFee(fees);
         appliedPromoForRedemption = appliedPromo;
       }
-      const linkedParent = await resolveLinkedBookingParent(request.student as Types.ObjectId, session);
+      const linkedParent = request.student.toString() === bookingStudent.toString()
+        ? await resolveLinkedBookingParent(bookingStudent as Types.ObjectId, session)
+        : request.student;
 
       const bookingArr = await Booking.create([{
-        student: request.student,
+        student: bookingStudent,
         ...(linkedParent && { parent: linkedParent }),
         tutor: bid.tutor,
         request: request._id,
@@ -995,6 +1094,30 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     res.status(400).json({ success: false, message: "Missing required fields." });
     return;
   }
+  if (containsContactInfo(description)) {
+    res.status(422).json({ success: false, code: "CONTACT_DETAILS_NOT_ALLOWED", message: "Do not include phone numbers, email addresses, or off-platform contact details in a booking request." });
+    return;
+  }
+
+  let learnerId: Types.ObjectId | undefined;
+  if (req.user?.role === "parent" && !req.body.learnerId) {
+    res.status(422).json({ success: false, code: "LEARNER_REQUIRED", message: "Select one of your linked learners before sending a direct booking request." });
+    return;
+  }
+  if (req.user?.role === "parent" && req.body.learnerId) {
+    if (!Types.ObjectId.isValid(req.body.learnerId)) {
+      res.status(422).json({ success: false, message: "Select a valid linked learner." });
+      return;
+    }
+    const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": new Types.ObjectId(req.body.learnerId) });
+    if (!linked) {
+      res.status(403).json({ success: false, message: "You can only create a booking for a learner linked to your account." });
+      return;
+    }
+    learnerId = new Types.ObjectId(req.body.learnerId);
+  } else if (req.user?.role !== "parent") {
+    learnerId = req.user?._id as Types.ObjectId;
+  }
 
   const TutorProfile = (await import("../models/TutorProfile.model")).default;
   const tutorProfile = await TutorProfile.findOne({ user: tutorId });
@@ -1097,6 +1220,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   }
   const request = await Request.create({
     student: req.user?._id,
+    ...(learnerId && { learner: learnerId }),
     subject,
     level,
     description,
@@ -1208,7 +1332,7 @@ export const getMyDirectRequests = async (req: AuthRequest, res: Response): Prom
   const requestsWithBid = await Promise.all(
     requests.map(async (r) => {
       const bid = await Bid.findOne({ request: r._id, tutor: req.user?._id });
-      return { ...r.toObject(), bid };
+      return { ...publicRequestShape(r.toObject()), bid };
     })
   );
 
@@ -1322,7 +1446,7 @@ if (teachingMode && teachingMode !== "all") {
     .sort("-createdAt")
     .skip(skip)
     .limit(limitNum)
-    .select("subject level budget maximumBudget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt expiresAt student sessionDurationMinutes sessionsPerWeek");
+    .select("subject level budget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt expiresAt student sessionDurationMinutes sessionsPerWeek");
 
   const Bid = (await import("../models/Bid.model")).default;
   const sanitizedRequests = await Promise.all(
@@ -1349,7 +1473,7 @@ if (teachingMode && teachingMode !== "all") {
         countryCode: r.countryCode || (r.student as any)?.countryCode || "PK",
         countryName: r.countryName || (r.student as any)?.countryName || "Pakistan",
         schedule: r.schedule,
-        description: r.description,
+        description: "Learning goals will be shared after a tutor is selected.",
         status: r.status,
         createdAt: r.createdAt,
         expiresAt: r.expiresAt,
@@ -1453,6 +1577,10 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(404).json({ success: false, message: "Original request not found." });
     return;
   }
+  if (containsContactInfo(`${req.body?.description || oldRequest.description || ""}\n${req.body?.learningObjectives || oldRequest.learningObjectives || ""}`)) {
+    res.status(422).json({ success: false, code: "CONTACT_DETAILS_NOT_ALLOWED", message: "Do not include phone numbers, email addresses, or off-platform contact details in a tuition requirement." });
+    return;
+  }
   if (!["expired", "cancelled", "closed"].includes(oldRequest.status) && !(oldRequest.expiresAt && oldRequest.expiresAt <= new Date())) {
     res.status(409).json({ success: false, message: "Only expired, cancelled, or closed requests can be reposted." });
     return;
@@ -1464,6 +1592,7 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
   // Create fresh request document, preserving old request for analytics
   const newRequest = await Request.create({
     student: oldRequest.student,
+    learner: oldRequest.learner,
     subject: oldRequest.subject,
     level: oldRequest.level,
     description: req.body?.description || oldRequest.description,
@@ -1477,12 +1606,26 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
     examType: oldRequest.examType,
     studentLevel: oldRequest.studentLevel,
     learningObjectives: oldRequest.learningObjectives,
+    learnerType: oldRequest.learnerType,
+    learningNeed: oldRequest.learningNeed,
+    urgency: oldRequest.urgency,
     countryCode: oldRequest.countryCode,
     countryName: oldRequest.countryName,
+    country: oldRequest.country,
+    region: oldRequest.region,
+    cityRef: oldRequest.cityRef,
+    locality: oldRequest.locality,
     city: req.body?.city || oldRequest.city,
+    state: oldRequest.state,
+    zipCode: oldRequest.zipCode,
     timezone: oldRequest.timezone,
+    scheduleTimezone: oldRequest.scheduleTimezone,
+    scheduledStartAt: oldRequest.scheduledStartAt,
+    scheduledEndAt: oldRequest.scheduledEndAt,
+    lessonLanguage: oldRequest.lessonLanguage,
     area: req.body?.area || oldRequest.area,
     travelRadiusKm: oldRequest.travelRadiusKm,
+    location: oldRequest.location,
     isWorldwideEligible: oldRequest.isWorldwideEligible,
     preferredTutorCountries: oldRequest.preferredTutorCountries,
     tutorGenderPreference: oldRequest.tutorGenderPreference,

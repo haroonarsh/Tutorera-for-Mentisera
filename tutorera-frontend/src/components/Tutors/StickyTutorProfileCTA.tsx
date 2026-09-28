@@ -84,7 +84,7 @@ export default function StickyTutorProfileCTA({
               minHeight: "44px",
             }}
           >
-            <PlusCircle size={14} /> Invite
+            <PlusCircle size={14} /> Create requirement
           </Link>
 
           {hasRate ? (

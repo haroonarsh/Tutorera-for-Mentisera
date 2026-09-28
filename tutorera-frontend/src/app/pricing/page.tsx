@@ -34,8 +34,8 @@ export default function PricingPage() {
               </div>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
                 {[
-                  "Browse all verified tutors",
-                  "Post unlimited tuition requests",
+                  "Browse tutor profiles and completed verification indicators",
+                  "Post tuition requirements subject to platform safeguards",
                   "Receive and compare tutor offers",
                   "Real-time chat with tutors",
                   "No student marketplace fee currently",
@@ -61,7 +61,7 @@ export default function PricingPage() {
               </div>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
                 {[
-                  "Create verified tutor profile",
+                  "Create a tutor profile and complete required verification",
                   "Browse student requests",
                   "Accept budgets or send offers",
                   "Real-time chat with students",
@@ -81,7 +81,7 @@ export default function PricingPage() {
             {/* Fee Breakdown */}
             <div style={{ backgroundColor: '#fffbeb', borderRadius: '1rem', padding: '2.5rem', border: '1px solid #fde68a' }}>
               <h3 style={{ fontWeight: '800', color: C.primary, fontSize: '1.2rem', marginBottom: '0.5rem' }}>Fee Breakdown</h3>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>How the {TOTAL_FEE_PERCENT}% total fee is calculated</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.5rem' }}>Illustrative Pakistan fee configuration. Market-specific fees and taxes are shown before booking or payout.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                 {[
                   { label: "Platform Fee", value: `${PLATFORM_FEE_PERCENT}%`, color: '#d97706' },
@@ -97,11 +97,8 @@ export default function PricingPage() {
               <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #fde68a' }}>
                 <p style={{ fontSize: '0.8rem', color: '#92400e', fontWeight: '600', marginBottom: '0.3rem' }}>Example</p>
                 <p style={{ fontSize: '0.8rem', color: '#a16207', lineHeight: '1.6' }}>
-                  Agreed rate: PKR 2,000/hour<br />
-                  Student pays: PKR 2,000<br />
-                  Tutor platform fee: PKR 400<br />
-                  Tax on fee: PKR 60<br />
-                  Estimated tutor earnings: PKR 1,540
+                  This illustration applies only where the displayed Pakistan fee configuration applies.<br />
+                  Your booking or payout screen shows the applicable currency, fee, tax, and net amount before confirmation.
                 </p>
               </div>
             </div>

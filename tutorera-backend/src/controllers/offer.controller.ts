@@ -123,6 +123,19 @@ export const markOfferViewed = async (req: AuthRequest, res: Response): Promise<
   res.json({ success: true, offer: data.offer });
 };
 
+export const shortlistOffer = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await context(req.params.id as string);
+  if (!data) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
+  if (data.request.student.toString() !== req.user?._id?.toString()) { res.status(403).json({ success: false, message: "Only the requirement owner can shortlist an offer." }); return; }
+  if (terminalOfferStates.includes(data.offer.status) || !ACTIVE_OFFER_STATES.includes(data.offer.status as any)) { res.status(409).json({ success: false, message: "This offer can no longer be shortlisted." }); return; }
+  data.offer.shortlistedAt = data.offer.shortlistedAt ? undefined : new Date();
+  await data.offer.save();
+  const shortlisted = Boolean(data.offer.shortlistedAt);
+  await logAudit({ action: shortlisted ? "offer_shortlisted" : "offer_unshortlisted", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: data.offer.id });
+  if (shortlisted) await sendNotification(req.app.get("io"), data.offer.tutor.toString(), { title: "Offer shortlisted", message: "A student shortlisted your tutor offer for comparison.", type: "bid", link: "/offers" });
+  res.json({ success: true, shortlisted, offer: data.offer });
+};
+
 export const renewOffer = async (req: AuthRequest, res: Response): Promise<void> => {
   const offer = await Bid.findOne({ _id: req.params.id, tutor: req.user?._id }); if (!offer) { res.status(404).json({ success: false, message: "Offer not found." }); return; }
   const request = await Request.findById(offer.request); if (!request || !(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status)) { res.status(409).json({ success: false, message: "The request is no longer accepting offers." }); return; }
@@ -499,6 +512,12 @@ export const getMyOffers = async (req: AuthRequest, res: Response): Promise<void
   const result = await Promise.all(offers.map(async offer => {
     const tutorId = (offer.tutor as any)?._id;
     const request = offer.request as any;
+    // Tutors can see the teaching mode, city and schedule required to manage
+    // an offer, but the exact area remains private until a booking is
+    // confirmed. Keep this consistent with the tutor marketplace feed.
+    const safeRequest = req.user?.role === "tutor" && request
+      ? (() => { const { area, learner, invitedTutors, ...safe } = request; return safe; })()
+      : request;
     const [history, profile, completedSessions] = await Promise.all([
       OfferNegotiation.find({ offer: offer._id }).sort("sequenceNumber").lean(),
       tutorId ? TutorProfile.findOne({ user: tutorId }).select(OFFER_PROFILE_FIELDS).lean() : null,
@@ -509,6 +528,7 @@ export const getMyOffers = async (req: AuthRequest, res: Response): Promise<void
       : null;
     return {
       ...offer,
+      request: safeRequest,
       history,
       profile,
       completedSessions,

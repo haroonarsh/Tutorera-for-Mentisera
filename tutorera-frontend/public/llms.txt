@@ -1,39 +1,34 @@
 # TUTORERA Platform Description
 
-TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
+TUTORERA is a Student-First Tutoring Marketplace. Students and parents post learning requirements with a preferred budget for online or home tuition where available. Eligible tutors can submit offers, and the student or parent compares options before choosing a tutor.
 
 ## Core Purpose
-TUTORERA enables students to post tuition requirements and receive transparent offers from qualified tutors. The platform uses an 8-layer smart matching engine with Bayesian ratings to recommend compatible tutors. All tutor verifications—including CNIC, education credentials, demo video, and police clearance—are tracked per-component with canonical status computation.
+The initial budget is set by the student or parent. Tutors may propose a different rate only when the request permits counter-offers. Verification requirements vary by market and teaching mode, and verification does not guarantee tutoring performance.
+
+TUTORERA enables students and parents to post tuition requirements and receive comparable offers from eligible tutors. Matching considers the information supplied in a request and tutor profile; a match score is guidance, not a promise of suitability or a guarantee of a booking. Public tutor-verification indicators describe the checks completed under the relevant market and teaching-mode policy.
 
 ## Key Features
 - Student-led tuition request posting with budget and schedule preferences
-- Verified tutor directory with match scoring, availability, and structured profiles
-- Structured negotiation with max 3 counter-offers per party
-- Authorized platform checkout with atomic booking creation, server-side payment verification, and webhook confirmation
-- Per-component tutor verification (identity, education, demo video, police)
-- Admin control tower with at-risk request rescue, supply-gap intelligence, and financial reconciliation
-- Role-based access control with granular permissions (student, tutor, parent, admin)
-- Email webhook tracking and delivery monitoring
-- Request expiry lifecycle with archival and retention
-- Multi-country market configuration (PK, AE, SA, GB, US, CA, AU, QA, OM, KW, BH, IN, MY, SG)
-- One-click rebooking with pre-filled tutor, subject, mode, and rate from previous sessions
-- Post-session review request automation
-- Parent/guardian accounts with child profile management and approval workflows
-- Self-service refund request flow for completed bookings
+- Tutor discovery is a secondary feature; request posting is the primary marketplace journey.
+- Eligible tutors can submit offers and, where a request permits it, negotiate a rate before selection.
+- Booking and checkout are available only where the selected market enables them.
+- Tutor verification is shown only for checks completed under the relevant market and teaching-mode policy.
+- Role-based accounts support students, parents, tutors, and authorised administrators.
 - Guest checkout for parent accounts — parents can pay for their children's bookings
-- Pricing intelligence showing market rate ranges per city and subject
-- Learning relationship tracking (student-tutor pairs, repeat booking counts, retention metrics)
-- First-session satisfaction guarantee with claim workflow
+- Private requirements, child details, exact addresses, and direct contact information are not public content.
 
-## Demand SEO Pages
+## Student-intent Pages
 TUTORERA generates city×subject×curriculum demand pages for organic discovery:
-- /tuition-requests/pk/lahore/mathematics
-- /tuition-requests/pk/karachi/physics
-- /tuition-requests/pk/islamabad/chemistry
-Each page surfaces anonymized, real request data filtered by city, subject, curriculum, and teaching mode.
+- /pk/home-tuition
+- /pk/online-tuition
+- /pk/mathematics-tuition
+- /pk/o-level-tuition
+- /pk/islamabad/tuition
+- /pk/lahore/home-tuition
+These pages do not publish private requests or claim inventory that has not been verified for indexing.
 
 ## Tutoring Index
-Public aggregate market research is also available at /research/tutoring-index with anonymized demand, offer-rate, booking, response-time, city, subject, mode, and six-month trend data.
+The Tutoring Index at /research/tutoring-index publishes only sufficiently large, anonymised, country- and currency-specific aggregates with its methodology. Absence of a data point does not imply a market result.
 Public aggregate market research at /research/pakistan-tutoring-rates — anonymized data on tutoring rates by city, subject, mode, and trend over 6 months.
 
 ## Contact
@@ -45,3 +40,6 @@ Public aggregate market research at /research/pakistan-tutoring-rates — anonym
 - Terms: https://tutorera.ac.pk/terms
 - Privacy: https://tutorera.ac.pk/privacy
 - Refund Policy: https://tutorera.ac.pk/refund-policy
+- How it works: https://tutorera.ac.pk/how-it-works
+- Verification: https://tutorera.ac.pk/tutor-verification-standards
+- Research methodology: https://tutorera.ac.pk/research-methodology

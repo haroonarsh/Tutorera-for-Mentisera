@@ -49,6 +49,7 @@ export default function RequestWizard({
   const [isPublished, setIsPublished] = useState(false);
   const [freeText, setFreeText] = useState("");
   const [parsingNLP, setParsingNLP] = useState(false);
+  const [linkedLearners, setLinkedLearners] = useState<{ _id: string; name: string; level?: string }[]>([]);
 
   const handleNLPParse = async () => {
     if (!freeText.trim()) return;
@@ -97,6 +98,10 @@ export default function RequestWizard({
     examType: prefill.examType || "",
     studentLevel: prefill.studentLevel || "",
     learningObjectives: prefill.learningObjectives || "",
+    learnerType: prefill.learnerType || "self",
+    learnerId: prefill.learnerId,
+    learningNeed: prefill.learningNeed || "regular_tuition",
+    urgency: prefill.urgency || "flexible",
     area: prefill.area || "",
     travelRadiusKm: prefill.travelRadiusKm || "8",
     tutorGenderPreference: prefill.tutorGenderPreference || "none",
@@ -141,6 +146,13 @@ export default function RequestWizard({
       budget: current.budget === "2000" && market.currency !== "PKR" ? (market.currency === "AED" ? "80" : market.currency === "GBP" ? "25" : "30") : current.budget,
     }));
   }, [geo.countries, prefill.countryCode, user?.countryCode, user?.city]);
+
+  useEffect(() => {
+    if (user?.role !== "parent") { setLinkedLearners([]); return; }
+    api.get("/parent/profile")
+      .then((res) => setLinkedLearners((res.data?.profile?.children || []).map((child: any) => ({ _id: child.studentUser, name: child.name, level: child.level || child.studentProfile?.currentLevel }))))
+      .catch(() => setLinkedLearners([]));
+  }, [user?.role]);
 
   const hasContactInfo = Boolean(form.learningObjectives && CONTACT_INFO_REGEX.test(form.learningObjectives)) || Boolean(form.description && CONTACT_INFO_REGEX.test(form.description));
 
@@ -222,6 +234,12 @@ export default function RequestWizard({
       sessionStorage.setItem("tutorera_redirect_after_auth", "/post-tuition-request");
       showSuccess("Your request details are saved! Please sign in or create an account to publish.");
       router.push("/login");
+      return;
+    }
+
+    if (user.role === "parent" && form.learnerType === "child" && !form.learnerId) {
+      showError("Select a linked learner before posting this requirement.");
+      setStep(1);
       return;
     }
 
@@ -444,6 +462,23 @@ export default function RequestWizard({
         {/* STEP 1: Academic Needs */}
         {step === 1 && (
           <div style={{ display: "grid", gap: "1.25rem" }}>
+            <fieldset style={{ border: "1px solid #dbe5f5", borderRadius: "0.75rem", padding: "1rem" }}>
+              <legend style={{ fontWeight: 800, color: "#021550" }}>Who needs tutoring?</legend>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {([ ["self", "Myself"], ["child", "My child"], ["other", "Someone else"] ] as const).map(([value, label]) => <button type="button" key={value} onClick={() => update("learnerType", value)} aria-pressed={form.learnerType === value} style={{ ...inputStyle, width: "auto", background: form.learnerType === value ? "#eaf2ff" : "white", borderColor: form.learnerType === value ? "#0329b2" : "#cbd5e1" }}>{label}</button>)}
+              </div>
+              {form.learnerType === "child" && <p style={{ margin: "0.65rem 0 0", color: "#52627e", fontSize: "0.8rem" }}>Keep your child&apos;s name, school, phone number, and exact address private. Guardian approval may be required before booking.</p>}
+              {user?.role === "parent" && form.learnerType === "child" && (
+                <label style={{ display: "grid", gap: 6, marginTop: "0.75rem", fontSize: "0.85rem", fontWeight: 700, color: "#021550" }}>
+                  Linked learner <span aria-hidden="true" style={{ color: "#b91c1c" }}>*</span>
+                  <select value={form.learnerId || ""} onChange={(event) => update("learnerId", event.target.value || undefined)} style={inputStyle} required>
+                    <option value="">Select a linked learner</option>
+                    {linkedLearners.map((learner) => <option key={learner._id} value={learner._id}>{learner.name}{learner.level ? ` — ${learner.level}` : ""}</option>)}
+                  </select>
+                  {linkedLearners.length === 0 && <span style={{ color: "#b45309", fontSize: "0.78rem", fontWeight: 500 }}>Link a learner from your Parent Dashboard before posting for a child.</span>}
+                </label>
+              )}
+            </fieldset>
             {/* Ask Tutorera — Free text NLP parsing */}
             <div style={{
               background: "linear-gradient(135deg, #f0f9ff 0%, #eef5ff 100%)",
@@ -506,6 +541,12 @@ export default function RequestWizard({
             </div>
 
             <div>
+              <label style={labelStyle}>What help is needed?</label>
+              <select value={form.learningNeed} onChange={(e) => update("learningNeed", e.target.value)} style={inputStyle}>
+                <option value="regular_tuition">Regular tuition</option><option value="concept_improvement">Concept improvement</option><option value="exam_preparation">Exam preparation</option><option value="past_papers">Past papers</option><option value="homework_support">Homework support</option><option value="revision">Revision</option><option value="test_preparation">Test preparation</option><option value="language_practice">Language practice</option><option value="skill_development">Skill development</option><option value="other">Other</option>
+              </select>
+            </div>
+            <div>
               <label style={labelStyle}>Select Subject *</label>
               <select 
                 value={form.subject} 
@@ -560,6 +601,13 @@ export default function RequestWizard({
                   style={inputStyle}
                 />
               </div>
+            </div>
+
+            <div>
+              <label style={labelStyle}>When would you like to start?</label>
+              <select value={form.urgency} onChange={(e) => update("urgency", e.target.value)} style={inputStyle}>
+                <option value="immediately">Immediately</option><option value="within_3_days">Within 3 days</option><option value="within_week">Within a week</option><option value="flexible">Flexible</option>
+              </select>
             </div>
 
             <div>

@@ -15,6 +15,7 @@ export interface IBid extends Document {
   availability?: string;
   expiresAt: Date;
   viewedAt?: Date;
+  shortlistedAt?: Date;
   renewedAt?: Date;
   renewalCount: number;
   flaggedForModeration: boolean;
@@ -44,6 +45,7 @@ const bidSchema = new Schema<IBid>(
     availability: { type: String, trim: true, maxlength: 300 },
     expiresAt: { type: Date, required: true },
     viewedAt: { type: Date },
+    shortlistedAt: { type: Date },
     renewedAt: { type: Date },
     renewalCount: { type: Number, default: 0, min: 0 },
     flaggedForModeration: { type: Boolean, default: false },

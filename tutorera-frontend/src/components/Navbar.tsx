@@ -30,16 +30,16 @@ const megaMenus = [
   {
     key: "students" as MegaKey,
     label: "For Students",
-    eyebrow: "Global Student-Led Marketplace",
-    title: "Post your need, receive offers worldwide or locally, compare & choose.",
+    eyebrow: "Student-First Marketplace",
+    title: "Post your learning need, receive eligible tutor offers, compare, and choose.",
     icon: GraduationCap,
     featured: { label: "Post a Tuition Request", href: "/post-tuition-request", desc: "Set subject, schedule, mode, and your proposed budget in any currency." },
     groups: [
       { title: "Learning Modes", links: [
-        { label: "Home Tuition Requests", href: "/post-home-tuition-request", desc: "Verified tutors near your neighborhood." },
-        { label: "Online Tuition Requests", href: "/post-online-tuition-request", desc: "1-on-1 live sessions with top global tutors." },
-        { label: "Browse Tutors Directory", href: "/tutors", desc: "Search across verified profiles worldwide." },
-        { label: "Tutors by Location", href: "/locations", desc: "Dubai, London, Lahore, New York & more." },
+        { label: "Home Tuition Requests", href: "/post-home-tuition-request", desc: "Post your local learning requirement where home tuition is available." },
+        { label: "Online Tuition Requests", href: "/post-online-tuition-request", desc: "Set your subject, schedule, and preferred budget for online learning." },
+        { label: "Browse Tutors", href: "/tutors", desc: "Explore tutor profiles as a secondary discovery option." },
+        { label: "Tutors by Location", href: "/locations", desc: "Explore available location coverage." },
       ] },
       { title: "Transparency & Trust", links: [
         { label: "How Tutor Offers Work", href: "/how-tutor-offers-work", desc: "Understanding offers, counters & locking." },
@@ -53,14 +53,14 @@ const megaMenus = [
     key: "tutors" as MegaKey,
     label: "For Tutors",
     eyebrow: "Global Teaching Opportunities",
-    title: "Discover real student demand and send offers across borders or locally.",
+    title: "Review relevant student requirements and submit offers where eligible.",
     icon: BriefcaseBusiness,
-    featured: { label: "Browse Open Requests", href: "/browse-requests", desc: "Review student budgets and send counter-offers." },
+    featured: { label: "Browse Open Requests", href: "/browse-requests", desc: "Review privacy-safe requirements and submit offers." },
     groups: [
       { title: "Tutor Marketplace", links: [
-        { label: "Browse Student Requests", href: "/browse-requests", desc: "View real-time tutoring requirements worldwide." },
-        { label: "Become a Verified Tutor", href: "/become-a-tutor", desc: "Join TUTORERA's global network." },
-        { label: "Tutor Earnings Flow", href: "/earnings", desc: "Multi-currency payouts & net earnings." },
+        { label: "Browse Student Requests", href: "/browse-requests", desc: "See relevant, privacy-safe tutoring requirements." },
+        { label: "Become a Tutor", href: "/become-a-tutor", desc: "Complete the application and required verification." },
+        { label: "Tutor Earnings Flow", href: "/earnings", desc: "Understand applicable earnings and settlement terms." },
         { label: "Verification Standards", href: "/tutor-verification-standards", desc: "Identity & credential screening." },
       ] },
       { title: "Teaching Standards", links: [
@@ -76,18 +76,18 @@ const megaMenus = [
     eyebrow: "Guides & Policies",
     title: "Everything you need to know about TUTORERA.",
     icon: ShieldCheck,
-    featured: { label: "How TUTORERA Works", href: "/how-it-works", desc: "The global student-led demand marketplace loop." },
+    featured: { label: "How TUTORERA Works", href: "/how-it-works", desc: "The student-first requirement, offer, comparison, and booking flow." },
     groups: [
       { title: "Guides & Research", links: [
         { label: "Global Tutoring Index", href: "/research/tutoring-index", desc: "Country-specific tutoring market benchmarks." },
         { label: "Student Journey", href: "/student-journey", desc: "From posting need to completed session." },
-        { label: "Payment Process", href: "/payment-process", desc: "Secure multi-currency checkout & guarantees." },
+        { label: "Payment Process", href: "/payment-process", desc: "Market-enabled checkout and payment information." },
         { label: "Help Center", href: "/help", desc: "FAQs & support documentation." },
       ] },
       { title: "Company & Trust", links: [
         { label: "About TUTORERA", href: "/about", desc: "Mission & global team." },
         { label: "Safety & Privacy Policy", href: "/safety-policy", desc: "Address & identity protections." },
-        { label: "Contact Support", href: "/contact", desc: "Direct 24/7 team assistance." },
+        { label: "Contact Support", href: "/contact", desc: "Contact the TUTORERA support team." },
       ] },
     ],
   },
@@ -162,6 +162,9 @@ export default function Navbar() {
 
         {/* Desktop Main Links */}
         <div className={s.desktopNav}>
+          <Link href="/post-tuition-request" className={s.navLink} onClick={closeMenus}>
+            Post Requirement
+          </Link>
           <Link href="/tutors" className={s.navLink} onClick={closeMenus}>
             Find Tutors
           </Link>

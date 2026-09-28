@@ -16,7 +16,6 @@ export interface TuitionRequest {
   level: string;
   description: string;
   budget: number;
-  maximumBudget?: number;
   pricingUnit: "hour" | "session" | "month" | "course";
   currency: string;
   allowCounterOffers: boolean;
@@ -68,7 +67,7 @@ export async function fetchRequests(filters: RequestFilters = {}, limit = 12): P
   if (currency) params.set("currency", currency);
 
   try {
-    const response = await fetch(`${API_URL}/requests?${params}`, { next: { revalidate: 60 } });
+    const response = await fetch(`${API_URL}/requests/public/preview?${params}`, { next: { revalidate: 60 } });
     if (!response.ok) throw new Error(`Request API returned ${response.status}`);
     const data = await response.json();
     const requests: TuitionRequest[] = data.requests ?? [];
@@ -76,7 +75,7 @@ export async function fetchRequests(filters: RequestFilters = {}, limit = 12): P
       requests,
       total: data.total ?? requests.length,
       page: data.page ?? 1,
-      pages: data.pages ?? 1,
+      pages: data.totalPages ?? data.pages ?? 1,
     };
   } catch (error) {
     console.error("Unable to load tuition requests", error);

@@ -12,6 +12,10 @@ export interface DashRequest {
   pricingUnit: "hour" | "session" | "month" | "course";
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string; learningObjectives?: string;
+  learnerType?: "self" | "child" | "other";
+  learnerId?: string;
+  learningNeed?: string;
+  urgency?: "immediately" | "within_3_days" | "within_week" | "flexible";
   area?: string; travelRadiusKm?: number; tutorGenderPreference?: "male" | "female" | "none";
   minimumQualification?: string; minimumExperience?: number; preferredLanguage?: string; preferredTutorRating?: number;
   preferredDays?: string[]; preferredStartTime?: string; sessionDurationMinutes?: number; sessionsPerWeek?: number; expectedStartDate?: string;
@@ -41,6 +45,7 @@ export interface DashRequest {
   isExpired?: boolean;
   secondsRemaining?: number;
   offersCount?: number;
+  invitedTutorCount?: number;
   bid?: Pick<DashBid, "_id" | "amount" | "currency" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
 }
 
@@ -194,6 +199,7 @@ export interface PostRequestPayload {
   schedule: string;
   maximumBudget: string; pricingUnit: "hour" | "session" | "month" | "course"; allowCounterOffers: boolean;
   classGrade: string; curriculum: string; examType: string; studentLevel: string; learningObjectives: string;
+  learnerType: "self" | "child" | "other"; learnerId?: string; learningNeed: string; urgency: "immediately" | "within_3_days" | "within_week" | "flexible";
   area: string; travelRadiusKm: string; tutorGenderPreference: "male" | "female" | "none";
   minimumQualification: string; minimumExperience: string; preferredLanguage: string; preferredTutorRating: string;
   preferredDays: string[]; preferredStartTime: string; sessionDurationMinutes: string; sessionsPerWeek: string; expectedStartDate: string;
@@ -216,4 +222,5 @@ export interface RankedRequestMatch {
   tier: "excellent" | "great" | "good" | "fair";
   scoreBreakdown: Record<string, number>;
   reasons: string[];
+  isInvited?: boolean;
 }

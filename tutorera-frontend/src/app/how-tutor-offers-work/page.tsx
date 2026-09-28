@@ -3,19 +3,19 @@ import Link from "next/link";
 import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
-  title: "How Tutor Offers Work | Global Student-Led Tutoring Marketplace",
-  description: "Post a tuition request with your preferred budget and currency, compare verified tutor offers, negotiate transparently, and hire your ideal tutor on TUTORERA.",
+  title: "How Tutor Offers Work | Student-First Marketplace | TUTORERA",
+  description: "Post a tuition requirement with a preferred budget, compare eligible tutor offers, negotiate where permitted, and choose a tutor on TUTORERA.",
   alternates: { canonical: "/how-tutor-offers-work" },
 };
 
 const faq = [
   [
     "How do students receive tutor offers?",
-    "A student or parent publishes a tuition request with subject, curriculum, learning mode (online worldwide or home tuition locally), schedule, and budget details. Verified, eligible educators receive the opportunity and submit tailored offers.",
+    "A student or parent publishes a tuition request with subject, curriculum, learning mode, schedule, and preferred budget. Eligible tutors can receive the opportunity and submit tailored offers.",
   ],
   [
     "Can students set their own tutoring budget?",
-    "Yes. Students propose a rate in their chosen local currency (e.g. AED, USD, GBP, SAR, PKR). An optional maximum budget remains confidential and is never shown to competing tutors.",
+    "Yes. Students and parents set the initial preferred budget in the request currency. Any private maximum budget is not shown to tutors.",
   ],
   [
     "Can tutors submit counter-offers?",
@@ -23,15 +23,15 @@ const faq = [
   ],
   [
     "Can students negotiate tutor rates?",
-    "Yes. Both parties can exchange structured counter-offers within the platform. Every change is tracked on an immutable timeline so terms remain 100% transparent.",
+    "When a request permits counter-offers, both parties can exchange structured counter-offers in the platform. The request and offer history records the negotiation steps.",
   ],
   [
     "Does TUTORERA automatically assign a tutor?",
-    "No. TUTORERA is strictly student-led. Learners and parents evaluate match scores, credentials, verified student ratings, availability, and rates before independently selecting their tutor.",
+    "No. TUTORERA is student-first: the learner or parent compares the available information and chooses a tutor. A match score is guidance, not a recommendation or guarantee.",
   ],
   [
     "What happens after accepting an offer?",
-    "The agreed rate is locked, competing offers close, and a secure platform booking is created. Payment is processed with full student satisfaction guarantees.",
+    "The agreed rate is locked, competing offers close, and a booking is created. In a checkout-enabled market, payment options and the applicable cancellation terms are shown before payment is requested.",
   ],
 ];
 
@@ -72,10 +72,10 @@ export default function HowTutorOffersWorkPage() {
             fontSize: "1.1rem",
           }}
         >
-          Define your requirements. Set your budget in your currency. Receive offers from verified educators worldwide or locally.
+          Define your requirements. Set a preferred budget. Eligible tutors can submit offers for online or locally available home tuition.
         </p>
         <Link
-          href="/dashboard"
+          href="/post-tuition-request"
           style={{
             display: "inline-block",
             background: "#016ef8",
@@ -94,10 +94,10 @@ export default function HowTutorOffersWorkPage() {
       <div style={{ maxWidth: 850, margin: "auto", padding: "3.5rem 1.5rem" }}>
         <section>
           <h2 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: "1rem" }}>
-            A Global Student-Led Demand Tutoring Marketplace
+            A Student-First Tutoring Marketplace
           </h2>
           <p style={{ lineHeight: 1.8, color: "#475569", fontSize: "1rem" }}>
-            TUTORERA is a global student-led tutoring marketplace where students and parents post tutoring requirements in their preferred local currency and learning mode (online worldwide or home tuition locally). Qualified, verified educators submit competitive offers or transparent counter-offers. Students evaluate tutor credentials, teaching background, and reviews before making an empowered choice.
+            TUTORERA is a student-first tutoring marketplace where students and parents post tutoring requirements, select an available learning mode, and set a preferred budget. Eligible tutors may submit offers or, where permitted, counter-offers. Students evaluate the available profile information and choose the tutor that fits their needs.
           </p>
         </section>
 
@@ -110,16 +110,16 @@ export default function HowTutorOffersWorkPage() {
               <strong>Specify what you need:</strong> Subject, curriculum (Cambridge, IB, GCSE, Matric/FSc, etc.), mode (online or home tuition), schedule, timezone, and your preferred budget.
             </li>
             <li>
-              <strong>Receive verified tutor offers:</strong> Matching educators review your requirement and accept your budget or submit customized counter-offers.
+              <strong>Receive tutor offers:</strong> Eligible tutors review your requirement and can accept your budget or submit a counter-offer when the request permits it.
             </li>
             <li>
-              <strong>Compare & negotiate:</strong> Review verified degrees, ID verification, background checks, tutor match ratings, and terms in real-time.
+              <strong>Compare & negotiate:</strong> Review the profile details, completed verification indicators, availability, offer terms, and any permitted counter-offers.
             </li>
             <li>
               <strong>Choose your educator:</strong> Accept the tutor whose expertise and price best meet your criteria. The final rate is locked.
             </li>
             <li>
-              <strong>Secure platform booking:</strong> Review transparent checkout details with satisfaction guarantee. Your payment is protected until the session is successfully delivered.
+              <strong>Review booking and payment:</strong> Review the final rate and booking terms. Where market checkout is enabled, payment options and applicable cancellation terms are shown before payment.
             </li>
           </ol>
         </section>
@@ -144,10 +144,10 @@ export default function HowTutorOffersWorkPage() {
           <ul style={{ lineHeight: 1.9, color: "#475569", paddingLeft: "1.25rem" }}>
             <li>Students retain full autonomy over which tutor they hire.</li>
             <li>Tutors define their own rates and are never compelled to accept below-market prices.</li>
-            <li>Multi-currency transparency: budgets and offers are denominated clearly with protected platform checkout.</li>
-            <li>Rankings prioritize qualification authenticity, teaching efficacy, and student reviews.</li>
-            <li>Zero hidden charges: all fees and tutor earnings are disclosed upfront.</li>
-            <li>Police verification is mandatory for in-person home tutors to ensure parent peace of mind.</li>
+            <li>Budgets and offers use the request currency; the agreed rate is displayed before booking.</li>
+            <li>Matching considers profile and request information, but the student or parent makes the final choice.</li>
+            <li>Any applicable fee or payment information is shown in the booking flow.</li>
+            <li>Home-tuition eligibility follows the active market's safety and verification policy.</li>
           </ul>
         </section>
 

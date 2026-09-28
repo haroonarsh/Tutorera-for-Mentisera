@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       canonical,
     },
+    robots: { index: false, follow: true },
     openGraph: {
       title: `Active Tuition Requests in ${countryName} | TUTORERA`,
       description: `Real students in ${countryName} are looking for tutors. Post your tuition requirement and get matched with verified tutors.`,

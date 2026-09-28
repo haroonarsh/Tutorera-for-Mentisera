@@ -98,7 +98,6 @@ const studentProfileSchema = new Schema<IStudentProfile>(
 // Compound indexes for global marketplace queries
 studentProfileSchema.index({ countryCode: 1, cityId: 1, onboardingComplete: 1 });
 studentProfileSchema.index({ countryCode: 1, currency: 1, teachingModePreference: 1 });
-studentProfileSchema.index({ user: 1 });
 studentProfileSchema.index({ location: "2dsphere" });
 
 // The onboarding controller writes via findOneAndUpdate({ upsert: true }),

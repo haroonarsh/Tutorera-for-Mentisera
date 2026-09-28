@@ -4,27 +4,14 @@ import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Find Verified Online Tutors Worldwide | 1-on-1 Live Lessons",
-  description:
-    "Connect with qualified, verified online tutors worldwide. Post your requirement, compare tutor rates in your currency, schedule flexible 1-on-1 sessions, and pay through authorized platform checkout.",
-  alternates: { canonical: "/online-tutors" },
-  openGraph: {
-    title: "Find Verified Online Tutors Worldwide",
-    description:
-      "Connect with qualified online tutors worldwide across Cambridge, IB, GCSE, and board curricula with transparent pricing.",
-    url: `${SITE_URL}/online-tutors`,
-  },
-};
-
 const onlineFaqs = [
   {
     q: "How does online tutoring work on TUTORERA?",
-    a: "Students post their subject, curriculum, timezone, and preferred budget. Verified online tutors submit customized offers. Once you accept an offer, 1-on-1 interactive lessons take place via live interactive video and collaborative whiteboards.",
+    a: "Students post their subject, curriculum, timezone, and preferred budget. Eligible tutors can submit customised offers. After a booking is confirmed, the tutor and learner follow the agreed online-session arrangements.",
   },
   {
     q: "What curricula do online tutors cover?",
-    a: "TUTORERA educators support Cambridge O/A Levels, British GCSE/IGCSE, International Baccalaureate (IB DP/MYP), American AP, Matric, FSc, and standardized tests such as IELTS, SAT, and MDCAT.",
+    a: "Tutor profiles state their subjects, curricula, and teaching experience. Availability depends on the profiles and requests active in the relevant market.",
   },
   {
     q: "In what currencies can I pay for online tutoring?",
@@ -32,12 +19,28 @@ const onlineFaqs = [
   },
   {
     q: "What timezone scheduling is supported?",
-    a: "Tutors set flexible availability across Middle East (GST), UK (GMT/BST), Pakistan (PKT), North America (EST/PST), and global timezones.",
+    a: "Requests store their selected timezone and schedule details. Tutors can respond when their stated availability fits the requested time.",
   },
 ];
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 const value = (input: string | string[] | undefined) => (typeof input === "string" ? input : "");
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const params = await searchParams;
+  const hasFilters = Object.values(params).some((rawValue) => value(rawValue).trim().length > 0);
+  return {
+    title: "Find Online Tutors | Post a Requirement | TUTORERA",
+    description: "Post an online-tuition requirement with your subject, schedule, and preferred budget. Eligible tutors can submit offers for you to compare before choosing.",
+    alternates: { canonical: "/online-tutors" },
+    robots: hasFilters ? { index: false, follow: true } : undefined,
+    openGraph: {
+      title: "Find Online Tutors | TUTORERA",
+      description: "Post an online-tuition requirement and compare eligible tutor offers before choosing.",
+      url: `${SITE_URL}/online-tutors`,
+    },
+  };
+}
 
 export default async function OnlineTutorsPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -100,11 +103,11 @@ export default async function OnlineTutorsPage({ searchParams }: Props) {
           limit: 12,
         }}
         initialFilters={initialFilters}
-        title="Find Verified Online Tutors Worldwide"
+        title="Find Online Tutors"
         subtitle={
           result.total
-            ? `${result.total} verified online tutors ready for 1-on-1 virtual lessons`
-            : "Browse verified online educators across international curricula and subjects"
+            ? `${result.total} online tutor profiles matching this directory view`
+            : "Post an online-tuition requirement to receive eligible tutor offers"
         }
       />
       <section style={{ maxWidth: 1120, margin: "2rem auto 4rem", padding: "0 1.5rem" }}>

@@ -2,6 +2,9 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IRequest extends Document {
   student: Types.ObjectId;
+  // The account that will receive tuition. For a parent-posted requirement,
+  // `student` remains the accountable requester and `learner` is the linked child.
+  learner?: Types.ObjectId;
   subject: string;
   level: string;
   description: string;
@@ -12,6 +15,9 @@ export interface IRequest extends Document {
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
   learningObjectives?: string;
+  learnerType?: "self" | "child" | "other";
+  learningNeed?: "regular_tuition" | "concept_improvement" | "exam_preparation" | "past_papers" | "homework_support" | "revision" | "test_preparation" | "language_practice" | "skill_development" | "other";
+  urgency?: "immediately" | "within_3_days" | "within_week" | "flexible";
   countryCode?: string; countryName?: string; state?: string; city?: string; zipCode?: string; timezone?: string;
   scheduleTimezone?: string; scheduledStartAt?: Date; scheduledEndAt?: Date;
   country?: Types.ObjectId; region?: Types.ObjectId; cityRef?: Types.ObjectId; locality?: Types.ObjectId;
@@ -54,6 +60,7 @@ export interface IRequest extends Document {
   // intended to use is still applied once the parent later approves.
   pendingPromoCode?: string;
   targetTutor?: Types.ObjectId;       // set only for direct booking requests
+  invitedTutors?: Types.ObjectId[];   // student-selected supply, never public contact data
   isDirect: boolean;                  // flags this as a direct booking, not open bidding
   selectedDate?: string;
   selectedStartTime?: string;
@@ -69,12 +76,13 @@ const requestSchema = new Schema<IRequest>(
       ref: "User",
       required: true,
     },
+    learner: { type: Schema.Types.ObjectId, ref: "User" },
     subject: { type: String, required: true, trim: true },
     level: {
       type: String,
       required: true,
-      // Keep the historical short value readable while new requests use the descriptive label.
-      enum: ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"],
+      // Persist the market-specific level snapshot. A fixed Pakistan-only enum
+      // would reject valid values such as GCSE, CBSE, and Key Stage 3.
     },
     description: { type: String, required: true, trim: true },
     budget: { type: Number, required: true, min: 0 },
@@ -84,6 +92,9 @@ const requestSchema = new Schema<IRequest>(
     allowCounterOffers: { type: Boolean, default: true },
     classGrade: { type: String, trim: true }, curriculum: { type: String, trim: true }, examType: { type: String, trim: true }, studentLevel: { type: String, trim: true },
     learningObjectives: { type: String, trim: true }, 
+    learnerType: { type: String, enum: ["self", "child", "other"], default: "self" },
+    learningNeed: { type: String, enum: ["regular_tuition", "concept_improvement", "exam_preparation", "past_papers", "homework_support", "revision", "test_preparation", "language_practice", "skill_development", "other"] },
+    urgency: { type: String, enum: ["immediately", "within_3_days", "within_week", "flexible"], default: "flexible" },
     countryCode: { type: String, uppercase: true, trim: true },
     countryName: { type: String, trim: true },
     country: { type: Schema.Types.ObjectId, ref: "Country", index: true },
@@ -148,6 +159,7 @@ const requestSchema = new Schema<IRequest>(
     finalAgreedRate: { type: Number, min: 0 },
     pendingPromoCode: { type: String, trim: true, uppercase: true },
     targetTutor: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    invitedTutors: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isDirect: { type: Boolean, default: false }, 
     selectedDate: { type: String, default: "" },
     selectedStartTime: { type: String, default: "" },
@@ -159,10 +171,12 @@ const requestSchema = new Schema<IRequest>(
 // High-performance compound indexes for marketplace freshness & candidate matching
 requestSchema.index({ status: 1, expiresAt: 1 });
 requestSchema.index({ student: 1, status: 1, createdAt: -1 });
+requestSchema.index({ learner: 1, status: 1, createdAt: -1 });
 requestSchema.index({ teachingMode: 1, countryCode: 1, status: 1, expiresAt: 1 });
 requestSchema.index({ countryCode: 1, cityRef: 1, currency: 1, status: 1, createdAt: -1 });
 requestSchema.index({ lossReason: 1, lossClassifiedAt: -1 });
 requestSchema.index({ moderationStatus: 1, countryCode: 1, updatedAt: -1 });
+requestSchema.index({ invitedTutors: 1, status: 1, expiresAt: 1 });
 requestSchema.index({ location: "2dsphere" });
 
 // location.type defaults to "Point" whenever the location subdocument exists

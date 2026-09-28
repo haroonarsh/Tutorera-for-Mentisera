@@ -317,6 +317,7 @@ function OpenRequestCard({
   matchTier,
   matchReasons,
   matchBreakdown,
+  isInvited = false,
 }: {
   request: DashRequest;
   onBidPlaced: () => void;
@@ -324,6 +325,7 @@ function OpenRequestCard({
   matchTier?: "excellent" | "great" | "good" | "fair";
   matchReasons?: string[];
   matchBreakdown?: Record<string, number>;
+  isInvited?: boolean;
 }) {
   const [showBidModal, setShowBidModal] = useState(false);
 
@@ -346,6 +348,9 @@ function OpenRequestCard({
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
               <h3 className={s.cardTitle} style={{ margin: 0 }}>{request.subject}</h3>
+              {isInvited ? (
+                <StatusBadge tone="info">You were invited</StatusBadge>
+              ) : null}
               {matchScore ? (
                 <MatchScoreBadge
                   score={matchScore}
@@ -982,6 +987,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
                   matchTier={item.tier}
                   matchReasons={item.reasons}
                   matchBreakdown={item.scoreBreakdown}
+                  isInvited={Boolean(item.isInvited)}
                   onBidPlaced={() => {
                     setBidSuccess(true);
                     fetchRecommended();

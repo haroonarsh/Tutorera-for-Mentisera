@@ -43,11 +43,11 @@ export default function TuitionRequestsExplorer({ initialRequests, initialPagina
       if (newFilters.country) params.set("country", newFilters.country);
       if (newFilters.teachingMode && newFilters.teachingMode !== "all") params.set("teachingMode", newFilters.teachingMode);
 
-      const res = await fetch(`/api/v1/requests?${params}`);
+      const res = await fetch(`/api/v1/requests/public/preview?${params}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setRequests(data.requests ?? []);
-      setPagination({ total: data.total ?? 0, page: data.page ?? 1, pages: data.pages ?? 1 });
+      setPagination({ total: data.total ?? 0, page: data.page ?? 1, pages: data.totalPages ?? data.pages ?? 1 });
       setFilters(newFilters);
     } catch (err) {
       console.error(err);
@@ -329,9 +329,6 @@ function RequestCard({ request: req }: { request: TuitionRequest }) {
       {/* Budget */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
         <span style={{ fontSize: "1rem", fontWeight: 800, color: "#021550" }}>{budget}</span>
-        {req.maximumBudget && req.maximumBudget > req.budget && (
-          <span style={{ fontSize: "0.75rem", color: "#64748b" }}>up to {formatBudget(req.maximumBudget, req.currency || "PKR", req.pricingUnit)}</span>
-        )}
       </div>
 
       {/* Meta row */}

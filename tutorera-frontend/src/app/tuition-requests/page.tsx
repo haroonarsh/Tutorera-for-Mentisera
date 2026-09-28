@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Browse Tuition Requests",
   description: "Browse open tuition requests from students worldwide. Submit your offer and start teaching. Filter by subject, city, level, and teaching mode.",
   alternates: { canonical: "/tuition-requests" },
+  robots: { index: false, follow: true },
 };
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };

@@ -14,10 +14,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
+    default: "TUTORERA | Student-First Tutoring Marketplace",
     template: "%s | TUTORERA",
   },
-  description: "Connect with verified tutors worldwide and locally. Post your tuition requirement with your preferred budget and currency, receive competitive tutor offers, and book with verified confidence.",
+  description: "TUTORERA is a Student-First Tutoring Marketplace. Students and parents post a learning requirement and preferred budget, receive eligible tutor offers, compare options, and choose a tutor for online or home tuition where available.",
   keywords: [
     "online tutors worldwide",
     "find verified tutors",
@@ -80,8 +80,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://tutorera.ac.pk",
     siteName: "TUTORERA",
-    title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
-    description: "Post your tuition requirement with your preferred budget and currency. Receive offers from qualified tutors locally or worldwide.",
+    title: "TUTORERA | Student-First Tutoring Marketplace",
+    description: "Post your tuition requirement and preferred budget, receive offers from eligible tutors, compare options, and choose the right tutor.",
     images: [
       {
         url: "/tutorera-logo-transparent.png",
@@ -93,8 +93,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "TUTORERA | Global Online & In-Person Tutoring Marketplace",
-    description: "Post your requirement, receive tutor offers, compare rates in your currency, and choose your verified tutor.",
+    title: "TUTORERA | Student-First Tutoring Marketplace",
+    description: "Post a requirement, receive tutor offers, compare options, and choose your tutor.",
     images: ["/tutorera-logo-transparent.png"],
   },
   robots: {
@@ -130,7 +130,7 @@ export default function RootLayout({
         legalName: LEGAL_OPERATOR,
         url: SITE_URL,
         logo: `${SITE_URL}/tutorera-logo-transparent.png`,
-        description: "Global student-led demand marketplace for online and in-person tutoring. Students post requirements with preferred budgets; verified tutors compete with offers.",
+        description: "Student-First Tutoring Marketplace for online and home tuition where available. Students and parents post requirements with preferred budgets; eligible tutors submit offers and families choose.",
         address: {
           "@type": "PostalAddress",
           streetAddress: "House 387, Street 11, Phase 5-b, Ghauri Town",
@@ -166,7 +166,7 @@ export default function RootLayout({
         "@id": `${SITE_URL}/#website`,
         url: SITE_URL,
         name: PLATFORM_NAME,
-        description: "Global student-led tutoring marketplace connecting learners and verified educators worldwide and locally.",
+        description: "Student-First Tutoring Marketplace where students and parents post learning requirements, receive eligible tutor offers, compare options, and choose who to learn with.",
         publisher: {
           "@id": `${SITE_URL}/#organization`,
         },
@@ -179,11 +179,11 @@ export default function RootLayout({
       {
         "@type": "Service",
         "@id": `${SITE_URL}/#service`,
-        serviceType: "Online & In-Person Tutoring Marketplace",
+        serviceType: "Student-First Tutoring Marketplace",
         provider: {
           "@id": `${SITE_URL}/#organization`,
         },
-        description: "Student-led tutoring marketplace where students post requirements in their local currency and verified tutors respond with customized offers.",
+        description: "Students and parents set the initial learning requirement and preferred budget. Eligible tutors can submit offers, then the student or parent compares options and chooses a tutor.",
         areaServed: {
           "@type": "Place",
           name: "Worldwide",

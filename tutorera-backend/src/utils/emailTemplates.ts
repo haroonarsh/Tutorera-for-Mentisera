@@ -759,16 +759,71 @@ export const requestZeroOfferEmail = (studentName: string, subject: string) => {
   return { subject: `We’re Expanding the Search for Your ${subject} Tutor  - TUTORERA`, html };
 };
 
-export const requestExpiringEmail = (studentName: string, subject: string) => {
+export const requestExpiringEmail = (studentName: string, subject: string, hoursUntilExpiry = 24) => {
   const html = renderTransactionalEmail({ subject: `Your ${subject} Tuition Request Expires Soon `,
     emailCategory: "Request Alert",
     emailHeading: "Tuition Request Expiring",
-    emailSubheading: `Your request for ${subject} will expire in 48 hours.`,
+    emailSubheading: `Your request for ${subject} will expire in ${hoursUntilExpiry} hours.`,
     firstName: studentName,
-    openingMessage: `Your tuition requirement for ${subject} is scheduled to expire in 48 hours.`,
+    openingMessage: `Your tuition requirement for ${subject} is scheduled to expire in ${hoursUntilExpiry} hours.`,
     mainMessage: "If you're still looking for an educator, you can keep your request active with a single click so tutors can continue sending proposals.",
     cta: { label: "Keep Request Active", url: "https://tutorera.ac.pk/dashboard" },
     includeSecurityNotice: false,
   });
   return { subject: `Your ${subject} Tuition Request Expires Soon  - TUTORERA`, html };
+};
+
+export const requestExpiredEmail = (studentName: string, subject: string, hasOffers: boolean) => {
+  const html = renderTransactionalEmail({ subject: `Your ${subject} Tuition Request Has Expired`,
+    emailCategory: "Request Update",
+    emailHeading: "Tuition Request Expired",
+    emailSubheading: `Your ${subject} requirement is no longer accepting tutor offers.`,
+    firstName: studentName,
+    openingMessage: hasOffers
+      ? "You can still review the tutor offers you received and repost the requirement if you need more time."
+      : "No tutor was selected before the request expired. You can repost it with updated preferences.",
+    mainMessage: "Reposting creates a fresh requirement while keeping the previous record available for your account history.",
+    cta: { label: "Review My Requirements", url: "https://tutorera.ac.pk/dashboard" },
+    includeSecurityNotice: false,
+  });
+  return { subject: `Your ${subject} Tuition Request Has Expired - TUTORERA`, html };
+};
+
+export const offerExpiringEmail = (recipientName: string, subject: string, recipientIsTutor: boolean) => {
+  const roleMessage = recipientIsTutor
+    ? `Your offer for the ${subject} requirement expires in under one hour.`
+    : `A tutor offer on your ${subject} requirement expires in under one hour.`;
+  const html = renderTransactionalEmail({
+    subject: "Tutor offer expiring soon",
+    emailCategory: "Offer Alert",
+    emailHeading: "Tutor Offer Expiring Soon",
+    emailSubheading: roleMessage,
+    firstName: recipientName,
+    openingMessage: recipientIsTutor
+      ? "Renew it if you are still available to teach this requirement."
+      : "Review the offer before it expires if you would like to continue the conversation.",
+    mainMessage: "Expired offers cannot be accepted. You can keep comparing other active tutor offers at any time.",
+    cta: { label: recipientIsTutor ? "Review My Offers" : "Review Tutor Offers", url: "https://tutorera.ac.pk/offers" },
+    includeSecurityNotice: false,
+  });
+  return { subject: `Tutor offer for ${subject} expires soon - TUTORERA`, html };
+};
+
+export const offerExpiredEmail = (recipientName: string, subject: string, recipientIsTutor: boolean) => {
+  const html = renderTransactionalEmail({
+    subject: "Tutor offer expired",
+    emailCategory: "Offer Update",
+    emailHeading: "Tutor Offer Expired",
+    emailSubheading: recipientIsTutor
+      ? `Your offer for ${subject} is no longer active.`
+      : `A tutor offer on your ${subject} requirement is no longer active.`,
+    firstName: recipientName,
+    openingMessage: recipientIsTutor
+      ? "You may renew the offer if the requirement is still open and you are available."
+      : "You can keep comparing your other active tutor offers or repost your requirement if needed.",
+    mainMessage: "No booking or payment was created from this expired offer.",
+    cta: { label: recipientIsTutor ? "Review My Offers" : "Review Tutor Offers", url: "https://tutorera.ac.pk/offers" },
+    includeSecurityNotice: false,
+  });
+  return { subject: `Tutor offer for ${subject} has expired - TUTORERA`, html };
 };

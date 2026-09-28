@@ -5,6 +5,7 @@ import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
+import ParentProfile from "../models/ParentProfile.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
 import { finalizeBidAcceptance } from "./request.controller";
@@ -130,7 +131,12 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response): Pr
   const limitNum = 20;
   const skip = (Number(page) - 1) * limitNum;
 
-  const ledgerFilter: Record<string, unknown> = { student: req.user?._id };
+  const parentBookingIds = req.user?.role === "parent"
+    ? await Booking.find({ parent: req.user._id }).distinct("_id")
+    : [];
+  const ledgerFilter: Record<string, unknown> = req.user?.role === "parent"
+    ? { $or: [{ student: req.user._id }, { booking: { $in: parentBookingIds } }] }
+    : { student: req.user?._id };
   if (status) ledgerFilter.status = status;
 
   const [transactions, total] = await Promise.all([
@@ -236,6 +242,14 @@ export const confirmSwichPayment = async (req: AuthRequest, res: Response): Prom
       // before ever finalizing — kept identical on purpose, this isn't
       // Swich-specific, it's a fraud/tampering guard that still applies.
       const request = await RequestModel.findById(bid.request).select("student currency countryCode teachingMode");
+      const isRequestOwner = request?.student?.toString() === req.user?._id?.toString();
+      const isLinkedParent = !isRequestOwner && req.user?.role === "parent" && request
+        ? Boolean(await ParentProfile.exists({ user: req.user._id, "children.studentUser": request.student }))
+        : false;
+      if (!isRequestOwner && !isLinkedParent) {
+        res.status(403).json({ success: false, message: "You are not authorized to confirm this payment." });
+        return;
+      }
       const appliedPromo = await getAppliedPromoForBasket(basketId);
       const baseExpectedAmount = (await calculateMarketplaceFees(bid.amount, {
         currency: bid.currency || request?.currency,
@@ -277,6 +291,12 @@ export const confirmSwichPayment = async (req: AuthRequest, res: Response): Prom
     const booking = await Booking.findById(basketId);
     if (!booking) {
       res.status(404).json({ success: false, message: "Booking not found for this payment" });
+      return;
+    }
+    const isBookingOwner = booking.student.toString() === req.user?._id?.toString()
+      || booking.parent?.toString() === req.user?._id?.toString();
+    if (!isBookingOwner) {
+      res.status(403).json({ success: false, message: "You are not authorized to confirm this payment." });
       return;
     }
 

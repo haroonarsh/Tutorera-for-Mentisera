@@ -50,7 +50,7 @@ export default function SafetyCenterPage() {
           <span>•</span>
           <span>Emergency Lead: {SAFETY_CONTACT_EMAIL}</span>
           <span>•</span>
-          <span>Response SLA: Within 24 Hours</span>
+          <span>Safety reports are reviewed under the published complaint process</span>
         </div>
       </section>
 
@@ -239,9 +239,9 @@ export default function SafetyCenterPage() {
             <div className={s.card}>
               <h3 className={s.cardTitle}>On-Platform Payment Verification</h3>
               <p className={s.cardText}>
-                Lesson fees must be paid through TUTORERA&apos;s authorized platform checkout when available.
-                TUTORERA verifies payment server-side, records booking payment status, and supports dispute review
-                under the published refund and first-session guarantee policies.
+                Where authorised checkout is available in the selected market, use the platform payment flow.
+                TUTORERA records the booking payment status and handles eligible reports under the published
+                refund and complaint processes.
               </p>
             </div>
             <div className={s.card}>
@@ -263,8 +263,8 @@ export default function SafetyCenterPage() {
             <div className={s.card}>
               <h3 className={s.cardTitle}>Dispute & First-Session Protection</h3>
               <p className={s.cardText}>
-                If a tutor fails to attend or a session falls catastrophically short of academic standards,
-                students can open a dispute within 24 hours under our First-Session Satisfaction Guarantee.
+                If a tutor fails to attend or a session raises a serious concern, students can submit a report
+                through the platform. Eligibility and any remedy follow the published refund and complaint terms.
               </p>
             </div>
           </div>
@@ -283,8 +283,8 @@ export default function SafetyCenterPage() {
             <strong>How We Handle Reports:</strong>
             <ol style={{ paddingLeft: "1.25rem", marginTop: "0.5rem", lineHeight: "1.7" }}>
               <li>
-                <strong>Immediate Receipt & Triage:</strong> Reports received via our contact forms or
-                safety email are acknowledged and triaged within 2 to 4 hours for priority safety alerts.
+                <strong>Receipt & Triage:</strong> Reports received through the contact form or safety email
+                are assessed according to their seriousness and the information provided.
               </li>
               <li>
                 <strong>Precautionary Restriction:</strong> Where serious allegations involving minor safety,
@@ -296,9 +296,9 @@ export default function SafetyCenterPage() {
                 submitted documents, and mutual witness statements.
               </li>
               <li>
-                <strong>Resolution & Sanction:</strong> Violators face immediate permanent deplatforming,
-                forfeiture of platform privileges, and, where appropriate, formal referral to local criminal
-                justice authorities.
+                <strong>Resolution & Sanction:</strong> Where a report is substantiated, TUTORERA may restrict,
+                suspend, or remove access under the applicable terms and may refer serious matters to relevant
+                authorities where appropriate.
               </li>
             </ol>
           </div>

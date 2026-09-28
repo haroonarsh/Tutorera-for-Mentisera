@@ -26,7 +26,7 @@ const footerColumns = [
     links: [
       { label: "Find a Tutor", href: "/tutors" },
       { label: "Online Tutors Worldwide", href: "/online-tutors" },
-      { label: "Post Tuition Requirement", href: "/dashboard?tab=requests" },
+      { label: "Post Tuition Requirement", href: "/post-tuition-request" },
       { label: "Online Tutoring Terms", href: "/terms/online-tutoring" },
       { label: "Home Tuition Terms", href: "/terms/home-tuition" },
       { label: "Tutor Agreement", href: "/terms/tutors" },
@@ -77,7 +77,7 @@ export default function Footer() {
           <div className={s.brand}>
             <BrandLogo className={s.logo} imageClassName={s.logoImage} variant="light" size="lg" />
             <p>
-              TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
+              TUTORERA is a student-first tutoring marketplace. Students and parents post their learning requirements and preferred budget; eligible tutors can respond with offers to compare before a tutor is chosen.
             </p>
             <div className={s.contactList} aria-label="Contact information">
               <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
@@ -113,7 +113,7 @@ export default function Footer() {
         </div>
 
         <div className={s.bottom}>
-          <p>TUTORERA is a global two-sided tutoring marketplace.</p>
+          <p>TUTORERA is a student-first tutoring marketplace.</p>
           <p>© 2026 TUTORERA®. All rights reserved.</p>
         </div>
       </div>

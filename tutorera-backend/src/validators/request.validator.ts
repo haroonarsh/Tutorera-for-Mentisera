@@ -7,7 +7,9 @@ const timezone = z.string().min(1).max(100);
 
 export const createRequestSchema = z.object({
     subject: z.string().min(2, "Subject is required").max(100),
-    level: z.enum(["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"]),
+    // Levels are market-specific (for example GCSE in GB and CBSE in India),
+    // so they are validated strings rather than a Pakistan-only enum.
+    level: z.string().min(2, "Level is required").max(100),
     description: z.string().min(10, "Description must be at least 10 characters").max(1000),
     budget: z.number().positive("Budget must be a positive number"),
     maximumBudget: z.number().positive().optional(),
@@ -15,6 +17,10 @@ export const createRequestSchema = z.object({
     allowCounterOffers: z.boolean().default(true),
     classGrade: z.string().max(100).optional(), curriculum: z.string().max(100).optional(), examType: z.string().max(100).optional(), studentLevel: z.string().max(100).optional(),
     learningObjectives: z.string().max(1000).optional(), area: z.string().max(100).optional(), travelRadiusKm: z.number().min(0).max(100).optional(),
+    learnerType: z.enum(["self", "child", "other"]).default("self"),
+    learnerId: objectId.optional(),
+    learningNeed: z.enum(["regular_tuition", "concept_improvement", "exam_preparation", "past_papers", "homework_support", "revision", "test_preparation", "language_practice", "skill_development", "other"]).optional(),
+    urgency: z.enum(["immediately", "within_3_days", "within_week", "flexible"]).default("flexible"),
     countryCode: countryCode.optional(), country: objectId.optional(), region: objectId.optional(), cityRef: objectId.optional(), locality: objectId.optional(),
     timezone: timezone.optional(), lessonLanguage: z.string().max(50).optional(), isWorldwideEligible: z.boolean().optional(),
     preferredTutorCountries: z.array(countryCode).max(50).optional(),
@@ -39,11 +45,11 @@ export const createRequestSchema = z.object({
 export const createDirectBookingRequestSchema = z.object({
     tutorId: z.string().min(1, "Tutor ID is required"),
     subject: z.string().min(2, "Subject is required").max(100),
-    level: z.enum(["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"]),
+    level: z.string().min(2, "Level is required").max(100),
     description: z.string().min(10, "Description must be at least 10 characters").max(1000),
     teachingMode: z.enum(["online", "in-person", "both"]).optional(),
     city: z.string().max(100).optional(),
-    countryCode: countryCode.optional(), country: objectId.optional(), region: objectId.optional(), cityRef: objectId.optional(), locality: objectId.optional(), timezone: timezone.optional(),
+    countryCode: countryCode.optional(), country: objectId.optional(), region: objectId.optional(), cityRef: objectId.optional(), locality: objectId.optional(), timezone: timezone.optional(), learnerId: objectId.optional(),
     schedule: z.string().min(1, "Schedule is required").max(200),
     selectedDate: z.string().optional(),
     selectedStartTime: z.string().optional(),

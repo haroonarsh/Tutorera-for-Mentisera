@@ -59,7 +59,7 @@ export const getTutorRecommendedRequests = async (req: AuthRequest, res: Respons
       return;
     }
 
-    const recommended = await MatchingService.getRecommendedRequestsForTutor(tutorProfile, { limit: 25 });
+    const recommended = await MatchingService.getRecommendedRequestsForTutor(tutorProfile, { limit: 25, tutorUserId: req.user?._id?.toString() });
 
     res.json({
       success: true,

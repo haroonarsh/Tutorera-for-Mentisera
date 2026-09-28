@@ -97,6 +97,27 @@ export const studentRequestAbandonedEmail = (name: string, stage: number, subjec
   return { subject, html };
 };
 
+export const studentDirectBookingAbandonedEmail = (name: string, stage: number, tutorName?: string, subjectName?: string) => {
+  const isFinal = stage >= 7 || stage === 3;
+  const educator = tutorName || "your selected tutor";
+  const subject = isFinal
+    ? "Your tutor booking is waiting - TUTORERA"
+    : `Continue booking with ${educator} - TUTORERA`;
+  const html = renderTransactionalEmail({
+    subject,
+    emailCategory: "Tutor Booking",
+    emailHeading: isFinal ? "Your booking is still available" : "Continue Your Tutor Booking",
+    emailSubheading: "Complete the remaining details to request a booking with your selected tutor.",
+    firstName: name,
+    openingMessage: `You started a booking${subjectName ? ` for ${subjectName}` : ""} with ${educator}, but have not completed it yet.`,
+    mainMessage: "Review the schedule and learning details, then submit your request. Your tutor will only see the information needed to respond safely.",
+    cta: { label: "Continue Booking", url: "https://tutorera.ac.pk/post-tuition-request" },
+    includeSecurityNotice: false,
+    deliverability: "This reminder was sent because you started a tutor booking on TUTORERA.",
+  });
+  return { subject, html };
+};
+
 export const studentPaymentAbandonedEmail = (
   name: string,
   stage: number,

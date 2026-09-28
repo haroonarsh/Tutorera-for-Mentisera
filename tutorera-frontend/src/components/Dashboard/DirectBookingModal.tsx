@@ -8,8 +8,8 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatMoney } from "@/lib/site";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { DashCard } from "./ui";
-
-const LEVELS = ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
+import { useGeoData } from "@/lib/geoService";
+import { useAuth } from "@/context/AuthContext";
 
 interface Slot {
   date: string;
@@ -40,12 +40,21 @@ interface DirectBookingForm {
   teachingMode: string;
 }
 
+interface LinkedLearner {
+  _id: string;
+  name: string;
+  level?: string;
+}
+
 export default function DirectBookingModal({
   tutorId, tutorUserId, tutorName, hourlyRate, currency = "PKR",
   tutorSubjects, tutorTeachingMode, tutorCity,
   initialSubject = "", initialLevel = "",
   onClose, onSuccess,
 }: Props) {
+  const { user } = useAuth();
+  const geo = useGeoData();
+  const marketLevels = geo.countries.find((country) => country.code === user?.countryCode)?.levels || geo.levels;
   const [form, setForm] = useState<DirectBookingForm>({
     subject: initialSubject || "", level: initialLevel || "", description: "",
     teachingMode: tutorTeachingMode === "both" ? "" : tutorTeachingMode,
@@ -54,6 +63,8 @@ export default function DirectBookingModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [linkedLearners, setLinkedLearners] = useState<LinkedLearner[]>([]);
+  const [learnerId, setLearnerId] = useState("");
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalRef = useFocusTrap(true, onClose);
 
@@ -84,6 +95,24 @@ export default function DirectBookingModal({
     };
   }, [form, selectedSlot, submitted, tutorId, tutorName]);
 
+  useEffect(() => {
+    let active = true;
+    axiosInstance.get("/parent/profile")
+      .then((res) => {
+        if (!active) return;
+        const children = res.data?.profile?.children || [];
+        setLinkedLearners(children
+          .filter((child: { studentUser?: string }) => Boolean(child.studentUser))
+          .map((child: { studentUser: string; name?: string; level?: string; studentProfile?: { currentLevel?: string } }) => ({
+            _id: child.studentUser,
+            name: child.name || "Linked learner",
+            level: child.level || child.studentProfile?.currentLevel,
+          })));
+      })
+      .catch(() => { /* The endpoint is parent-only; students do not need a selector. */ });
+    return () => { active = false; };
+  }, []);
+
   async function handleSubmit() {
     const { subject, level, description, teachingMode } = form;
     if (!subject || !level || !description || !teachingMode) {
@@ -91,6 +120,9 @@ export default function DirectBookingModal({
     }
     if (!selectedSlot) {
       setError("Please select a time slot."); return;
+    }
+    if (linkedLearners.length > 0 && !learnerId) {
+      setError("Please select the learner for this booking."); return;
     }
     setLoading(true); setError("");
     try {
@@ -103,6 +135,7 @@ export default function DirectBookingModal({
         selectedDate: selectedSlot.date,
         selectedStartTime: selectedSlot.startTime,
         selectedEndTime: selectedSlot.endTime,
+        ...(learnerId && { learnerId }),
       });
       setSubmitted(true);
       onSuccess();
@@ -163,10 +196,25 @@ export default function DirectBookingModal({
               <select id="db-level" aria-label="Level" className={styles.select}
                 value={form.level} onChange={e => set("level", e.target.value)}>
                 <option value="">Select level</option>
-                {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                {marketLevels.map(level => <option key={level} value={level}>{level}</option>)}
               </select>
             </div>
           </div>
+
+          {linkedLearners.length > 0 && (
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="db-learner">Booking for *</label>
+              <select id="db-learner" className={styles.select} value={learnerId} onChange={e => setLearnerId(e.target.value)}>
+                <option value="">Select a linked learner</option>
+                {linkedLearners.map(learner => (
+                  <option key={learner._id} value={learner._id}>
+                    {learner.name}{learner.level ? ` — ${learner.level}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className={styles.hint}>The tutor receives only the learning details needed to respond to this booking.</p>
+            </div>
+          )}
 
           {/* Message */}
           <div className={styles.field}>

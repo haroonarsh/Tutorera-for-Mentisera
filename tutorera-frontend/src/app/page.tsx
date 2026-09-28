@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   // Bypasses the root layout's "%s | TUTORERA" template - this title is
   // already the full, final brand string, so letting the template run
   // would double the suffix ("... Marketplace | TUTORERA").
-  title: { absolute: "TUTORERA | Online & Home Tuition Marketplace" },
+  title: { absolute: "TUTORERA | Student-First Tutoring Marketplace" },
   description:
-    "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
+    "Post a tuition requirement and preferred budget for online or home tuition where available. Eligible tutors can submit offers, so students and parents can compare options and choose the right tutor.",
   alternates: { canonical: "/" },
 };
 

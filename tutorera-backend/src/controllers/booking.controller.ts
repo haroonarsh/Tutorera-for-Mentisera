@@ -19,7 +19,11 @@ export const getMyBookings = async (req: AuthRequest, res: Response): Promise<vo
   const role = req.user?.role;
   const { page = "1", limit = "20" } = req.query;
 
-  const filter = role === "student" ? { student: userId } : { tutor: userId };
+  const filter = role === "student"
+    ? { student: userId }
+    : role === "parent"
+      ? { parent: userId }
+      : { tutor: userId };
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
@@ -150,14 +154,17 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
 
 // @desc    Build a prefilled repeat-booking request from a completed booking
 // @route   POST /api/bookings/:id/book-again
-// @access  Private (student)
+// @access  Private (student or booking parent)
 export const bookAgainFromBooking = async (req: AuthRequest, res: Response): Promise<void> => {
-  if (req.user?.role !== "student") {
-    res.status(403).json({ success: false, message: "Only students can rebook a tutor from a completed booking." });
+  if (req.user?.role !== "student" && req.user?.role !== "parent") {
+    res.status(403).json({ success: false, message: "Only students or the linked parent can rebook a tutor from a completed booking." });
     return;
   }
 
-  const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id })
+  const booking = await Booking.findOne({
+    _id: req.params.id,
+    ...(req.user?.role === "parent" ? { parent: req.user._id } : { student: req.user._id }),
+  })
     .populate("tutor", "name")
     .populate("request", "subject level description curriculum classGrade examType learningObjectives countryCode countryName city area schedule teachingMode currency pricingUnit preferredDays preferredStartTime sessionDurationMinutes sessionsPerWeek");
 

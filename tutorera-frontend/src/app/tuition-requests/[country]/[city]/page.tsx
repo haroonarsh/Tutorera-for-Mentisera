@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cityLabel = slugToLabel(city, CITIES);
   const title = `Tuition Requests in ${cityLabel}, ${countryName} | TUTORERA`;
   const description = `Browse open tuition requests from students in ${cityLabel}, ${countryName}. Find tutoring opportunities in your area.`;
-  return { title, description, alternates: { canonical: `/tuition-requests/${country}/${city}` } };
+  return { title, description, alternates: { canonical: `/tuition-requests/${country}/${city}` }, robots: { index: false, follow: true } };
 }
 
 export default async function CityTuitionRequestsPage({ params, searchParams }: Props) {

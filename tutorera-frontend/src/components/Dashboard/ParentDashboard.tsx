@@ -1,6 +1,7 @@
 "use client";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS, SPACING } from "@/lib/brand";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Link2, Plus, Trash2, Users, BookOpen, Clock } from "lucide-react";
 import api from "@/lib/axios";
 import { showSuccess, showError } from "@/lib/toast";
@@ -50,6 +51,16 @@ interface ParentProfileData {
   pendingApprovals?: { _id: string; subject: string; studentName: string; currency?: string; offer?: { amount: number; currency?: string; pricingUnit?: string } | null }[];
 }
 
+interface ParentRequirement {
+  _id: string;
+  subject: string;
+  level: string;
+  status: string;
+  offersCount?: number;
+  currency?: string;
+  budget?: number;
+}
+
 function TeachingModeBadge({ mode }: { mode: string }) {
   const label = mode === "online" ? "Online" : mode === "home" ? "Home" : "Hybrid";
   return (
@@ -67,6 +78,7 @@ interface ParentDashboardProps {
 
 export default function ParentDashboard({ userId, userName }: ParentDashboardProps) {
   const [data, setData] = useState<ParentProfileData | null>(null);
+  const [requirements, setRequirements] = useState<ParentRequirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [pendingUnlink, setPendingUnlink] = useState<string | null>(null);
@@ -78,6 +90,9 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
       })
       .catch(() => showError("Failed to load parent profile."))
       .finally(() => setLoading(false));
+    api.get("/requests/my")
+      .then((res) => setRequirements(res.data?.requests || []))
+      .catch(() => setRequirements([]));
   };
 
   useEffect(() => { fetchProfile(); }, []);
@@ -121,11 +136,14 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
     <div style={{ maxWidth: "960px" }}>
       {/* Header */}
       <div style={{ marginBottom: SPACING.space8 }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: TEXT_COLORS.primary, marginBottom: "0.4rem" }}>
-          Parent Dashboard
-        </h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: SPACING.space4, flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: TEXT_COLORS.primary, marginBottom: "0.4rem" }}>Parent Dashboard</h1>
+          <Link href="/post-tuition-request" style={{ minHeight: 44, display: "inline-flex", alignItems: "center", gap: 8, borderRadius: "0.65rem", padding: "0.65rem 0.9rem", background: "#0329B2", color: "white", fontWeight: 800, textDecoration: "none" }}>
+            <Plus size={17} aria-hidden="true" /> Post a requirement
+          </Link>
+        </div>
         <p style={{ color: TEXT_COLORS.muted, fontSize: "0.875rem" }}>
-          Manage your children&apos;s tutoring accounts, track sessions, and oversee bookings.
+          Post a requirement for a learner, compare tutor offers, and oversee bookings.
         </p>
       </div>
 
@@ -177,6 +195,31 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
         <StatTile icon={<BookOpen size={20} />} value={recentBookings.filter(b => b.status === "completed").length} label="Total sessions" tone="success" />
         <StatTile icon={<Clock size={20} />} value={recentBookings.filter(b => b.status === "upcoming").length} label="Upcoming" tone="purple" />
       </div>
+
+      <DashCard padding="none" style={{ overflow: "hidden", marginBottom: SPACING.space6 }}>
+        <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: SPACING.space3, flexWrap: "wrap" }}>
+          <div>
+            <h2 style={{ fontSize: "1rem", color: TEXT_COLORS.primary, margin: 0 }}>Your tuition requirements</h2>
+            <p style={{ fontSize: "0.8rem", color: TEXT_COLORS.muted, margin: "0.25rem 0 0" }}>Track tutor offers and negotiations for requirements you posted.</p>
+          </div>
+          <Link href="/offers" style={{ color: C.accent, fontWeight: 800, fontSize: "0.85rem", textDecoration: "none" }}>View offers</Link>
+        </div>
+        {requirements.length ? requirements.slice(0, 3).map((requirement) => (
+          <div key={requirement._id} style={{ padding: "0.9rem 1.25rem", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", gap: SPACING.space3, alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <strong style={{ color: TEXT_COLORS.primary }}>{requirement.subject}</strong>
+              <span style={{ color: TEXT_COLORS.muted, fontSize: "0.82rem" }}> · {requirement.level}</span>
+              {typeof requirement.budget === "number" ? <div style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem", marginTop: 3 }}>Budget: {formatMoney(requirement.budget, requirement.currency || "PKR")}</div> : null}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <StatusBadge tone={statusTone(requirement.status)}>{requirement.status.replace(/_/g, " ")}</StatusBadge>
+              <span style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem" }}>{requirement.offersCount || 0} offer{requirement.offersCount === 1 ? "" : "s"}</span>
+            </div>
+          </div>
+        )) : (
+          <div style={{ padding: "1rem 1.25rem", color: TEXT_COLORS.muted, fontSize: "0.88rem" }}>No requirements yet. Post one to receive tutor offers.</div>
+        )}
+      </DashCard>
 
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>

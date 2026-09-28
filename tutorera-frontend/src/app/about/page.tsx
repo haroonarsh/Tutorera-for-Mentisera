@@ -7,7 +7,7 @@ import AdBanner from "@/components/AdBanner";
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
+  description: "TUTORERA is a student-first tutoring marketplace where students and parents post learning requirements and preferred budgets, then compare offers from eligible tutors before choosing.",
   alternates: { canonical: "/about" },
 };
 
@@ -25,10 +25,10 @@ export default function AboutPage() {
             <span style={{ fontSize: '2rem', fontWeight: '800', color: 'white' }}>TUTORERA</span>
           </div>
           <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '800', color: 'white', marginBottom: '1.25rem', lineHeight: '1.2' }}>
-            A Global Two-Sided Tutoring Marketplace
+            A Student-First Tutoring Marketplace
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '1.1rem', lineHeight: '1.75', maxWidth: '650px', margin: '0 auto' }}>
-            TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
+            Students and parents post learning requirements and preferred budgets for online or locally available home tuition. Eligible tutors can respond with offers to compare before a tutor is chosen.
           </p>
         </div>
       </section>
@@ -67,7 +67,7 @@ export default function AboutPage() {
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '0.75rem' }}>Our Marketplace Model</h2>
             <p style={{ color: C.gray500, fontSize: '1rem', lineHeight: 1.75, maxWidth: 760, margin: '0 auto' }}>
-              TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.
+              TUTORERA is a student-first tutoring marketplace. Students and parents set out their learning requirements and preferred budget, and eligible tutors respond with offers that they can compare before choosing.
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
@@ -107,7 +107,7 @@ export default function AboutPage() {
           <h2 style={{ fontSize: '2rem', fontWeight: '800', color: C.primary, marginBottom: '1.5rem', textAlign: 'center' }}>Our Story</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', color: C.gray500, fontSize: '1rem', lineHeight: '1.8' }}>
             <p>For decades, finding a tutor meant relying on unverified word-of-mouth, unmoderated social media groups, or commission-heavy agencies — with no structured credentials verification, transparent pricing, or safety guarantees.</p>
-            <p>TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.</p>
+            <p>TUTORERA is a student-first tutoring marketplace. Students and parents post learning requirements and preferred budgets, then eligible tutors respond with offers that can be compared before a tutor is chosen.</p>
             <p>We are operated by <strong style={{ color: C.primary }}>{LEGAL_OPERATOR}</strong>, an education technology company committed to building transparent, high-integrity learning platforms connecting students and educators across borders.</p>
             <p><strong style={{ color: C.primary }}>Corporate address:</strong> {BUSINESS_ADDRESS}</p>
             <p><strong style={{ color: C.primary }}>Official email:</strong> <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> · <strong style={{ color: C.primary }}>Support hotline:</strong> {SUPPORT_PHONE}</p>

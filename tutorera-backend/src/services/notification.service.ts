@@ -59,14 +59,31 @@ export class NotificationService {
             const emailBuilder = this.getEmailBuilder(registryEntry.templateId);
             if (emailBuilder) {
                const { subject, html } = emailBuilder(user.name, payload);
-               await sendEmail({ to: user.email, subject, html, eventType: eventName });
+               await sendEmail({
+                 to: user.email,
+                 subject,
+                 html,
+                 userId: user._id.toString(),
+                 eventType: eventName,
+                 templateId: registryEntry.templateId,
+                 relatedEntityType: payload.relatedEntityType,
+                 relatedEntityId: payload.relatedEntityId,
+               });
             } else {
                console.warn(`[NotificationService] No email template mapped for ${registryEntry.templateId}`);
             }
           } else {
             // Direct fallback if no explicit templateId but email is true
             if (payload.subject && payload.html) {
-               await sendEmail({ to: user.email, subject: payload.subject, html: payload.html, eventType: eventName });
+               await sendEmail({
+                 to: user.email,
+                 subject: payload.subject,
+                 html: payload.html,
+                 userId: user._id.toString(),
+                 eventType: eventName,
+                 relatedEntityType: payload.relatedEntityType,
+                 relatedEntityId: payload.relatedEntityId,
+               });
             }
           }
         }
@@ -133,6 +150,9 @@ export class NotificationService {
       "request_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 1, payload.subjectName),
       "request_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 3, payload.subjectName),
       "request_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 7, payload.subjectName),
+      "direct_booking_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 1, payload.tutorName, payload.subjectName),
+      "direct_booking_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 3, payload.tutorName, payload.subjectName),
+      "direct_booking_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 7, payload.tutorName, payload.subjectName),
       
       "payment_abandoned_1h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1/24, payload.tutorName, payload.amount),
       "payment_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1, payload.tutorName, payload.amount),

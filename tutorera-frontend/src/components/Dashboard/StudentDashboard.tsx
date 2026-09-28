@@ -538,6 +538,9 @@ function RequestCard({
   const [selectedBids, setSelectedBids] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timeline, setTimeline] = useState<{ id: string; action: string; actor: string; createdAt: string }[]>([]);
 
   async function handleExtend() {
     setExtending(true);
@@ -576,6 +579,20 @@ function RequestCard({
     } finally {
       setClosing(false);
       setConfirmClose(false);
+    }
+  }
+
+  async function toggleTimeline() {
+    if (timelineOpen) { setTimelineOpen(false); return; }
+    setTimelineLoading(true);
+    try {
+      const response = await axiosInstance.get(`/requests/${request._id}/timeline`);
+      setTimeline(response.data?.events || []);
+      setTimelineOpen(true);
+    } catch (error) {
+      showError(error, "Unable to load this requirement's activity.");
+    } finally {
+      setTimelineLoading(false);
     }
   }
 
@@ -690,6 +707,9 @@ function RequestCard({
         {(request.extensionCount || 0) > 0 && (
           <StatusBadge tone="neutral">Extended {request.extensionCount}x</StatusBadge>
         )}
+        {(request.invitedTutorCount || 0) > 0 && (
+          <StatusBadge tone="info">{request.invitedTutorCount} tutor{request.invitedTutorCount === 1 ? "" : "s"} invited</StatusBadge>
+        )}
       </div>
 
       <p className={s.cardDesc}>{request.description}</p>
@@ -741,6 +761,10 @@ function RequestCard({
           </DashButton>
         )}
 
+        <DashButton type="button" variant="secondary" size="sm" onClick={toggleTimeline} disabled={timelineLoading}>
+          {timelineLoading ? "Loading activity..." : timelineOpen ? "Hide activity" : "View activity"}
+        </DashButton>
+
         {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && (
           <DashButton type="button" variant="ghost" size="sm" onClick={() => setConfirmClose(true)} disabled={closing} style={{ color: TEXT_COLORS.muted, border: `1px solid ${C.border}` }}>
             {closing ? "Closing..." : "Close Request"}
@@ -754,6 +778,13 @@ function RequestCard({
           </DashButton>
         )}
       </div>
+
+      {timelineOpen && (
+        <section aria-label="Requirement activity" style={{ marginTop: "0.9rem", padding: "0.8rem", border: `1px solid ${C.border}`, borderRadius: "0.65rem", background: "#f8faff" }}>
+          <h4 style={{ margin: "0 0 0.55rem", color: TEXT_COLORS.primary, fontSize: "0.88rem" }}>Requirement activity</h4>
+          {timeline.length ? <ol style={{ margin: 0, paddingLeft: "1.15rem", color: TEXT_COLORS.secondary, fontSize: "0.8rem", display: "grid", gap: "0.4rem" }}>{timeline.map((event) => <li key={event.id}><strong>{event.action.replace(/^tuition_request_/, "").replaceAll("_", " ")}</strong> · {event.actor} · {new Date(event.createdAt).toLocaleString()}</li>)}</ol> : <p style={{ margin: 0, color: TEXT_COLORS.muted, fontSize: "0.8rem" }}>No additional activity has been recorded yet.</p>}
+        </section>
+      )}
 
           {expanded && (
             <div className={s.bidsSection}>

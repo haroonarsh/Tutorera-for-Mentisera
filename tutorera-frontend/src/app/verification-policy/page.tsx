@@ -94,7 +94,7 @@ export default function VerificationPolicyPage() {
                 <strong style={{ color: "#166534", fontSize: "0.95rem" }}>Online Tuition (Borderless)</strong>
               </div>
               <p style={{ margin: 0, fontSize: "0.85rem", color: "#15803d", lineHeight: 1.5 }}>
-                <strong>No Police Verification is required.</strong> Online tutors are vetted through Tier 1 Government Photo ID (CNIC / Passport / National ID), Tier 2 Academic Degrees, and Tier 3 Intro Demo Videos. Lessons are delivered digitally with built-in platform safeguards.
+                <strong>Online requirements depend on the active market policy.</strong> Online tutor applications may require identity, academic, profile, or demonstration materials. The public profile reflects only checks completed under the relevant policy.
               </p>
             </div>
             <div style={{ backgroundColor: "#fff7ed", border: "1px solid #fdba74", borderRadius: "0.5rem", padding: "1rem" }}>
@@ -103,7 +103,7 @@ export default function VerificationPolicyPage() {
                 <strong style={{ color: "#9a3412", fontSize: "0.95rem" }}>Home Tuition (In-Person)</strong>
               </div>
               <p style={{ margin: 0, fontSize: "0.85rem", color: "#c2410c", lineHeight: 1.5 }}>
-                <strong>Police Verification Report is strictly MANDATORY.</strong> Any tutor visiting a student&apos;s home or conducting face-to-face tuition must provide an official, verifiable Police Character Certificate (issued by Police Khidmat Markaz, PKM, or statutory police registry) before receiving or accepting in-person bookings.
+                <strong>Home-tuition requirements depend on the active market safety policy.</strong> A market may require background or safety documentation before a tutor is eligible for in-person opportunities. Country-specific document requirements are communicated in the tutor application flow.
               </p>
             </div>
           </div>
@@ -126,11 +126,11 @@ export default function VerificationPolicyPage() {
                 <div className={s.cardIcon}>
                   <UserCheck size={20} />
                 </div>
-                <h3 className={s.cardTitle}>Tier 1: Government Identity (Mandatory)</h3>
+                <h3 className={s.cardTitle}>Tier 1: Government Identity</h3>
               </div>
               <p className={s.cardText}>
-                Every tutor must submit authentic government-issued photo identification matching their legal
-                name and date of birth. Accepted documents include:
+                Where identity verification is required by the active market policy, tutors submit authentic
+                government-issued photo identification matching their legal name and date of birth. Examples include:
               </p>
               <ul className={s.list} style={{ marginTop: "0.5rem" }}>
                 <li><strong>Pakistan:</strong> Computerized National Identity Card (CNIC) or Smart NIC.</li>

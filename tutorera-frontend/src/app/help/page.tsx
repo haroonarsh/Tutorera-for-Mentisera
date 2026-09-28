@@ -8,11 +8,11 @@ export const metadata: Metadata = { title: "Help Center", description: "Answers 
 const C = UI_COLORS;
 
 const faqs = [
-  { q: "How do I find a tutor?", a: "Go to 'Find a Tutor', use filters to search by subject, level, city, and budget, then view tutor profiles and post a request." },
+  { q: "How do I find a tutor?", a: "Start by posting a tuition requirement with the subject, level or curriculum, schedule, teaching mode, and preferred budget. Eligible tutors can send offers for you to compare before you choose. Browsing tutor profiles is also available as a secondary discovery option." },
   { q: "How do I become a tutor?", a: "Click 'Become a Tutor', create an account, complete the 5-step onboarding, and submit your documents for verification." },
-  { q: "How long does tutor verification take?", a: "Our team reviews applications within 24-48 hours. You'll receive an email notification once approved." },
+  { q: "How does tutor verification work?", a: "Required checks depend on the tutor's market and teaching mode. A profile shows only the checks that have been completed; verification does not guarantee tutoring performance. Tutors can track document-level review decisions in their application area." },
   { q: "How do payments work?", a: "After accepting a tutor offer and agreed rate, review the booking summary and complete payment through the authorized platform checkout when available. TUTORERA verifies payment server-side before marking a booking paid; no payment is collected just to post a request." },
-  { q: "What is the platform fee?", a: "Students currently pay no marketplace fee. Tutors pay a 20% platform fee only when they earn, plus 15% tax on that fee (a 23% effective deduction from tutor earnings)." },
+  { q: "Who sets the initial tutoring budget?", a: "The student or parent sets the initial preferred budget in the tuition request. Where counter-offers are enabled, an eligible tutor may propose a different rate; the final agreed rate is shown before booking." },
   { q: "Can I contact a tutor directly?", a: "All communication happens through TUTORERA® chat to ensure safety and quality. Contact details are kept private." },
   { q: "How do I cancel a booking?", a: "Go to your dashboard, find the booking, and click Cancel. Please review our Cancellation Policy for refund details." },
   { q: "What if I'm not satisfied with a tutor?", a: "You can leave a review after the session and contact our support team. We take all complaints seriously." },

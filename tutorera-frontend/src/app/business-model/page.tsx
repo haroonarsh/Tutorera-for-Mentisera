@@ -4,12 +4,12 @@ import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
   title: "Business Model",
-  description: "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.",
+  description: "TUTORERA is a student-first tutoring marketplace: students and parents post learning requirements and a preferred budget, then eligible tutors respond with offers they can compare before choosing.",
   alternates: { canonical: "/business-model" },
 };
 
 const explanation =
-  "TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA. Once the tutor's offer is accepted, the final tutoring rate is locked and a booking is created. Payment is then collected against that specific booking and processed securely under platform satisfaction guarantees before the tutoring session is delivered.";
+  "TUTORERA is a student-first tutoring marketplace. Students and parents post learning requirements and a preferred budget for online or locally available home tuition; eligible tutors respond with offers that can be compared before a tutor is chosen. Once an offer is accepted, the final tutoring rate is locked and a booking is created. In checkout-enabled markets, payment is collected for that booking under the applicable payment and cancellation terms.";
 
 const flow = [
   "Student posts tutoring requirement specifying subject, curriculum, and mode",
@@ -69,7 +69,7 @@ export default function BusinessModelPage() {
     <div className={s.page}>
       <section className={s.hero}>
         <h1>How TUTORERA Works – Our Business Model</h1>
-        <p>TUTORERA is a global two-sided tutoring marketplace that connects students and parents seeking online tutoring or locally available home tuition with tutors seeking relevant teaching opportunities. Students post learning requirements, suitable tutors respond with offers, and both sides compare, agree and book through TUTORERA.</p>
+        <p>TUTORERA is a student-first tutoring marketplace. Students and parents post learning requirements and a preferred budget; eligible tutors respond with offers that can be compared before a tutor is chosen.</p>
       </section>
       <section className={s.narrow}>
         <div className={s.content}>

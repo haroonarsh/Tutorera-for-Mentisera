@@ -100,7 +100,7 @@ export default async function PakistanHomeTutorsCityPage({ params }: { params: P
         value={city}
         filters={{ city, countryCode: "PK", teachingMode: "in-person" }}
         title={`Verified Home Tutors in ${city}`}
-        description={`${copy.intro} TUTORERA is a global student-led tutoring marketplace: students post requirements, verified tutors submit offers, and families choose the best fit.`}
+        description={`${copy.intro} TUTORERA is a student-first tutoring marketplace: students and parents post requirements, eligible home-tuition tutors can submit offers, and families choose the option that fits.`}
         canonicalPath={path}
         currency="PKR"
       />

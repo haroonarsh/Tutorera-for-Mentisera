@@ -33,7 +33,6 @@ const EmailTemplateSchema = new Schema<IEmailTemplate>(
   { timestamps: true }
 );
 
-EmailTemplateSchema.index({ key: 1 });
 EmailTemplateSchema.index({ category: 1, isActive: 1 });
 
 export default mongoose.model<IEmailTemplate>("EmailTemplate", EmailTemplateSchema);

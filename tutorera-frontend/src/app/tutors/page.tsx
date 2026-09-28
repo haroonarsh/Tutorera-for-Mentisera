@@ -9,6 +9,7 @@ const value = (input: string | string[] | undefined) => typeof input === "string
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const params = await searchParams;
   const page = Math.max(1, parseInt(value(params.page)) || 1);
+  const hasFilters = Object.entries(params).some(([key, rawValue]) => key !== "page" && value(rawValue).trim().length > 0);
   // Page 1 (and any filter-only query, e.g. ?city=Lahore) canonicalizes to
   // the clean /tutors URL - filter combinations are near-duplicates of each
   // other. Page 2+ is genuinely different content (different tutors), so it
@@ -19,6 +20,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     title: page > 1 ? `Find Verified Tutors Online & In-Person - Page ${page}` : "Find Verified Tutors Online & In-Person",
     description: "Search verified tutors worldwide and locally by subject, curriculum, country, teaching mode, rating, availability, and transparent hourly rates.",
     alternates: { canonical: page > 1 ? `/tutors?page=${page}` : "/tutors" },
+    robots: hasFilters ? { index: false, follow: true } : undefined,
   };
 }
 
