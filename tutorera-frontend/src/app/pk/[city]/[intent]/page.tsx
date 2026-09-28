@@ -53,19 +53,35 @@ export default async function CityTuitionIntentPage({ params }: { params: Promis
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "WebPage",
-          name: `${page.label} in ${cityName}`,
-          url: canonical,
-          description: answer,
-          breadcrumb: {
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
-              { "@type": "ListItem", position: 2, name: "Pakistan", item: "https://tutorera.ac.pk/pk" },
-              { "@type": "ListItem", position: 3, name: cityName, item: `https://tutorera.ac.pk/pk/${city}/tuition` },
-              { "@type": "ListItem", position: 4, name: page.label, item: canonical },
-            ],
-          },
+          "@graph": [
+            {
+              "@type": "WebPage",
+              "@id": `${canonical}#webpage`,
+              name: `${page.label} in ${cityName}`,
+              url: canonical,
+              description: answer,
+              isPartOf: { "@id": "https://tutorera.ac.pk/#website" },
+              breadcrumb: { "@id": `${canonical}#breadcrumb` },
+            },
+            {
+              "@type": "BreadcrumbList",
+              "@id": `${canonical}#breadcrumb`,
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
+                { "@type": "ListItem", position: 2, name: "Pakistan", item: "https://tutorera.ac.pk/pk" },
+                { "@type": "ListItem", position: 3, name: cityName, item: `https://tutorera.ac.pk/pk/${city}/tuition` },
+                { "@type": "ListItem", position: 4, name: page.label, item: canonical },
+              ],
+            },
+            // Real page copy printed verbatim below — surfaces via AEO
+            // (spec §16, §17, §19, §40) without fabricated content.
+            {
+              "@type": "FAQPage",
+              mainEntity: [
+                { "@type": "Question", name: question, acceptedAnswer: { "@type": "Answer", text: answer } },
+              ],
+            },
+          ],
         }) }}
       />
       <nav aria-label="Breadcrumb" style={{ fontSize: "0.9rem", marginBottom: "1.5rem" }}>
