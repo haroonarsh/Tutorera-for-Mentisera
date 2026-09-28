@@ -1,6 +1,6 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -15,11 +15,20 @@ const C = UI_COLORS;
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const geo = useGeoData();
-  const guardStatus = useAppGuard();
+  // A rejected or incomplete tutor must be able to repair their profile and
+  // resubmit documents. Eligibility remains required for marketplace actions,
+  // not for this account-management page.
+  const guardStatus = useAppGuard({ requireTutorEligibility: false });
   const router = useRouter();
 
-  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"];
-  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
+  const subjects = useMemo(
+    () => geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Islamiyat", "Pakistan Studies", "Economics", "Statistics", "Other"],
+    [geo.subjects]
+  );
+  const levels = useMemo(
+    () => geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"],
+    [geo.levels]
+  );
 
   const [activeTab, setActiveTab] = useState<"personal" | "tutor">("personal");
   const [saving, setSaving] = useState(false);
@@ -66,6 +75,33 @@ export default function ProfilePage() {
     countryCode?: string;
   } | null>(null);
 
+  const normalizeTutorLevel = (value: string) => {
+    const aliases: Record<string, string> = {
+      primary: "Primary (Grades 1-5)",
+      middle: "Middle (Grades 6-8)",
+      matric: "Matric (9th & 10th)",
+      intermediate: "Intermediate / FSc",
+      fsc: "Intermediate / FSc",
+      "o-level": "O-Level (Cambridge / Edexcel)",
+      "o level": "O-Level (Cambridge / Edexcel)",
+      "a-level": "A-Level (Cambridge / Edexcel)",
+      "a level": "A-Level (Cambridge / Edexcel)",
+      university: "University / Degree",
+      "university level": "University / Degree",
+    };
+    const key = value.toLowerCase().replace(/[()/]/g, " ").replace(/\s+/g, " ").trim();
+    return aliases[key] || levels.find((level) => level.toLowerCase().replace(/[()/]/g, " ").replace(/\s+/g, " ").trim() === key) || value;
+  };
+
+  const apiErrorMessage = (err: unknown, fallback: string) => {
+    if (typeof err === "object" && err !== null && "response" in err) {
+      const response = (err as { response?: { data?: { message?: unknown; errors?: unknown } } }).response;
+      if (typeof response?.data?.message === "string") return response.data.message;
+      if (Array.isArray(response?.data?.errors) && typeof response.data.errors[0] === "string") return response.data.errors[0];
+    }
+    return fallback;
+  };
+
   useEffect(() => {
     if (!loading && !user) { router.push("/login"); return; }
     if (user) {
@@ -108,14 +144,14 @@ export default function ProfilePage() {
               hourlyRate: p.hourlyRate?.toString() || "",
               experience: p.experience?.toString() || "",
               subjects: (p.subjects || []).filter((s: string) => subjects.includes(s)),
-              levels: (p.levels || []).filter((l: string) => levels.includes(l)),
+              levels: [...new Set((p.levels || []).map(normalizeTutorLevel))].filter((l: string) => levels.includes(l)),
               teachingMode: p.teachingMode || "both",
               city: p.city || "",
             });
           }).catch(() => {});
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, subjects, levels]);
 
     // ← ADD: block pending/rejected tutors + show spinner while checking
   if (guardStatus !== "ok") return null;
@@ -152,8 +188,8 @@ export default function ProfilePage() {
 
       setSuccess("Profile updated successfully!");
       setTimeout(() => setSuccess(""), 3000);
-    } catch {
-      setError("Failed to update profile.");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to update profile."));
     } finally {
       setSaving(false);
     }
@@ -162,6 +198,24 @@ export default function ProfilePage() {
   const handleTutorSave = async () => {
     setSaving(true); setError(""); setSuccess("");
     try {
+      const hourlyRate = Number(tutorForm.hourlyRate);
+      const experience = Number(tutorForm.experience);
+      if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
+        setError("Enter a valid non-negative hourly rate.");
+        return;
+      }
+      if (!Number.isFinite(experience) || experience < 0) {
+        setError("Enter valid years of teaching experience.");
+        return;
+      }
+      if (tutorForm.subjects.length === 0) {
+        setError("Choose at least one subject you teach.");
+        return;
+      }
+      if (tutorForm.levels.length === 0) {
+        setError("Choose at least one teaching level.");
+        return;
+      }
       if (cnicFrontFile || cnicBackFile || videoIntroFile) {
         const formData = new FormData();
         if (cnicFrontFile) formData.append("cnicFront", cnicFrontFile);
@@ -172,13 +226,13 @@ export default function ProfilePage() {
 
       await api.post("/tutors/profile", {
         ...tutorForm,
-        hourlyRate: Number(tutorForm.hourlyRate),
-        experience: Number(tutorForm.experience),
+        hourlyRate,
+        experience,
       });
       setSuccess("Tutor profile updated successfully!");
       setTimeout(() => setSuccess(""), 3000);
-    } catch {
-      setError("Failed to update tutor profile.");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to update tutor profile."));
     } finally {
       setSaving(false);
     }

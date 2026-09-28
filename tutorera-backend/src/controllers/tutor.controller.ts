@@ -88,6 +88,9 @@ export const createOrUpdateProfile = async (
 
   if (profile) {
     const updateData = { ...req.body };
+    if (Array.isArray(updateData.levels)) {
+      updateData.levels = normalizeEducationLevels(updateData.levels);
+    }
     if (updateData.cnicFront || updateData.cnicBack) {
       updateData.cnicVerificationStatus = "pending";
     }

@@ -408,8 +408,7 @@ export default function AcceptTutorAgreementPage() {
                     Go to Tutor Dashboard →
                   </Link>
                   <Link
-                    href={user?._id ? `/tutors/${user._id}` : "/tutors"}
-                    target="_blank"
+                    href="/profile"
                     style={{
                       background: "#FFFFFF",
                       color: "#334155",
@@ -425,7 +424,7 @@ export default function AcceptTutorAgreementPage() {
                     }}
                   >
                     <ExternalLink size={15} />
-                    View Live Profile
+                    Manage Tutor Profile
                   </Link>
                 </div>
               </div>

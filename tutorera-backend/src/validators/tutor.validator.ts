@@ -1,11 +1,22 @@
 import { z } from "zod";
 import { Request, Response, NextFunction } from "express";
-import { EDUCATION_LEVELS } from "../config/educationLevels";
+import { EDUCATION_LEVELS, normalizeEducationLevels } from "../config/educationLevels";
+
+const normalizedEducationLevelsSchema = z
+  .array(z.string())
+  .transform((values) => normalizeEducationLevels(values))
+  .refine(
+    (values) => values.every((value) => (EDUCATION_LEVELS as readonly string[]).includes(value)),
+    "Choose valid teaching levels."
+  );
 
 export const tutorProfileSchema = z.object({
   bio: z.string().min(20, "Bio must be at least 20 characters").optional(),
   subjects: z.array(z.string()).min(1, "At least one subject required").optional(),
-  levels: z.array(z.enum(EDUCATION_LEVELS)).optional(),
+  // Existing tutors may still hold historic labels (for example "O-Level"
+  // and "University"). Normalize those before validation so a corrective
+  // profile update cannot be blocked by legacy data.
+  levels: normalizedEducationLevelsSchema.optional(),
   hourlyRate: z.number().min(0, "Hourly rate cannot be negative").optional(),
   experience: z.number().min(0).optional(),
   education: z.array(z.object({

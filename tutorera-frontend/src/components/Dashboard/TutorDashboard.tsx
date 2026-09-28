@@ -777,8 +777,8 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             <Link href="/browse-requests" className={s.btnCyan}>
               View Matching Requests →
             </Link>
-            <Link href={userId ? `/tutors/${userId}` : "/tutors"} className={s.btnGhost}>
-              View Public Profile
+            <Link href="/profile" className={s.btnGhost}>
+              Edit Tutor Profile
             </Link>
           </div>
         </div>

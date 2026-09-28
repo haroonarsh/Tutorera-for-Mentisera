@@ -16,7 +16,7 @@ type GuardStatus = "loading" | "ok" | "blocked";
  * - Tutors → must be a fully verified tutor; pending/rejected are redirected to /dashboard
  * - Network/API errors while checking tutor status → fail closed (blocked), not silently approved
  */
-export function useAppGuard() {
+export function useAppGuard(options: { requireTutorEligibility?: boolean } = {}) {
     const { user, loading } = useAuth();
     const router = useRouter();
     const [status, setStatus] = useState<GuardStatus>("loading");
@@ -40,6 +40,13 @@ export function useAppGuard() {
         }
 
         if (user.role === "tutor") {
+        // Tutors must always retain access to account and profile-repair pages.
+        // Marketplace eligibility is deliberately enforced by the marketplace
+        // endpoints themselves and by pages that opt into this additional guard.
+        if (options.requireTutorEligibility === false) {
+            setStatus("ok");
+            return;
+        }
         setStatus("loading");
         api.get("/tracking/application-status", { timeout: 8000 })
             .then(res => {
@@ -61,7 +68,7 @@ export function useAppGuard() {
         // Any other/unknown role (e.g. "pending" role from Google sign-up flow) — block.
         setStatus("blocked");
         router.replace("/select-role");
-    }, [user, loading, router]);
+    }, [user, loading, router, options.requireTutorEligibility]);
 
     return status;
 }
