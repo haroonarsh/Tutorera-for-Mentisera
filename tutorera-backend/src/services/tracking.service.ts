@@ -226,6 +226,21 @@ function hasPolice(profile: ITutorProfile): boolean {
 
 export function isMarketplaceEligible(profile: ITutorProfile): boolean {
   const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
+  const accessIsBlocked = Boolean(
+    profile.suspendedAt ||
+    profile.reVerificationRequired ||
+    profile.tutorStatus === "suspended" ||
+    profile.tutorStatus === "reverification_required" ||
+    profile.tutorStatus === "terminated"
+  );
+
+  // Profiles activated before agreement acceptance was persisted have a
+  // marketplaceEligible flag, but no agreementAcceptedAt timestamp. Keep that
+  // activation authoritative instead of showing a listed tutor as pending (or
+  // silently revoking their marketplace access). New approvals still follow
+  // the strict agreement gate below.
+  if (profile.marketplaceEligible && !accessIsBlocked) return true;
+
   return Boolean(
     profile.isVerified &&
     profile.onboardingComplete &&
@@ -234,11 +249,7 @@ export function isMarketplaceEligible(profile: ITutorProfile): boolean {
     profile.degreeVerificationStatus === "approved" &&
     profile.verificationStatus === "approved" &&
     agreementSigned &&
-    !profile.suspendedAt &&
-    !profile.reVerificationRequired &&
-    profile.tutorStatus !== "suspended" &&
-    profile.tutorStatus !== "reverification_required" &&
-    profile.tutorStatus !== "terminated"
+    !accessIsBlocked
   );
 }
 
@@ -362,12 +373,6 @@ export function computeCanonicalStatus(profile: ITutorProfile): CanonicalStatus 
     return "AGREEMENT_REACCEPTANCE_REQUIRED";
   }
 
-  // NON-NEGOTIABLE: If application cleared admin approval, but agreement has not yet been accepted,
-  // the canonical status MUST be APPROVED_PENDING_AGREEMENT.
-  if ((profile.verificationStatus === "approved" || profile.tutorStatus === "approved_pending_agreement") && !agreementSigned) {
-    return "APPROVED_PENDING_AGREEMENT";
-  }
-
   if (isHomeTuitionEligible(profile)) return "HOME_TUITION_ELIGIBLE";
 
   if (isMarketplaceEligible(profile)) {
@@ -375,6 +380,13 @@ export function computeCanonicalStatus(profile: ITutorProfile): CanonicalStatus 
       return "HOME_TUITION_VERIFICATION_REQUIRED";
     }
     return "APPROVED_FOR_MARKETPLACE";
+  }
+
+  // New applications require explicit electronic agreement acceptance before
+  // activation. This check intentionally follows the persisted-activation
+  // check above so legacy, already-live marketplace profiles stay live.
+  if ((profile.verificationStatus === "approved" || profile.tutorStatus === "approved_pending_agreement") && !agreementSigned) {
+    return "APPROVED_PENDING_AGREEMENT";
   }
 
   const anyRejected =
@@ -439,7 +451,7 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
       key: "marketplace",
       label: "Marketplace activation",
       status: isMarketplaceEligible(profile) ? "done" : "pending",
-      at: at("MARKETPLACE_ACTIVATED"),
+      at: at("MARKETPLACE_ACTIVATED") || profile.marketplaceEligibleAt?.toISOString(),
     },
   ];
   if (policeIsRequired(profile)) {
@@ -463,7 +475,7 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
 function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   const RESUBMIT_URL = "/tutor/resubmit-docs";
   const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
-  if (profile.verificationStatus === "approved" && !agreementSigned) {
+  if (profile.verificationStatus === "approved" && !agreementSigned && !isMarketplaceEligible(profile)) {
     return {
       title: "Accept Your Tutor Marketplace Agreement",
       body: "Congratulations! Your application has been approved. Review and electronically accept the Tutor Marketplace Agreement (TTA-2026.1) to activate your account and marketplace access.",
@@ -559,8 +571,11 @@ export async function buildAuthenticatedTrackingPayload(
     opts.includePlainToken = t.plaintext;
   }
 
-  // Self-heal: If an admin approved the profile or all core marketplace documents are verified,
-  // ensure the profile is marked approved_pending_agreement until the legal agreement is signed.
+  // Self-heal only incomplete, newly-approved applications. A prior version
+  // also ran this against profiles that were already marketplaceEligible,
+  // overwriting their active state simply because historic agreement metadata
+  // was not available. Persisted activation is authoritative for those legacy
+  // profiles and must never be revoked by a read/status endpoint.
   const coreDocsApproved =
     profile.cnicVerificationStatus === "approved" &&
     profile.degreeVerificationStatus === "approved" &&
@@ -570,7 +585,16 @@ export async function buildAuthenticatedTrackingPayload(
 
   const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
 
-  if ((coreDocsApproved || profile.verificationStatus === "approved") && !agreementSigned) {
+  const hasPersistedMarketplaceActivation = Boolean(
+    profile.marketplaceEligible &&
+    !profile.suspendedAt &&
+    !profile.reVerificationRequired &&
+    profile.tutorStatus !== "suspended" &&
+    profile.tutorStatus !== "reverification_required" &&
+    profile.tutorStatus !== "terminated"
+  );
+
+  if (!hasPersistedMarketplaceActivation && (coreDocsApproved || profile.verificationStatus === "approved") && !agreementSigned) {
     if (profile.verificationStatus !== "approved" || profile.tutorStatus !== "approved_pending_agreement") {
       profile.verificationStatus = "approved";
       profile.isVerified = true;
