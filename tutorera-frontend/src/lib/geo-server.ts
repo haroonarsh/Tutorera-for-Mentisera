@@ -54,5 +54,13 @@ export async function resolveCountry(countryCode: string): Promise<CountryData |
 export async function liveCountryCodeParams(): Promise<{ countryCode: string }[]> {
   const live = await fetchLiveCountries();
   const codes = new Set<string>([...COUNTRIES.map((c) => c.code), ...live.map((c) => c.code)]);
-  return Array.from(codes).map((code) => ({ countryCode: code.toLowerCase() }));
+  // Pakistan has its own dedicated /pk landing (src/app/pk/page.tsx) that
+  // matches the same URL. Static routes beat dynamic ones in Next.js, but
+  // letting the dynamic catch-all also enumerate "pk" makes the build
+  // resolve the same URL twice, which can be brittle under OpenNext's
+  // route table generation. Excluding it here keeps /pk owned by exactly
+  // one handler.
+  return Array.from(codes)
+    .filter((code) => code.toLowerCase() !== "pk")
+    .map((code) => ({ countryCode: code.toLowerCase() }));
 }
