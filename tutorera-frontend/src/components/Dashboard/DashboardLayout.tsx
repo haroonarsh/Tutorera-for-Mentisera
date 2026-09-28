@@ -9,6 +9,7 @@ import {
   LayoutDashboard, Bell, Settings, LogOut,
   ChevronLeft, ChevronRight, MessageSquare,
   CreditCard, User, Search, Menu, TrendingUp, BriefcaseBusiness, BookOpen,
+  PlusCircle, FileText, Handshake, Calendar, Wallet, ShieldCheck, HelpCircle, Users,
 } from "lucide-react";
 
 const C = UI_COLORS;
@@ -17,42 +18,70 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
-  roles?: string[];
 }
 
-const navItems: NavItem[] = [
-  { href: "/dashboard",  label: "Dashboard",       icon: <LayoutDashboard size={18} /> },
-  { href: "/earnings",   label: "Earnings & Progress", icon: <TrendingUp size={18} />, roles: ["student", "tutor"] },
+// Spec §22 — student/parent sidebar, in order, real routes only.
+const studentNav: NavItem[] = [
+  { href: "/dashboard",             label: "Overview",          icon: <LayoutDashboard size={18} /> },
+  { href: "/post-tuition-request",  label: "Post Requirement",  icon: <PlusCircle size={18} /> },
+  { href: "/requests",              label: "My Requirements",   icon: <FileText size={18} /> },
+  { href: "/offers",                label: "Tutor Offers",      icon: <Handshake size={18} /> },
+  { href: "/book",                  label: "Bookings",          icon: <Calendar size={18} /> },
+  { href: "/chat",                  label: "Messages",          icon: <MessageSquare size={18} /> },
+  { href: "/transactions",          label: "Payments",          icon: <Wallet size={18} /> },
+  { href: "/notifications",         label: "Notifications",     icon: <Bell size={18} /> },
+  { href: "/safety",                label: "Safety",            icon: <ShieldCheck size={18} /> },
+  { href: "/support",               label: "Support",           icon: <HelpCircle size={18} /> },
+  { href: "/profile",               label: "Profile",           icon: <User size={18} /> },
+  { href: "/student/guidebook",     label: "Student Guidebook", icon: <BookOpen size={18} /> },
+  { href: "/settings",              label: "Settings",          icon: <Settings size={18} /> },
+];
+
+// Spec §23 — tutor sidebar, in order, real routes only.
+const tutorNav: NavItem[] = [
+  { href: "/dashboard",             label: "Overview",            icon: <LayoutDashboard size={18} /> },
+  { href: "/opportunities",         label: "Tuition Opportunities", icon: <BriefcaseBusiness size={18} /> },
+  { href: "/browse-requests",       label: "Browse Requests",     icon: <Search size={18} /> },
+  { href: "/offers",                label: "My Offers",           icon: <Handshake size={18} /> },
+  { href: "/book",                  label: "Bookings",            icon: <Calendar size={18} /> },
+  { href: "/students",              label: "Students",            icon: <Users size={18} /> },
+  { href: "/chat",                  label: "Messages",            icon: <MessageSquare size={18} /> },
+  { href: "/earnings",              label: "Earnings",            icon: <TrendingUp size={18} /> },
+  { href: "/notifications",         label: "Notifications",       icon: <Bell size={18} /> },
+  { href: "/profile",               label: "Profile",             icon: <User size={18} /> },
+  { href: "/support",               label: "Support",             icon: <HelpCircle size={18} /> },
+  { href: "/tutor/guidebook",       label: "Tutor Guidebook",     icon: <BookOpen size={18} /> },
+  { href: "/settings",              label: "Settings",            icon: <Settings size={18} /> },
+];
+
+// Fallback for pending / admin / parent — the pre-existing common items.
+const fallbackNav: NavItem[] = [
+  { href: "/dashboard",     label: "Dashboard",     icon: <LayoutDashboard size={18} /> },
   { href: "/notifications", label: "Notifications", icon: <Bell size={18} /> },
-  { href: "/offers",     label: "Offers & Negotiations", icon: <CreditCard size={18} /> },
-  { href: "/chat",       label: "Messages",         icon: <MessageSquare size={18} /> },
-  { href: "/settings",   label: "Settings",         icon: <Settings size={18} /> },
+  { href: "/offers",        label: "Offers",        icon: <CreditCard size={18} /> },
+  { href: "/chat",          label: "Messages",      icon: <MessageSquare size={18} /> },
+  { href: "/profile",       label: "Profile",       icon: <User size={18} /> },
+  { href: "/settings",      label: "Settings",      icon: <Settings size={18} /> },
 ];
 
-const tutorItems: NavItem[] = [
-  { href: "/browse-requests", label: "Browse Requests", icon: <Search size={18} /> },
-  { href: "/opportunities", label: "Teaching Opportunities", icon: <BriefcaseBusiness size={18} /> },
-  { href: "/profile",         label: "My Profile",      icon: <User size={18} /> },
-  { href: "/tutor/guidebook", label: "Tutor Guidebook",  icon: <BookOpen size={18} /> },
-];
-
-const studentItems: NavItem[] = [
-  { href: "/tutors",  label: "Find a Tutor", icon: <Search size={18} /> },
-  { href: "/profile", label: "My Profile",   icon: <User size={18} /> },
-  { href: "/student/guidebook", label: "Student Guidebook", icon: <BookOpen size={18} /> },
-];
-
-// Page title map
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':     'Dashboard',
-  '/earnings':      'Earnings & Progress',
-  '/notifications': 'Notifications',
-  '/offers':        'Offers & Negotiations',
-  '/settings':      'Settings',
-  '/opportunities': 'Teaching Opportunities',
-  '/profile':       'My Profile',
-  '/student/guidebook': 'Student Guidebook',
-  '/tutor/guidebook':   'Tutor Guidebook',
+  '/dashboard':            'Overview',
+  '/post-tuition-request': 'Post Requirement',
+  '/requests':             'My Requirements',
+  '/offers':               'Offers',
+  '/book':                 'Bookings',
+  '/transactions':         'Payments',
+  '/earnings':             'Earnings',
+  '/notifications':        'Notifications',
+  '/safety':               'Safety',
+  '/support':              'Support',
+  '/settings':             'Settings',
+  '/opportunities':        'Tuition Opportunities',
+  '/browse-requests':      'Browse Requests',
+  '/students':             'Students',
+  '/profile':              'Profile',
+  '/student/guidebook':    'Student Guidebook',
+  '/tutor/guidebook':      'Tutor Guidebook',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -63,7 +92,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router                      = useRouter();
 
   const handleLogout = async () => { await logout(); router.replace("/"); };
-  const roleItems = user?.role === "tutor" ? tutorItems : studentItems;
+  const sidebarNav: NavItem[] = user?.role === "tutor"
+    ? tutorNav
+    : user?.role === "student" || user?.role === "parent"
+      ? studentNav
+      : fallbackNav;
 
   const pageTitle = PAGE_TITLES[pathname]
     ?? (pathname.startsWith('/chat') ? 'Messages' : 'Dashboard');
@@ -106,38 +139,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* Nav */}
+      {/* Nav — single ordered list per role, per spec §22 / §23. */}
       <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-        {navItems.filter(item => !item.roles || item.roles.includes(user?.role || "")).map(item => {
-          const isActive = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href}
-              onClick={() => setMobileOpen(false)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                padding: collapsed ? '0.625rem' : '0.625rem 0.875rem',
-                borderRadius: '0.5rem', textDecoration: 'none',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                backgroundColor: isActive ? C.accentLight : 'transparent',
-                color: isActive ? C.accent : C.gray500,
-                fontWeight: isActive ? '600' : '400',
-                fontSize: '0.875rem', transition: 'background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)',
-              }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = C.gray50; }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}>
-              {item.icon}
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-
-        {!collapsed && (
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: C.gray500, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem', margin: 0 }}>
-            {user?.role === "tutor" ? "TEACHING" : "LEARNING"}
-          </p>
-        )}
-
-        {roleItems.map(item => {
+        {sidebarNav.map(item => {
           const isActive = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
