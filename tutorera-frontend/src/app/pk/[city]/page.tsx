@@ -3,20 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 const PAGES: Record<string, { title: string; description: string; question: string; answer: string; mode: "home" | "online" | "both" }> = {
-  "home-tuition": {
-    title: "Home Tuition in Pakistan",
-    description: "Post a home-tuition requirement in Pakistan, set a preferred budget, and compare offers from eligible tutors.",
-    question: "How can I find home tuition in Pakistan?",
-    answer: "Post your subject, curriculum, approximate area, schedule, and preferred budget. Eligible home-tuition tutors can submit offers, allowing you to compare options before choosing. Exact contact details and addresses stay private until a booking is confirmed.",
-    mode: "home",
-  },
-  "online-tuition": {
-    title: "Online Tuition in Pakistan",
-    description: "Post an online-tuition requirement in Pakistan, set your preferred budget, and compare eligible tutor offers.",
-    question: "How can I find an online tutor in Pakistan?",
-    answer: "Post your subject, curriculum, timezone, schedule, and preferred budget. Eligible tutors can send offers for you to compare before selecting who to learn with.",
-    mode: "online",
-  },
+  "home-tuition": { title: "Home Tuition in Pakistan", description: "Post a home-tuition requirement in Pakistan, set a preferred budget, and compare offers from eligible tutors.", question: "How can I find home tuition in Pakistan?", answer: "Post your subject, curriculum, approximate area, schedule, and preferred budget. Eligible home-tuition tutors can submit offers, allowing you to compare options before choosing. Exact contact details and addresses stay private until a booking is confirmed.", mode: "home" },
+  "online-tuition": { title: "Online Tuition in Pakistan", description: "Post an online-tuition requirement in Pakistan, set your preferred budget, and compare eligible tutor offers.", question: "How can I find an online tutor in Pakistan?", answer: "Post your subject, curriculum, timezone, schedule, and preferred budget. Eligible tutors can send offers for you to compare before selecting who to learn with.", mode: "online" },
   "mathematics-tuition": { title: "Mathematics Tuition in Pakistan", description: "Find mathematics tuition by posting your learning needs and comparing eligible tutor offers.", question: "How do I find a mathematics tutor in Pakistan?", answer: "Post the mathematics topics, level, schedule, and preferred budget. Eligible tutors can submit offers so you can compare teaching fit, availability, and pricing before choosing.", mode: "both" },
   "physics-tuition": { title: "Physics Tuition in Pakistan", description: "Post a physics-tuition requirement and compare eligible tutor offers in Pakistan.", question: "How do I find a physics tutor in Pakistan?", answer: "Post your physics level, curriculum, learning goals, schedule, and preferred budget. Tutors whose profiles fit the requirement can submit offers for you to compare.", mode: "both" },
   "chemistry-tuition": { title: "Chemistry Tuition in Pakistan", description: "Post a chemistry-tuition requirement and compare eligible tutor offers in Pakistan.", question: "How do I find a chemistry tutor in Pakistan?", answer: "Post your chemistry level, curriculum, learning goals, schedule, and preferred budget. Eligible tutors can send offers and you decide which option fits.", mode: "both" },
@@ -27,53 +15,26 @@ const PAGES: Record<string, { title: string; description: string; question: stri
   "mdcat-tutoring": { title: "MDCAT Tutoring in Pakistan", description: "Post an MDCAT tutoring requirement and compare eligible tutor offers.", question: "How do I find an MDCAT tutor in Pakistan?", answer: "Post the MDCAT topics, preparation timeline, schedule, learning mode, and preferred budget. Eligible tutors can send offers for you to compare before choosing.", mode: "both" },
 };
 
-export function generateStaticParams() { return Object.keys(PAGES).map((intent) => ({ intent })); }
+export function generateStaticParams() { return Object.keys(PAGES).map((city) => ({ city })); }
 
-export async function generateMetadata({ params }: { params: Promise<{ intent: string }> }): Promise<Metadata> {
-  const { intent } = await params;
-  const page = PAGES[intent];
-  if (!page) return {};
-  const path = `/pk/${intent}`;
-  return { title: page.title, description: page.description, alternates: { canonical: path } };
+export async function generateMetadata({ params }: { params: Promise<{ city: string }> }): Promise<Metadata> {
+  const { city } = await params;
+  const page = PAGES[city];
+  if (!page) return { robots: { index: false, follow: true } };
+  return { title: page.title, description: page.description, alternates: { canonical: `/pk/${city}` } };
 }
 
-export default async function PakistanStudentIntentPage({ params }: { params: Promise<{ intent: string }> }) {
-  const { intent } = await params;
-  const page = PAGES[intent];
+export default async function PakistanStudentIntentPage({ params }: { params: Promise<{ city: string }> }) {
+  const { city } = await params;
+  const page = PAGES[city];
   if (!page) notFound();
   const requestHref = page.mode === "home" ? "/post-home-tuition-request" : page.mode === "online" ? "/post-online-tuition-request" : "/post-tuition-request";
-  const url = `https://tutorera.ac.pk/pk/${intent}`;
-  const schema = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": `${url}#webpage`,
-        name: page.title,
-        description: page.description,
-        url,
-        isPartOf: { "@id": "https://tutorera.ac.pk/#website" },
-        breadcrumb: { "@id": `${url}#breadcrumb` },
-      },
-      {
-        "@type": "BreadcrumbList",
-        "@id": `${url}#breadcrumb`,
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
-          { "@type": "ListItem", position: 2, name: "Pakistan", item: "https://tutorera.ac.pk/pk" },
-          { "@type": "ListItem", position: 3, name: page.title, item: url },
-        ],
-      },
-      // The page prints the same Q&A verbatim; FAQPage lets answer engines
-      // (§40) surface it directly. Real page content, not fabricated.
-      {
-        "@type": "FAQPage",
-        mainEntity: [
-          { "@type": "Question", name: page.question, acceptedAnswer: { "@type": "Answer", text: page.answer } },
-        ],
-      },
-    ],
-  };
+  const url = `https://tutorera.ac.pk/pk/${city}`;
+  const schema = { "@context": "https://schema.org", "@graph": [
+    { "@type": "WebPage", "@id": `${url}#webpage`, name: page.title, description: page.description, url, isPartOf: { "@id": "https://tutorera.ac.pk/#website" }, breadcrumb: { "@id": `${url}#breadcrumb` } },
+    { "@type": "BreadcrumbList", "@id": `${url}#breadcrumb`, itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" }, { "@type": "ListItem", position: 2, name: "Pakistan", item: "https://tutorera.ac.pk/pk" }, { "@type": "ListItem", position: 3, name: page.title, item: url }] },
+    { "@type": "FAQPage", mainEntity: [{ "@type": "Question", name: page.question, acceptedAnswer: { "@type": "Answer", text: page.answer } }] },
+  ] };
   return <main style={{ maxWidth: 960, margin: "0 auto", padding: "3rem 1.25rem 5rem", color: "#10224f" }}>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
     <nav aria-label="Breadcrumb" style={{ fontSize: ".9rem", marginBottom: "2rem" }}><Link href="/">Home</Link> / <Link href="/pk">Pakistan</Link> / {page.title}</nav>
