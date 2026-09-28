@@ -106,6 +106,7 @@ export default function AcceptTutorAgreementPage() {
 
   const [agreementInfo, setAgreementInfo] = useState<CurrentAgreementResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -138,6 +139,7 @@ export default function AcceptTutorAgreementPage() {
     (async () => {
       try {
         setLoading(true);
+        setLoadError("");
         const res = await api.get("/tutor/agreements/current");
         if (isMounted) {
           setAgreementInfo(res.data);
@@ -153,7 +155,9 @@ export default function AcceptTutorAgreementPage() {
         }
       } catch (err: any) {
         if (isMounted) {
-          showError(err, "Failed to load agreement. Please refresh or contact support.");
+          const message = err?.response?.data?.message || "Failed to load the agreement. Please refresh or contact support.";
+          setLoadError(message);
+          showError(err, message);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -249,6 +253,22 @@ export default function AcceptTutorAgreementPage() {
           <div style={{ width: 44, height: 44, border: "4px solid #E2E8F0", borderTopColor: "#0284C7", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
           <p style={{ color: "#475569", fontWeight: 600, fontSize: 15 }}>Loading Tutor Agreement & Verification Records…</p>
         </div>
+      </main>
+    );
+  }
+
+  if (loadError || !agreementInfo?.agreement) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <section role="alert" style={{ maxWidth: 560, background: "#FFFFFF", border: "1px solid #FCA5A5", borderRadius: 16, padding: 28, boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)" }}>
+          <AlertCircle size={30} color="#B91C1C" aria-hidden="true" />
+          <h1 style={{ color: "#0F172A", fontSize: 22, margin: "14px 0 8px" }}>The agreement could not be opened</h1>
+          <p style={{ color: "#475569", lineHeight: 1.55, margin: 0 }}>{loadError || "A current agreement is not available yet."}</p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 22 }}>
+            <button type="button" onClick={() => window.location.reload()} style={{ border: 0, borderRadius: 9, padding: "10px 16px", background: "#0329B2", color: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}>Try again</button>
+            <Link href="/tutor/application-status" style={{ border: "1px solid #CBD5E1", borderRadius: 9, padding: "10px 16px", color: "#0F172A", fontWeight: 700, textDecoration: "none" }}>View application status</Link>
+          </div>
+        </section>
       </main>
     );
   }
