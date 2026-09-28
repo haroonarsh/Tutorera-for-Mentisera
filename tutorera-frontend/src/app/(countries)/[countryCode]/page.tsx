@@ -70,7 +70,10 @@ export default async function CountryLandingPage({ params }: Props) {
     name: `TUTORERA - ${country.name}`,
     description: `Find verified tutors and teaching opportunities in ${country.name}, priced in ${country.currency}.`,
     url: `${SITE_URL}/${countryCode.toLowerCase()}`,
-    isPartOf: { "@id": `${SITE_URL}/#organization` },
+    // WebPage.isPartOf semantically references the WebSite, not the
+    // Organization (WebSite is what Google's guidance and schema.org's own
+    // examples use). The Organization is reachable via WebSite.publisher.
+    isPartOf: { "@id": `${SITE_URL}/#website` },
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
