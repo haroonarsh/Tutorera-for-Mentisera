@@ -1,30 +1,29 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import TuitionRequestsClient from "./TuitionRequestsClient";
+import { liveCountryCodeParams, resolveCountry } from "@/lib/geo-server";
 
 interface Props {
   params: Promise<{ country: string }>;
 }
 
-const COUNTRY_NAMES: Record<string, string> = {
-  pk: "Pakistan",
-  ae: "United Arab Emirates",
-  gb: "United Kingdom",
-};
-
 export async function generateStaticParams() {
-  return [{ country: "pk" }, { country: "ae" }, { country: "gb" }];
+  return (await liveCountryCodeParams()).map(({ countryCode }) => ({ country: countryCode }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country } = await params;
-  const countryName = COUNTRY_NAMES[country.toLowerCase()] || country.toUpperCase();
+  const market = await resolveCountry(country);
+  if (!market) return { title: "Tuition Requests", robots: { index: false, follow: true } };
+  const countryName = market.name;
+  const canonical = `/tuition-requests/${market.code.toLowerCase()}`;
 
   return {
     title: `Student Tuition Requests in ${countryName}`,
     description: `Browse active tuition requests from students in ${countryName}. Post your requirement and receive offers from verified tutors. Online and home tuition available.`,
     alternates: {
-      canonical: `/tuition-requests/${country}`,
+      canonical,
     },
     openGraph: {
       title: `Active Tuition Requests in ${countryName} | TUTORERA`,
@@ -36,8 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CountryTuitionRequestsPage({ params }: Props) {
   const { country } = await params;
-  const countryCode = country.toUpperCase();
-  const countryName = COUNTRY_NAMES[country.toLowerCase()] || countryCode;
+  const market = await resolveCountry(country);
+  if (!market) notFound();
+  const countryCode = market.code;
+  const countryName = market.name;
 
   return (
     <Suspense fallback={<main style={{ padding: "4rem 1.5rem", textAlign: "center" }}><p>Loading tuition requests for {countryName}...</p></main>}>

@@ -3,7 +3,9 @@ import { ArrowRight, BadgeCheck, CheckCircle, Sparkles, ShieldCheck } from "luci
 import QuickRequestComposer from "./QuickRequestComposer";
 import AskTutoreraInput from "./AskTutoreraInput";
 
-export default function HeroMarketplace() {
+export default function HeroMarketplace({ countryCode }: { countryCode?: string }) {
+  const requestHref = `/post-tuition-request${countryCode ? `?country=${encodeURIComponent(countryCode)}` : ""}`;
+  const marketHref = (path: string) => `${path}${countryCode ? `?country=${encodeURIComponent(countryCode)}` : ""}`;
   return (
     <section
       style={{
@@ -108,7 +110,7 @@ export default function HeroMarketplace() {
               }}
             >
               <Link
-                href="/post-tuition-request"
+                href={requestHref}
                 id="hero-post-request-btn"
                 style={{
                   background: "#0329b2",
@@ -160,7 +162,7 @@ export default function HeroMarketplace() {
 
             <div style={{ marginBottom: "1.25rem" }}>
               <Link
-                href="/tuition-requests"
+                href={marketHref("/tuition-requests")}
                 style={{
                   color: "#64748b",
                   fontSize: "0.85rem",

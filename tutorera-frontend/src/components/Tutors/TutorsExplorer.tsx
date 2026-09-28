@@ -19,6 +19,7 @@ interface Props {
   initialFilters?: Partial<FiltersState>;
   title?: string;
   subtitle?: string;
+  marketCountryCode?: string;
 }
 
 function query(filters: FiltersState, page: number, matchRequestId?: string|null) {
@@ -29,7 +30,7 @@ function query(filters: FiltersState, page: number, matchRequestId?: string|null
   return params.toString();
 }
 
-export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {}, title, subtitle }: Props) {
+export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {}, title, subtitle, marketCountryCode }: Props) {
   const searchParams = useSearchParams();
   const matchRequestId = searchParams.get("matchRequestId");
   const [tutors, setTutors] = useState(initialTutors);
@@ -126,7 +127,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
             </span>
           </div>
           <Link
-            href="/post-tuition-request"
+            href={`/post-tuition-request${marketCountryCode ? `?country=${encodeURIComponent(marketCountryCode)}` : ""}`}
             style={{
               background: "#0329b2",
               color: "white",

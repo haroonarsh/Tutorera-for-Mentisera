@@ -407,9 +407,17 @@ export const getAllTutors = async (
     const matchRequest = await Request.findById(matchRequestId).lean();
     if (matchRequest) {
       const ranked = await MatchingService.rankTutors(matchRequest as any, tutorsWithResponse as any[]);
-      const scoreMap = new Map(ranked.map((s) => [s.tutor._id.toString(), s.matchScore]));
+      const rankedMap = new Map(ranked.map((s) => [s.tutor._id.toString(), s]));
       tutorsWithResponse.forEach((t: any) => {
-        t.matchScore = scoreMap.get(t._id.toString()) ?? null;
+        const matchData = rankedMap.get(t._id.toString());
+        if (matchData) {
+          t.matchScore = matchData.matchScore;
+          t.matchBreakdown = matchData.scoreBreakdown;
+          t.matchReasons = matchData.reasons;
+          t.matchTier = matchData.tier;
+        } else {
+          t.matchScore = null;
+        }
       });
     }
   }

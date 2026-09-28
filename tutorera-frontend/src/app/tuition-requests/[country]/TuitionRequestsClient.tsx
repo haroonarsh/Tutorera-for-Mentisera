@@ -161,7 +161,7 @@ export default function TuitionRequestsClient({
 
           <div style={{ display: "inline-flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
             <Link
-              href="/post-tuition-request"
+              href={`/post-tuition-request?country=${encodeURIComponent(countryCode)}`}
               style={{
                 background: "#ffffff",
                 color: "#0329b2",
@@ -249,7 +249,7 @@ export default function TuitionRequestsClient({
 
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <Link
-                href="/post-tuition-request"
+                href={`/post-tuition-request?country=${encodeURIComponent(countryCode)}`}
                 style={{
                   background: "#0329b2",
                   color: "white",

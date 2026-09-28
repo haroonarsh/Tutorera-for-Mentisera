@@ -11,6 +11,7 @@ interface StickyTutorProfileCTAProps {
   tutorName: string;
   hourlyRate?: number;
   currency?: string;
+  countryCode?: string;
   rating?: number;
   teachingMode: "online" | "in-person" | "both";
   city: string;
@@ -22,7 +23,8 @@ export default function StickyTutorProfileCTA({
   tutorName,
   hourlyRate,
   currency = "PKR",
-  rating,
+  countryCode,
+  rating = 4.9,
   teachingMode,
   city,
   subjects,
@@ -66,7 +68,7 @@ export default function StickyTutorProfileCTA({
 
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexShrink: 0 }}>
           <Link
-            href={requestHref}
+            href={`/post-tuition-request?subject=${encodeURIComponent(subjects[0] || "")}&city=${encodeURIComponent(city || "")}${countryCode ? `&country=${encodeURIComponent(countryCode)}` : ""}`}
             style={{
               background: "#eef5ff",
               color: "#0329b2",

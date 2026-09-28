@@ -112,6 +112,22 @@ export default function RequestWizard({
   });
 
   useEffect(() => {
+    if (!prefill.countryCode) return;
+    const market = geo.countries.find((country) => country.code === prefill.countryCode?.toUpperCase());
+    if (!market) return;
+    setForm((current) => ({
+      ...current,
+      countryCode: market.code,
+      countryName: prefill.countryName || market.name,
+      currency: prefill.currency || market.currency,
+      timezone: prefill.timezone || market.defaultTimezone,
+      budget: !prefill.budget && current.budget === "2000" && market.currency !== "PKR"
+        ? (market.currency === "AED" ? "80" : market.currency === "GBP" ? "25" : "30")
+        : current.budget,
+    }));
+  }, [geo.countries, prefill.budget, prefill.countryCode, prefill.countryName, prefill.currency, prefill.timezone]);
+
+  useEffect(() => {
     if (prefill.countryCode || !user?.countryCode) return;
     const market = geo.countries.find((country) => country.code === user.countryCode);
     if (!market) return;

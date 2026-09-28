@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Home, Laptop, ShieldCheck, MapPin, CheckCircle2 } from "lucide-react";
 
-export default function HomeOnlineTuitionCards() {
+export default function HomeOnlineTuitionCards({ countryCode }: { countryCode?: string }) {
+  const requestHref = (path: string) => `${path}${countryCode ? `?country=${encodeURIComponent(countryCode)}` : ""}`;
   return (
     <section style={{ maxWidth: 1120, margin: "2.5rem auto 0", padding: "0 1.5rem" }} aria-label="Tutoring learning modes">
       <div style={{
@@ -73,7 +74,7 @@ export default function HomeOnlineTuitionCards() {
 
           <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
             <Link
-              href="/post-home-tuition-request"
+              href={requestHref("/post-home-tuition-request")}
               style={{
                 background: "#0329b2",
                 color: "white",
@@ -91,7 +92,7 @@ export default function HomeOnlineTuitionCards() {
               Post a local request <ArrowRight size={15} />
             </Link>
             <Link
-              href="/tutors?mode=in-person"
+              href={`/tutors?teachingMode=in-person${countryCode ? `&country=${encodeURIComponent(countryCode)}` : ""}`}
               style={{
                 color: "#0329b2",
                 fontSize: "0.825rem",
@@ -150,7 +151,7 @@ export default function HomeOnlineTuitionCards() {
 
           <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
             <Link
-              href="/post-online-tuition-request"
+              href={requestHref("/post-online-tuition-request")}
               style={{
                 background: "#021550",
                 color: "white",
@@ -167,7 +168,7 @@ export default function HomeOnlineTuitionCards() {
               Post Online Tuition Request <ArrowRight size={15} />
             </Link>
             <Link
-              href="/online-tutors"
+              href={requestHref("/online-tutors")}
               style={{
                 color: "#475569",
                 fontSize: "0.825rem",

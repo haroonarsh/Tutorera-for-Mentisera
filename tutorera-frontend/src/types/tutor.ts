@@ -45,6 +45,7 @@ export interface TutorProfile {
   matchScore?: number;
   matchBreakdown?: Record<string, number>;
   matchReasons?: string[];
+  matchTier?: "excellent" | "great" | "good" | "fair";
   averageResponseMinutes?: number;
   responseTimeFormatted?: string;
   lastActiveAt?: string;

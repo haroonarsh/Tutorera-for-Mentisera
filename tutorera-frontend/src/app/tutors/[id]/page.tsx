@@ -1198,6 +1198,7 @@ export default async function TutorProfilePage({ params }: Props) {
               tutorName={name}
               hourlyRate={tutor.hourlyRate}
               currency={tutor.currency || ""}
+              countryCode={tutor.countryCode}
               subjects={tutor.subjects || []}
               teachingMode={tutor.teachingMode}
               city={city}
@@ -1226,6 +1227,7 @@ export default async function TutorProfilePage({ params }: Props) {
         tutorName={name}
         hourlyRate={tutor.hourlyRate}
         currency={tutor.currency || ""}
+        countryCode={tutor.countryCode}
         rating={tutor.averageRating}
         teachingMode={tutor.teachingMode}
         city={city}

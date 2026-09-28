@@ -100,9 +100,9 @@ export default async function CountryLandingPage({ params }: Props) {
         {country.paymentsEnabled === false && " · Online payment isn't live in this market yet"}
       </div>
 
-      <HeroMarketplace />
+      <HeroMarketplace countryCode={country.code} />
       
-      <HomeOnlineTuitionCards />
+      <HomeOnlineTuitionCards countryCode={country.code} />
 
       <section style={{ maxWidth: 1120, margin: "4rem auto", padding: "0 1.5rem" }}>
         <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>

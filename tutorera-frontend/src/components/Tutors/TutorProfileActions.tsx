@@ -6,7 +6,7 @@ import { Calendar,Heart,PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-interface Props { profileId: string; tutorUserId: string; tutorName: string; hourlyRate: number; currency?: string; subjects: string[]; teachingMode: "online" | "in-person" | "both"; city: string; }
+interface Props { profileId: string; tutorUserId: string; tutorName: string; hourlyRate: number; currency?: string; countryCode?: string; subjects: string[]; teachingMode: "online" | "in-person" | "both"; city: string; }
 
 export default function TutorProfileActions(props: Props) {
   const [booking, setBooking] = useState(false);
@@ -19,7 +19,7 @@ export default function TutorProfileActions(props: Props) {
       <Calendar size={18} /> Request Direct Booking
     </button>
     <Link
-      href={`/post-tuition-request?subject=${encodeURIComponent(props.subjects[0] || "")}&city=${encodeURIComponent(props.city || "")}`}
+      href={`/post-tuition-request?subject=${encodeURIComponent(props.subjects[0] || "")}&city=${encodeURIComponent(props.city || "")}${props.countryCode ? `&country=${encodeURIComponent(props.countryCode)}` : ""}`}
       style={{
         width: "100%",
         padding: ".85rem",

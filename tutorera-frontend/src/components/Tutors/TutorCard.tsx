@@ -88,7 +88,14 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
 
         {typeof matchScore === "number" && (
           <span style={{ position: "relative", zIndex: 1 }}>
-            <MatchScoreBadge score={matchScore} compact />
+            <MatchScoreBadge
+              score={matchScore}
+              tier={tutor.matchTier}
+              reasons={tutor.matchReasons}
+              breakdown={tutor.matchBreakdown}
+              compact
+              showBreakdown
+            />
           </span>
         )}
       </div>

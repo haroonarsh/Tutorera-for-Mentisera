@@ -13,8 +13,10 @@ type Score={score:number;grade:string;components:{demandScore:number;supplyScore
 type Segment={key:string;city:string;subject:string;mode:string;currency:string;score:Score;opportunity:number};
 
 export default function TutorOpportunitiesPage(){
- const {user}=useAuth(); const guard=useAppGuard(); const [scores,setScores]=useState<Record<string,Score>>({}); const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [query,setQuery]=useState(""); const [mode,setMode]=useState("all");
- const load=useCallback(async()=>{if(!user||user.role!=="tutor")return;setLoading(true);setError("");try{const response=await api.get("/liquidity/overview",{params:{countryCode:user.countryCode||"PK"}});setScores(response.data?.scores||{});}catch{setError("Opportunity data could not be loaded.");}finally{setLoading(false);}},[user]);
+ const {user}=useAuth(); const guard=useAppGuard(); const [scores,setScores]=useState<Record<string,Score>>({}); const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [query,setQuery]=useState(""); const [mode,setMode]=useState("all"); const [countryCode,setCountryCode]=useState("");
+ useEffect(()=>{const requested=new URLSearchParams(window.location.search).get("country")?.toUpperCase();if(requested&&/^[A-Z]{2}$/.test(requested))setCountryCode(requested);},[]);
+ const effectiveCountryCode=countryCode||user?.countryCode||"PK";
+ const load=useCallback(async()=>{if(!user||user.role!=="tutor")return;setLoading(true);setError("");try{const response=await api.get("/liquidity/overview",{params:{countryCode:effectiveCountryCode}});setScores(response.data?.scores||{});}catch{setError("Opportunity data could not be loaded.");}finally{setLoading(false);}},[effectiveCountryCode,user]);
  useEffect(()=>{void load();},[load]);
  const segments=useMemo<Segment[]>(()=>Object.entries(scores).map(([key,score])=>{const [,_currency="PKR",city="Unknown",subject="Tutoring",segmentMode="online"]=key.split("|");const scarcity=score.meta.openRequests/Math.max(score.meta.eligibleTutors,1);const opportunity=Math.min(100,Math.round(score.components.demandScore*.65+Math.min(scarcity*20,35)));return{key,city,subject,mode:segmentMode,currency:score.meta.currency||_currency,score,opportunity};}).filter(item=>(mode==="all"||item.mode===mode)&&`${item.city} ${item.subject}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>b.opportunity-a.opportunity),[mode,query,scores]);
  if(guard!=="ok"||!user)return null;

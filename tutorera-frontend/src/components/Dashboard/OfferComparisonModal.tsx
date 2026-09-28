@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { DashBid } from "@/types/dashboard";
-import { formatPKR } from "@/lib/site";
+import { formatPKR, formatMoney } from "@/lib/site";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
@@ -38,7 +38,7 @@ export default function OfferComparisonModal({
             tier={bid.matchTier as any}
             reasons={bid.matchReasons}
             breakdown={bid.matchScoreBreakdown}
-            showBreakdown={false}
+            showBreakdown={true}
           />
         ) : (
           <span style={{ color: TEXT_COLORS.muted }}>N/A</span>
@@ -48,7 +48,7 @@ export default function OfferComparisonModal({
       label: "Rate",
       render: (bid) => (
         <span style={{ fontWeight: 700, fontSize: "1rem" }}>
-          {formatPKR(bid.amount, bid.pricingUnit || "hour")}
+          {formatMoney(bid.amount, bid.currency || "PKR", bid.pricingUnit || "hour")}
         </span>
       ),
     },

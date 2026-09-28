@@ -8,14 +8,22 @@ export default function PostHomeTuitionRequestPage() {
   const [prefill, setPrefill] = useState<Partial<PostRequestPayload>>({
     teachingMode: "in-person"
   });
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem("tutorera_quick_request");
+      const countryCode = new URLSearchParams(window.location.search).get("country")?.toUpperCase();
       if (stored) {
-        setPrefill((prev) => ({ ...prev, ...JSON.parse(stored), teachingMode: "in-person" }));
+        setPrefill((prev) => ({ ...prev, ...JSON.parse(stored), ...(countryCode && /^[A-Z]{2}$/.test(countryCode) ? { countryCode } : {}), teachingMode: "in-person" }));
+      } else if (countryCode && /^[A-Z]{2}$/.test(countryCode)) {
+        setPrefill((prev) => ({ ...prev, countryCode }));
       }
-    } catch {}
+    } catch {
+      // A malformed or unavailable saved draft must not block request creation.
+    } finally {
+      setReady(true);
+    }
   }, []);
 
   return (
@@ -32,8 +40,12 @@ export default function PostHomeTuitionRequestPage() {
             Specify your location and budget. Verified home tutors in your city will send offers. Your exact residential address is never shown publicly.
           </p>
         </div>
-        <RequestWizard initialMode="in-person" prefill={prefill} />
+        {ready ? <RequestWizard initialMode="in-person" prefill={prefill} /> : <RequestWizardLoading />}
       </div>
     </main>
   );
+}
+
+function RequestWizardLoading() {
+  return <div role="status" aria-live="polite" style={{ minHeight: 320, display: "grid", placeItems: "center", color: "#52627e" }}>Preparing your request…</div>;
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
-import { fetchTutors, CITIES } from "@/lib/tutor-directory";
+import { fetchTutors } from "@/lib/tutor-directory";
 import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
 import type { FiltersState } from "@/types/tutor";
 import { SITE_URL } from "@/lib/site";
@@ -122,6 +122,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           limit: 12,
         }}
         initialFilters={initialFilters}
+        marketCountryCode={country.code}
         title={`Verified Tutors in ${country.name}`}
         subtitle={
           result.total
@@ -136,11 +137,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
           </h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
             {country.cities.map((city) => {
-              const citySlug = city.name.toLowerCase().replace(/\s+/g, "-");
-              const hasDedicatedLanding = citySlug in CITIES;
-              const href = hasDedicatedLanding
-                ? `/tutors/city/${citySlug}`
-                : `/${countryCode.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`;
+              const href = `/${countryCode.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`;
 
               return (
                 <Link
@@ -160,7 +157,7 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
                     gap: "0.3rem",
                   }}
                 >
-                  {city.name} {hasDedicatedLanding ? "Tutors →" : ""}
+                  {city.name}
                 </Link>
               );
             })}
@@ -175,11 +172,10 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
         </h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
           {["Mathematics", "Physics", "Chemistry", "Biology", "English", "Computer Science", "Economics", "Accounting", "Business Studies", "Urdu"].map((subject) => {
-            const slug = subject.toLowerCase().replace(/\s+/g, "-");
             return (
               <Link
                 key={subject}
-                href={`/tutors/subject/${slug}`}
+                href={`/${countryCode.toLowerCase()}/tutors?subject=${encodeURIComponent(subject)}`}
                 style={{
                   background: "white",
                   border: "1px solid #e2e8f0",
