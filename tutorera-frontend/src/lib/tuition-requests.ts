@@ -1,12 +1,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
 
+// Shape of the sanitized student embedded in a public preview payload —
+// the backend never sends _id, email, avatar, phone, or exact address on
+// this endpoint (see request-privacy.test.ts and getPublicRequestsPreview
+// in tutorera-backend). Keep this type honest to that redaction, so it
+// can't quietly widen if a future change starts sending more.
 export interface StudentUser {
-  _id: string;
   name: string;
-  avatar?: string;
+  displayTitle?: string;
   city?: string;
   countryName?: string;
-  countryCode?: string;
 }
 
 export interface TuitionRequest {
@@ -14,29 +17,23 @@ export interface TuitionRequest {
   student: StudentUser;
   subject: string;
   level: string;
+  // Always the canned "Learning goals will be shared after a tutor is
+  // selected." placeholder on the public preview — never the real body.
   description: string;
   budget: number;
   pricingUnit: "hour" | "session" | "month" | "course";
   currency: string;
-  allowCounterOffers: boolean;
   countryCode?: string;
   countryName?: string;
   city?: string;
-  timezone?: string;
-  area?: string;
   teachingMode: "online" | "in-person" | "both";
   schedule: string;
   status: string;
   expiresAt?: string;
   createdAt: string;
-  bid?: {
-    amount: number;
-    currency: string;
-    status: string;
-    expiresAt: string;
-    pricingUnit: string;
-    createdAt: string;
-  };
+  offersCount?: number;
+  sessionDurationMinutes?: number;
+  sessionsPerWeek?: number;
 }
 
 export interface RequestFilters {
