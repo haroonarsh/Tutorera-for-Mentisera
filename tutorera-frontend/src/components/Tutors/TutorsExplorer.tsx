@@ -77,6 +77,14 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
     } else load(1, next);
   }
   function reset() { setFilters(INITIAL_FILTERS); load(1, INITIAL_FILTERS); }
+  // Spec §31: an explicit action the user has to click; never a silent mode swap.
+  const includeOnline = () => {
+    const next = { ...filters, teachingMode: "online" as const };
+    setFilters(next);
+    load(1, next);
+  };
+  const canIncludeOnline = filters.teachingMode === "in-person";
+  const postRequirementHref = `/post-tuition-request${marketCountryCode ? `?country=${encodeURIComponent(marketCountryCode)}` : ""}`;
   const sidebarProps = { filters, onFilterChange: change, onReset: reset, activeFilterCount };
 
   return <div className={styles.page}>
@@ -153,7 +161,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
             <div className={styles.sortControl}><select aria-label="Sort tutors" value={filters.sortBy} onChange={(event) => change("sortBy", event.target.value)} className={styles.sortSelect}>{SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
           </div>
         </div>
-        {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} matchScore={tutor.matchScore} />)}</div> : <EmptyState onReset={reset} />}
+        {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} matchScore={tutor.matchScore} />)}</div> : <EmptyState onReset={reset} onIncludeOnline={canIncludeOnline ? includeOnline : undefined} postRequirementHref={postRequirementHref} />}
         {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} hrefBuilder={(page) => `/tutors?${query(filters, page, matchRequestId)}`} /></div>}
       </section>
     </div>
