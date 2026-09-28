@@ -200,17 +200,28 @@ export default async function TutorProfilePage({ params }: Props) {
           "@type": "EducationalOrganization",
           name: edu.institution,
         })),
-        makesOffer: {
-          "@type": "Offer",
-          price: tutor.hourlyRate || 0,
-          priceCurrency: tutor.currency || undefined,
-          availability: "https://schema.org/InStock",
-        },
-        ...(tutor.totalReviews
+        // Only emit an Offer with a real price + currency (spec §42: never
+        // fabricate prices). "Availability: InStock" alone tells a crawler
+        // nothing genuine when the rate is missing.
+        ...(tutor.hourlyRate && tutor.currency
+          ? {
+              makesOffer: {
+                "@type": "Offer",
+                price: tutor.hourlyRate,
+                priceCurrency: tutor.currency,
+                availability: "https://schema.org/InStock",
+              },
+            }
+          : {}),
+        // Only emit AggregateRating when both the review count AND a real
+        // average rating exist. The previous `tutor.averageRating || 5`
+        // fallback fabricated a 5-star rating for tutors with reviews but no
+        // computed average — spec §42 forbids fabricated ratings.
+        ...(tutor.totalReviews && tutor.averageRating
           ? {
               aggregateRating: {
                 "@type": "AggregateRating",
-                ratingValue: tutor.averageRating || 5,
+                ratingValue: tutor.averageRating,
                 reviewCount: tutor.totalReviews,
                 bestRating: 5,
                 worstRating: 1,

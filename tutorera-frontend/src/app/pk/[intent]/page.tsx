@@ -42,14 +42,37 @@ export default async function PakistanStudentIntentPage({ params }: { params: Pr
   const page = PAGES[intent];
   if (!page) notFound();
   const requestHref = page.mode === "home" ? "/post-home-tuition-request" : page.mode === "online" ? "/post-online-tuition-request" : "/post-tuition-request";
+  const url = `https://tutorera.ac.pk/pk/${intent}`;
   const schema = {
-    "@context": "https://schema.org", "@type": "WebPage", name: page.title,
-    description: page.description, url: `https://tutorera.ac.pk/pk/${intent}`,
-    breadcrumb: { "@type": "BreadcrumbList", itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
-      { "@type": "ListItem", position: 2, name: "Pakistan", item: "https://tutorera.ac.pk/pk" },
-      { "@type": "ListItem", position: 3, name: page.title, item: `https://tutorera.ac.pk/pk/${intent}` },
-    ] },
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${url}#webpage`,
+        name: page.title,
+        description: page.description,
+        url,
+        isPartOf: { "@id": "https://tutorera.ac.pk/#website" },
+        breadcrumb: { "@id": `${url}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
+          { "@type": "ListItem", position: 2, name: "Pakistan", item: "https://tutorera.ac.pk/pk" },
+          { "@type": "ListItem", position: 3, name: page.title, item: url },
+        ],
+      },
+      // The page prints the same Q&A verbatim; FAQPage lets answer engines
+      // (§40) surface it directly. Real page content, not fabricated.
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          { "@type": "Question", name: page.question, acceptedAnswer: { "@type": "Answer", text: page.answer } },
+        ],
+      },
+    ],
   };
   return <main style={{ maxWidth: 960, margin: "0 auto", padding: "3rem 1.25rem 5rem", color: "#10224f" }}>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
