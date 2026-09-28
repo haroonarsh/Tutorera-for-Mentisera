@@ -144,7 +144,7 @@ export default function ProfilePage() {
               hourlyRate: p.hourlyRate?.toString() || "",
               experience: p.experience?.toString() || "",
               subjects: (p.subjects || []).filter((s: string) => subjects.includes(s)),
-              levels: [...new Set((p.levels || []).map(normalizeTutorLevel))].filter((l: string) => levels.includes(l)),
+              levels: [...new Set(((p.levels || []) as string[]).map(normalizeTutorLevel))].filter((l) => levels.includes(l)),
               teachingMode: p.teachingMode || "both",
               city: p.city || "",
             });
