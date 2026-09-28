@@ -71,10 +71,14 @@ export const getCurrentTutorAgreement = async (req: AuthRequest, res: Response):
     agreement: {
       _id: agreement._id,
       documentType: agreement.documentType,
+      // Compatibility aliases retained while web clients move to the
+      // canonical documentType/applicableSchedule names.
+      agreementType: agreement.documentType,
       version: agreement.version,
       title: agreement.title,
       content: agreement.content,
       applicableSchedule: agreement.applicableSchedule,
+      countrySchedule: agreement.applicableSchedule,
       country: agreement.country,
       locale: agreement.locale,
       contentHash: agreement.contentHash,
@@ -94,6 +98,27 @@ export const getCurrentTutorAgreement = async (req: AuthRequest, res: Response):
       country: profile.countryCode || "PK",
       verificationStatus: profile.verificationStatus,
       tutorStatus: profile.tutorStatus || "registered",
+    },
+    // Flat fields are retained for the agreement page and older clients.
+    verifiedLegalName: profile.fullName || req.user.name,
+    tutorProfileId: profile._id,
+    applicationId: req.user.applicationId || "TUT-PENDING",
+    alreadyAccepted: Boolean(existingAcceptance),
+    latestAcceptance: existingAcceptance
+      ? {
+          _id: existingAcceptance._id,
+          agreementVersion: existingAcceptance.agreementVersion,
+          agreementHash: existingAcceptance.agreementHash,
+          acceptedAt: existingAcceptance.acceptedAt,
+          electronicSignature: existingAcceptance.electronicSignature,
+          pdfDownloadUrl: `/api/v1/tutor/agreements/${existingAcceptance._id}/pdf`,
+        }
+      : null,
+    feeSchedule: {
+      marketplaceFeePercent: feeSnapshot.feeConfig.tutorFeePercent,
+      taxRatePercent: feeSnapshot.feeConfig.taxRatePercent,
+      currency: feeSnapshot.currency,
+      summary: `Tutor platform fee: ${feeSnapshot.feeConfig.tutorFeePercent}%.`,
     },
     acceptance: existingAcceptance
       ? {
@@ -116,9 +141,18 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
   const {
     agreementId,
     electronicSignature,
-    confirmations,
+    confirmations: submittedConfirmations,
     passwordConfirmation,
   } = req.body;
+
+  // Accept the legacy field names used by the existing agreement page as well
+  // as the canonical API names. All downstream persistence uses the canonical
+  // shape, so a successful signature always stores the complete consent set.
+  const confirmations = {
+    ...(submittedConfirmations || {}),
+    informationAccurate: submittedConfirmations?.informationAccurate ?? submittedConfirmations?.informationAccuracy,
+    independentProvider: submittedConfirmations?.independentProvider ?? submittedConfirmations?.independentContractor,
+  };
 
   // 1. Mandatory Consents Validation
   if (

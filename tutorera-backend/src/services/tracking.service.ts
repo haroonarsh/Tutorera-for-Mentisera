@@ -248,12 +248,21 @@ export function isHomeTuitionEligible(profile: ITutorProfile): boolean {
 }
 
 export function computeProgress(profile: ITutorProfile): { completed: number; total: number; percent: number } {
-  // Once a profile has cleared marketplace approval, every step below has
-  // necessarily already passed review - show 100% rather than letting
-  // unrelated profile-completeness fields (bio, hourly rate, availability,
-  // date of birth, etc.) that were never part of what admins actually
-  // verify keep the bar stuck below 100 after approval.
-  if (isMarketplaceEligible(profile)) {
+  // Verification and marketplace activation are separate stages. A tutor whose
+  // application and required documents are approved must see verification as
+  // complete even though their unsigned agreement deliberately keeps
+  // marketplace access disabled. Do not let optional/profile-completeness
+  // fields turn this state into the misleading 55% shown previously.
+  const requiredDocumentsApproved =
+    profile.cnicVerificationStatus === "approved" &&
+    profile.degreeVerificationStatus === "approved" &&
+    profile.demoVideoStatus === "approved" &&
+    (!policeIsRequired(profile) || profile.policeVerificationStatus === "approved");
+  if (isMarketplaceEligible(profile) || (
+    profile.verificationStatus === "approved" &&
+    profile.isVerified &&
+    requiredDocumentsApproved
+  )) {
     return { completed: 100, total: 100, percent: 100 };
   }
   const steps: { done: boolean; weight: number }[] = [

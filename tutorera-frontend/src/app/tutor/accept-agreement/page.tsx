@@ -63,7 +63,7 @@ interface CurrentAgreementResponse {
 
 const MANDATORY_CONSENTS = [
   {
-    key: "informationAccuracy",
+    key: "informationAccurate",
     label: "Accurate & Authentic Information",
     description:
       "I confirm that all personal, academic, identity, qualification, and professional background information submitted to TUTORERA is true, accurate, and authentic in all respects.",
@@ -81,7 +81,7 @@ const MANDATORY_CONSENTS = [
       "I agree to adhere strictly to TUTORERA's Child Safeguarding Policy, zero-tolerance child protection standards, Academic Integrity policies, and professional conduct requirements at all times.",
   },
   {
-    key: "independentContractor",
+    key: "independentProvider",
     label: "Independent Contractor Relationship",
     description:
       "I acknowledge and agree that I participate as an independent freelance service provider, not an employee, agent, worker, partner, or joint venturer of TUTORERA or MENTISERA (SMC-Private) Limited.",
