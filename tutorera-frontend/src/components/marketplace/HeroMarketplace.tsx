@@ -45,7 +45,7 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                 letterSpacing: "0.05em",
               }}
             >
-              <BadgeCheck size={15} /> A Global Student-Led Tutoring Marketplace
+              <BadgeCheck size={15} /> TUTORERA · A Student-First Tutoring Marketplace
             </div>
 
             <h1
@@ -58,8 +58,8 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                 marginBottom: "1rem",
               }}
             >
-              Students Need Tutors. <br />
-              <span style={{ color: "#016ef8" }}>Tutors Need Students. <br />TUTORERA Connects Both.</span>
+              Find the Right Tutor <br />
+              <span style={{ color: "#016ef8" }}>Without Searching Through Hundreds of Profiles</span>
             </h1>
 
             <p
@@ -71,7 +71,7 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                 maxWidth: 540,
               }}
             >
-              The global marketplace where you control the match. Students post requirements and budgets. Tutors apply or send offers. Compare, negotiate, and start learning or teaching today.
+              Tell TUTORERA what you need, choose home or online tuition, set your budget and receive offers from suitable tutors. Choose the tutor that&apos;s right for you.
             </p>
 
             <div style={{ marginBottom: "1.25rem" }}>
@@ -109,6 +109,7 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                 marginBottom: "1.25rem",
               }}
             >
+              {/* Primary CTA */}
               <Link
                 href={requestHref}
                 id="hero-post-request-btn"
@@ -131,12 +132,13 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                   transition: "transform 0.15s ease, background 0.15s ease",
                 }}
               >
-                <span>I Need a Tutor</span>
+                <span>Post Tuition Requirement</span>
                 <ArrowRight size={18} />
               </Link>
 
+              {/* Secondary CTA */}
               <Link
-                href="/opportunities"
+                href="/tutors"
                 style={{
                   background: "white",
                   color: "#021550",
@@ -151,12 +153,34 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
                   justifyContent: "center",
                   minHeight: "50px",
                   flex: "1 1 auto",
-                  maxWidth: "240px",
+                  maxWidth: "200px",
                   gap: "0.4rem"
                 }}
               >
-                <span>I Want to Teach</span>
+                <span>Find Tutors</span>
                 <ArrowRight size={16} color="#021550" />
+              </Link>
+
+              {/* Tutor CTA */}
+              <Link
+                href="/become-a-tutor"
+                style={{
+                  background: "#f8fafc",
+                  color: "#475569",
+                  padding: "0.95rem 1.25rem",
+                  borderRadius: "0.75rem",
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  border: "1.5px solid #e2e8f0",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: "50px",
+                  gap: "0.4rem"
+                }}
+              >
+                <span>Become a Tutor</span>
               </Link>
             </div>
 
