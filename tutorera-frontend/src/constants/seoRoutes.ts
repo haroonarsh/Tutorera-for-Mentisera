@@ -24,6 +24,11 @@ export const SEO_PRIVATE_PATHS = [
   "/login",
   "/register",
   "/select-role",
+  // Personal transaction / booking surfaces — spec §46 (dashboard pages,
+  // private user activity). /book is the rebook launcher, /transactions the
+  // ledger, neither is content a crawler should index.
+  "/book",
+  "/transactions",
 ] as const;
 
 export const CANONICAL_HOST = "tutorera.ac.pk";

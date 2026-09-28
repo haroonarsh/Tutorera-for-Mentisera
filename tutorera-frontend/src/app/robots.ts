@@ -8,13 +8,38 @@ import type { MetadataRoute } from "next";
 // alternates.canonical on /tutors and friends).
 const NOISY_QUERY_PATTERNS = [
   "/*?*sort=",
+  "/*?*sortBy=",
   "/*?*minRate=",
+  "/*?*minPrice=",
+  "/*?*maxPrice=",
+  "/*?*minRating=",
   "/*?*rating=",
   "/*?*availability=",
   "/*?*currency=",
 ];
 
-const PRIVATE_DISALLOW = [...SEO_PRIVATE_PATHS.map((p) => `${p}/`), "/api/", ...NOISY_QUERY_PATTERNS];
+// Tracking / campaign parameters — every combination is a duplicate of the
+// clean URL and burns crawl budget for zero SEO value (spec §46 tracking URLs).
+const TRACKING_QUERY_PATTERNS = [
+  "/*?*utm_source=",
+  "/*?*utm_medium=",
+  "/*?*utm_campaign=",
+  "/*?*utm_term=",
+  "/*?*utm_content=",
+  "/*?*gclid=",
+  "/*?*fbclid=",
+  "/*?*msclkid=",
+  "/*?*ref=",
+  "/*?*mc_cid=",
+  "/*?*mc_eid=",
+];
+
+const PRIVATE_DISALLOW = [
+  ...SEO_PRIVATE_PATHS.map((p) => `${p}/`),
+  "/api/",
+  ...NOISY_QUERY_PATTERNS,
+  ...TRACKING_QUERY_PATTERNS,
+];
 
 // Answer-engine / AI-search crawlers that can drive real traffic and citation
 // back to TUTORERA when they browse or index it - allowed the same as any
