@@ -6,91 +6,32 @@ import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import {
   Bell,
-  Briefcase,
-  BriefcaseBusiness,
-  ChevronDown,
-  GraduationCap,
   LayoutDashboard,
   LogOut,
   Menu,
   MessageSquare,
   PlusCircle,
-  ShieldCheck,
   User,
-  X
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect,useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import s from "./Navbar.module.css";
 
-type MegaKey = "students" | "tutors" | "resources" | null;
-
-const megaMenus = [
-  {
-    key: "students" as MegaKey,
-    label: "For Students",
-    eyebrow: "Student-First Marketplace",
-    title: "Post your learning need, receive eligible tutor offers, compare, and choose.",
-    icon: GraduationCap,
-    featured: { label: "Post a Tuition Request", href: "/post-tuition-request", desc: "Set subject, schedule, mode, and your proposed budget in any currency." },
-    groups: [
-      { title: "Learning Modes", links: [
-        { label: "Home Tuition Requests", href: "/post-home-tuition-request", desc: "Post your local learning requirement where home tuition is available." },
-        { label: "Online Tuition Requests", href: "/post-online-tuition-request", desc: "Set your subject, schedule, and preferred budget for online learning." },
-        { label: "Browse Tutors", href: "/tutors", desc: "Explore tutor profiles as a secondary discovery option." },
-        { label: "Tutors by Location", href: "/locations", desc: "Explore available location coverage." },
-      ] },
-      { title: "Transparency & Trust", links: [
-        { label: "How Tutor Offers Work", href: "/how-tutor-offers-work", desc: "Understanding offers, counters & locking." },
-        { label: "First-Session Guarantee", href: "/first-session-guarantee", desc: "Session quality protection policy." },
-        { label: "Parent Safety Guide", href: "/help/for-parents", desc: "Safety & verification checks." },
-        { label: "Pricing & Fee Clarity", href: "/pricing", desc: "0% student marketplace fee." },
-      ] },
-    ],
-  },
-  {
-    key: "tutors" as MegaKey,
-    label: "For Tutors",
-    eyebrow: "Global Teaching Opportunities",
-    title: "Review relevant student requirements and submit offers where eligible.",
-    icon: BriefcaseBusiness,
-    featured: { label: "Browse Open Requests", href: "/browse-requests", desc: "Review privacy-safe requirements and submit offers." },
-    groups: [
-      { title: "Tutor Marketplace", links: [
-        { label: "Browse Student Requests", href: "/browse-requests", desc: "See relevant, privacy-safe tutoring requirements." },
-        { label: "Become a Tutor", href: "/become-a-tutor", desc: "Complete the application and required verification." },
-        { label: "Tutor Earnings Flow", href: "/earnings", desc: "Understand applicable earnings and settlement terms." },
-        { label: "Verification Standards", href: "/tutor-verification-standards", desc: "Identity & credential screening." },
-      ] },
-      { title: "Teaching Standards", links: [
-        { label: "Screening Policy", href: "/tutor-screening-policy", desc: "How tutor profiles are approved." },
-        { label: "Academic Standards", href: "/academic-standards", desc: "Professional conduct guidelines." },
-        { label: "Safety Policy", href: "/safety-policy", desc: "In-person & online safety rules." },
-      ] },
-    ],
-  },
-  {
-    key: "resources" as MegaKey,
-    label: "How It Works",
-    eyebrow: "Guides & Policies",
-    title: "Everything you need to know about TUTORERA.",
-    icon: ShieldCheck,
-    featured: { label: "How TUTORERA Works", href: "/how-it-works", desc: "The student-first requirement, offer, comparison, and booking flow." },
-    groups: [
-      { title: "Guides & Research", links: [
-        { label: "Global Tutoring Index", href: "/research/tutoring-index", desc: "Country-specific tutoring market benchmarks." },
-        { label: "Student Journey", href: "/student-journey", desc: "From posting need to completed session." },
-        { label: "Payment Process", href: "/payment-process", desc: "Market-enabled checkout and payment information." },
-        { label: "Help Center", href: "/help", desc: "FAQs & support documentation." },
-      ] },
-      { title: "Company & Trust", links: [
-        { label: "About TUTORERA", href: "/about", desc: "Mission & global team." },
-        { label: "Safety & Privacy Policy", href: "/safety-policy", desc: "Address & identity protections." },
-        { label: "Contact Support", href: "/contact", desc: "Contact the TUTORERA support team." },
-      ] },
-    ],
-  },
+// Flat top-nav aligned with the Student-First Marketplace spec (§5).
+// Supporting depth (Home Tuition / Online Tuition / O Level / A Level / MDCAT /
+// Pricing / Research / Guides) now lives in the footer (§51) and inside the
+// destination pages themselves, not as mega menus off the top nav.
+const primaryLinks = [
+  // "Find Tuition" — the tuition-request marketplace landing where students
+  // and parents start; points at the PK home-tuition hub since PK is the
+  // primary market and /pk/[intent] renders that page.
+  { label: "Find Tuition", href: "/pk/home-tuition" },
+  { label: "Find Tutors", href: "/tutors" },
+  { label: "Subjects", href: "/subjects" },
+  { label: "How It Works", href: "/how-it-works" },
+  { label: "Safety", href: "/safety" },
 ];
 
 function notificationIcon(type: string) {
@@ -103,7 +44,6 @@ function notificationIcon(type: string) {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeMega, setActiveMega] = useState<MegaKey>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
@@ -114,14 +54,12 @@ export default function Navbar() {
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       if (!navRef.current?.contains(event.target as Node)) {
-        setActiveMega(null);
         setShowNotifications(false);
         setShowAccountMenu(false);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setActiveMega(null);
         setShowNotifications(false);
         setShowAccountMenu(false);
         setIsOpen(false);
@@ -136,7 +74,6 @@ export default function Navbar() {
   }, []);
 
   const closeMenus = () => {
-    setActiveMega(null);
     setShowNotifications(false);
     setShowAccountMenu(false);
     setIsOpen(false);
@@ -155,163 +92,49 @@ export default function Navbar() {
       : "/dashboard";
   const profileHref = user?.role === "pending" ? "/select-role" : "/profile";
 
+  // Role-aware "For Tutors" slot on the top nav (§5): tutors see their
+  // opportunities feed; everyone else sees the tutor acquisition page.
+  const forTutorsHref = user?.role === "tutor" ? "/opportunities" : "/become-a-tutor";
+  const forTutorsLabel = user?.role === "tutor" ? "Tuition Opportunities" : "For Tutors";
+
   return (
     <header ref={navRef} className={s.header}>
       <nav id="main-nav" className={s.nav} aria-label="Main navigation">
         <BrandLogo className={s.logo} imageClassName={s.logoImage} priority />
 
-        {/* Desktop Main Links */}
+        {/* Desktop main links — flat per spec §5 */}
         <div className={s.desktopNav}>
-          <Link href="/post-tuition-request" className={s.navLink} onClick={closeMenus}>
-            Post Requirement
-          </Link>
-          <Link href="/tutors" className={s.navLink} onClick={closeMenus}>
-            Find Tutors
-          </Link>
-
-          {megaMenus.map((menu) => {
-            const Icon = menu.icon;
-            const open = activeMega === menu.key;
-            return (
-              <div key={menu.key} className={s.megaWrap}>
-                <button
-                  type="button"
-                  className={s.navButton}
-                  aria-expanded={open}
-                  aria-controls={`${menu.key}-mega-menu`}
-                  onClick={() => { setActiveMega(open ? null : menu.key); setShowNotifications(false); }}
-                >
-                  {menu.label}
-                  <ChevronDown size={15} aria-hidden="true" />
-                </button>
-                {open && (
-                  <div id={`${menu.key}-mega-menu`} className={s.megaPanel}>
-                    <div className={s.megaFeature}>
-                      <Icon size={28} aria-hidden="true" />
-                      <p>{menu.eyebrow}</p>
-                      <h2>{menu.title}</h2>
-                      <Link href={menu.featured.href} onClick={closeMenus}>
-                        <strong>{menu.featured.label}</strong>
-                        <span>{menu.featured.desc}</span>
-                      </Link>
-                    </div>
-                    <div className={s.megaColumns}>
-                      {menu.groups.map((group) => (
-                        <section key={group.title} aria-labelledby={`${menu.key}-${group.title.replace(/\s+/g, "-")}`}>
-                          <h3 id={`${menu.key}-${group.title.replace(/\s+/g, "-")}`}>{group.title}</h3>
-                          {group.links.map((link) => (
-                            <Link key={link.href} href={link.href} onClick={closeMenus} className={s.megaLink}>
-                              <strong>{link.label}</strong>
-                              <span>{link.desc}</span>
-                            </Link>
-                          ))}
-                        </section>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          <Link href="/pricing" className={s.navLink} onClick={closeMenus}>
-            Pricing
-          </Link>
-          <Link href="/support" className={s.navLink} onClick={closeMenus}>
-            Support
+          {primaryLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={s.navLink} onClick={closeMenus}>
+              {link.label}
+            </Link>
+          ))}
+          <Link href={forTutorsHref} className={s.navLink} onClick={closeMenus}>
+            {forTutorsLabel}
           </Link>
         </div>
 
-        {/* Actions / CTA Header Button */}
+        {/* Actions / CTA */}
         <div className={s.desktopActions}>
-          {/* Anonymous-visitor role picker - routes to the matching primary CTA.
-              Hidden once signed in, since the account's role already determines it. */}
-          {/* {!user && (
-            <div
-              role="group"
-              aria-label="Choose your role"
-              style={{
-                display: "inline-flex",
-                border: "1.5px solid #cbd5e1",
-                borderRadius: "0.5rem",
-                overflow: "hidden",
-                marginRight: "0.5rem",
-              }}
-            >
-              <Link
-                href="/post-tuition-request"
-                onClick={closeMenus}
-                style={{
-                  padding: "0.55rem 0.9rem",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  color: "#021550",
-                  textDecoration: "none",
-                  background: "#eef5ff",
-                  borderRight: "1.5px solid #cbd5e1",
-                }}
-              >
-                I&apos;m a Student
-              </Link>
-              <Link
-                href="/become-a-tutor"
-                onClick={closeMenus}
-                style={{
-                  padding: "0.55rem 0.9rem",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  color: "#475569",
-                  textDecoration: "none",
-                  background: "white",
-                }}
-              >
-                I&apos;m a Tutor
-              </Link>
-            </div>
-          )} */}
-
-          {/* Marketplace Hero CTA in Navbar */}
-          {user?.role === "tutor" ? (
-            <Link
-              href="/browse-requests"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: "#0329b2",
-                color: "white",
-                padding: "0.6rem 1.15rem",
-                borderRadius: "0.5rem",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                textDecoration: "none",
-                boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)"
-              }}
-            >
-              <Briefcase size={16} />
-              <span>Matching Requests</span>
-            </Link>
-          ) : (
-            <Link
-              href="/post-tuition-request"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: "#0329b2",
-                color: "white",
-                padding: "0.6rem 1.15rem",
-                borderRadius: "0.5rem",
-                fontWeight: 800,
-                fontSize: "0.85rem",
-                textDecoration: "none",
-                boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)"
-              }}
-            >
-              <PlusCircle size={16} />
-              <span>{user ? "+ Post Request" : "Post Tuition Request"}</span>
-            </Link>
-          )}
+          <Link
+            href="/post-tuition-request"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              background: "#0329b2",
+              color: "white",
+              padding: "0.6rem 1.15rem",
+              borderRadius: "0.5rem",
+              fontWeight: 800,
+              fontSize: "0.85rem",
+              textDecoration: "none",
+              boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)",
+            }}
+          >
+            <PlusCircle size={16} />
+            <span>Post Requirement</span>
+          </Link>
 
           {user ? (
             <>
@@ -321,7 +144,7 @@ export default function Navbar() {
                   className={s.iconButton}
                   aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
                   aria-expanded={showNotifications}
-                  onClick={() => { setShowNotifications(!showNotifications); setActiveMega(null); setShowAccountMenu(false); }}
+                  onClick={() => { setShowNotifications(!showNotifications); setShowAccountMenu(false); }}
                 >
                   <Bell size={20} aria-hidden="true" />
                   {unreadCount > 0 && <span className={s.badge}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
@@ -361,16 +184,18 @@ export default function Navbar() {
                   aria-label="Account menu"
                   aria-expanded={showAccountMenu}
                   aria-controls="account-menu"
-                  onClick={() => { setShowAccountMenu((open) => !open); setActiveMega(null); setShowNotifications(false); }}
+                  onClick={() => { setShowAccountMenu((open) => !open); setShowNotifications(false); }}
                 >
                   <span className={s.avatar}>
-                    {user.avatar ? <Image src={user.avatar} alt="" width={32} height={32}  unoptimized/> : user.name.charAt(0).toUpperCase()}
+                    {user.avatar ? <Image src={user.avatar} alt="" width={32} height={32} unoptimized /> : user.name.charAt(0).toUpperCase()}
                   </span>
                   <span>{user.name.split(" ")[0]}</span>
                 </button>
                 {showAccountMenu && (
                   <div id="account-menu" className={s.accountLinks}>
-                    <Link href={dashboardHref} onClick={closeMenus}><LayoutDashboard size={16} /> Dashboard</Link>
+                    <Link href={dashboardHref} onClick={closeMenus}>
+                      <LayoutDashboard size={16} /> {user.role === "student" || user.role === "parent" ? "My Learning" : "Dashboard"}
+                    </Link>
                     <Link href={profileHref} onClick={closeMenus}><User size={16} /> {user.role === "pending" ? "Select role" : "Profile"}</Link>
                     {user.role !== "admin" && user.role !== "pending" && <Link href="/chat" onClick={closeMenus}><MessageSquare size={16} /> Messages</Link>}
                     <button type="button" onClick={handleLogout}><LogOut size={16} /> Logout</button>
@@ -399,25 +224,7 @@ export default function Navbar() {
 
       {isOpen && (
         <div className={s.mobilePanel}>
-          {!user && (
-            <div style={{ display: "flex", padding: "0.75rem 1rem 0" }}>
-              <Link
-                href="/post-tuition-request"
-                onClick={closeMenus}
-                style={{ flex: 1, textAlign: "center", padding: "0.55rem", fontSize: "0.82rem", fontWeight: 700, color: "#021550", background: "#eef5ff", borderRadius: "0.5rem 0 0 0.5rem", textDecoration: "none", border: "1.5px solid #cbd5e1", borderRight: "none" }}
-              >
-                I&apos;m a Student
-              </Link>
-              <Link
-                href="/become-a-tutor"
-                onClick={closeMenus}
-                style={{ flex: 1, textAlign: "center", padding: "0.55rem", fontSize: "0.82rem", fontWeight: 700, color: "#475569", background: "white", borderRadius: "0 0.5rem 0.5rem 0", textDecoration: "none", border: "1.5px solid #cbd5e1" }}
-              >
-                I&apos;m a Tutor
-              </Link>
-            </div>
-          )}
-
+          {/* Mobile top action — Post Requirement is priority §6 */}
           <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #f1f5f9" }}>
             <Link
               href="/post-tuition-request"
@@ -429,35 +236,36 @@ export default function Navbar() {
                 gap: "0.5rem",
                 background: "#0329b2",
                 color: "white",
-                padding: "0.75rem",
+                padding: "0.85rem",
                 borderRadius: "0.5rem",
                 fontWeight: 800,
                 fontSize: "0.95rem",
-                textDecoration: "none"
+                textDecoration: "none",
+                minHeight: 48,
               }}
             >
-              <PlusCircle size={18} /> Post Tuition Request
+              <PlusCircle size={18} /> Post Requirement
             </Link>
           </div>
 
-          <Link href="/tutors" onClick={closeMenus} style={{ padding: "0.75rem 1rem", fontWeight: 700, display: "block" }}>
-            Browse Verified Tutors
-          </Link>
-
-          {megaMenus.map((menu) => (
-            <details key={menu.key} className={s.mobileGroup}>
-              <summary>{menu.label}</summary>
-              <Link href={menu.featured.href} onClick={closeMenus}>{menu.featured.label}</Link>
-              {menu.groups.flatMap((group) => group.links).map((link) => (
-                <Link key={link.href} href={link.href} onClick={closeMenus}>{link.label}</Link>
-              ))}
-            </details>
-          ))}
+          {/* Spec §6 mobile order — wrapped in .mobileGroup so its
+              already-defined `a` selector styles rows uniformly. */}
+          <div className={s.mobileGroup}>
+            <Link href="/tutors" onClick={closeMenus}>Find Tutors</Link>
+            <Link href="/pk/home-tuition" onClick={closeMenus}>Home Tuition</Link>
+            <Link href="/pk/online-tuition" onClick={closeMenus}>Online Tuition</Link>
+            <Link href="/subjects" onClick={closeMenus}>Subjects</Link>
+            <Link href="/how-it-works" onClick={closeMenus}>How It Works</Link>
+            <Link href="/safety" onClick={closeMenus}>Safety</Link>
+            <Link href={forTutorsHref} onClick={closeMenus}>{forTutorsLabel}</Link>
+          </div>
 
           <div className={s.mobileActions}>
             {user ? (
               <>
-                <Link href={dashboardHref} onClick={closeMenus}>Dashboard</Link>
+                <Link href={dashboardHref} onClick={closeMenus}>
+                  {user.role === "student" || user.role === "parent" ? "My Learning" : "Dashboard"}
+                </Link>
                 <Link href="/notifications" onClick={closeMenus}>Notifications {unreadCount > 0 ? `(${unreadCount})` : ""}</Link>
                 <button type="button" onClick={handleLogout}>Logout</button>
               </>
