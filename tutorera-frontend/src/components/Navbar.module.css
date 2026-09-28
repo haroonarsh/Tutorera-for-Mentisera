@@ -77,6 +77,8 @@
 }
 
 .desktopNav {
+  flex: 1;
+  justify-content: center;
   gap: 0.15rem;
 }
 
@@ -91,17 +93,20 @@
 }
 
 .navButton,
+.navLink,
 .quickLink,
 .loginLink,
 .signupLink,
 .iconButton,
-.accountButton {
+.accountButton,
+.primaryCta {
   min-height: 44px;
   border-radius: 999px;
   transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 
 .navButton,
+.navLink,
 .quickLink,
 .loginLink,
 .accountButton {
@@ -117,6 +122,41 @@
   font-weight: 750;
   text-decoration: none;
   padding: 0 0.82rem;
+}
+
+/* Main navigation needs a dedicated interactive surface. Without this class
+   Next links collapse into a visually indistinguishable text run. */
+.navLink {
+  white-space: nowrap;
+  border-radius: 10px;
+  color: #24324a;
+  letter-spacing: -0.01em;
+}
+
+.navLink:focus-visible,
+.primaryCta:focus-visible,
+.loginLink:focus-visible,
+.signupLink:focus-visible,
+.iconButton:focus-visible,
+.accountButton:focus-visible,
+.mobileToggle:focus-visible {
+  outline: 3px solid rgba(1, 110, 248, 0.42);
+  outline-offset: 3px;
+}
+
+.primaryCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0 1rem;
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-royal-blue), var(--color-digital-blue));
+  box-shadow: 0 8px 18px rgba(3, 41, 178, 0.22);
+  font-size: 0.86rem;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .quickLink,
@@ -419,6 +459,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .navButton:hover,
+  .navLink:hover,
   .quickLink:hover,
   .loginLink:hover,
   .iconButton:hover,
@@ -429,6 +470,11 @@
   .signupLink:hover {
     transform: translateY(-1px);
     box-shadow: 0 16px 32px rgba(1, 110, 248, 0.25);
+  }
+
+  .primaryCta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(3, 41, 178, 0.28);
   }
 
   .megaLink:hover,
@@ -445,11 +491,13 @@
 }
 
 .navButton:active,
+.navLink:active,
 .quickLink:active,
 .loginLink:active,
 .signupLink:active,
 .iconButton:active,
 .accountButton:active,
+.primaryCta:active,
 .mobileToggle:active {
   transform: scale(0.97);
 }
@@ -546,6 +594,7 @@
   }
 
   .navButton,
+  .navLink,
   .quickLink,
   .loginLink,
   .signupLink,
@@ -556,6 +605,7 @@
   }
 
   .navButton:active,
+  .navLink:active,
   .quickLink:active,
   .loginLink:active,
   .signupLink:active,
@@ -563,6 +613,7 @@
   .accountButton:active,
   .mobileToggle:active,
   .signupLink:hover,
+  .primaryCta:hover,
   .megaLink:hover {
     transform: none;
   }

@@ -118,19 +118,7 @@ export default function Navbar() {
         <div className={s.desktopActions}>
           <Link
             href="/post-tuition-request"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              background: "#0329b2",
-              color: "white",
-              padding: "0.6rem 1.15rem",
-              borderRadius: "0.5rem",
-              fontWeight: 800,
-              fontSize: "0.85rem",
-              textDecoration: "none",
-              boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)",
-            }}
+            className={s.primaryCta}
           >
             <PlusCircle size={16} />
             <span>Post Requirement</span>
