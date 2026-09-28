@@ -10,13 +10,18 @@ import {
   ArrowRight,
   Eye,
   FileCheck,
+  Gavel,
   Home,
   Laptop,
   LifeBuoy,
   Lock,
+  MessageSquare,
   ShieldCheck,
+  Star,
+  UserX,
   Users
 } from "lucide-react";
+import { SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import s from "../compliance-pages.module.css";
@@ -30,9 +35,121 @@ export const metadata: Metadata = {
   },
 };
 
+// Spec §32 / §40 / §42: WebPage + BreadcrumbList + FAQPage. Content below is
+// real page copy — nothing fabricated.
+const trustCenterFaq = [
+  {
+    q: "How does TUTORERA verify tutors?",
+    a: "Tutors complete identity verification, credential review, and — where required — background checks before being approved to receive tuition opportunities. Verification confirms the documents reviewed; it does not guarantee outcomes or teaching quality on its own.",
+  },
+  {
+    q: "How do I block or report a user?",
+    a: "Use the report link on the tutor's profile, on any conversation, or contact the Trust & Safety team by email. Reports involving minor safety, harassment, or fraud can lead to a precautionary account hold while evidence is reviewed.",
+  },
+  {
+    q: "What happens if I have a dispute over a paid booking?",
+    a: "Submit a report through the platform. Eligibility, timelines, and any remedy follow the published refund, cancellation, and complaint processes; the first-session protection policy covers eligible first-session issues where applicable.",
+  },
+  {
+    q: "Are reviews on TUTORERA real?",
+    a: "Reviews are written by students or parents whose bookings are recorded on the platform. Fabricated, incentivised, or off-platform reviews are removed under the review policy.",
+  },
+];
+
+const trustDirectory = [
+  {
+    heading: "Verification",
+    links: [
+      { href: "/verification-policy", label: "Tutor verification standards" },
+      { href: "/background-check-policy", label: "Background check policy" },
+      { href: "/tutor-screening-policy", label: "Tutor screening policy" },
+      { href: "/tutor-verification-standards", label: "Verification standards detail" },
+    ],
+  },
+  {
+    heading: "Students, parents & children",
+    links: [
+      { href: "/child-safety", label: "Child safeguarding" },
+      { href: "/help/for-parents", label: "Parent safety guide" },
+      { href: "/community-guidelines", label: "Community standards" },
+      { href: "/academic-integrity", label: "Academic integrity" },
+    ],
+  },
+  {
+    heading: "Home & online tuition",
+    links: [
+      { href: "/terms/home-tuition", label: "Home tuition rules" },
+      { href: "/in-person-home-tuition-terms", label: "In-person home tuition terms" },
+      { href: "/how-tutor-offers-work", label: "How tutor offers work" },
+      { href: "/first-session-guarantee", label: "First-session protection" },
+    ],
+  },
+  {
+    heading: "Payments & disputes",
+    links: [
+      { href: "/payment-process", label: "How payments work" },
+      { href: "/refund-policy", label: "Refund policy" },
+      { href: "/cancellation-policy", label: "Cancellation policy" },
+      { href: "/complaint-process", label: "Complaint & dispute process" },
+    ],
+  },
+  {
+    heading: "Privacy & data",
+    links: [
+      { href: "/privacy", label: "Privacy policy" },
+      { href: "/privacy-center", label: "Privacy rights & data export" },
+      { href: "/cookies", label: "Cookie policy" },
+      { href: "/legal/ai-transparency", label: "AI & algorithm transparency" },
+    ],
+  },
+  {
+    heading: "Reviews & content",
+    links: [
+      { href: "/review-policy", label: "Review policy" },
+      { href: "/content-review-policy", label: "Content review policy" },
+      { href: "/editorial-policy", label: "Editorial policy" },
+      { href: "/academic-standards", label: "Academic standards" },
+    ],
+  },
+];
+
 export default function SafetyCenterPage() {
+  const url = `${SITE_URL}/safety`;
+  const trustSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${url}#webpage`,
+        name: "Trust & Safety Center",
+        description:
+          "TUTORERA's Trust & Safety Center: verification, safeguarding, home & online tuition rules, payments, disputes, reviews, and reporting.",
+        url,
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        breadcrumb: { "@id": `${url}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: "Safety", item: url },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: trustCenterFaq.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: { "@type": "Answer", text: item.a },
+        })),
+      },
+    ],
+  };
+
   return (
     <div className={s.wrapper}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(trustSchema) }} />
       {/* Hero */}
       <section className={s.hero}>
         <div className={s.badge}>
@@ -312,6 +429,92 @@ export default function SafetyCenterPage() {
             <Link href="/contact" className={s.secondaryBtn}>
               Submit Web Report <ArrowRight size={16} />
             </Link>
+          </div>
+        </section>
+
+        {/* Section 6: Privacy, blocking, disputes, reviews, community
+            standards — spec §32 gaps consolidated into the trust hub. */}
+        <section className={s.section}>
+          <h2 className={s.sectionTitle}>
+            <ShieldCheck size={22} color="var(--primary, #0f172a)" /> 6. Privacy, Blocking, Disputes, Reviews & Community
+          </h2>
+          <div className={s.cardGrid}>
+            <div className={s.card}>
+              <div className={s.cardHeader}>
+                <div className={s.cardIcon}><Lock size={20} /></div>
+                <h3 className={s.cardTitle}>Privacy</h3>
+              </div>
+              <p className={s.cardText}>
+                Exact addresses, contact numbers, and account data are not published on public profiles or SEO pages. See the{" "}
+                <Link href="/privacy">Privacy Policy</Link> and{" "}
+                <Link href="/privacy-center">Privacy Center</Link> for data-export and deletion rights.
+              </p>
+            </div>
+            <div className={s.card}>
+              <div className={s.cardHeader}>
+                <div className={s.cardIcon}><UserX size={20} /></div>
+                <h3 className={s.cardTitle}>Blocking & Reporting</h3>
+              </div>
+              <p className={s.cardText}>
+                Report any user from a profile, opportunity, or conversation. Reports involving minor safety, harassment, or fraud can lead to a precautionary account hold pending review. Email{" "}
+                <a href={`mailto:${SAFETY_CONTACT_EMAIL}`}>{SAFETY_CONTACT_EMAIL}</a> for urgent issues.
+              </p>
+            </div>
+            <div className={s.card}>
+              <div className={s.cardHeader}>
+                <div className={s.cardIcon}><Gavel size={20} /></div>
+                <h3 className={s.cardTitle}>Disputes</h3>
+              </div>
+              <p className={s.cardText}>
+                The published <Link href="/complaint-process">complaint process</Link>,{" "}
+                <Link href="/refund-policy">refund policy</Link>, and{" "}
+                <Link href="/cancellation-policy">cancellation policy</Link> govern eligibility, timelines, and remedies. First-session issues are also covered by the{" "}
+                <Link href="/first-session-guarantee">first-session protection</Link>.
+              </p>
+            </div>
+            <div className={s.card}>
+              <div className={s.cardHeader}>
+                <div className={s.cardIcon}><Star size={20} /></div>
+                <h3 className={s.cardTitle}>Reviews</h3>
+              </div>
+              <p className={s.cardText}>
+                Reviews come from students or parents whose bookings are recorded on the platform. Fabricated, incentivised, or off-platform reviews are removed under the{" "}
+                <Link href="/review-policy">review policy</Link>.
+              </p>
+            </div>
+            <div className={s.card}>
+              <div className={s.cardHeader}>
+                <div className={s.cardIcon}><MessageSquare size={20} /></div>
+                <h3 className={s.cardTitle}>Community Standards</h3>
+              </div>
+              <p className={s.cardText}>
+                <Link href="/community-guidelines">Community guidelines</Link> and{" "}
+                <Link href="/academic-integrity">academic integrity</Link> rules apply to all students, parents, and tutors on the platform.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 7: Full trust directory — every shipped trust page,
+            grouped by topic (spec §32). Real routes only. */}
+        <section className={s.section}>
+          <h2 className={s.sectionTitle}>
+            <FileCheck size={22} color="var(--primary, #0f172a)" /> 7. Trust & Safety Directory
+          </h2>
+          <p>Every published policy, standard, and safeguard is linked here so you can go straight to the source.</p>
+          <div className={s.cardGrid}>
+            {trustDirectory.map((group) => (
+              <div key={group.heading} className={s.card}>
+                <h3 className={s.cardTitle} style={{ marginBottom: "0.5rem" }}>{group.heading}</h3>
+                <ul style={{ margin: 0, paddingLeft: "1.1rem", lineHeight: 1.8 }}>
+                  {group.links.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href}>{link.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </section>
 
