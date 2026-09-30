@@ -5,6 +5,7 @@ import api from "@/lib/axios";
 import { showError, showSuccess } from "@/lib/toast";
 import { formatDateLong } from "@/lib/site";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
+import { COUNTRY_SCHEDULES, formatScheduleDraft } from "@/lib/legalJurisdictions";
 import {
   Scale,
   Download,
@@ -585,6 +586,8 @@ export default function AdminLegalAgreementsPage() {
                     <option value="PK">Pakistan (PK)</option>
                     <option value="SA">Saudi Arabia (SA)</option>
                     <option value="AE">UAE (AE)</option>
+                    <option value="GB">United Kingdom (GB)</option>
+                    <option value="US">United States (US)</option>
                     <option value="GLOBAL">Global</option>
                   </select>
                 </div>
@@ -614,7 +617,24 @@ export default function AdminLegalAgreementsPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: TEXT_COLORS.secondary, marginBottom: 4 }}>Country Schedule (Schedule PK)</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: TEXT_COLORS.secondary }}>Country Schedule ({draftCountry})</label>
+                  {COUNTRY_SCHEDULES[draftCountry.toLowerCase()] && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (draftSchedule.trim() && !window.confirm("Replace the current Country Schedule text with the existing jurisdiction facts on file for this country?")) return;
+                        setDraftSchedule(formatScheduleDraft(draftCountry));
+                      }}
+                      style={{ fontSize: 11, fontWeight: 700, color: UI_COLORS.accent, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    >
+                      Use existing jurisdiction facts for {draftCountry}
+                    </button>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: TEXT_COLORS.muted, margin: "0 0 6px" }}>
+                  Governing law, dispute forum, and consumer/privacy/tax facts already on file at /legal/country/{draftCountry.toLowerCase()} can be pulled in as a starting point - this is jurisdictional reference data, not reviewed contract language, so review before publishing.
+                </p>
                 <textarea
                   rows={4}
                   placeholder="Country specific provisions under ETO 2002 / PECA 2016..."
