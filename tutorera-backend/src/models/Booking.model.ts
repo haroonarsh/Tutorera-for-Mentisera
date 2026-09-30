@@ -50,6 +50,15 @@ export interface IBooking extends Document {
   payoutPaidAt?: Date;
   payoutFailedAt?: Date;
   isFirstSession: boolean;
+  // Set when a tutor's subject-teaching eligibility for this booking's
+  // subject is rejected/revoked AFTER the booking was already made (e.g.
+  // their degree verification was overturned, or an admin pulled back a
+  // previously-approved subject) - see
+  // services/subjectEligibility.service.ts's revokeSubjectEligibility().
+  // Does not auto-cancel the booking; surfaces it for an admin to decide.
+  flaggedForReview?: boolean;
+  flagReason?: string;
+  flaggedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -107,6 +116,9 @@ const bookingSchema = new Schema<IBooking>(
     payoutPaidAt: { type: Date },
     payoutFailedAt: { type: Date },
     isFirstSession: { type: Boolean, default: false },
+    flaggedForReview: { type: Boolean, default: false, index: true },
+    flagReason: { type: String, trim: true, default: "" },
+    flaggedAt: { type: Date },
   },
   { timestamps: true }
 );

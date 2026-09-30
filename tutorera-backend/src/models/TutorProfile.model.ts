@@ -51,14 +51,54 @@ export interface ITutorProfile extends Document {
     year: number;
     degreeDoc: string;
     degreeDocPublicId: string;
+    // Normalized discipline selection (e.g. "Computer Science") distinct
+    // from the free-text `degree` credential name (e.g. "BS Computer
+    // Science, FAST-NUCES") - drives DisciplineSubjectMap lookups so the
+    // admin reviewing subject requests sees which ones plausibly match the
+    // tutor's actual qualification. Optional: older profiles predate this
+    // field and won't have it.
+    discipline?: string;
   }[];
 
   // Step 3 — Experience
   experience: number;
   previousInstitutions: string[];
+  // `subjects`/`levels` remain the tutor's self-declared WISH list, exactly
+  // as before this feature - selecting a subject here has never granted
+  // (and still does not grant) any marketplace privilege by itself. Actual
+  // eligibility to bid/accept/book for a given subject is tracked
+  // separately below in `subjectEligibility` and only takes effect once an
+  // admin explicitly approves that specific (subject, levels) entry.
   subjects: string[];
   levels: string[];
   curricula?: string[];
+  // One entry per subject the tutor has ever requested (via onboarding or
+  // a later "request additional subject" action). This is the actual
+  // source of truth for what a tutor may bid/accept/book - see
+  // services/subjectEligibility.service.ts for the enforcement helper.
+  subjectEligibility?: {
+    subject: string;
+    levels: string[]; // approved teaching levels for this subject; empty = not yet scoped
+    status: "pending" | "approved" | "rejected" | "revoked";
+    // Whether this subject appears in a DisciplineSubjectMap entry matching
+    // the tutor's declared discipline at the time it was requested - shown
+    // to the admin as a hint, never used to auto-approve (tutor selections
+    // alone must never grant eligibility, per the feature spec).
+    matchesDiscipline: boolean;
+    qualificationIndex?: number; // index into `education[]` this request is tied to, if any
+    requestedAt: Date;
+    reviewedBy?: Types.ObjectId;
+    reviewedAt?: Date;
+    reason?: string; // rejection/revocation reason, shown to the tutor
+  }[];
+  // Denormalized flat list of currently-APPROVED subjects, kept in sync
+  // with subjectEligibility whenever an entry's status changes - exists
+  // purely so matching/listing queries (matching.service.ts, the tutor
+  // "browse requests" endpoint, etc.) can filter with a simple $in query
+  // instead of an $elemMatch over subjectEligibility on every read. Never
+  // written to directly; always derived - see
+  // services/subjectEligibility.service.ts's syncApprovedSubjects().
+  approvedSubjects?: string[];
 
   // Step 4 — Profile
   bio: string;
@@ -222,6 +262,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       year: { type: Number },
       degreeDoc: { type: String, default: "" },
       degreeDocPublicId: { type: String, default: "" },
+      discipline: { type: String, trim: true },
     }],
 
     // Step 3
@@ -232,6 +273,18 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       type: String,
       trim: true,
     }],
+    subjectEligibility: [{
+      subject: { type: String, trim: true, required: true },
+      levels: [{ type: String, trim: true }],
+      status: { type: String, enum: ["pending", "approved", "rejected", "revoked"], default: "pending" },
+      matchesDiscipline: { type: Boolean, default: false },
+      qualificationIndex: { type: Number },
+      requestedAt: { type: Date, default: Date.now },
+      reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      reviewedAt: { type: Date },
+      reason: { type: String, trim: true, default: "" },
+    }],
+    approvedSubjects: [{ type: String, trim: true }],
     curricula: [{ type: String, trim: true }],
 
     // Step 4
@@ -368,6 +421,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
 tutorProfileSchema.index({ location: "2dsphere" });
 tutorProfileSchema.index({ countryCode: 1, isVerified: 1, teachingMode: 1 });
 tutorProfileSchema.index({ countryCode: 1, cityId: 1, subjects: 1, isVerified: 1 });
+tutorProfileSchema.index({ countryCode: 1, cityId: 1, approvedSubjects: 1, isVerified: 1 });
 tutorProfileSchema.index({ onlineCountryReach: 1, isVerified: 1, averageRating: -1 });
 tutorProfileSchema.index({ verificationStatus: 1, onboardingComplete: 1, createdAt: -1 });
 
