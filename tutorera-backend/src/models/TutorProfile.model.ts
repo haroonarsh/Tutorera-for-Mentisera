@@ -124,6 +124,12 @@ export interface ITutorProfile extends Document {
   agreementAcceptanceRequired?: boolean;
   agreementAcceptedAt?: Date;
   agreementVersion?: string;
+  // Tracks the daily reminder cron (legalAgreementReminder.service.ts) so it
+  // can throttle to at most one email per day per tutor and show an
+  // admin-visible reminder count/history, rather than blindly re-emailing
+  // every time its interval fires.
+  agreementReminderLastSentAt?: Date;
+  agreementReminderCount?: number;
   legacyAgreementStatus?: "none" | "legacy_unrecorded" | "reacceptance_pending" | "accepted";
   isTestAccount: boolean;
 
@@ -309,6 +315,8 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     agreementAcceptanceRequired: { type: Boolean, default: false },
     agreementAcceptedAt: { type: Date },
     agreementVersion: { type: String, trim: true },
+    agreementReminderLastSentAt: { type: Date },
+    agreementReminderCount: { type: Number, default: 0 },
     // Kept on the profile as well as User so every public profile query can
     // exclude test/demo records without relying on a populated user document.
     isTestAccount: { type: Boolean, default: false, index: true },

@@ -13,6 +13,7 @@ import {
 } from "../services/legalAgreement.service";
 import { syncTutorActivation } from "../services/tutorActivation.service";
 import { generateContractPdf } from "../services/contractPdf.service";
+import { sendAgreementReminders } from "../services/legalAgreementReminder.service";
 import { calculateMarketplaceFees } from "../services/pricing.service";
 import { recordStatusEvent } from "../services/tracking.service";
 import { logAudit } from "../utils/logAudit";
@@ -616,6 +617,21 @@ export const publishAdminAgreement = async (req: AuthRequest, res: Response): Pr
       p.agreementAcceptanceRequired = true;
       await p.save({ validateBeforeSave: false });
     }
+
+    // Email the newly-flagged tutors right away rather than making them
+    // wait for the next daily reminder run (see server.ts) - that run then
+    // takes over and keeps nudging anyone who still hasn't signed.
+    const io = req.app.get("io");
+    sendAgreementReminders(io).catch((err) =>
+      logAudit({
+        action: "legal_agreement_reminder_failed",
+        actor: "System",
+        entity: "LegalAgreement",
+        targetId: agreement._id.toString(),
+        targetName: agreement.title,
+        metadata: { error: err instanceof Error ? err.message : String(err) },
+      })
+    );
   }
 
   await logAudit({

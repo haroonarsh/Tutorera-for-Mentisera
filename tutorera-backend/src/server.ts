@@ -12,6 +12,7 @@ import { processRequestLifecycle } from "./services/requestLifecycle.service";
 import { processPendingPayouts } from "./services/payout.service";
 import { refreshRates } from "./services/exchangeRate.service";
 import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
+import { sendAgreementReminders } from "./services/legalAgreementReminder.service";
 
 dotenv.config();
 
@@ -54,6 +55,15 @@ setTimeout(() => processPendingPayouts().catch(err => logger.error({ err }, "Ini
 const exchangeRateTimer = setInterval(() => refreshRates().catch(err => logger.error({ err }, "Exchange rate refresh failed")), 60 * 60 * 1000);
 exchangeRateTimer.unref();
 setTimeout(() => refreshRates().catch(err => logger.error({ err }, "Initial exchange rate refresh failed")), 5_000).unref();
+
+// Legal agreement reminders — already-activated tutors who still haven't
+// accepted the current Tutor Agreement get emailed once daily (throttled
+// inside the service itself) until they sign; publishAdminAgreement also
+// fires an immediate one when a new version is published, so this daily
+// run is the "keep nudging" half, not the only trigger.
+const agreementReminderTimer = setInterval(() => sendAgreementReminders(io).catch(err => logger.error({ err }, "Legal agreement reminder run failed")), 24 * 60 * 60 * 1000);
+agreementReminderTimer.unref();
+setTimeout(() => sendAgreementReminders(io).catch(err => logger.error({ err }, "Initial legal agreement reminder run failed")), 40_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown

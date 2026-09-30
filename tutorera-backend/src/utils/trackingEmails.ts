@@ -248,6 +248,34 @@ export const trackingWelcomeEmail = (
   return { subject, html: wrap(innerHtml, subject, "Tutor Application", `Your application ${args.applicationId} is being tracked — view your status now.`) };
 };
 
+/** Daily reminder for already-activated tutors who still haven't accepted
+ * the current (possibly newly published/updated) Tutor Agreement. Distinct
+ * from tutorMarketplaceAgreementEmail (which is the one-time "you're
+ * approved, accept to activate" email for brand-new tutors) - this one
+ * targets tutors who were already active and now need to reaccept, and is
+ * safe to re-send daily since it's driven by a cron that stops finding the
+ * tutor once they actually sign (see legalAgreementReminder.service.ts). */
+export const agreementReminderEmail = (
+  tutorName: string,
+  args: CtaArgs & { version: string; reminderCount: number; complianceDeadline?: Date }
+) => {
+  const subject = args.reminderCount > 1
+    ? `Reminder: sign the updated TUTORERA Tutor Agreement (${args.version})`
+    : `Action required: sign the updated TUTORERA Tutor Agreement (${args.version})`;
+  const deadlineLine = args.complianceDeadline
+    ? `<p style="color:#b91c1c;font-weight:700;">Please sign by ${escapeHtml(args.complianceDeadline.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }))} to keep bidding on new tuition requests without interruption.</p>`
+    : "";
+  const innerHtml = `
+    <h2 style="color:#021550;margin:0 0 12px;">Your Tutor Agreement needs to be reaccepted</h2>
+    <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
+    <p style="color:#374151;">TUTORERA has published an updated Tutor Marketplace Agreement (Version ${escapeHtml(args.version)}). As an active tutor, you need to review and accept it to keep your marketplace access uninterrupted.</p>
+    ${deadlineLine}
+    <div style="text-align:center;margin:24px 0 0;"><a href="${SITE_URL}/tutor/accept-agreement" style="display:inline-block;background:#0329B2;color:#fff;text-decoration:none;font-weight:800;padding:13px 22px;border-radius:999px;">Review and Accept Agreement</a></div>
+    ${trackingCta(args, "View My Application")}
+  `;
+  return { subject, html: wrap(innerHtml, subject, "Tutor Agreement", `Action required: sign the updated Tutor Agreement (${args.version}) to keep marketplace access.`) };
+};
+
 export const documentResubmittedEmail = (tutorName: string, documentType: string, args: CtaArgs) => {
   const subject = `${documentType} re-submitted for review - TUTORERA`;
   const innerHtml = `
