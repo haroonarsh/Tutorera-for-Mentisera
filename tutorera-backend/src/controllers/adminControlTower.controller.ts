@@ -659,9 +659,10 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
     res.status(400).json({ success: false, message: "Only English can be enabled as an interface language until additional translations are reviewed." });
     return;
   }
-  // Payment activation is intentionally code/provider gated; an admin toggle cannot make an unconfigured market transactional.
-  // AE, US, SA, IN are launched on RapidPay (see LAUNCH_MARKETS in market.service.ts) and are exempt from this lock.
-  if (["GB"].includes(current.countryCode)) Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", launchStatus: "beta", "featureFlags.acceptance": false });
+  // Payment activation is intentionally code/provider gated. Only PK has the
+  // implemented Swich checkout adapter; every other market remains discovery
+  // only until its compliant provider is implemented and configured.
+  if (current.countryCode !== "PK") Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", "featureFlags.acceptance": false });
   const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
   if (updated) {
     // upsert:true - previously a plain updateOne, which silently no-oped if
