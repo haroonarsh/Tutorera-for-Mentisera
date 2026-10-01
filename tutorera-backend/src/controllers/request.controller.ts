@@ -872,6 +872,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
       currency: bid.currency || "PKR",
+      marketCountryCode: request.countryCode,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${bid._id.toString()}`,

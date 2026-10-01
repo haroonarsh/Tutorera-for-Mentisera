@@ -1,5 +1,6 @@
 import MarketConfig, { IMarketConfig } from "../models/MarketConfig.model";
 import { seedTaxConfigs } from "./pricing.service";
+import { getSwichCapabilities } from "./swichProvider.service";
 
 export const LAUNCH_MARKETS = {
   PK: {
@@ -139,6 +140,13 @@ export async function assertAcceptanceAvailable(countryCode?: string): Promise<I
     const error = new Error("No compliant payment provider is configured for this market.") as Error & { statusCode: number; code: string };
     error.statusCode = 409;
     error.code = "PAYMENT_PROVIDER_UNAVAILABLE";
+    throw error;
+  }
+  const capabilities = getSwichCapabilities();
+  if (!capabilities.markets.has(market.countryCode) || !capabilities.currencies.has(market.currency)) {
+    const error = new Error("Switch is not approved for this market and currency yet.") as Error & { statusCode: number; code: string };
+    error.statusCode = 409;
+    error.code = "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED";
     throw error;
   }
   return market;

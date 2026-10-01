@@ -111,7 +111,7 @@ describe("Swich Payment Session integration", () => {
           successUrl: "https://example.test/success",
         },
       })
-    ).rejects.toMatchObject({ code: "SWICH_CURRENCY_UNSUPPORTED", statusCode: 409 });
+    ).rejects.toMatchObject({ code: "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED", statusCode: 409 });
 
     expect(post).not.toHaveBeenCalled();
   });

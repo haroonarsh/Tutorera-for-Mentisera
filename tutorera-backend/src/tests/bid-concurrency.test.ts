@@ -31,7 +31,7 @@ jest.mock("../utils/socket", () => ({
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 // acceptBid/initiateAcceptBid calls out to the real Rapid Gateway payment
 // integration to start checkout - that integration requires real
-// RAPID_GATEWAY_* credentials (it throws PAYMENT_GATEWAY_NOT_CONFIGURED
+// Switch credentials (it throws PAYMENT_GATEWAY_NOT_CONFIGURED
 // without them, unlike the old sandbox-mock checkout it replaced) and this
 // test is about the reservation race guard, not payment gateway behavior -
 // stub just the checkout call.

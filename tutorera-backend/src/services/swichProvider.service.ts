@@ -19,6 +19,7 @@ import axios from "axios";
 export interface SwichCheckoutParams {
     amount: number;
     currency?: string;
+    marketCountryCode?: string;
     reference: string; // maps to billReferenceNo — our own order/basket reference
     metadata?: Record<string, unknown>;
 }
@@ -39,6 +40,8 @@ export interface SwichSessionStatus {
 const AUTH_BASE_URL = "https://sandbox-auth.swichnow.com"; // TODO: swap to the live auth host when going to production — confirm exact live hostname with Swich first, same caution as Rapid Gateway's sandbox-vs-live mixup
 const API_BASE_URL = "https://sandbox-api.swichnow.com"; // TODO: same caution for the live API host
 const DEFAULT_CATEGORIES = ["ewallet", "visamastercardpayment", "bankaccount", "rtpnowpayment"];
+const SWICH_AUTH_BASE_URL = process.env.SWICH_AUTH_BASE_URL?.trim() || AUTH_BASE_URL;
+const SWICH_API_BASE_URL = process.env.SWICH_API_BASE_URL?.trim() || API_BASE_URL;
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
@@ -51,6 +54,28 @@ function requireEnv(name: string): string {
         throw error;
     }
     return value;
+}
+
+function configuredValues(name: string, fallback: string[]): Set<string> {
+    const value = process.env[name];
+    return new Set((value ? value.split(",") : fallback).map((item) => item.trim().toUpperCase()).filter(Boolean));
+}
+
+export function getSwichCapabilities() {
+    return {
+        markets: configuredValues("SWICH_SUPPORTED_MARKETS", ["PK"]),
+        currencies: configuredValues("SWICH_SUPPORTED_CURRENCIES", ["PKR"]),
+    };
+}
+
+export function assertSwichCheckoutCapability(countryCode: string | undefined, currency: string): void {
+    const capabilities = getSwichCapabilities();
+    if (!capabilities.markets.has((countryCode || "PK").toUpperCase()) || !capabilities.currencies.has(currency.toUpperCase())) {
+        const error = new Error("Switch checkout is not yet approved for this market and currency.") as Error & { statusCode?: number; code?: string };
+        error.statusCode = 409;
+        error.code = "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED";
+        throw error;
+    }
 }
 
 /**
@@ -71,7 +96,7 @@ async function getAccessToken(): Promise<string> {
 
     try {
         const response = await axios.post(
-        `${AUTH_BASE_URL}/connect/token`,
+        `${SWICH_AUTH_BASE_URL}/connect/token`,
         {
             client_id: clientId,
             client_secret: clientSecret,
@@ -114,15 +139,10 @@ export const swichProvider = {
      * this object with null/empty values."
      */
     async createCheckout(params: SwichCheckoutParams): Promise<{ checkoutUrl: string; paymentSessionGuid: string }> {
-        const accessToken = await getAccessToken();
         const currency = (params.currency || "PKR").toUpperCase();
+        assertSwichCheckoutCapability(params.marketCountryCode, currency);
+        const accessToken = await getAccessToken();
 
-        if (currency !== "PKR") {
-        const error = new Error(`Swich checkout is currently enabled only for PKR transactions; received ${currency}.`) as Error & { statusCode?: number; code?: string };
-        error.statusCode = 409;
-        error.code = "SWICH_CURRENCY_UNSUPPORTED";
-        throw error;
-        }
         if (!Number.isFinite(params.amount) || params.amount <= 0) {
         const error = new Error("Payment amount must be a positive number") as Error & { statusCode?: number; code?: string };
         error.statusCode = 400;
@@ -172,7 +192,7 @@ export const swichProvider = {
         };
 
         try {
-        const response = await axios.post(`${API_BASE_URL}/gateway/paymentsession/initiate`, body, {
+        const response = await axios.post(`${SWICH_API_BASE_URL}/gateway/paymentsession/initiate`, body, {
             headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -226,7 +246,7 @@ export const swichProvider = {
         const accessToken = await getAccessToken();
 
         try {
-        const response = await axios.get(`${API_BASE_URL}/gateway/paymentsession/get`, {
+        const response = await axios.get(`${SWICH_API_BASE_URL}/gateway/paymentsession/get`, {
             params: { paymentSessionGuid },
             headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
             timeout: 15_000,

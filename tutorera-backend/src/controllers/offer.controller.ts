@@ -283,6 +283,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       const checkoutUrl = await paymentProvider.createCheckout({
         amount: fees.studentTotal,
         currency: offer.currency || request.currency || "PKR",
+        marketCountryCode: request.countryCode,
         customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
         // "BID-" prefix — confirmSwichPayment (payment.controller.ts)
@@ -404,6 +405,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
       currency: offer.currency || request.currency || "PKR",
+      marketCountryCode: request.countryCode,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${offer._id.toString()}`,

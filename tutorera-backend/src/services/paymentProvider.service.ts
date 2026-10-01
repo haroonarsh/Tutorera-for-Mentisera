@@ -15,6 +15,7 @@ export type FeeSnapshot = {
 export interface CheckoutParams {
   amount: number;
   currency?: string;
+  marketCountryCode?: string;
   customerMobileNo: string;
   customerEmail: string;
   basketId: string;
@@ -37,6 +38,7 @@ export const paymentProvider = {
     const { checkoutUrl, paymentSessionGuid } = await swichProvider.createCheckout({
       amount: params.amount,
       currency: params.currency,
+      marketCountryCode: params.marketCountryCode,
       reference: params.basketId,
       metadata: {
         studentMobileNo: params.customerMobileNo,

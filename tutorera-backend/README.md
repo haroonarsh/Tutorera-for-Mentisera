@@ -31,13 +31,14 @@ npm ci
 Set the required application variables, including the Rapid Gateway server-side credentials:
 
 ```bash
-RAPID_GATEWAY_SECRET_KEY=<merchant secret key>
-RAPID_GATEWAY_WEBHOOK_SECRET=<webhook signing secret>
-RAPID_GATEWAY_WEBHOOK_URL=https://your-api.example.com/api/v1/payments/webhook
-RAPID_GATEWAY_API_BASE_URL=https://secure.rapid-gateway.com
+SWICH_CLIENT_ID=<Switch merchant client id>
+SWICH_CLIENT_SECRET=<Switch merchant client secret>
+SWICH_ENVIRONMENT=sandbox
+SWICH_SUPPORTED_MARKETS=PK
+SWICH_SUPPORTED_CURRENCIES=PKR
 ```
 
-`RAPID_GATEWAY_SECRET_KEY` and `RAPID_GATEWAY_WEBHOOK_SECRET` must stay on the backend. They must never be exposed through `NEXT_PUBLIC_*`, browser JavaScript, or the frontend repository.
+Switch credentials must stay on the backend. They must never be exposed through `NEXT_PUBLIC_*`, browser JavaScript, or the frontend repository. Do not add a market or currency to `SWICH_SUPPORTED_*` until Switch has confirmed merchant onboarding, settlement, payout and compliance support for that market.
 
 ### 4. Run development server
 ```bash
