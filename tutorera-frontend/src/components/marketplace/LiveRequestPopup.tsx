@@ -32,60 +32,10 @@ export interface LiveRequestItem {
   offersCount: number;
 }
 
-// Default initial high-liquidity request specified by user:
-// Ahmed Al from Jeddah, Kingdom of Saudi Arabia posted tuition request worth 200 Dirham / SAR
-const INITIAL_REQUESTS: LiveRequestItem[] = [
-  {
-    id: "live-req-ahmed-jeddah",
-    studentName: "Ahmed Al",
-    location: "Jeddah",
-    country: "Kingdom of Saudi Arabia",
-    subject: "Mathematics & Physics",
-    level: "O-Level / High School",
-    mode: "Online & Home Tuition",
-    budget: 200,
-    currency: "AED", // 200 Dirhams / SAR equivalent
-    pricingUnit: "hour",
-    timeAgo: "2 mins ago",
-    description: "Looking for an experienced tutor for Cambridge O-Level Mathematics and Physics exam preparation. Need 3 sessions per week.",
-    offersCount: 1,
-  },
-  {
-    id: "live-req-sarah-dubai",
-    studentName: "Sarah M.",
-    location: "Dubai",
-    country: "United Arab Emirates",
-    subject: "Chemistry & Biology",
-    level: "A-Level / IB",
-    mode: "Online Worldwide",
-    budget: 180,
-    currency: "AED",
-    pricingUnit: "hour",
-    timeAgo: "8 mins ago",
-    description: "Seeking a verified educator for IB Diploma Higher Level Chemistry syllabus and past paper drills.",
-    offersCount: 2,
-  },
-  {
-    id: "live-req-zain-lahore",
-    studentName: "Zainab K.",
-    location: "DHA, Lahore",
-    country: "Pakistan",
-    subject: "English Language & Literature",
-    level: "O-Level",
-    mode: "Home Tuition (Police Verified)",
-    budget: 2500,
-    currency: "PKR",
-    pricingUnit: "hour",
-    timeAgo: "14 mins ago",
-    description: "Female tutor preferred for home tuition in DHA Phase 5. Syllabus review and creative writing focus.",
-    offersCount: 3,
-  }
-];
-
 export default function LiveRequestPopup() {
   const { user } = useAuth();
   const router = useRouter();
-  const [requests, setRequests] = useState<LiveRequestItem[]>(INITIAL_REQUESTS);
+  const [requests, setRequests] = useState<LiveRequestItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -115,25 +65,25 @@ export default function LiveRequestPopup() {
           const apiRequests: LiveRequestItem[] = res.data.requests.map((r: any) => ({
             id: r._id,
             studentName: r.student?.name || "Student",
-            location: r.city || "Jeddah",
-            country: r.countryName || "Kingdom of Saudi Arabia",
+            location: r.city || "Online",
+            country: r.countryName || r.countryCode || "Global",
             subject: r.subject,
             level: r.level,
             mode: r.teachingMode === "both" ? "Online & In-Person" : r.teachingMode,
-            budget: r.budget || 200,
-            currency: r.currency || "AED",
+            budget: r.budget || 0,
+            currency: r.currency || "",
             pricingUnit: r.pricingUnit || "hour",
             timeAgo: "Just now",
             description: r.description || "Active tutoring requirement",
             offersCount: r.offersCount || 0,
           }));
 
-          // Always ensure Ahmed Al from Jeddah is available at the start
-          setRequests([INITIAL_REQUESTS[0], ...apiRequests]);
+          setRequests(apiRequests);
         }
       })
       .catch(() => {
-        // Fallback to high quality initial mock list
+        // Never fabricate marketplace demand when the preview is unavailable.
+        setRequests([]);
       });
   }, []);
 
@@ -148,21 +98,12 @@ export default function LiveRequestPopup() {
     return () => clearInterval(cycleTimer);
   }, [isVisible, isDismissed, showOfferModal, requests.length]);
 
-  const currentReq = requests[currentIndex] || INITIAL_REQUESTS[0];
+  const currentReq = requests[currentIndex];
 
   const handleApproachStudent = () => {
-    if (user?.role === "tutor") {
-      // Tutor is logged in - open quick approach modal or navigate to direct offer
-      setOfferRate(String(currentReq.budget));
-      setShowOfferModal(true);
-    } else if (user?.role === "student") {
-      // Logged in as student - let them view or post similar
-      router.push("/tuition-requests");
-    } else {
-      // Guest tutor / visitor - open offer modal which allows instant approach
-      setOfferRate(String(currentReq.budget));
-      setShowOfferModal(true);
-    }
+    // A popup is discovery only. Route to the actual request flow so every
+    // offer is authorized, moderated, audited, and persisted server-side.
+    router.push(`/browse-requests?request=${encodeURIComponent(currentReq.id)}`);
   };
 
   const handleSendOfferSubmit = (e: React.FormEvent) => {
@@ -181,7 +122,7 @@ export default function LiveRequestPopup() {
     }, 1800);
   };
 
-  if (isDismissed || !isVisible) return null;
+  if (isDismissed || !isVisible || !currentReq) return null;
 
   return (
     <>
@@ -340,7 +281,7 @@ export default function LiveRequestPopup() {
         {/* Subtle Footnote */}
         <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.68rem", color: "#94a3b8" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-            <ShieldCheck size={11} color="#10b981" /> Verified student requirement
+            <ShieldCheck size={11} color="#10b981" /> Marketplace requirement
           </span>
           <span>{currentReq.offersCount} tutor offers submitted</span>
         </div>
