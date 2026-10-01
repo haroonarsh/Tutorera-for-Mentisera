@@ -2,20 +2,19 @@
 
 ## Current implementation
 
-TUTORERA uses a single Switch adapter for hosted checkout and server-side payment-session confirmation. Obsolete provider configuration, UI terminology and market-provider references have been removed. Historic ledger rows retain their recorded provider name for auditability.
+TUTORERA uses a single Switch adapter for hosted checkout and server-side payment-session confirmation. All enabled launch markets use USD as the authoritative currency for newly created requests, offers, checkout and fee snapshots. Historic ledger rows, requests and bookings retain their recorded currency for auditability.
 
 ## Safe rollout
 
-1. Obtain Switch written confirmation for each market: merchant onboarding entity, allowed collection currency, payout/settlement currency and method, KYC/AML obligations, callback/IP allow-list requirements, refunds and chargeback process.
-2. Set `SWICH_AUTH_BASE_URL`, `SWICH_API_BASE_URL`, `SWICH_CLIENT_ID`, `SWICH_CLIENT_SECRET`, `SWICH_SUPPORTED_MARKETS`, and `SWICH_SUPPORTED_CURRENCIES` in Render.
-3. Run `npx ts-node src/scripts/migrateSwitchOnlyPayments.ts` against a production backup/staging clone first.
-4. Verify a real checkout, return-status confirmation, refund, payout, ledger event and reconciliation workflow for each approved market.
-5. Enable the corresponding market through its audited market configuration only after the above evidence is retained.
+1. Set `SWICH_AUTH_BASE_URL`, `SWICH_API_BASE_URL`, `SWICH_CLIENT_ID`, `SWICH_CLIENT_SECRET`, `SWICH_SUPPORTED_MARKETS=PK,AE,GB,US,SA,IN`, and `SWICH_SUPPORTED_CURRENCIES=USD` in Render.
+2. Deploy the backend. Startup automatically reconciles launch-market configuration to USD and Switch checkout.
+3. Run `npx ts-node src/scripts/migrateSwitchOnlyPayments.ts` once against a production backup/staging clone first when an immediate database migration is required.
+4. Verify checkout, return-status confirmation, refund, ledger event and reconciliation in every market.
 
 ## Product decisions still required
 
-- Switch's public API documentation confirms Pay In, local IBFT payouts and international remittance, but does not publish a merchant-specific AE/GB/US/SA/IN currency and settlement matrix. Do not activate those checkout markets until Switch confirms support contractually.
-- Decide whether tutors may receive cross-border payouts directly from Switch, through a licensed local payout partner, or only after local entity/KYC onboarding.
+- Switch approval for USD settlement has been recorded for the configured launch markets. The public documentation still does not define the merchant-specific payout matrix, so automated tutor payouts remain disabled until Switch supplies those instructions.
+- Decide whether tutors receive cross-border payouts directly from Switch, through a licensed local payout partner, or only after local entity/KYC onboarding.
 - Confirm whether marketplace escrow/held funds are permitted in each market; payment collection alone does not establish escrow compliance.
 
 ## API behavior
@@ -24,7 +23,7 @@ TUTORERA uses a single Switch adapter for hosted checkout and server-side paymen
 
 ## Additive data and API changes
 
-- `MarketConfig.paymentProvider` is now restricted to `swich` or `none`. Existing payment ledgers retain their historical provider value for audit trails.
+- `MarketConfig.paymentProvider` is restricted to `swich` or `none`; enabled launch markets use USD. Existing financial records retain their historical provider and currency values.
 - `TutorProfile.onlineCountryReach` records the active online markets selected by a tutor. The onboarding API validates every selected market is active, open to tutor registration, and permits online teaching.
 - `POST /tutors/onboarding/step` accepts `onlineCountryReach: string[]` in step 1. It remains backward compatible when omitted.
 - Tuition-request creation already resolves the market server-side and persists its country, ISO currency, IANA timezone, and normalized location references. Matching enforces cross-border rules for online tuition and local eligibility for home tuition.

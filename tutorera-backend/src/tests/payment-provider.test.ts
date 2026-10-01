@@ -7,12 +7,16 @@ describe("Swich Payment Session integration", () => {
   beforeEach(() => {
     process.env.SWICH_CLIENT_ID = "swich_test_client_id";
     process.env.SWICH_CLIENT_SECRET = "swich_test_client_secret_123456";
+    process.env.SWICH_SUPPORTED_MARKETS = "PK,AE,GB,US,SA,IN";
+    process.env.SWICH_SUPPORTED_CURRENCIES = "USD";
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
     delete process.env.SWICH_CLIENT_ID;
     delete process.env.SWICH_CLIENT_SECRET;
+    delete process.env.SWICH_SUPPORTED_MARKETS;
+    delete process.env.SWICH_SUPPORTED_CURRENCIES;
   });
 
   it("fetches a token then creates a payment session with the confirmed field shape", async () => {
@@ -38,7 +42,7 @@ describe("Swich Payment Session integration", () => {
 
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: 100,
-      currency: "PKR",
+      currency: "USD",
       customerMobileNo: "03001234567",
       customerEmail: "student@example.test",
       basketId: "BID-test1001",
@@ -77,7 +81,7 @@ describe("Swich Payment Session integration", () => {
       "https://sandbox-api.swichnow.com/gateway/paymentsession/initiate",
       expect.objectContaining({
         amount: 100,
-        currency: "PKR",
+        currency: "USD",
         billReferenceNo: "BID-test1001",
         successURL: "https://example.test/success",
         failedURL: "https://example.test/failure",
@@ -97,14 +101,14 @@ describe("Swich Payment Session integration", () => {
     );
   });
 
-  it("rejects unsupported non-PKR checkout before contacting Swich", async () => {
+  it("rejects unsupported non-USD checkout before contacting Swich", async () => {
     const post = jest.spyOn(axios, "post");
 
     await expect(
       swichProvider.createCheckout({
         amount: 100,
-        currency: "AED",
-        reference: "BID-aed-1",
+        currency: "PKR",
+        reference: "BID-pkr-1",
         metadata: {
           studentMobileNo: "+971500000000",
           studentEmail: "student@example.test",
@@ -125,7 +129,7 @@ describe("Swich Payment Session integration", () => {
         status: "SUCCESS",
         paymentSessionGuid: "test-session-guid-123",
         amount: 100,
-        currency: "PKR",
+        currency: "USD",
         billReferenceNo: "BID-test1001",
         sessionStatus: "Success",
         remainingAttempts: 9,

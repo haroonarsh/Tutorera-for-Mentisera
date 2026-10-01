@@ -4,50 +4,49 @@ import { getSwichCapabilities } from "./swichProvider.service";
 
 export const LAUNCH_MARKETS = {
   PK: {
-    countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "PKR", currencySymbol: "Rs.",
+    countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "USD", currencySymbol: "$",
     timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "swich",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   AE: {
-    countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "AED", currencySymbol: "AED",
-    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "beta", paymentProvider: "none",
-    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
+    countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "USD", currencySymbol: "$",
+    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "swich",
+    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   GB: {
-    countryName: "United Kingdom", iso3: "GBR", dialCode: "+44", currency: "GBP", currencySymbol: "£",
-    timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "beta", paymentProvider: "none",
-    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
-    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: false },
+    countryName: "United Kingdom", iso3: "GBR", dialCode: "+44", currency: "USD", currencySymbol: "$",
+    timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "live", paymentProvider: "swich",
+    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   US: {
     countryName: "United States", iso3: "USA", dialCode: "+1", currency: "USD", currencySymbol: "$",
-    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "coming_soon", paymentProvider: "none",
-    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: false, homeTuitionEnabled: false,
-    featureFlags: { profiles: false, requests: false, offers: false, negotiation: false, acceptance: false },
+    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "swich",
+    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   SA: {
-    countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "SAR", currencySymbol: "SAR",
-    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "coming_soon", paymentProvider: "none",
-    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: false, homeTuitionEnabled: false,
-    featureFlags: { profiles: false, requests: false, offers: false, negotiation: false, acceptance: false },
+    countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "USD", currencySymbol: "$",
+    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "swich",
+    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   IN: {
-    countryName: "India", iso3: "IND", dialCode: "+91", currency: "INR", currencySymbol: "₹",
-    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "coming_soon", paymentProvider: "none",
-    paymentsEnabled: false, payoutsEnabled: false, onlineEnabled: false, homeTuitionEnabled: false,
-    featureFlags: { profiles: false, requests: false, offers: false, negotiation: false, acceptance: false },
+    countryName: "India", iso3: "IND", dialCode: "+91", currency: "USD", currencySymbol: "$",
+    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "swich",
+    paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
+    featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
 } as const;
 
 export async function ensureLaunchMarkets(): Promise<void> {
   const swichCapabilities = getSwichCapabilities();
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
-    // A transactional market needs both an explicit Switch capability entry
-    // and this server-side configuration.  The default environment contains
-    // PK/PKR only; operators must add a market/currency pair only after
-    // Switch has approved its settlement, compliance and payout route.
+    // Switch settles the configured launch markets in USD.  Historical
+    // requests, bookings and ledger rows retain their own currency snapshot;
+    // this configuration affects newly created marketplace activity only.
     //
     // Everything else - including launchStatus and featureFlags - is seeded
     // on INSERT ONLY. This used to be a blanket $set applied on every call
@@ -58,7 +57,13 @@ export async function ensureLaunchMarkets(): Promise<void> {
     // seconds of it being made.
     const switchApproved = swichCapabilities.markets.has(countryCode) && swichCapabilities.currencies.has(config.currency);
     const marketSafety = switchApproved
-      ? { paymentProvider: "swich", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", "featureFlags.acceptance": true }
+      ? {
+          currency: config.currency, currencySymbol: config.currencySymbol,
+          paymentProvider: "swich", paymentsEnabled: true, payoutsEnabled: false,
+          launchStatus: "live", onlineEnabled: config.onlineEnabled, homeTuitionEnabled: config.homeTuitionEnabled,
+          "featureFlags.profiles": true, "featureFlags.requests": true, "featureFlags.offers": true,
+          "featureFlags.negotiation": true, "featureFlags.acceptance": true,
+        }
       : {
           paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false,
           launchStatus: config.launchStatus, "featureFlags.acceptance": false,

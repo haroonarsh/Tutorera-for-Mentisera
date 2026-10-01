@@ -588,7 +588,7 @@ export const getFeeConfig = async (_req: AuthRequest, res: Response): Promise<vo
     active = await FeeConfig.create({
       version: "2026.1",
       countryCode: "GLOBAL",
-      currency: "PKR",
+      currency: "USD",
       studentFeePercent: 0,
       tutorFeePercent: 20,
       minimumFee: 0,
@@ -621,7 +621,7 @@ export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<
   try {
     await session.withTransaction(async () => {
       await FeeConfig.updateMany({ isActive: true }, { isActive: false }, { session });
-      [created] = await FeeConfig.create([{ version: nextVersion, countryCode: "GLOBAL", currency: "PKR", ...values, notes: notes || "Updated via Admin Console", isActive: true, updatedBy: req.user?._id }], { session });
+      [created] = await FeeConfig.create([{ version: nextVersion, countryCode: "GLOBAL", currency: "USD", ...values, notes: notes || "Updated via Admin Console", isActive: true, updatedBy: req.user?._id }], { session });
     });
   } finally {
     await session.endSession();

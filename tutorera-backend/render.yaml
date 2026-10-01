@@ -51,9 +51,9 @@ services:
       - key: SWICH_API_BASE_URL
         sync: false
       - key: SWICH_SUPPORTED_MARKETS
-        value: PK
+        value: PK,AE,GB,US,SA,IN
       - key: SWICH_SUPPORTED_CURRENCIES
-        value: PKR
+        value: USD
       - key: LINKEDIN_CLIENT_ID
         sync: false
       - key: LINKEDIN_CLIENT_SECRET

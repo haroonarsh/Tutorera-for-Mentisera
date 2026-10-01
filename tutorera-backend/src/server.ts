@@ -13,6 +13,7 @@ import { processPendingPayouts } from "./services/payout.service";
 import { refreshRates } from "./services/exchangeRate.service";
 import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
 import { sendAgreementReminders } from "./services/legalAgreementReminder.service";
+import { ensureLaunchMarkets } from "./services/market.service";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.set("io", io);
 // Connect DB & seed legal agreements
 connectDB().then(() => {
   seedDefaultLegalAgreements().catch(err => logger.error({ err }, "Initial legal agreement seed failed"));
+  ensureLaunchMarkets().catch(err => logger.error({ err }, "Initial Switch market configuration failed"));
 });
 
 const PORT = process.env.PORT || 5000;

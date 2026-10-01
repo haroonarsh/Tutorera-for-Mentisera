@@ -29,7 +29,7 @@ const feeConfigSchema = new Schema<IFeeConfig>(
   {
     version: { type: String, required: true },
     countryCode: { type: String, default: "GLOBAL", index: true },
-    currency: { type: String, default: "PKR" },
+    currency: { type: String, default: "USD" },
     studentFeePercent: { type: Number, default: 0, min: 0, max: 100 },
     tutorFeePercent: { type: Number, default: 20, min: 0, max: 100 },
     minimumFee: { type: Number, default: 0, min: 0 },

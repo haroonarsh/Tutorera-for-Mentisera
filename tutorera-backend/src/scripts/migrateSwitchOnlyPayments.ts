@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import "dotenv/config";
 import MarketConfig from "../models/MarketConfig.model";
 import { getSwichCapabilities } from "../services/swichProvider.service";
+import { LAUNCH_MARKETS } from "../services/market.service";
 
 async function run() {
   if (!process.env.MONGO_URI) throw new Error("MONGO_URI is required");
@@ -17,11 +18,22 @@ async function run() {
   const capabilities = getSwichCapabilities();
   const markets = await MarketConfig.find();
   for (const market of markets) {
-    const enabled = capabilities.markets.has(market.countryCode) && capabilities.currencies.has(market.currency);
+    const launchMarket = LAUNCH_MARKETS[market.countryCode as keyof typeof LAUNCH_MARKETS];
+    if (!launchMarket) continue;
+    // New activity is settled in USD. Historic requests, bookings and
+    // payment ledgers retain their stored currency snapshots.
+    market.currency = launchMarket.currency;
+    market.currencySymbol = launchMarket.currencySymbol;
+    const enabled = capabilities.markets.has(market.countryCode) && capabilities.currencies.has("USD");
     market.paymentProvider = enabled ? "swich" : "none";
     market.paymentsEnabled = enabled;
     market.payoutsEnabled = false;
-    if (market.featureFlags instanceof Map) market.featureFlags.set("acceptance", enabled);
+    market.launchStatus = enabled ? "live" : launchMarket.launchStatus;
+    market.onlineEnabled = launchMarket.onlineEnabled;
+    market.homeTuitionEnabled = launchMarket.homeTuitionEnabled;
+    if (market.featureFlags instanceof Map) {
+      for (const feature of ["profiles", "requests", "offers", "negotiation", "acceptance"]) market.featureFlags.set(feature, enabled);
+    }
     await market.save();
   }
   console.log(`Migrated ${markets.length} market configurations to Switch-only checkout.`);

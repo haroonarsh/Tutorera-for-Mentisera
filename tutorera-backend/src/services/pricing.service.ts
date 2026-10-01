@@ -73,7 +73,7 @@ export async function calculateMarketplaceFees(
   subtotal: number,
   opts: { currency?: string; countryCode?: string; teachingMode?: "online" | "in-person" | "both" } = {}
 ): Promise<MarketplaceFees> {
-  const currency = (opts.currency || "PKR").toUpperCase();
+  const currency = (opts.currency || "USD").toUpperCase();
   const countryCode = (opts.countryCode || "PK").toUpperCase();
   const teachingMode = opts.teachingMode || "online";
 
