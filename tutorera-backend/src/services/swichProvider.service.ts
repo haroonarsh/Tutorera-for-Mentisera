@@ -63,7 +63,13 @@ function configuredValues(name: string, fallback: string[]): Set<string> {
 export function getSwichCapabilities() {
     return {
         markets: configuredValues("SWICH_SUPPORTED_MARKETS", ["PK"]),
-        currencies: configuredValues("SWICH_SUPPORTED_CURRENCIES", ["PKR"]),
+        // LAUNCH_MARKETS (market.service.ts) settles every market - including
+        // PK - in USD since the global-USD-settlement migration. This default
+        // must match that, or ensureLaunchMarkets() silently treats every
+        // market as Switch-unapproved (paymentProvider "none", payments
+        // disabled) whenever SWICH_SUPPORTED_CURRENCIES isn't set in the
+        // environment, which is the case in this repo's own .env today.
+        currencies: configuredValues("SWICH_SUPPORTED_CURRENCIES", ["USD"]),
     };
 }
 

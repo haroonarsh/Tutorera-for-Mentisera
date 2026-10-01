@@ -203,7 +203,9 @@ describe("Tutor onboarding — full E2E flow with real Cloudinary uploads", () =
     expect(step4.status).toBe(200);
     expect(step4.body.success).toBe(true);
     expect(step4.body.profile.onboardingStep).toBe(5);
-    expect(step4.body.profile.currency).toBe("PKR");
+    // Switch settles every launch market - including PK - in USD since the
+    // global-USD-settlement migration (market.service.ts's LAUNCH_MARKETS).
+    expect(step4.body.profile.currency).toBe("USD");
 
     // 6. Step 5 — Verification docs (CNIC front/back), online-only tutor so
     // no police certificate is required. This is also the final step, so a
