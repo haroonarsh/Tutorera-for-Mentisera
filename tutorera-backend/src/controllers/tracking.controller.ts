@@ -828,19 +828,36 @@ export async function syncMarketplaceAndHomeTuition(actor: { name: string; role:
     profile.degreeVerificationStatus === "approved" &&
     profile.demoVideoStatus === "approved" &&
     !profile.suspendedAt && !profile.reVerificationRequired;
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: any) =>
+    entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
   if (coreDocumentsApproved && profile.verificationStatus !== "approved") {
     profile.verificationStatus = "approved";
     profile.isVerified = true;
     profile.lastStatusChangeAt = now;
     await profile.save({ validateModifiedOnly: true });
     await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "PROFILE_APPROVED", message: "Tutor application approved after all mandatory marketplace documents were verified", statusAfter: "approved" });
+    if (!hasApprovedTeachingSubject) {
+      await NotificationService.publishEvent(user._id.toString(), "verification.pending", {
+        ctaArgs: ctaArgs(user),
+        title: "Teaching subject approval required",
+        message: "Your documents are verified. Select teaching subjects and levels; an administrator must approve at least one before an agreement and marketplace activation can proceed.",
+        link: "/onboarding/tutor?step=3",
+        type: "verification",
+      });
+    }
+  }
+  // A subject decision can arrive after document approval. Create the
+  // agreement at that later point as well, rather than requiring an admin to
+  // re-save a document to unblock the tutor.
+  if (coreDocumentsApproved && profile.verificationStatus === "approved" && hasApprovedTeachingSubject) {
     const existingAgreement = await TutorAgreement.findOne({ tutor: user._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } });
     if (!existingAgreement) {
       profile.agreementAcceptanceRequired = true;
       profile.agreementAcceptedAt = undefined as any;
       profile.agreementVersion = "TTA-2026.1";
       await profile.save({ validateModifiedOnly: true });
-      await TutorAgreement.create({ tutor: user._id, tutorProfile: profile._id, version: "TTA-2026.1", approvedHourlyRate: profile.hourlyRate, currency: profile.currency || "PKR", approvedBy: actor.role === "admin" && actor.id ? actor.id : undefined, approvedAt: now });
+      await TutorAgreement.create({ tutor: user._id, tutorProfile: profile._id, version: "TTA-2026.1", approvedHourlyRate: profile.hourlyRate, currency: profile.currency || "USD", approvedBy: actor.role === "admin" && actor.id ? actor.id : undefined, approvedAt: now });
       await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
         document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency,
         ctaArgs: ctaArgs(user), title: "Tutor application approved", message: "Your Tutor Marketplace Agreement and approved rate are ready.", link: "/tutor/application-status", type: "verification",
@@ -1132,6 +1149,7 @@ export const reviewSubjectEligibility = async (req: AuthRequest, res: Response):
   }
 
   await profile.save({ validateModifiedOnly: true });
+  await syncMarketplaceAndHomeTuition(actor, user, profile);
 
   const eventCopy: Record<string, { title: string; message: string }> = {
     approve: { title: "Subject approved ✅", message: `You're now approved to teach ${subject}.` },

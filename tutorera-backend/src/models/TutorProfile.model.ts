@@ -10,6 +10,7 @@ export type TutorStatus =
   | "admin_review"
   | "changes_requested"
   | "rejected"
+  | "approved_pending_subject_approval"
   | "approved_pending_agreement"
   | "agreement_pending"
   | "active"
@@ -148,6 +149,7 @@ export interface ITutorProfile extends Document {
     | "admin_review"
     | "changes_requested"
     | "rejected"
+    | "approved_pending_subject_approval"
     | "approved_pending_agreement"
     | "agreement_pending"
     | "active"
@@ -342,6 +344,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
         "admin_review",
         "changes_requested",
         "rejected",
+        "approved_pending_subject_approval",
         "approved_pending_agreement",
         "agreement_pending",
         "active",
@@ -432,6 +435,12 @@ function policeIsRequired(profile: ITutorProfile): boolean {
   return inPerson && homeCountries.includes(country);
 }
 
+function hasApprovedTeachingSubject(profile: ITutorProfile | Record<string, any>): boolean {
+  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: any) =>
+    entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
+}
+
 // location.type defaults to "Point" whenever the location subdocument exists
 // at all, even if coordinates was never populated (e.g. an online-only tutor
 // who never went through geocoding). MongoDB's 2dsphere index on `location`
@@ -476,6 +485,7 @@ tutorProfileSchema.pre("save", function () {
       p.degreeVerificationStatus === "approved" &&
       p.demoVideoStatus === "approved") ||
     p.verificationStatus === "approved";
+  const subjectApprovalSatisfied = hasApprovedTeachingSubject(p);
 
   if (coreApproved) {
     p.verificationStatus = "approved";
@@ -485,6 +495,13 @@ tutorProfileSchema.pre("save", function () {
       p.marketplaceEligible = false;
     } else if (p.reVerificationRequired) {
       p.tutorStatus = "reverification_required";
+      p.marketplaceEligible = false;
+    } else if (!subjectApprovalSatisfied && !p.marketplaceEligible) {
+      // New tutors must have at least one subject and specific teaching level
+      // approved by an administrator. A self-selected subject alone never
+      // unlocks marketplace visibility or bidding.
+      p.tutorStatus = "approved_pending_subject_approval";
+      p.agreementAcceptanceRequired = false;
       p.marketplaceEligible = false;
     } else if (!p.agreementAcceptedAt && p.legacyAgreementStatus !== "accepted" && !p.marketplaceEligible) {
       // NON-NEGOTIABLE RULE: admin/document approval does NOT make a tutor active!

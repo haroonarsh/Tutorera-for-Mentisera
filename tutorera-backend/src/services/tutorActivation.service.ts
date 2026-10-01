@@ -16,6 +16,7 @@ export interface ActivationEvaluationResult {
     mandatoryDocumentsVerified: boolean;
     identityVerified: boolean;
     adminApproved: boolean;
+    subjectEligibilityApproved: boolean;
     currentAgreementAccepted: boolean;
     mandatoryConsentsAccepted: boolean;
     accountNotSuspended: boolean;
@@ -62,6 +63,7 @@ export async function evaluateTutorActivation(
         mandatoryDocumentsVerified: false,
         identityVerified: false,
         adminApproved: false,
+        subjectEligibilityApproved: false,
         currentAgreementAccepted: false,
         mandatoryConsentsAccepted: false,
         accountNotSuspended: false,
@@ -103,6 +105,17 @@ export async function evaluateTutorActivation(
   if (!profileComplete) {
     missing.push("profile_complete");
     reasons.push("Profile onboarding is incomplete.");
+  }
+
+  // A tutor may select subjects during onboarding, but no subject becomes
+  // teachable until an administrator approves its precise levels. This is a
+  // separate trust gate from document verification.
+  const subjectEligibilityApproved = Boolean((profile.subjectEligibility || []).some((entry) =>
+    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  ));
+  if (!subjectEligibilityApproved) {
+    missing.push("subject_eligibility_approved");
+    reasons.push("At least one teaching subject and level must be approved by an administrator.");
   }
 
   // 3. Document submission
@@ -204,6 +217,8 @@ export async function evaluateTutorActivation(
     derivedStatus = "under_verification";
   } else if (!adminApproved) {
     derivedStatus = "admin_review";
+  } else if (!subjectEligibilityApproved) {
+    derivedStatus = "approved_pending_subject_approval";
   } else if (!currentAgreementAccepted || !mandatoryConsentsAccepted) {
     derivedStatus = "approved_pending_agreement";
   } else {
@@ -223,6 +238,7 @@ export async function evaluateTutorActivation(
       mandatoryDocumentsVerified,
       identityVerified,
       adminApproved,
+      subjectEligibilityApproved,
       currentAgreementAccepted,
       mandatoryConsentsAccepted,
       accountNotSuspended,
@@ -280,6 +296,14 @@ export async function syncTutorActivation(
     }
     if (evalResult.tutorStatus === "approved_pending_agreement") {
       profile.agreementAcceptanceRequired = true;
+      if (opts.session) {
+        await profile.save({ session: opts.session, validateBeforeSave: false });
+      } else {
+        await profile.save({ validateBeforeSave: false });
+      }
+      await setAccountStatus(tutorUserId.toString(), "submitted");
+    } else if (evalResult.tutorStatus === "approved_pending_subject_approval") {
+      profile.agreementAcceptanceRequired = false;
       if (opts.session) {
         await profile.save({ session: opts.session, validateBeforeSave: false });
       } else {

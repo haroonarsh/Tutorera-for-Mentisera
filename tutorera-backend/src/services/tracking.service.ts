@@ -15,6 +15,7 @@ export type CanonicalStatus =
   | "UNDER_REVIEW"
   | "ACTION_REQUIRED"
   | "VERIFICATION_IN_PROGRESS"
+  | "SUBJECT_ELIGIBILITY_REQUIRED"
   | "APPROVED_PENDING_AGREEMENT"
   | "AGREEMENT_PENDING"
   | "AGREEMENT_REACCEPTANCE_REQUIRED"
@@ -133,6 +134,7 @@ const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   UNDER_REVIEW: "Under review",
   ACTION_REQUIRED: "Action required",
   VERIFICATION_IN_PROGRESS: "Verification in progress",
+  SUBJECT_ELIGIBILITY_REQUIRED: "Teaching subject approval required",
   APPROVED_PENDING_AGREEMENT: "Application approved — Agreement pending",
   AGREEMENT_PENDING: "Agreement acceptance required",
   AGREEMENT_REACCEPTANCE_REQUIRED: "Updated agreement reacceptance required",
@@ -241,12 +243,17 @@ export function isMarketplaceEligible(profile: ITutorProfile): boolean {
   // the strict agreement gate below.
   if (profile.marketplaceEligible && !accessIsBlocked) return true;
 
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
+    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
+
   return Boolean(
     profile.isVerified &&
     profile.onboardingComplete &&
     profile.demoVideoStatus === "approved" &&
     profile.cnicVerificationStatus === "approved" &&
     profile.degreeVerificationStatus === "approved" &&
+    hasApprovedTeachingSubject &&
     profile.verificationStatus === "approved" &&
     agreementSigned &&
     !accessIsBlocked
@@ -264,9 +271,13 @@ export function computeProgress(profile: ITutorProfile): { completed: number; to
   // complete even though their unsigned agreement deliberately keeps
   // marketplace access disabled. Do not let optional/profile-completeness
   // fields turn this state into the misleading 55% shown previously.
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
+    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
   const requiredDocumentsApproved =
     profile.cnicVerificationStatus === "approved" &&
     profile.degreeVerificationStatus === "approved" &&
+    hasApprovedTeachingSubject &&
     profile.demoVideoStatus === "approved" &&
     (!policeIsRequired(profile) || profile.policeVerificationStatus === "approved");
   if (isMarketplaceEligible(profile) || (
@@ -382,6 +393,13 @@ export function computeCanonicalStatus(profile: ITutorProfile): CanonicalStatus 
     return "APPROVED_FOR_MARKETPLACE";
   }
 
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
+    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
+  if (!hasApprovedTeachingSubject && profile.verificationStatus === "approved") {
+    return "SUBJECT_ELIGIBILITY_REQUIRED";
+  }
+
   // New applications require explicit electronic agreement acceptance before
   // activation. This check intentionally follows the persisted-activation
   // check above so legacy, already-live marketplace profiles stay live.
@@ -434,6 +452,16 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
       at: at("EDUCATIONAL_DOCUMENTS_VERIFIED") || at("EDUCATIONAL_DOCUMENTS_SUBMITTED"),
     },
     {
+      key: "subjects",
+      label: "Teaching subjects and levels",
+      status: Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) => entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0)
+        ? "done"
+        : Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) => entry.status === "rejected")
+          ? "rejected"
+          : "pending",
+      at: undefined,
+    },
+    {
       key: "cnic",
       label: "Identity document verification",
       status: profile.cnicVerificationStatus === "approved" ? "done" :
@@ -475,6 +503,34 @@ function buildTimeline(profile: ITutorProfile, history: ITutorApplicationStatusH
 function buildActionRequired(profile: ITutorProfile): ActionRequired | null {
   const RESUBMIT_URL = "/tutor/resubmit-docs";
   const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
+  const hasEducationCredential = Array.isArray(profile.education) && profile.education.some((entry) =>
+    Boolean(entry.degree?.trim() && entry.institution?.trim() && entry.year && entry.degreeDoc)
+  );
+  const hasSubjectRequest = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.length > 0;
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
+    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
+  if (!hasEducationCredential) {
+    return {
+      title: "Submit your education credentials",
+      body: "Add your qualification, institution, graduation year, and a clear degree certificate or transcript. Marketplace activation cannot continue until this evidence is submitted and verified.",
+      cta: { label: "Add education credentials", href: "/onboarding/tutor?step=2" },
+    };
+  }
+  if (!hasSubjectRequest) {
+    return {
+      title: "Choose teaching subjects and levels",
+      body: "Select every subject and teaching level you want to offer. An administrator must approve at least one subject-level request before marketplace activation.",
+      cta: { label: "Choose subjects and levels", href: "/onboarding/tutor?step=3" },
+    };
+  }
+  if (!hasApprovedTeachingSubject) {
+    return {
+      title: "Subject eligibility is awaiting approval",
+      body: "Your requested subjects and levels must be reviewed by an administrator. Subjects outside your declared discipline may need supporting educational evidence.",
+      cta: { label: "Review education and subjects", href: "/onboarding/tutor?step=3" },
+    };
+  }
   if (profile.verificationStatus === "approved" && !agreementSigned && !isMarketplaceEligible(profile)) {
     return {
       title: "Accept Your Tutor Marketplace Agreement",

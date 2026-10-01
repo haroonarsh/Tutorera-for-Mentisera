@@ -10,7 +10,7 @@ import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary";
 import { MatchingService } from "../services/matching.service";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
-import { allocateApplicationId, generateTrackingToken, recordStatusEvent } from "../services/tracking.service";
+import { allocateApplicationId, generateTrackingToken, isMarketplaceEligible, recordStatusEvent } from "../services/tracking.service";
 import sendEmail from "../utils/sendEmail";
 import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/trackingEmails";
 import { sendNotification } from "../utils/socket";
@@ -212,6 +212,7 @@ export const getTutorById = async (
     profile &&
       profile.verificationStatus === "approved" &&
       profile.isVerified === true &&
+      isMarketplaceEligible(profile) &&
       agreementSigned &&
       profile.isTestAccount !== true &&
       !profile.suspendedAt &&

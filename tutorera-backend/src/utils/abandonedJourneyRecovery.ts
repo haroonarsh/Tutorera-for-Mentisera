@@ -39,6 +39,13 @@ function tutorMissingItems(profile: any): Array<{ label: string; href: string }>
   if (!profile.fullName || !profile.phone || !profile.city) missing.push({ label: "Personal details and location", href: "/onboarding/tutor?step=1" });
   if (!profile.education?.[0]?.degree || !profile.education?.[0]?.institution || !profile.education?.[0]?.degreeDoc || needsTutorAction(profile.degreeVerificationStatus)) missing.push({ label: "Qualification and educational document", href: "/onboarding/tutor?step=2" });
   if (!profile.experience || !profile.subjects?.length || !profile.levels?.length) missing.push({ label: "Teaching experience, subjects, and levels", href: "/onboarding/tutor?step=3" });
+  const eligibility = Array.isArray(profile.subjectEligibility) ? profile.subjectEligibility : [];
+  const hasApprovedSubject = eligibility.some((entry: any) => entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0);
+  if (!eligibility.length) {
+    missing.push({ label: "Submit teaching subjects and levels for admin approval", href: "/onboarding/tutor?step=3" });
+  } else if (!hasApprovedSubject && eligibility.some((entry: any) => entry?.status === "rejected")) {
+    missing.push({ label: "Update rejected subject evidence and teaching levels", href: "/onboarding/tutor?step=2" });
+  }
   if (!profile.bio || !profile.hourlyRate || !profile.availability?.length) missing.push({ label: "Profile, hourly rate, and availability", href: "/onboarding/tutor?step=4" });
   if (!profile.cnicFront || !profile.cnicBack || needsTutorAction(profile.cnicVerificationStatus)) missing.push({ label: "Identity document (front and back)", href: "/onboarding/tutor?step=5" });
   if (!profile.videoIntro || needsTutorAction(profile.demoVideoStatus)) missing.push({ label: "Demo video", href: "/onboarding/tutor?step=5" });
@@ -54,8 +61,9 @@ export async function processAbandonedJourneyRecovery() {
 
   const incompleteProfiles = await TutorProfile.find({
     updatedAt: { $lte: new Date(now.getTime() - DAY_MS) },
-    verificationStatus: { $ne: "approved" },
-  }).select("user onboardingStep updatedAt fullName phone city education experience subjects levels bio hourlyRate availability teachingMode cnicFront cnicBack cnicVerificationStatus degreeVerificationStatus videoIntro demoVideoStatus policeCertificate policeVerificationStatus").limit(200);
+    marketplaceEligible: { $ne: true },
+    tutorStatus: { $nin: ["suspended", "terminated", "deactivated"] },
+  }).select("user onboardingStep updatedAt fullName phone city education experience subjects levels subjectEligibility bio hourlyRate availability teachingMode cnicFront cnicBack cnicVerificationStatus degreeVerificationStatus videoIntro demoVideoStatus policeCertificate policeVerificationStatus").limit(200);
 
   for (const profile of incompleteProfiles) {
     try {

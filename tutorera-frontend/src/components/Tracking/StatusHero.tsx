@@ -21,7 +21,7 @@ export function StatusHero({
   const variant =
     canonicalStatus === "REJECTED" || canonicalStatus === "SUSPENDED"
       ? "danger"
-      : canonicalStatus === "ACTION_REQUIRED" || canonicalStatus === "RE_VERIFICATION_REQUIRED"
+      : canonicalStatus === "ACTION_REQUIRED" || canonicalStatus === "RE_VERIFICATION_REQUIRED" || canonicalStatus === "SUBJECT_ELIGIBILITY_REQUIRED"
         ? "warn"
         : canonicalStatus === "APPROVED_FOR_MARKETPLACE" || canonicalStatus === "HOME_TUITION_ELIGIBLE"
           ? "success"

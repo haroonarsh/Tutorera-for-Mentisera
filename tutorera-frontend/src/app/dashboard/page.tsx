@@ -148,6 +148,24 @@ function PendingApprovalScreen({ canonicalStatus }: { canonicalStatus?: string |
     );
   }
 
+  if (canonicalStatus === "SUBJECT_ELIGIBILITY_REQUIRED") {
+    return (
+      <GateScreen
+        icon="📚"
+        iconTone="warning"
+        title="Action Required: Choose Teaching Subjects & Levels"
+        actions={<>
+          <DashButton variant="primary" href="/onboarding/tutor?step=3">Choose Subjects & Levels</DashButton>
+          <DashButton variant="secondary" href="/tutor/application-status">View Application Status</DashButton>
+        </>}
+      >
+        <p style={{ color: TEXT_COLORS.muted, fontSize: "0.95rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+          Your education documents have been verified, but marketplace activation needs at least one teaching subject and level approved by an administrator. Add every subject you are qualified to teach and provide supporting evidence when a subject falls outside your declared discipline.
+        </p>
+      </GateScreen>
+    );
+  }
+
   return (
     <GateScreen
       icon="⏳"

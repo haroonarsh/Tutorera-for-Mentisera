@@ -86,7 +86,11 @@ export default function TutorApplicationStatusPage() {
     );
   }
 
-  const showActionRequired = payload.actionRequired && (payload.canonicalStatus === "ACTION_REQUIRED" || payload.canonicalStatus === "RE_VERIFICATION_REQUIRED");
+  const showActionRequired = payload.actionRequired && (
+    payload.canonicalStatus === "ACTION_REQUIRED" ||
+    payload.canonicalStatus === "RE_VERIFICATION_REQUIRED" ||
+    payload.canonicalStatus === "SUBJECT_ELIGIBILITY_REQUIRED"
+  );
 
   return (
     <div className={s.trackingPage}>

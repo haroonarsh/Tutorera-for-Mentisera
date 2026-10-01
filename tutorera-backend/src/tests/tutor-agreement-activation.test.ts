@@ -96,6 +96,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         fullName: "Approved Unsigned",
         hourlyRate: 2500,
         subjects: ["Physics"],
+        subjectEligibility: [{ subject: "Physics", levels: ["O-Level"], status: "approved", matchesDiscipline: true, requestedAt: new Date() }],
         teachingMode: "online",
         onboardingComplete: true,
         cnicFront: "https://cdn.test/cnic.jpg",
@@ -121,6 +122,44 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
       expect(syncResult.profile.tutorStatus).toBe("approved_pending_agreement");
     });
 
+    it("strictly blocks activation until an administrator approves a teaching subject and level", async () => {
+      const user = await User.create({
+        name: "No Subject Approval",
+        email: "no-subject-approval@tutorera-test.pk",
+        password: "Password123!",
+        role: "tutor",
+      });
+
+      await TutorProfile.create({
+        user: user._id,
+        fullName: "No Subject Approval",
+        hourlyRate: 2500,
+        subjects: ["Mathematics"],
+        subjectEligibility: [],
+        teachingMode: "online",
+        onboardingComplete: true,
+        cnicFront: "https://cdn.test/cnic.jpg",
+        videoIntro: "https://cdn.test/video.mp4",
+        education: [{ degree: "BS Mathematics", institution: "NUST", year: 2022, degreeDoc: "https://cdn.test/degree.pdf", degreeDocPublicId: "degree-1" }],
+        cnicVerificationStatus: "approved",
+        degreeVerificationStatus: "approved",
+        demoVideoStatus: "approved",
+        verificationStatus: "approved",
+        agreementAcceptedAt: new Date(),
+        agreementVersion: "TTA-2026.1",
+      });
+
+      const evaluation = await evaluateTutorActivation(user._id);
+      expect(evaluation.isEligible).toBe(false);
+      expect(evaluation.checks.subjectEligibilityApproved).toBe(false);
+      expect(evaluation.tutorStatus).toBe("approved_pending_subject_approval");
+
+      const syncResult = await syncTutorActivation(user._id);
+      expect(syncResult.activated).toBe(false);
+      expect(syncResult.profile.marketplaceEligible).toBe(false);
+      expect(syncResult.profile.tutorStatus).toBe("approved_pending_subject_approval");
+    });
+
     it("activates tutor ONLY when ALL mandatory conditions including agreement acceptance are satisfied", async () => {
       const user = await User.create({
         name: "Fully Eligible Tutor",
@@ -134,6 +173,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         fullName: "Fully Eligible Tutor",
         hourlyRate: 3000,
         subjects: ["Chemistry"],
+        subjectEligibility: [{ subject: "Chemistry", levels: ["A-Level"], status: "approved", matchesDiscipline: true, requestedAt: new Date() }],
         teachingMode: "online",
         onboardingComplete: true,
         cnicFront: "https://cdn.test/cnic.jpg",
@@ -214,6 +254,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         fullName: "Suspended Tutor",
         hourlyRate: 2000,
         subjects: ["Biology"],
+        subjectEligibility: [{ subject: "Biology", levels: ["A-Level"], status: "approved", matchesDiscipline: true, requestedAt: new Date() }],
         teachingMode: "online",
         onboardingComplete: true,
         cnicFront: "https://cdn.test/cnic.jpg",
@@ -263,6 +304,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         city: "Islamabad",
         hourlyRate: 2500,
         subjects: ["Computer Science"],
+        subjectEligibility: [{ subject: "Computer Science", levels: ["O-Level"], status: "approved", matchesDiscipline: true, requestedAt: new Date() }],
         teachingMode: "online",
         onboardingComplete: true,
         cnicFront: "https://cdn.test/cnic.jpg",
