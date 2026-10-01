@@ -20,6 +20,7 @@ import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import TutorProfile from "../models/TutorProfile.model";
 import { acceptBid, finalizeBidAcceptance } from "../controllers/request.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
@@ -63,6 +64,11 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
   it("firing two simultaneous accept calls on the same bid creates exactly one booking", async () => {
     const student = await User.create({ name: "Student", email: "race-student@test.com", password: "password123", role: "student" });
     const tutor = await User.create({ name: "Tutor", email: "race-tutor@test.com", password: "password123", role: "tutor" });
+    await TutorProfile.create({
+      user: tutor._id,
+      subjectEligibility: [{ subject: "Math", levels: ["Matric"], status: "approved" }],
+      approvedSubjects: ["Math"],
+    });
 
     const requestDoc = await Request.create({
       student: student._id,
@@ -130,6 +136,16 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     const student = await User.create({ name: "Student2", email: "race-student2@test.com", password: "password123", role: "student" });
     const tutorA = await User.create({ name: "TutorA", email: "race-tutorA@test.com", password: "password123", role: "tutor" });
     const tutorB = await User.create({ name: "TutorB", email: "race-tutorB@test.com", password: "password123", role: "tutor" });
+    await TutorProfile.create({
+      user: tutorA._id,
+      subjectEligibility: [{ subject: "Physics", levels: ["Matric"], status: "approved" }],
+      approvedSubjects: ["Physics"],
+    });
+    await TutorProfile.create({
+      user: tutorB._id,
+      subjectEligibility: [{ subject: "Physics", levels: ["Matric"], status: "approved" }],
+      approvedSubjects: ["Physics"],
+    });
 
     const requestDoc = await Request.create({
       student: student._id,

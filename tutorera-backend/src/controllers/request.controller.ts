@@ -14,6 +14,7 @@ import { containsContactInfo } from "../utils/contentFilter";
 import { logAudit } from "../utils/logAudit";
 import BookedSlot from "../models/BookedSlot.model";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
+import { checkSubjectEligibility } from "../services/subjectEligibility.service";
 import sendEmail from "../utils/sendEmail";
 import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
 import { convertToPKR } from "../config/countries";
@@ -533,6 +534,14 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
+  // Self-declared subjects/levels above only establish relevance - actual
+  // eligibility to bid still requires admin-approved qualification.
+  const eligibility = checkSubjectEligibility(tutorProfile, requested.subject, requested.level);
+  if (!eligibility.eligible) {
+    res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: eligibility.message });
+    return;
+  }
+
   const currency = requested.currency || "PKR";
   if (!requested.allowCounterOffers && req.body.amount !== requested.budget) {
     res.status(409).json({ success: false, code: "COUNTERS_DISABLED", message: `This request only accepts the proposed rate of ${currency} ${requested.budget.toLocaleString()}.` });
@@ -741,6 +750,20 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   if (bid.expiresAt && bid.expiresAt.getTime() <= Date.now()) {
     res.status(410).json({ success: false, message: "This offer has expired." });
     return;
+  }
+
+  // Defense-in-depth: re-check the tutor's subject eligibility at
+  // acceptance time too, in case it was approved when they bid but has
+  // since been revoked (placeBid already checked it when the offer was
+  // submitted).
+  {
+    const TutorProfile = (await import("../models/TutorProfile.model")).default;
+    const bidTutorProfile = await TutorProfile.findOne({ user: bid.tutor }).select("subjectEligibility").lean();
+    const eligibility = bidTutorProfile ? checkSubjectEligibility(bidTutorProfile, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
+    if (!eligibility.eligible) {
+      res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: eligibility.message });
+      return;
+    }
   }
 
   const isOwner = request.student.toString() === req.user?._id?.toString();
@@ -1123,6 +1146,15 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   const tutorProfile = await TutorProfile.findOne({ user: tutorId });
   if (!tutorProfile || !isMarketplaceEligible(tutorProfile)) {
     res.status(404).json({ success: false, message: "Tutor not found or not available for booking." });
+    return;
+  }
+
+  // A direct booking request builds both a Request and a matching Bid in
+  // one step, bypassing placeBid's checks entirely - so subject eligibility
+  // has to be enforced here directly instead.
+  const directEligibility = checkSubjectEligibility(tutorProfile, subject, level);
+  if (!directEligibility.eligible) {
+    res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: directEligibility.message });
     return;
   }
 

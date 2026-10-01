@@ -38,6 +38,11 @@ import {
   trackingWelcomeEmail,
 } from "../utils/trackingEmails";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import {
+  approveSubjectEligibility,
+  rejectSubjectEligibility,
+  revokeSubjectEligibility,
+} from "../services/subjectEligibility.service";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { syncReviewQueueComponent } from "../services/verification.service";
 
@@ -1088,4 +1093,58 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
     console.error("[Tracking] uploadApplicationDocumentOnBehalf error:", err);
     res.status(500).json({ success: false, message: err.message || "Failed to upload document." });
   }
+};
+
+// @desc    Admin: approve a tutor's pending subject-eligibility request for
+//          specific teaching levels. Tutor selections never grant this on
+//          their own - this endpoint is the only place status flips to
+//          "approved".
+// @route   PATCH /api/tracking/admin/applications/:id/subject-eligibility
+// @access  Private (admin)
+export const reviewSubjectEligibility = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const { profile, user } = data;
+  const { subject, action, levels, reason } = req.body as { subject?: string; action?: "approve" | "reject" | "revoke"; levels?: string[]; reason?: string };
+
+  if (!subject || typeof subject !== "string") {
+    res.status(400).json({ success: false, message: "A subject is required." });
+    return;
+  }
+  if (!["approve", "reject", "revoke"].includes(action || "")) {
+    res.status(400).json({ success: false, message: "action must be one of: approve, reject, revoke." });
+    return;
+  }
+
+  const actor = actorFromReq(req);
+  let result: { success: boolean; message?: string; flaggedBookings?: number };
+  if (action === "approve") {
+    result = await approveSubjectEligibility(profile, subject, Array.isArray(levels) ? levels : [], { id: actor.id, name: actor.name });
+  } else if (action === "reject") {
+    result = await rejectSubjectEligibility(profile, subject, reason || "", { id: actor.id, name: actor.name });
+  } else {
+    result = await revokeSubjectEligibility(profile, subject, reason || "", { id: actor.id, name: actor.name });
+  }
+
+  if (!result.success) {
+    res.status(422).json({ success: false, message: result.message });
+    return;
+  }
+
+  await profile.save({ validateModifiedOnly: true });
+
+  const eventCopy: Record<string, { title: string; message: string }> = {
+    approve: { title: "Subject approved ✅", message: `You're now approved to teach ${subject}.` },
+    reject: { title: "Subject request declined", message: `Your request to teach ${subject} was not approved.${reason ? ` Reason: ${reason}` : ""}` },
+    revoke: { title: "Subject eligibility revoked", message: `Your approval to teach ${subject} has been revoked.${reason ? ` Reason: ${reason}` : ""}` },
+  };
+  const copy = eventCopy[action as string];
+  await NotificationService.publishEvent(user._id.toString(), "verification.subject_eligibility", {
+    title: copy.title,
+    message: copy.message,
+    link: "/tutor/application-status",
+    type: "verification",
+  });
+
+  res.status(200).json({ success: true, message: copy.title, profile, flaggedBookings: result.flaggedBookings });
 };

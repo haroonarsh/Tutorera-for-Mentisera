@@ -21,6 +21,7 @@ import { resolveMarket } from "../services/market.service";
 import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 import { calculateMarketplaceFees } from "../services/pricing.service";
+import { requestSubjectEligibility, syncApprovedSubjects } from "../services/subjectEligibility.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -622,6 +623,7 @@ export const saveOnboardingStep = async (
       degree: parsedData.degree,
       institution: parsedData.institution,
       year: parseInt(parsedData.year),
+      discipline: parsedData.discipline || profile.education?.[0]?.discipline || "",
       degreeDoc: degreeDocUrl || profile.education?.[0]?.degreeDoc || "",
       degreeDocPublicId: degreeDocPublicId || profile.education?.[0]?.degreeDocPublicId || "",
     }];
@@ -660,13 +662,24 @@ export const saveOnboardingStep = async (
   }
 
   else if (stepNum === 3) {
-    // Experience & Curricula
+    // Experience & Curricula. Selecting a subject here only creates a
+    // "pending" eligibility request - it does not grant any marketplace
+    // privilege on its own; an admin still has to approve it (see
+    // services/subjectEligibility.service.ts).
+    const selectedSubjects: string[] = parsedData.subjects || [];
+    const discipline = profile.education?.[0]?.discipline;
+    for (const subject of selectedSubjects) {
+      await requestSubjectEligibility(profile, subject, { discipline, qualificationIndex: 0 });
+    }
+    syncApprovedSubjects(profile);
     updateData = {
       experience: parseInt(parsedData.experience),
       previousInstitutions: parsedData.previousInstitutions || [],
-      subjects: parsedData.subjects || [],
+      subjects: selectedSubjects,
       levels: normalizeEducationLevels(parsedData.levels),
       curricula: parsedData.curricula || [],
+      subjectEligibility: profile.subjectEligibility,
+      approvedSubjects: profile.approvedSubjects,
       onboardingStep: 4,
     };
   }

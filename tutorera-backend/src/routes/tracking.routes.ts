@@ -17,6 +17,7 @@ import {
   setReverification,
   getApplicationHistory,
   uploadApplicationDocumentOnBehalf,
+  reviewSubjectEligibility,
 } from "../controllers/tracking.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
@@ -43,6 +44,7 @@ router.patch("/admin/applications/:id/marketplace", protect, authorize("admin"),
 router.patch("/admin/applications/:id/home-tuition", protect, authorize("admin"), requirePermission("tutor.verify"), setHomeTuitionEligibility);
 router.patch("/admin/applications/:id/suspended", protect, authorize("admin"), requirePermission("tutor.suspend"), setSuspended);
 router.patch("/admin/applications/:id/reverification", protect, authorize("admin"), requirePermission("tutor.verify"), setReverification);
+router.patch("/admin/applications/:id/subject-eligibility", protect, authorize("admin"), requirePermission("tutor.verify"), reviewSubjectEligibility);
 
 // Admin upload document on tutor's behalf
 router.post(

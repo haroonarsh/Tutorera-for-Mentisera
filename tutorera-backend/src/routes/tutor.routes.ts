@@ -18,6 +18,7 @@ import { validate, tutorProfileSchema } from "../validators/tutor.validator";
 import { validate as validateAvailability, saveAvailabilitySchema } from "../validators/availability.validator";
 import { uploadVerification } from "../middlewares/upload.middleware";
 import { cachePublic } from "../middlewares/cacheControl.middleware";
+import { listActiveDisciplineSubjectMaps } from "../controllers/disciplineSubjectMap.controller";
 
 const router = Router();
 
@@ -25,6 +26,8 @@ const router = Router();
 // ratings, and availability change more often; still meaningfully cuts
 // repeated-crawl/SSR-revalidation load versus no caching at all.
 router.get("/", cachePublic(60), getAllTutors);
+// Must come before the `/:id` wildcard below.
+router.get("/disciplines", protect, listActiveDisciplineSubjectMaps);
 router.get("/:tutorUserId/availability", getTutorAvailability);
 router.get("/:id", cachePublic(60), getTutorById);
 

@@ -87,8 +87,16 @@ export default function TutorOnboardingPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   // Step 2
-  const [step2, setStep2] = useState({ degree: "", institution: "", year: "" });
+  const [step2, setStep2] = useState({ degree: "", institution: "", year: "", discipline: "" });
   const [degreeDoc, setDegreeDoc] = useState<File | null>(null);
+  // Discipline -> eligible subjects mapping, used to preview which subjects
+  // a tutor's degree can unlock in step 3 - selecting a subject never grants
+  // eligibility on its own, admin approval always required (see
+  // subjectEligibility.service.ts on the backend).
+  const [disciplineMaps, setDisciplineMaps] = useState<{ discipline: string; eligibleSubjects: string[] }[]>([]);
+  useEffect(() => {
+    api.get("/tutors/disciplines").then(res => setDisciplineMaps(res.data.maps || [])).catch(() => setDisciplineMaps([]));
+  }, []);
 
   // Step 3
   const [step3, setStep3] = useState({ experience: "", previousInstitutions: "" });
@@ -152,6 +160,7 @@ export default function TutorOnboardingPage() {
                 degree: p.education[0].degree || "",
                 institution: p.education[0].institution || "",
                 year: p.education[0].year ? String(p.education[0].year) : "",
+                discipline: p.education[0].discipline || "",
               });
             }
 
@@ -663,6 +672,21 @@ export default function TutorOnboardingPage() {
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Degree Discipline</label>
+                  <select
+                    title="Pick the closest match to your degree's field of study. This determines which subjects you can request to teach."
+                    value={step2.discipline}
+                    onChange={e => setStep2({ ...step2, discipline: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary, backgroundColor: '#fff' }}
+                  >
+                    <option value="">Select the closest match (optional)</option>
+                    {disciplineMaps.map(m => <option key={m.discipline} value={m.discipline}>{m.discipline}</option>)}
+                  </select>
+                  <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                    This helps admins review your subject requests faster. Subjects you select in the next step still require admin approval regardless of discipline.
+                  </p>
+                </div>
+                <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Institution *</label>
                   <input title="Enter the awarding school, college, or university exactly as shown on your document." value={step2.institution} onChange={e => setStep2({ ...step2, institution: e.target.value })} placeholder="e.g. COMSATS University Islamabad"
                     style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
@@ -731,13 +755,21 @@ export default function TutorOnboardingPage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Subjects You Teach *</label>
+                  <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '-0.35rem', marginBottom: '0.6rem' }}>
+                    Selecting a subject sends it for admin review - you can only submit offers and accept bookings for subjects an admin has approved for your qualification.
+                  </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {subjects.map(s => (
-                      <button key={s} type="button" onClick={() => toggleItem(selectedSubjects, s, setSelectedSubjects)}
-                        style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${selectedSubjects.includes(s) ? C.accent : '#e5e7eb'}`, backgroundColor: selectedSubjects.includes(s) ? C.accentLight : 'white', color: selectedSubjects.includes(s) ? C.accent : C.gray500, fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer' }}>
-                        {s}
-                      </button>
-                    ))}
+                    {subjects.map(s => {
+                      const matchingMap = disciplineMaps.find(m => m.discipline === step2.discipline);
+                      const matchesDiscipline = matchingMap?.eligibleSubjects.some(es => es.toLowerCase() === s.toLowerCase());
+                      return (
+                        <button key={s} type="button" onClick={() => toggleItem(selectedSubjects, s, setSelectedSubjects)}
+                          title={matchesDiscipline ? "Matches your selected discipline" : undefined}
+                          style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${selectedSubjects.includes(s) ? C.accent : '#e5e7eb'}`, backgroundColor: selectedSubjects.includes(s) ? C.accentLight : 'white', color: selectedSubjects.includes(s) ? C.accent : C.gray500, fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer' }}>
+                          {s}{matchesDiscipline ? " ✓" : ""}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 <div>

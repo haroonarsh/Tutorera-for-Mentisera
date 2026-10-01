@@ -23,6 +23,7 @@ import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
 import { convertAmount } from "../services/exchangeRate.service";
+import { checkSubjectEligibility } from "../services/subjectEligibility.service";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
@@ -87,6 +88,12 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     if (!isStudent && !isTutor) throw { statusCode: 403, message: "Not authorized." };
     if (!request.allowCounterOffers) throw { statusCode: 409, message: "Counter-offers are disabled for this request." };
     role = isStudent ? "student" : "tutor";
+    if (isTutor) {
+      // Re-check eligibility could have been revoked since the original bid.
+      const counteringTutorProfile = await TutorProfile.findOne({ user: offer.tutor }).select("subjectEligibility").session(session);
+      const counterEligibility = counteringTutorProfile ? checkSubjectEligibility(counteringTutorProfile, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
+      if (!counterEligibility.eligible) throw { statusCode: 403, code: "SUBJECT_NOT_APPROVED", message: counterEligibility.message };
+    }
     const [roleCount, last] = await Promise.all([OfferNegotiation.countDocuments({ offer: offer._id, senderRole: role, sequenceNumber: { $gt: 1 } }).session(session), OfferNegotiation.findOne({ offer: offer._id }).sort("-sequenceNumber").session(session)]);
     if (roleCount >= 3) throw { statusCode: 409, message: "The maximum of three counter-offers for your side has been reached." };
     if (last?.senderRole === role) throw { statusCode: 409, message: "Wait for the other party to respond." };

@@ -8,6 +8,7 @@ import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import TutorProfile from "../models/TutorProfile.model";
 import { acceptBid, rejectBid, finalizeBidAcceptance } from "../controllers/request.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
@@ -170,6 +171,14 @@ describe("BE-01: cross-request bid substitution", () => {
     // full real acceptance path end to end.
     const student = await User.create({ name: "Student C", email: "c@test.com", password: "password123", role: "student" });
     const tutor = await User.create({ name: "Tutor C", email: "tutorC@test.com", password: "password123", role: "tutor" });
+    // initiateAcceptBid defense-in-depth re-checks subject eligibility at
+    // acceptance time - give this tutor an approved entry for the subject
+    // being tested.
+    await TutorProfile.create({
+      user: tutor._id,
+      subjectEligibility: [{ subject: "English", levels: ["Matric"], status: "approved" }],
+      approvedSubjects: ["English"],
+    });
 
     const request = await Request.create({
       student: student._id,

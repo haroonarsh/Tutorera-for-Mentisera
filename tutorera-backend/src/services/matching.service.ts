@@ -238,10 +238,12 @@ export class MatchingService {
       ];
     }
 
-    // Subject Filtering (case-insensitive, synonym alias and token patterns)
+    // Subject Filtering (case-insensitive, synonym alias and token patterns).
+    // Filters on approvedSubjects (admin-approved), not the self-declared
+    // subjects list, so unapproved tutors never surface as eligible matches.
     const subjectPatterns = buildSubjectSearchPatterns(request.subject);
     if (subjectPatterns.length > 0) {
-      query.subjects = { $in: subjectPatterns };
+      query.approvedSubjects = { $in: subjectPatterns };
     }
 
     // Level Compatibility (normalized)
@@ -657,8 +659,9 @@ export class MatchingService {
       }
     }
 
-    // Subject filter
-    const tutorSubs = (tutor.subjects || []).map((s) => new RegExp(`^${escapeRegExp(s.trim())}$`, "i"));
+    // Subject filter - uses admin-approved subjects, not self-declared ones,
+    // so recommendations never surface requests the tutor isn't eligible to bid on.
+    const tutorSubs = (tutor.approvedSubjects || []).map((s) => new RegExp(`^${escapeRegExp(s.trim())}$`, "i"));
     if (tutorSubs.length > 0) {
       standardQuery.subject = { $in: tutorSubs };
     }

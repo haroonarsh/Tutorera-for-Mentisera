@@ -62,7 +62,16 @@ interface ApplicationDetail {
     levels: string[];
     hourlyRate: number;
     teachingMode: string;
-    education: { degree: string; institution: string; year: number; degreeDoc: string }[];
+    education: { degree: string; institution: string; year: number; discipline?: string; degreeDoc: string }[];
+    subjectEligibility?: {
+      subject: string;
+      levels: string[];
+      status: "pending" | "approved" | "rejected" | "revoked";
+      matchesDiscipline: boolean;
+      reason?: string;
+      requestedAt: string;
+      reviewedAt?: string;
+    }[];
     cnicFront: string;
     cnicBack: string;
     videoIntro: string;
@@ -207,6 +216,35 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
       await fetchDetail();
     } catch (err) {
       showError(err, "Failed to update eligibility");
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const [eligibilityLevels, setEligibilityLevels] = useState<Record<string, string>>({});
+  const [eligibilityReasons, setEligibilityReasons] = useState<Record<string, string>>({});
+
+  const handleSubjectEligibility = async (subject: string, action: "approve" | "reject" | "revoke") => {
+    const key = `subject-eligibility-${subject}-${action}`;
+    const levelsInput = eligibilityLevels[subject] || "";
+    const levels = levelsInput.split(",").map(l => l.trim()).filter(Boolean);
+    if (action === "approve" && levels.length === 0) {
+      showError("Enter at least one teaching level (comma-separated) to approve this subject.");
+      return;
+    }
+    const reason = eligibilityReasons[subject] || "";
+    if ((action === "reject" || action === "revoke") && !reason.trim()) {
+      showError(`A reason is required to ${action} this subject.`);
+      return;
+    }
+    setBusyKey(key);
+    try {
+      await api.patch(`/tracking/admin/applications/${id}/subject-eligibility`, { subject, action, levels, reason: reason.trim() || undefined });
+      showSuccess(`Subject "${subject}" ${action === "approve" ? "approved" : action === "reject" ? "declined" : "revoked"}.`);
+      setEligibilityReasons(current => ({ ...current, [subject]: "" }));
+      await fetchDetail();
+    } catch (err) {
+      showError(err, `Failed to ${action} subject eligibility`);
     } finally {
       setBusyKey("");
     }
@@ -455,6 +493,63 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
               <strong>{education.degree || "Qualification"}</strong>{education.institution ? ` — ${education.institution}` : ""}{education.year ? ` (${education.year})` : ""}
             </p>
           )) : <p className={s.empty}>No education entries have been submitted.</p>}
+          {p.education?.[0]?.discipline && (
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: TEXT_COLORS.muted }}><strong>Declared discipline:</strong> {p.education[0].discipline}</p>
+          )}
+        </section>
+
+        <section className={s.card} style={{ marginBottom: 16 }} aria-labelledby="subject-eligibility">
+          <p id="subject-eligibility" className={s.cardTitle} style={{ marginBottom: 6 }}>Subject eligibility review</p>
+          <p style={{ fontSize: 12, color: TEXT_COLORS.muted, margin: "0 0 12px" }}>
+            Tutor-selected subjects only become live after an admin approves specific teaching levels here. Subjects that don&apos;t match the declared discipline are flagged and may need supporting evidence.
+          </p>
+          {(!p.subjectEligibility || p.subjectEligibility.length === 0) ? (
+            <p className={s.empty}>No subject eligibility requests yet.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {p.subjectEligibility.map((entry) => (
+                <div key={entry.subject} style={{ border: `1px solid ${UI_COLORS.border}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <strong style={{ fontSize: 14 }}>{entry.subject}</strong>
+                      {" "}
+                      <StatusBadge status={entry.status} />
+                      {entry.matchesDiscipline ? (
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.success.color }}>Matches discipline</span>
+                      ) : (
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.warning.color }}>Adjacent — needs evidence</span>
+                      )}
+                    </div>
+                    {entry.levels?.length > 0 && <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>Approved levels: {entry.levels.join(", ")}</span>}
+                  </div>
+                  {entry.reason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "6px 0 0" }}>Reason: {entry.reason}</p>}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <input
+                      type="text"
+                      placeholder="Levels to approve, e.g. O-Level, A-Level"
+                      value={eligibilityLevels[entry.subject] || ""}
+                      onChange={e => setEligibilityLevels(current => ({ ...current, [entry.subject]: e.target.value }))}
+                      style={{ flex: "1 1 220px", padding: "6px 10px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 12 }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Reason (required to reject/revoke)"
+                      value={eligibilityReasons[entry.subject] || ""}
+                      onChange={e => setEligibilityReasons(current => ({ ...current, [entry.subject]: e.target.value }))}
+                      style={{ flex: "1 1 220px", padding: "6px 10px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 12 }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    <button disabled={busyKey === `subject-eligibility-${entry.subject}-approve`} onClick={() => handleSubjectEligibility(entry.subject, "approve")} style={btnSuccessStyle}>Approve</button>
+                    <button disabled={busyKey === `subject-eligibility-${entry.subject}-reject`} onClick={() => handleSubjectEligibility(entry.subject, "reject")} style={btnDangerStyle}>Reject</button>
+                    {entry.status === "approved" && (
+                      <button disabled={busyKey === `subject-eligibility-${entry.subject}-revoke`} onClick={() => handleSubjectEligibility(entry.subject, "revoke")} style={btnDangerStyle}>Revoke</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <div className={`${s.grid} ${s.two}`} style={{ marginBottom: 16 }}>
