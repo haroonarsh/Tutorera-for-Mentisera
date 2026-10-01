@@ -287,3 +287,60 @@ export const documentResubmittedEmail = (tutorName: string, documentType: string
   `;
   return { subject, html: wrap(innerHtml, subject, "Verification Update", `Your ${documentType} has been received and is under review.`) };
 };
+
+/** Nudges a tutor whose onboarding is stalled on missing/incomplete
+ * education credentials - either no education entries at all, or no
+ * subject eligibility requests yet (see services/subjectEligibility.service.ts).
+ * Safe to re-send (e.g. daily/weekly via a cron) the same way
+ * agreementReminderEmail is - the subject line and tone escalate slightly
+ * on repeat sends. Unlike the other tracking emails above, which all point
+ * at args.statusUrl, this one is meant to be given the secure, passwordless
+ * `/track/tutor/<token>` link (see tracking.service.ts's generateTrackingToken)
+ * rather than the plain `/tutor/application-status` page, since a tutor this
+ * early in (or stalled in) onboarding may not be signed in. */
+export const missingDocumentsReminderEmail = (
+  tutorName: string,
+  args: CtaArgs & { missingItems: string[]; responseDeadline?: Date; reminderCount?: number }
+) => {
+  const isFollowUp = (args.reminderCount || 1) > 1;
+  const subject = isFollowUp
+    ? "Reminder: your TUTORERA tutor application is still missing required documents"
+    : "Action required: complete your TUTORERA tutor application";
+
+  const missingList = args.missingItems.length
+    ? `<ul style="color:#374151;padding-left:20px;margin:12px 0;">${args.missingItems
+        .map((item) => `<li style="margin-bottom:6px;">${escapeHtml(item)}</li>`)
+        .join("")}</ul>`
+    : "";
+
+  const deadlineLine = args.responseDeadline
+    ? `<p style="color:#b91c1c;font-weight:700;">Please submit the items above by ${escapeHtml(
+        args.responseDeadline.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+      )}. Applications with no response by this date may be archived, and you will need to re-apply.</p>`
+    : "";
+
+  const innerHtml = `
+    <h2 style="color:#1a1a2e;margin:0 0 12px;">${isFollowUp ? "Your application is still incomplete" : "A few things are missing from your application"}</h2>
+    <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
+    <p style="color:#374151;">To finish setting up your TUTORERA tutor profile, we still need the following from you:</p>
+    ${missingList}
+    <p style="color:#374151;">A few important notes on how approval works:</p>
+    <ul style="color:#374151;padding-left:20px;margin:12px 0;">
+      <li style="margin-bottom:6px;">Selecting a subject to teach only <strong>requests</strong> approval - our team reviews and approves each subject individually, per teaching level, before you can bid on or accept related tuition requests.</li>
+      <li style="margin-bottom:6px;">A subject outside your declared degree discipline will be flagged for extra review and may require supporting evidence (e.g. a certificate, prior teaching record, or test score) before it can be approved.</li>
+      <li style="margin-bottom:6px;">Your profile cannot be activated on the marketplace until all required education information and documents are submitted and verified.</li>
+    </ul>
+    ${deadlineLine}
+    <p style="color:#374151;">Please upload the missing items using the secure link below. If you believe this is a mistake or need help, reply to this email.</p>
+    ${trackingCta(args, "Complete My Application")}
+  `;
+  return {
+    subject,
+    html: wrap(
+      innerHtml,
+      subject,
+      "Action Required",
+      "Your TUTORERA tutor application is missing required education information or documents."
+    ),
+  };
+};

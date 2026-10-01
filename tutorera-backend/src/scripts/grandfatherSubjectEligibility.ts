@@ -15,8 +15,9 @@ import { grandfatherExistingSubjects } from "../services/subjectEligibility.serv
  * re-run; it skips tutors who already have any subjectEligibility entries.
  */
 async function main() {
-  if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required");
-  await mongoose.connect(process.env.MONGODB_URI);
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  if (!mongoUri) throw new Error("MONGO_URI is required");
+  await mongoose.connect(mongoUri);
 
   const profiles = await TutorProfile.find({
     subjects: { $exists: true, $ne: [] },

@@ -13,6 +13,7 @@ import { processPendingPayouts } from "./services/payout.service";
 import { refreshRates } from "./services/exchangeRate.service";
 import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
 import { sendAgreementReminders } from "./services/legalAgreementReminder.service";
+import { sendMissingDocumentsReminders } from "./services/missingDocumentsReminder.service";
 import { ensureLaunchMarkets } from "./services/market.service";
 
 dotenv.config();
@@ -66,6 +67,10 @@ setTimeout(() => refreshRates().catch(err => logger.error({ err }, "Initial exch
 const agreementReminderTimer = setInterval(() => sendAgreementReminders(io).catch(err => logger.error({ err }, "Legal agreement reminder run failed")), 24 * 60 * 60 * 1000);
 agreementReminderTimer.unref();
 setTimeout(() => sendAgreementReminders(io).catch(err => logger.error({ err }, "Initial legal agreement reminder run failed")), 40_000).unref();
+
+const missingDocumentsReminderTimer = setInterval(() => sendMissingDocumentsReminders(io).catch(err => logger.error({ err }, "Missing documents reminder run failed")), 24 * 60 * 60 * 1000);
+missingDocumentsReminderTimer.unref();
+setTimeout(() => sendMissingDocumentsReminders(io).catch(err => logger.error({ err }, "Initial missing documents reminder run failed")), 50_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
