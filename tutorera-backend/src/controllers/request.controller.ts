@@ -317,15 +317,21 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
     .limit(limitNum);
 
   if (req.user?.role === "tutor") {
-    const requestsWithOffer = await Promise.all(
-      requests.map(async (request) => {
-        const [bid, offersCount] = await Promise.all([
-          Bid.findOne({ request: request._id, tutor: req.user?._id }).select("amount currency status expiresAt pricingUnit createdAt").lean(),
-          Bid.countDocuments({ request: request._id, status: { $nin: ["withdrawn", "rejected"] } }),
-        ]);
-        return { ...publicRequestShape(request.toObject()), bid, offersCount };
-      })
-    );
+    const requestIds = requests.map((request) => request._id);
+    const [tutorBids, offerTotals] = await Promise.all([
+      Bid.find({ request: { $in: requestIds }, tutor: req.user?._id }).select("request amount currency status expiresAt pricingUnit createdAt").lean(),
+      Bid.aggregate([
+        { $match: { request: { $in: requestIds }, status: { $nin: ["withdrawn", "rejected"] } } },
+        { $group: { _id: "$request", count: { $sum: 1 } } },
+      ]),
+    ]);
+    const bidByRequest = new Map(tutorBids.map((bid) => [bid.request.toString(), bid]));
+    const offersByRequest = new Map(offerTotals.map((row) => [row._id.toString(), row.count as number]));
+    const requestsWithOffer = requests.map((request) => ({
+      ...publicRequestShape(request.toObject()),
+      bid: bidByRequest.get(request._id.toString()) || null,
+      offersCount: offersByRequest.get(request._id.toString()) || 0,
+    }));
     res.status(200).json({ success: true, total, page: pageNum, requests: requestsWithOffer });
     return;
   }
@@ -339,10 +345,15 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
 export const getMyRequests = async (req: AuthRequest, res: Response): Promise<void> => {
   const requests = await Request.find({ student: req.user?._id }).sort("-createdAt");
   const now = Date.now();
-  const enriched = await Promise.all(
-    requests.map(async (r) => {
+  const requestIds = requests.map((request) => request._id);
+  const offerTotals = await Bid.aggregate([
+    { $match: { request: { $in: requestIds }, status: { $nin: ["withdrawn", "rejected"] } } },
+    { $group: { _id: "$request", count: { $sum: 1 } } },
+  ]);
+  const offersByRequest = new Map(offerTotals.map((row) => [row._id.toString(), row.count as number]));
+  const enriched = requests.map((r) => {
       const obj = r.toObject();
-      const offersCount = await Bid.countDocuments({ request: r._id, status: { $nin: ["withdrawn", "rejected"] } });
+      const offersCount = offersByRequest.get(r._id.toString()) || 0;
       const isExpired = obj.status === "expired" || Boolean(obj.expiresAt && new Date(obj.expiresAt).getTime() <= now);
       const canExtend =
         ["open", "published", "receiving_offers"].includes(obj.status) &&
@@ -362,8 +373,7 @@ export const getMyRequests = async (req: AuthRequest, res: Response): Promise<vo
         canRepost,
         secondsRemaining,
       };
-    })
-  );
+    });
   res.status(200).json({ success: true, requests: enriched });
 };
 
@@ -1481,13 +1491,14 @@ if (teachingMode && teachingMode !== "all") {
     .limit(limitNum)
     .select("subject level budget pricingUnit currency teachingMode city countryCode countryName schedule description status createdAt expiresAt student sessionDurationMinutes sessionsPerWeek");
 
-  const Bid = (await import("../models/Bid.model")).default;
-  const sanitizedRequests = await Promise.all(
-    requests.map(async (r) => {
-      const offersCount = await Bid.countDocuments({ 
-        request: r._id, 
-        status: { $nin: ["withdrawn", "rejected"] } 
-      });
+  const requestIds = requests.map((request) => request._id);
+  const offerTotals = await Bid.aggregate([
+    { $match: { request: { $in: requestIds }, status: { $nin: ["withdrawn", "rejected"] } } },
+    { $group: { _id: "$request", count: { $sum: 1 } } },
+  ]);
+  const offersByRequest = new Map(offerTotals.map((row) => [row._id.toString(), row.count as number]));
+  const sanitizedRequests = requests.map((r) => {
+      const offersCount = offersByRequest.get(r._id.toString()) || 0;
       const rawName = (r.student as any)?.name || "Student";
       const nameParts = rawName.trim().split(" ");
       const sanitizedName = nameParts.length > 1
@@ -1520,8 +1531,7 @@ if (teachingMode && teachingMode !== "all") {
           countryName: r.countryName || "Pakistan",
         },
       };
-    })
-  );
+    });
 
   res.status(200).json({
     success: true,
