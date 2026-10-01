@@ -35,15 +35,11 @@ interface AgreementItem {
 }
 
 interface ComplianceStats {
-  totalActiveTutors: number;
-  tutorsWithCurrentAgreement: number;
-  tutorsPendingAgreement: number;
-  complianceRate: number;
-  latestPublishedAgreement: {
-    version: string;
-    publishedAt: string;
-    contentHash: string;
-  } | null;
+  totalApprovedTutors: number;
+  activeWithAgreement: number;
+  awaitingAgreement: number;
+  reacceptanceRequired: number;
+  acceptanceRatePercent: number;
 }
 
 export default function AdminLegalAgreementsPage() {
@@ -74,8 +70,8 @@ export default function AdminLegalAgreementsPage() {
     try {
       setLoading(true);
       const [agreementsRes, statsRes] = await Promise.all([
-        api.get("/admin/agreements"),
-        api.get("/admin/agreements/stats"),
+        api.get("/admin/legal/agreements"),
+        api.get("/admin/legal/compliance-stats"),
       ]);
       setAgreements(agreementsRes.data.agreements || []);
       setStats(statsRes.data.stats || null);
@@ -96,8 +92,13 @@ export default function AdminLegalAgreementsPage() {
     setSearchingTutor(true);
     setTutorCompliance(null);
     try {
-      const res = await api.get(`/admin/agreements/tutors/${searchTutorId.trim()}`);
-      setTutorCompliance(res.data);
+      const res = await api.get(`/admin/tutors/${searchTutorId.trim()}/agreements`);
+      const acceptance = (res.data.acceptances || [])[0] || null;
+      setTutorCompliance({
+        ...res.data,
+        tutorUserId: res.data.tutor?.userId?._id || res.data.tutor?.userId || searchTutorId.trim(),
+        latestAcceptance: acceptance,
+      });
       showSuccess("Tutor compliance record found.");
     } catch (err: any) {
       showError(err, "Tutor agreement record not found or invalid Tutor ID.");
@@ -135,13 +136,13 @@ export default function AdminLegalAgreementsPage() {
     }
     setSubmittingDraft(true);
     try {
-      await api.post("/admin/agreements", {
-        agreementType: "TUTOR_AGREEMENT",
+      await api.post("/admin/legal/agreements", {
+        documentType: "TUTOR_AGREEMENT",
         version: draftVersion.trim(),
         title: draftTitle.trim(),
         country: draftCountry,
         content: draftContent.trim(),
-        countrySchedule: draftSchedule.trim(),
+        applicableSchedule: draftSchedule.trim(),
       });
       showSuccess(`Draft agreement ${draftVersion} created successfully.`);
       setShowDraftModal(false);
@@ -161,8 +162,8 @@ export default function AdminLegalAgreementsPage() {
       return;
     }
     try {
-      await api.put(`/admin/agreements/${id}/publish`, {
-        requiresReacceptance: false,
+      await api.post(`/admin/legal/agreements/${id}/publish`, {
+        markReacceptance: false,
       });
       showSuccess(`Agreement ${version} published and set as current.`);
       fetchAgreementsAndStats();
@@ -214,15 +215,15 @@ export default function AdminLegalAgreementsPage() {
         <div style={{ background: "#FFFFFF", border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, padding: "18px 20px" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_COLORS.muted, display: "block", marginBottom: 4 }}>Active Marketplace Tutors</span>
           <div style={{ fontSize: 28, fontWeight: 900, color: TEXT_COLORS.primary }}>
-            {loading ? "…" : stats?.totalActiveTutors ?? 0}
+            {loading ? "…" : stats?.totalApprovedTutors ?? 0}
           </div>
-          <span style={{ fontSize: 11, color: STATUS_COLORS.success.color, fontWeight: 700 }}>Fully executed contracts</span>
+          <span style={{ fontSize: 11, color: STATUS_COLORS.success.color, fontWeight: 700 }}>Approved tutor applications</span>
         </div>
 
         <div style={{ background: "#FFFFFF", border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, padding: "18px 20px" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_COLORS.muted, display: "block", marginBottom: 4 }}>Signed Current Version ({stats?.latestPublishedAgreement?.version || "TTA-2026.1"})</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_COLORS.muted, display: "block", marginBottom: 4 }}>Active tutors with recorded agreement</span>
           <div style={{ fontSize: 28, fontWeight: 900, color: UI_COLORS.accent }}>
-            {loading ? "…" : stats?.tutorsWithCurrentAgreement ?? 0}
+            {loading ? "…" : stats?.activeWithAgreement ?? 0}
           </div>
           <span style={{ fontSize: 11, color: TEXT_COLORS.muted }}>On active release</span>
         </div>
@@ -230,7 +231,7 @@ export default function AdminLegalAgreementsPage() {
         <div style={{ background: "#FFFFFF", border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, padding: "18px 20px" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_COLORS.muted, display: "block", marginBottom: 4 }}>Pending Contract Signature</span>
           <div style={{ fontSize: 28, fontWeight: 900, color: STATUS_COLORS.warning.color }}>
-            {loading ? "…" : stats?.tutorsPendingAgreement ?? 0}
+            {loading ? "…" : stats?.awaitingAgreement ?? 0}
           </div>
           <span style={{ fontSize: 11, color: STATUS_COLORS.warning.color, fontWeight: 700 }}>Admin approved · Inactive</span>
         </div>
@@ -238,7 +239,7 @@ export default function AdminLegalAgreementsPage() {
         <div style={{ background: "#FFFFFF", border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, padding: "18px 20px" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_COLORS.muted, display: "block", marginBottom: 4 }}>Legal Compliance Rate</span>
           <div style={{ fontSize: 28, fontWeight: 900, color: STATUS_COLORS.success.color }}>
-            {loading ? "…" : `${stats?.complianceRate ?? 100}%`}
+            {loading ? "…" : `${stats?.acceptanceRatePercent ?? 0}%`}
           </div>
           <span style={{ fontSize: 11, color: TEXT_COLORS.muted }}>Fail-closed enforced</span>
         </div>
@@ -331,7 +332,9 @@ export default function AdminLegalAgreementsPage() {
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: 13, color: STATUS_COLORS.warning.color }}>
-                This tutor has not completed the electronic agreement acceptance workflow. Marketplace access remains disabled.
+                {tutorCompliance.tutor?.marketplaceEligible
+                  ? "This tutor has a historic marketplace activation but no executed agreement record. Reconcile the record before relying on agreement compliance metrics."
+                  : "This tutor has not completed the electronic agreement acceptance workflow. Marketplace access remains disabled."}
               </p>
             )}
           </div>
