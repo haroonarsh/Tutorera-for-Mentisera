@@ -7,6 +7,7 @@ import {
   saveOnboardingStep,
   getOnboardingStatus,
   getOnboardingFinancialPreview,
+  getTutorBySlug,
 } from "../controllers/tutor.controller";
 import {
   saveAvailability,
@@ -28,6 +29,9 @@ const router = Router();
 router.get("/", cachePublic(60), getAllTutors);
 // Must come before the `/:id` wildcard below.
 router.get("/disciplines", protect, listActiveDisciplineSubjectMaps);
+// Canonical SEO-friendly profile lookup - no ObjectId in the URL. Kept
+// distinct from `/:id` below (legacy lookups/backlinks/admin tooling).
+router.get("/slug/:country/:slug", cachePublic(60), getTutorBySlug);
 router.get("/:tutorUserId/availability", getTutorAvailability);
 router.get("/:id", cachePublic(60), getTutorById);
 

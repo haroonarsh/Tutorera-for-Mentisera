@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchSeoInventory, fetchTutors, tutorProfileSlug } from "@/lib/tutor-directory";
+import { CITIES, LEVELS, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchSeoInventory, fetchTutors, tutorProfileHref } from "@/lib/tutor-directory";
 import { getEditorialArticles, getEditorialCategories, categoryToSlug } from "@/lib/editorial-content";
 import { assessTutorSeoQuality } from "@/lib/tutor-seo";
 
@@ -144,7 +144,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
     // this cap AND a Next.js version upgrade is confirmed to have fixed the matcher bug.
     const { tutors } = await fetchTutors({}, TUTOR_SITEMAP_CAP);
     const profiles: MetadataRoute.Sitemap = tutors.filter((tutor) => assessTutorSeoQuality(tutor).indexable).map((tutor) => ({
-      url: `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`,
+      url: `${SITE_URL}${tutorProfileHref(tutor)}`,
       lastModified: tutor.lastActiveAt ? new Date(tutor.lastActiveAt) : lastModified,
       changeFrequency: "weekly",
       priority: 0.7,

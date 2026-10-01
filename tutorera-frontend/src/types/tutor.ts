@@ -17,6 +17,12 @@ export interface TutorProfile {
   city: string;
   countryCode?: string;
   countryName?: string;
+  /** SEO-friendly public profile URL pieces - see tutorera-backend's
+   * services/tutorSlug.service.ts. May be absent on profiles created
+   * before the backfill migration ran; callers should fall back to the
+   * legacy ObjectId-based URL in that case. */
+  slug?: string;
+  countrySlug?: string;
   timezone?: string;
   currency?: string;
   serviceAreas?: string[];

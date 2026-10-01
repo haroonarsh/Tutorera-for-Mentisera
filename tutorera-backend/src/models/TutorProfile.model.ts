@@ -23,6 +23,12 @@ export type TutorStatus =
 export interface ITutorProfile extends Document {
   user: Types.ObjectId;
 
+  // SEO-friendly public profile URL: /tutors/{countrySlug}/{slug}. Never
+  // contains the Mongo ObjectId - see services/tutorSlug.service.ts for
+  // generation/collision handling.
+  slug?: string;
+  countrySlug?: string;
+
   // Step 1 — Personal & Global Location
   fullName: string;
   phone: string;
@@ -172,6 +178,11 @@ export interface ITutorProfile extends Document {
   // every time its interval fires.
   agreementReminderLastSentAt?: Date;
   agreementReminderCount?: number;
+  // Same pattern, for missingDocumentsReminder.service.ts's cron: nudges a
+  // tutor stuck in onboarding with no education entries or no subject
+  // eligibility requests yet.
+  missingDocsReminderLastSentAt?: Date;
+  missingDocsReminderCount?: number;
   legacyAgreementStatus?: "none" | "legacy_unrecorded" | "reacceptance_pending" | "accepted";
   isTestAccount: boolean;
 
@@ -226,6 +237,8 @@ export interface ITutorProfile extends Document {
 const tutorProfileSchema = new Schema<ITutorProfile>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true, index: true },
+    countrySlug: { type: String, trim: true, lowercase: true },
 
     // Step 1
     fullName: { type: String, trim: true, default: "" },
@@ -373,6 +386,8 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     agreementVersion: { type: String, trim: true },
     agreementReminderLastSentAt: { type: Date },
     agreementReminderCount: { type: Number, default: 0 },
+    missingDocsReminderLastSentAt: { type: Date },
+    missingDocsReminderCount: { type: Number, default: 0 },
     // Kept on the profile as well as User so every public profile query can
     // exclude test/demo records without relying on a populated user document.
     isTestAccount: { type: Boolean, default: false, index: true },

@@ -145,19 +145,57 @@ export async function fetchTutor(id: string): Promise<TutorProfile | null> {
   }
 }
 
+/** Canonical SEO-friendly lookup - no ObjectId involved. `country` is
+ * accepted but not required by the backend route (the slug alone is
+ * globally unique); it's taken so the URL's country segment can be
+ * validated/redirected against the profile's actual countrySlug by the
+ * caller if they ever drift apart. */
+export async function fetchTutorBySlug(country: string, slug: string): Promise<TutorProfile | null> {
+  try {
+    const response = await fetch(
+      `${API_URL}/tutors/slug/${encodeURIComponent(country)}/${encodeURIComponent(slug)}`,
+      { next: { revalidate: 900 } }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.profile ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function slugify(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-export function tutorProfileSlug(tutor: Pick<TutorProfile, "_id" | "subjects"> & { city?: string; user?: { name?: string; city?: string } }) {
+type TutorLike = Pick<TutorProfile, "_id" | "subjects"> & {
+  city?: string;
+  countryName?: string;
+  slug?: string;
+  countrySlug?: string;
+  user?: { name?: string; city?: string };
+};
+
+// Legacy fallback for a profile that hasn't been through the slug backfill
+// migration yet (backend-persisted `slug`/`countrySlug` are missing) -
+// embeds the ObjectId directly in the URL, same as before this migration.
+// Prefer tutorProfileHref() below for anything with a real slug.
+function legacyTutorProfileSlug(tutor: TutorLike) {
   const name = tutor.user?.name || "tutor";
   const subject = tutor.subjects?.[0] || "tutor";
   const city = tutor.city || tutor.user?.city || "pakistan";
   return `${tutor._id}-${slugify(`${name} ${subject} tutor ${city}`)}`;
 }
 
-export function tutorProfileHref(tutor: Pick<TutorProfile, "_id" | "subjects"> & { city?: string; user?: { name?: string; city?: string } }) {
-  return `/tutors/${tutorProfileSlug(tutor)}`;
+/** The canonical, SEO-friendly public profile path: /tutors/{country}/{slug}
+ * with no ObjectId in it. Falls back to the legacy ObjectId-embedded path
+ * only for a profile that predates the backend slug migration. */
+export function tutorProfileHref(tutor: TutorLike) {
+  if (tutor.slug) {
+    const country = tutor.countrySlug || slugify(tutor.countryName || "pakistan");
+    return `/tutors/${country}/${tutor.slug}`;
+  }
+  return `/tutors/${legacyTutorProfileSlug(tutor)}`;
 }
 
 export function extractTutorId(value: string) {

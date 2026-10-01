@@ -22,6 +22,7 @@ import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 import { calculateMarketplaceFees } from "../services/pricing.service";
 import { requestSubjectEligibility, syncApprovedSubjects } from "../services/subjectEligibility.service";
+import { assignUniqueTutorSlug } from "../services/tutorSlug.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -116,6 +117,13 @@ export const createOrUpdateProfile = async (
       );
     }
 
+    if (updateData.fullName || updateData.subjects || updateData.countryCode || updateData.nationalityCountryCode) {
+      Object.assign(profile, updateData);
+      await assignUniqueTutorSlug(profile);
+      updateData.slug = profile.slug;
+      updateData.countrySlug = profile.countrySlug;
+    }
+
     // Update existing profile
     profile = await TutorProfile.findOneAndUpdate(
       { user: userId },
@@ -185,24 +193,14 @@ export const getMyProfile = async (
 // @desc    Get tutor by ID (public)
 // @route   GET /api/tutors/:id
 // @access  Public
-export const getTutorById = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  const id = extractObjectId(String(req.params.id || ""));
-  const profile =
-    (await TutorProfile.findById(id).populate(
-      "user",
-      "name email avatar phone city countryCode countryName timezone currency"
-    )) ??
-    (await TutorProfile.findOne({ user: id }).populate(
-      "user",
-      "name email avatar phone city countryCode countryName timezone currency"
-    ));
+const TUTOR_POPULATE_FIELDS = "name email avatar phone city countryCode countryName timezone currency";
 
-  // Detail pages must apply the same public-visibility policy as listings.
-  // Unactivated tutors, unapproved applications, and those with unsigned
-  // agreements must NEVER appear publicly or be indexed by search engines.
+// Shared by both the legacy ID-based lookup and the SEO-friendly slug
+// lookup below - detail pages must apply the same public-visibility policy
+// as listings. Unactivated tutors, unapproved applications, and those with
+// unsigned agreements must NEVER appear publicly or be indexed by search
+// engines.
+async function respondWithPublicTutorProfile(res: Response, profile: any): Promise<void> {
   const user = profile?.user as any;
   const userLooksLikeTest = /\b(test|testing|demo|sample|placeholder|dummy)\b/i.test(
     `${user?.name || ""} ${user?.email || ""}`
@@ -243,6 +241,39 @@ export const getTutorById = async (
       responseTimeFormatted: formatResponseTime(responseMinutes),
     },
   });
+}
+
+// @desc    Get a tutor by their legacy ObjectId. Kept for backward
+//          compatibility (old bookmarks/backlinks/admin tooling) - new
+//          links should use getTutorBySlug below.
+// @route   GET /api/tutors/:id
+// @access  Public
+export const getTutorById = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const id = extractObjectId(String(req.params.id || ""));
+  const profile =
+    (await TutorProfile.findById(id).populate("user", TUTOR_POPULATE_FIELDS)) ??
+    (await TutorProfile.findOne({ user: id }).populate("user", TUTOR_POPULATE_FIELDS));
+  await respondWithPublicTutorProfile(res, profile);
+};
+
+// @desc    Get a tutor by their SEO-friendly slug - the canonical public
+//          profile lookup. The ObjectId never appears in the URL.
+// @route   GET /api/tutors/slug/:country/:slug
+// @access  Public
+export const getTutorBySlug = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const slug = String(req.params.slug || "").toLowerCase();
+  if (!slug) {
+    res.status(404).json({ success: false, message: "Tutor not found" });
+    return;
+  }
+  const profile = await TutorProfile.findOne({ slug }).populate("user", TUTOR_POPULATE_FIELDS);
+  await respondWithPublicTutorProfile(res, profile);
 };
 
 function extractObjectId(value: string): string {
@@ -559,6 +590,9 @@ export const saveOnboardingStep = async (
       ...(avatarUrl && { avatarVerificationStatus: "pending" as const, avatarSubmittedAt: new Date() }),
       ...(resubmitAvatar && { avatarRejectionReason: "" }),
     };
+    Object.assign(profile, updateData);
+    await assignUniqueTutorSlug(profile);
+    Object.assign(updateData, { slug: profile.slug, countrySlug: profile.countrySlug });
     await User.findByIdAndUpdate(req.user?._id, {
       name: parsedData.fullName,
       phone: parsedData.phone,
@@ -684,6 +718,10 @@ export const saveOnboardingStep = async (
       await requestSubjectEligibility(profile, subject, { discipline, qualificationIndex: 0 });
     }
     syncApprovedSubjects(profile);
+    // The primary subject feeds the public profile slug (e.g.
+    // "...-mathematics-tutor-..."), so regenerate it now that subjects are known.
+    profile.subjects = selectedSubjects;
+    await assignUniqueTutorSlug(profile);
     updateData = {
       experience: parseInt(parsedData.experience),
       previousInstitutions: parsedData.previousInstitutions || [],
@@ -692,6 +730,8 @@ export const saveOnboardingStep = async (
       curricula: parsedData.curricula || [],
       subjectEligibility: profile.subjectEligibility,
       approvedSubjects: profile.approvedSubjects,
+      slug: profile.slug,
+      countrySlug: profile.countrySlug,
       onboardingStep: 4,
     };
   }

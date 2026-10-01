@@ -1,3 +1,10 @@
+// Shared rendering logic for both tutor profile routes:
+// - /tutors/[id] (legacy, ObjectId-embedded - kept for old backlinks/bookmarks)
+// - /tutors/[country]/[slug] (canonical, SEO-friendly - no ObjectId)
+// Both routes resolve a TutorProfile by their own means and hand it to the
+// functions below, so the actual rendering/metadata logic lives in exactly
+// one place. This file is prefixed with "_" so Next.js does not treat it
+// as a route segment.
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -21,16 +28,14 @@ import StickyTutorProfileCTA from "@/components/Tutors/StickyTutorProfileCTA";
 import AvatarImage from "@/components/Common/AvatarImage";
 import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
 import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
-import { fetchTutor, fetchTutors, tutorProfileHref } from "@/lib/tutor-directory";
+import { fetchTutors, tutorProfileHref } from "@/lib/tutor-directory";
 import TutorCard from "@/components/Tutors/TutorCard";
 import { SITE_URL } from "@/lib/site";
-import type { Review } from "@/types/tutor";
+import type { Review, TutorProfile } from "@/types/tutor";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://tutorera-backend.onrender.com/api/v1";
-
-type Props = { params: Promise<{ id: string }> };
 
 function formatName(raw?: string): string {
   if (!raw) return "Verified Tutor";
@@ -41,9 +46,7 @@ function formatName(raw?: string): string {
     .join(" ");
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const tutor = await fetchTutor(id);
+export async function generateTutorProfileMetadata(tutor: TutorProfile | null): Promise<Metadata> {
   if (!tutor) {
     return {
       title: "Tutor Profile",
@@ -127,9 +130,7 @@ const card = {
   boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
 } as const;
 
-export default async function TutorProfilePage({ params }: Props) {
-  const { id } = await params;
-  const tutor = await fetchTutor(id);
+export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | null }) {
   if (!tutor) notFound();
 
   const name = formatName(tutor.user?.name || tutor.fullName);
@@ -713,7 +714,7 @@ export default async function TutorProfilePage({ params }: Props) {
       >
         {/* Left Column Content */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          
+
           {/* ── DEMO VIDEO / TRIAL SESSION SECTION (Always rendered) ── */}
           <TutorVideoPlayer
             videoUrl={tutor.videoIntro}
