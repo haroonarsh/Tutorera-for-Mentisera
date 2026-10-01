@@ -2,17 +2,16 @@ import axios from "axios";
 
 // Swich Payment Session integration. Confirmed against Swich's own API docs
 // (api-docs.swichnow.com) on 2026-09-26, plus real request/response pairs
-// captured directly from those docs — not guessed, unlike the Rapid Gateway
-// integration this replaces, which was built against an API shape that
-// never existed and was never tested.
+// captured directly from those docs — not guessed or inferred from an
+// unsupported API contract.
 //
-// IMPORTANT ARCHITECTURAL DIFFERENCE FROM RAPID GATEWAY: Swich's Payment
+// IMPORTANT ARCHITECTURAL DETAIL: Switch's Payment
 // Session product has no documented push webhook. Its own docs say to
 // confirm outcome by calling GET /gateway/paymentsession/get "rather than
 // relying only on the customer redirect." That means payment confirmation
 // must be PULLED by our backend (on the customer's return, and/or via a
 // periodic poll job for abandoned sessions), not pushed to us the way
-// Rapid Gateway's webhook was. See getPaymentSessionStatus() below — it is
+// a push webhook. See getPaymentSessionStatus() below — it is
 // meant to be called from a /payments/swich/confirm-style endpoint hit on
 // successURL return, not from a webhook route.
 
@@ -37,7 +36,7 @@ export interface SwichSessionStatus {
     expiryAt: string;
 }
 
-const AUTH_BASE_URL = "https://sandbox-auth.swichnow.com"; // TODO: swap to the live auth host when going to production — confirm exact live hostname with Swich first, same caution as Rapid Gateway's sandbox-vs-live mixup
+const AUTH_BASE_URL = "https://sandbox-auth.swichnow.com"; // Confirm the live host with Switch before production.
 const API_BASE_URL = "https://sandbox-api.swichnow.com"; // TODO: same caution for the live API host
 const DEFAULT_CATEGORIES = ["ewallet", "visamastercardpayment", "bankaccount", "rtpnowpayment"];
 const SWICH_AUTH_BASE_URL = process.env.SWICH_AUTH_BASE_URL?.trim() || AUTH_BASE_URL;
@@ -81,7 +80,7 @@ export function assertSwichCheckoutCapability(countryCode: string | undefined, c
 /**
  * OAuth2 client_credentials token fetch, cached until near expiry.
  * Confirmed real contract: POST {AUTH_BASE_URL}/connect/token with a JSON
- * (not form-urlencoded — different from Rapid Gateway) body of client_id,
+ * JSON (not form-urlencoded) body of client_id,
  * client_secret, grant_type. Response: { access_token, token_type,
  * expires_in }.
  */

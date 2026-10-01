@@ -46,6 +46,10 @@ services:
         sync: false
       - key: SWICH_ENVIRONMENT
         value: sandbox
+      - key: SWICH_AUTH_BASE_URL
+        sync: false
+      - key: SWICH_API_BASE_URL
+        sync: false
       - key: SWICH_SUPPORTED_MARKETS
         value: PK
       - key: SWICH_SUPPORTED_CURRENCIES

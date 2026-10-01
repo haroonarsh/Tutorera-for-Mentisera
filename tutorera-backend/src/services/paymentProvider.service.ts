@@ -78,7 +78,7 @@ export const paymentProvider = {
 
   /**
    * Pull-based confirmation — Swich's Payment Session product has no
-   * documented push webhook (unlike the Rapid Gateway integration this
+   * documented push webhook (unlike a webhook-based integration this
    * replaced), so this is called from a dedicated confirm endpoint hit on
    * the frontend's successURL/failedURL return, not from a webhook route.
    */

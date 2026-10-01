@@ -68,6 +68,7 @@ export default function TutorOnboardingPage() {
     city: "",
     timezone: "Asia/Karachi",
     currency: "PKR",
+    onlineCountryReach: [] as string[],
     gender: "male",
     dateOfBirth: "",
   });
@@ -151,6 +152,7 @@ export default function TutorOnboardingPage() {
               city: p.city || p.user?.city || "",
               timezone: p.timezone || p.user?.timezone || "Asia/Karachi",
               currency: p.currency || "PKR",
+              onlineCountryReach: Array.isArray(p.onlineCountryReach) ? p.onlineCountryReach : [],
               gender: p.gender || "male",
               dateOfBirth: p.dateOfBirth ? p.dateOfBirth.slice(0, 10) : "",
             });
@@ -564,6 +566,7 @@ export default function TutorOnboardingPage() {
                         cityRef: undefined,
                         currency: c.currency,
                         timezone: c.defaultTimezone,
+                        onlineCountryReach: prev.onlineCountryReach.filter((code) => code !== c.code),
                       }));
                       setStep4(prev => ({ ...prev, currency: c.currency }));
                     }}
@@ -575,6 +578,28 @@ export default function TutorOnboardingPage() {
                     countries={geo.countries}
                   />
                 </div>
+
+                <fieldset style={{ border: '1px solid #dbeafe', borderRadius: '0.6rem', padding: '0.85rem', margin: 0 }}>
+                  <legend style={{ padding: '0 .3rem', color: C.primary, fontSize: '0.875rem', fontWeight: 700 }}>Online teaching markets</legend>
+                  <p style={{ color: C.gray500, fontSize: '0.78rem', margin: '0 0 .7rem', lineHeight: 1.45 }}>Select enabled markets where you can teach online. Your home market remains the location used for identity and safety review.</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.55rem 1rem' }}>
+                    {geo.countries.filter((country) => country.code !== step1.countryCode && country.onlineEnabled && country.launchStatus !== 'coming_soon').map((country) => (
+                      <label key={country.code} style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', color: C.primary, fontSize: '.82rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={step1.onlineCountryReach.includes(country.code)}
+                          onChange={(event) => setStep1((previous) => ({
+                            ...previous,
+                            onlineCountryReach: event.target.checked
+                              ? [...previous.onlineCountryReach, country.code]
+                              : previous.onlineCountryReach.filter((code) => code !== country.code),
+                          }))}
+                        />
+                        {country.name}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>

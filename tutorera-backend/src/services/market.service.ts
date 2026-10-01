@@ -42,11 +42,12 @@ export const LAUNCH_MARKETS = {
 } as const;
 
 export async function ensureLaunchMarkets(): Promise<void> {
+  const swichCapabilities = getSwichCapabilities();
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
-    // Only PK has an implemented checkout provider. Re-enforce every
-    // non-PK market's discovery/disabled state on each seed so historic
-    // records cannot continue advertising payments that this code cannot
-    // process safely.
+    // A transactional market needs both an explicit Switch capability entry
+    // and this server-side configuration.  The default environment contains
+    // PK/PKR only; operators must add a market/currency pair only after
+    // Switch has approved its settlement, compliance and payout route.
     //
     // Everything else - including launchStatus and featureFlags - is seeded
     // on INSERT ONLY. This used to be a blanket $set applied on every call
@@ -55,7 +56,8 @@ export async function ensureLaunchMarkets(): Promise<void> {
     // deliberate admin change - e.g. pausing a market during an incident, or
     // disabling a feature flag - back to the hardcoded default within
     // seconds of it being made.
-    const marketSafety = countryCode === "PK"
+    const switchApproved = swichCapabilities.markets.has(countryCode) && swichCapabilities.currencies.has(config.currency);
+    const marketSafety = switchApproved
       ? { paymentProvider: "swich", paymentsEnabled: true, payoutsEnabled: false, launchStatus: "live", "featureFlags.acceptance": true }
       : {
           paymentProvider: "none", paymentsEnabled: false, payoutsEnabled: false,

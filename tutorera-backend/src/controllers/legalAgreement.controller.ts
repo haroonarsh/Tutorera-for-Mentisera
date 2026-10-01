@@ -500,19 +500,18 @@ export const downloadTutorAgreementPdf = async (req: AuthRequest, res: Response)
 
 export const listAdminAgreements = async (req: AuthRequest, res: Response): Promise<void> => {
   const agreements = await LegalAgreement.find().sort({ createdAt: -1 }).lean();
-
-  const versions = await Promise.all(
-    agreements.map(async (agr) => {
-      const acceptanceCount = await TutorAgreementAcceptance.countDocuments({
-        legalAgreement: agr._id,
-        acceptanceStatus: "active",
-      });
-      return {
-        ...agr,
-        acceptanceCount,
-      };
-    })
-  );
+  const agreementIds = agreements.map((agreement) => agreement._id);
+  const acceptanceTotals = agreementIds.length === 0
+    ? []
+    : await TutorAgreementAcceptance.aggregate([
+        { $match: { legalAgreement: { $in: agreementIds }, acceptanceStatus: "active" } },
+        { $group: { _id: "$legalAgreement", count: { $sum: 1 } } },
+      ]);
+  const acceptanceByAgreement = new Map(acceptanceTotals.map((row) => [row._id.toString(), row.count as number]));
+  const versions = agreements.map((agreement) => ({
+    ...agreement,
+    acceptanceCount: acceptanceByAgreement.get(agreement._id.toString()) || 0,
+  }));
 
   res.status(200).json({ success: true, agreements: versions });
 };

@@ -496,6 +496,16 @@ export const saveOnboardingStep = async (
       res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tutor onboarding is not available in the selected market." });
       return;
     }
+    const onlineCountryReach = Array.from(new Set(
+      (Array.isArray(parsedData.onlineCountryReach) ? parsedData.onlineCountryReach : [])
+        .map((code: unknown) => String(code || "").trim().toUpperCase())
+        .filter((code: string) => code && code !== market.countryCode)
+    ));
+    const reachableMarkets = await Promise.all(onlineCountryReach.map((code) => resolveMarket(code)));
+    if (reachableMarkets.some((reachable) => !reachable || !reachable.isActive || !reachable.onlineEnabled || !reachable.tutorRegistration)) {
+      res.status(422).json({ success: false, code: "INVALID_ONLINE_MARKET", message: "Choose only active markets that currently support online tutoring and tutor registration." });
+      return;
+    }
     let locationReferences: Record<string, unknown>;
     try {
       locationReferences = await resolveLocationReferences(parsedData, market.countryCode);
@@ -536,6 +546,7 @@ export const saveOnboardingStep = async (
       phone: parsedData.phone,
       countryCode: market.countryCode,
       countryName: market.countryName,
+      onlineCountryReach,
       city: resolvedCity,
       timezone: resolvedTimezone,
       currency: market.currency,

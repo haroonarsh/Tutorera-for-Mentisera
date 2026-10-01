@@ -29,7 +29,7 @@ jest.mock("../utils/socket", () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
-// acceptBid/initiateAcceptBid calls out to the real Rapid Gateway payment
+// acceptBid/initiateAcceptBid calls out to the payment provider
 // integration to start checkout - that integration requires real
 // Switch credentials (it throws PAYMENT_GATEWAY_NOT_CONFIGURED
 // without them, unlike the old sandbox-mock checkout it replaced) and this

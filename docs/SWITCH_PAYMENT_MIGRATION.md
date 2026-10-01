@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-TUTORERA uses a single Switch adapter for hosted checkout and server-side payment-session confirmation. RapidPay configuration, UI terminology and market-provider references have been removed. Historic ledger rows retain their recorded provider name for auditability.
+TUTORERA uses a single Switch adapter for hosted checkout and server-side payment-session confirmation. Obsolete provider configuration, UI terminology and market-provider references have been removed. Historic ledger rows retain their recorded provider name for auditability.
 
 ## Safe rollout
 
@@ -21,3 +21,10 @@ TUTORERA uses a single Switch adapter for hosted checkout and server-side paymen
 ## API behavior
 
 `assertAcceptanceAvailable` and checkout creation now return `SWICH_MARKET_OR_CURRENCY_UNSUPPORTED` when a market/currency pair is not explicitly approved. This avoids starting a payment that cannot settle.
+
+## Additive data and API changes
+
+- `MarketConfig.paymentProvider` is now restricted to `swich` or `none`. Existing payment ledgers retain their historical provider value for audit trails.
+- `TutorProfile.onlineCountryReach` records the active online markets selected by a tutor. The onboarding API validates every selected market is active, open to tutor registration, and permits online teaching.
+- `POST /tutors/onboarding/step` accepts `onlineCountryReach: string[]` in step 1. It remains backward compatible when omitted.
+- Tuition-request creation already resolves the market server-side and persists its country, ISO currency, IANA timezone, and normalized location references. Matching enforces cross-border rules for online tuition and local eligibility for home tuition.

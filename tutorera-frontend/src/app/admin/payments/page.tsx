@@ -90,7 +90,7 @@ function PaymentsContent() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payment Management</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-          Review recorded student payments. Rapid Gateway checkout is available only for enabled Pakistan-market bookings; payout settlement is managed separately.
+          Review recorded student payments. Switch checkout is available only for enabled market-and-currency combinations; payout settlement is managed separately.
         </p>
       </div>
 

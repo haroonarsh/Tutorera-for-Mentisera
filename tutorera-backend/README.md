@@ -8,7 +8,7 @@ REST API for TUTORERA's student-led tutoring marketplace.
 - JWT Authentication
 - Cloudinary (file uploads)
 - Nodemailer / Resend (emails)
-- Rapid Gateway (payments)
+- Switch (payments)
 - Deployed on Render
 
 ## Live API
@@ -28,7 +28,7 @@ npm ci
 ```
 
 ### 3. Configure environment variables
-Set the required application variables, including the Rapid Gateway server-side credentials:
+Set the required application variables, including the Switch server-side credentials:
 
 ```bash
 SWICH_CLIENT_ID=<Switch merchant client id>
@@ -47,7 +47,7 @@ npm run dev
 
 ## Payment Architecture
 
-TUTORERA has one payment authority: the Render backend. Checkout creation is sent directly from the backend to Rapid Gateway over its REST API. The browser receives only the hosted checkout URL. Payment completion is accepted only from the signed Rapid Gateway webhook endpoint and is then checked against the booking/offer amount and currency before marketplace state is finalized.
+TUTORERA has one payment authority: the Render backend. Checkout creation is sent directly from the backend to Switch over its REST API. The browser receives only the hosted checkout URL. Payment completion is verified by the backend against the Switch payment-session endpoint and then checked against the booking/offer amount and currency before marketplace state is finalized.
 
 There is no payment Cloudflare Worker and no direct database write path outside the backend payment services.
 
@@ -69,7 +69,7 @@ There is no payment Cloudflare Worker and no direct database write path outside 
 | POST | /api/v1/requests/:id/bids | Place bid |
 | GET | /api/v1/bookings | Get my bookings |
 | POST | /api/v1/payments/booking/:bookingId/checkout | Create Swich checkout |
-| POST | /api/v1/payments/webhook | Receive signed Rapid Gateway webhook |
+| POST | /api/v1/payments/swich/confirm | Confirm a Switch payment session |
 | GET | /api/v1/payments/history | Get payment history |
 | POST | /api/v1/reviews/:tutorId | Create review |
 | GET | /api/v1/blogs | Get all blogs |

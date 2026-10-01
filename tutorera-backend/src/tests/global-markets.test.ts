@@ -20,4 +20,25 @@ describe("global market capability enforcement", () => {
     await expect(assertAcceptanceAvailable("AE")).rejects.toMatchObject({ code: "MARKET_DISCOVERY_ONLY", statusCode: 409 });
     await expect(assertAcceptanceAvailable("GB")).rejects.toMatchObject({ code: "MARKET_DISCOVERY_ONLY", statusCode: 409 });
   });
+
+  it("enables a non-PK market only when Switch explicitly approves its market and currency", async () => {
+    const previousMarkets = process.env.SWICH_SUPPORTED_MARKETS;
+    const previousCurrencies = process.env.SWICH_SUPPORTED_CURRENCIES;
+    process.env.SWICH_SUPPORTED_MARKETS = "PK,AE";
+    process.env.SWICH_SUPPORTED_CURRENCIES = "PKR,AED";
+    try {
+      await ensureLaunchMarkets();
+      await expect(assertAcceptanceAvailable("AE")).resolves.toMatchObject({
+        countryCode: "AE",
+        paymentProvider: "swich",
+        currency: "AED",
+      });
+    } finally {
+      if (previousMarkets === undefined) delete process.env.SWICH_SUPPORTED_MARKETS;
+      else process.env.SWICH_SUPPORTED_MARKETS = previousMarkets;
+      if (previousCurrencies === undefined) delete process.env.SWICH_SUPPORTED_CURRENCIES;
+      else process.env.SWICH_SUPPORTED_CURRENCIES = previousCurrencies;
+      await ensureLaunchMarkets();
+    }
+  });
 });

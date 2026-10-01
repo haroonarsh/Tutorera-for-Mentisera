@@ -265,7 +265,7 @@ export default function FeeConfigPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: TEXT_COLORS.secondary, marginBottom: "0.35rem" }}>
                   Gateway Processing Fee (%)
-                  <InfoTooltip text="Rapid Gateway's own processing cost, e.g. 2.9%. Charged on the student's full checkout amount and absorbed from TutorEra's margin - it never reduces the tutor's payout." />
+                  <InfoTooltip text="Switch processing cost, for example 2.9%. It is charged on the student's full checkout amount and absorbed from TutorEra's margin; it never reduces the tutor's payout." />
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
