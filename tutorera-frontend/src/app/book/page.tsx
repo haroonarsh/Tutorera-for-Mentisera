@@ -194,7 +194,7 @@ function BookPageContent() {
             tutorUserId={tutor.user._id}
             tutorName={tutor.user.name}
             hourlyRate={tutor.hourlyRate}
-            currency={tutor.currency || "PKR"}
+            currency={tutor.currency || "USD"}
             tutorSubjects={tutor.subjects}
             tutorTeachingMode={tutor.teachingMode}
             tutorCity={tutor.city}

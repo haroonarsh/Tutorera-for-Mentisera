@@ -343,7 +343,7 @@ export default function TutorOnboardingPage() {
         }
         formData.append("data", JSON.stringify({
           ...step4,
-          currency: step1.currency || step4.currency || "PKR",
+          currency: step1.currency || step4.currency || "USD",
           availability,
         }));
       }
@@ -842,7 +842,7 @@ export default function TutorOnboardingPage() {
                     )}
                     {pricingInsight && pricingInsight.median && (
                       <p style={{ margin: "0.35rem 0 0", fontSize: "0.72rem", color: "#16a34a", fontWeight: 500 }}>
-                        💡 Similar tutors in {step1.city} charge {step1.currency || "PKR"} {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: {step1.currency || "PKR"} {pricingInsight.median?.toLocaleString()})
+                        💡 Similar tutors in {step1.city} charge {step1.currency || "USD"} {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: {step1.currency || "USD"} {pricingInsight.median?.toLocaleString()})
                       </p>
                     )}
                   </div>

@@ -55,7 +55,7 @@ export const submitClaim = async (req: AuthRequest, res: Response): Promise<void
     details: details || "",
   });
 
-  const formattedAmount = formatMoney(booking.amount, booking.currency || "PKR");
+  const formattedAmount = formatMoney(booking.amount, booking.currency || "USD");
   const adminRecipient = process.env.EMAIL_USER || "mentiserapk@gmail.com";
 
   // Email to admin

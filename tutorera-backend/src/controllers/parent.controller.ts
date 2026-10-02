@@ -75,7 +75,7 @@ export const getMyParentProfile = async (req: AuthRequest, res: Response): Promi
       tutorName: (b.tutor as any)?.name || "Tutor",
       subject: (b.request as any)?.subject || "Tutoring",
       amount: b.amount,
-      currency: b.currency || (b.request as any)?.currency || profile.currency || "PKR",
+      currency: b.currency || (b.request as any)?.currency || profile.currency || "USD",
       status: b.status,
       teachingMode: b.teachingMode,
       createdAt: b.createdAt,
@@ -373,7 +373,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
       }
     }
 
-    checkoutUrl = await paymentProvider.createCheckout({ amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", marketCountryCode: request.countryCode, customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax }, description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`, ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }) });
+    checkoutUrl = await paymentProvider.createCheckout({ amount: fees.studentTotal, currency: bid.currency || request.currency || "USD", marketCountryCode: request.countryCode, customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax }, description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`, ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }) });
   } catch {
     await Promise.all([Request.updateOne({ _id: request._id, status: "awaiting_payment" }, { status: "awaiting_parent_approval" }), Bid.updateOne({ _id: bid._id, status: "payment_pending" }, { status: bid.status, $unset: { paymentPendingExpiresAt: "" } })]);
     await logAudit({ action: "parent_booking_checkout_failed", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });

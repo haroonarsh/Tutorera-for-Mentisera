@@ -476,7 +476,7 @@ export default function ProfilePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                      Hourly Rate ({tutorProfile?.currency || 'PKR'})
+                      Hourly Rate ({tutorProfile?.currency || 'USD'})
                     </label>
                     <input type="number" value={tutorForm.hourlyRate} onChange={e => setTutorForm({ ...tutorForm, hourlyRate: e.target.value })}
                       placeholder={tutorProfile?.currency === "PKR" ? "e.g. 2000" : "e.g. 50"}

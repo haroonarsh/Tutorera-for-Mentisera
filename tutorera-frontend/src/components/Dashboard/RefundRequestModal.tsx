@@ -34,7 +34,7 @@ export default function RefundRequestModal({ booking, onClose, onSuccess }: Prop
   const containerRef = useFocusTrap(true, onClose);
 
   const refundAmount = booking.studentTotal || booking.amount || booking.totalAmount || 0;
-  const currency = booking.currency || booking.request?.currency || "PKR";
+  const currency = booking.currency || booking.request?.currency || "USD";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

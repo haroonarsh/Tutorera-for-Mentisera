@@ -764,7 +764,7 @@ export default function AdminControlTowerPage() {
 
                     <div style={{ fontSize: "0.78rem", color: TEXT_COLORS.muted, display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                       <span>Student: <strong>{item.request.student?.name || "Student"}</strong> ({item.request.city || "Online"})</span>
-                      <span>Budget: <strong>{item.request.currency || "PKR"} {item.request.budget?.toLocaleString()}</strong></span>
+                      <span>Budget: <strong>{item.request.currency || "USD"} {item.request.budget?.toLocaleString()}</strong></span>
                       <span>Offers: <strong>{item.offersCount}</strong></span>
                       <span>Expires in: <strong>{item.hoursUntilExpiry}h</strong></span>
                     </div>

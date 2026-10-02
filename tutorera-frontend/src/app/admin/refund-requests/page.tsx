@@ -130,7 +130,7 @@ function RefundRequestsContent() {
   const pendingValueByCurrency = requests
     .filter((r) => r.status === "pending")
     .reduce((acc, r) => {
-      const currency = r.booking?.currency || "PKR";
+      const currency = r.booking?.currency || "USD";
       acc[currency] = (acc[currency] || 0) + (r.amount || r.booking?.studentTotal || 0);
       return acc;
     }, {} as Record<string, number>);
@@ -349,7 +349,7 @@ function RefundRequestsContent() {
                         <div style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>{r.tutor?.email}</div>
                       </td>
                       <td style={{ padding: "0.85rem 1rem" }}>
-                        <div style={{ fontWeight: 800, color: TEXT_COLORS.body }}>{r.booking?.currency || "PKR"} {amount.toLocaleString()}</div>
+                        <div style={{ fontWeight: 800, color: TEXT_COLORS.body }}>{r.booking?.currency || "USD"} {amount.toLocaleString()}</div>
                         {r.booking?._id && (
                           <div style={{ fontSize: "0.7rem", color: TEXT_COLORS.muted }}>
                             Booking #{r.booking._id.slice(-6).toUpperCase()}
@@ -483,7 +483,7 @@ function RefundRequestsContent() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
                 <span style={{ color: TEXT_COLORS.muted }}>Claim Amount:</span>
-                <span style={{ fontWeight: 900, color: UI_COLORS.error }}>{selectedRequest.booking?.currency || "PKR"} {(selectedRequest.amount || selectedRequest.booking?.studentTotal || 0).toLocaleString()}</span>
+                <span style={{ fontWeight: 900, color: UI_COLORS.error }}>{selectedRequest.booking?.currency || "USD"} {(selectedRequest.amount || selectedRequest.booking?.studentTotal || 0).toLocaleString()}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
                 <span style={{ color: TEXT_COLORS.muted }}>Reason:</span>

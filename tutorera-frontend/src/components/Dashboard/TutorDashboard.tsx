@@ -157,7 +157,7 @@ function BookingCard({
   const [showStudentRatingModal, setShowStudentRatingModal] = useState(false);
   const [studentRated, setStudentRated] = useState(false);
   const router = useRouter();
-  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "PKR", unit);
+  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "USD", unit);
 
   const handleStartSession = async () => {
     setStartingSession(true);
@@ -391,7 +391,7 @@ function OpenRequestCard({
             <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
             </svg>
-            Student proposed: {formatMoney(request.budget, request.currency || "PKR", request.pricingUnit || "hour")}
+            Student proposed: {formatMoney(request.budget, request.currency || "USD", request.pricingUnit || "hour")}
           </span>
           <span className={s.infoChip}>{request.teachingMode}</span>
           <span className={s.infoChip}>{request.schedule}</span>
@@ -411,7 +411,7 @@ function OpenRequestCard({
             </span>
           ) : request.bid ? (
             <Link href="/offers" className={s.btnOutline} style={{ textDecoration: "none" }}>
-              Offer sent: {formatMoney(request.bid.amount, request.bid.currency || request.currency || "PKR", request.bid.pricingUnit || "hour")} · {request.bid.status.replaceAll("_", " ")}
+              Offer sent: {formatMoney(request.bid.amount, request.bid.currency || request.currency || "USD", request.bid.pricingUnit || "hour")} · {request.bid.status.replaceAll("_", " ")}
             </Link>
           ) : (
             <button
@@ -504,7 +504,7 @@ function DirectRequestCard({
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          {formatMoney(request.budget, request.currency || "PKR", "hour")} <span style={{ opacity: 0.6, marginLeft: 4 }}>(your rate)</span>
+          {formatMoney(request.budget, request.currency || "USD", "hour")} <span style={{ opacity: 0.6, marginLeft: 4 }}>(your rate)</span>
         </span>
         <span className={s.infoChip}>{request.teachingMode}</span>
         <span className={s.infoChip}>{request.schedule}</span>
@@ -562,7 +562,7 @@ function ProfileSection({ profile }: { profile: TutorProfileData }) {
           </div>
           <div style={{ textAlign: "right" }}>
             <p style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 800, color: C.primary }}>
-              {formatMoney(profile.hourlyRate, profile.currency || "PKR", "hour")}
+              {formatMoney(profile.hourlyRate, profile.currency || "USD", "hour")}
             </p>
             <span className={`${s.badge} ${profile.verificationStatus === "approved" ? s.badgeApproved : s.badgePending}`}>
               {profile.verificationStatus === "approved" ? "✓ Verified" : profile.verificationStatus}

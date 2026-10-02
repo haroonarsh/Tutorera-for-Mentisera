@@ -345,7 +345,7 @@ export default function TuitionRequestsClient({
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
                     <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#021550", margin: 0 }}>{r.subject}</h3>
                     <span style={{ fontSize: "1rem", fontWeight: 900, color: "#021550" }}>
-                      {r.currency || "PKR"} {Number(r.budget || 0).toLocaleString()}
+                      {r.currency || "USD"} {Number(r.budget || 0).toLocaleString()}
                       <span style={{ fontSize: "0.7rem", color: "#64748b" }}>/{r.pricingUnit || "hr"}</span>
                     </span>
                   </div>

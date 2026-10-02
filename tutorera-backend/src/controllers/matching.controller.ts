@@ -429,7 +429,7 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
         countryCode: customRequest.countryCode || "PK",
         budget: Number(customRequest.budget) || 2500,
         pricingUnit: customRequest.pricingUnit || "hour",
-        currency: customRequest.currency || "PKR",
+        currency: customRequest.currency || "USD",
         preferredDays: customRequest.preferredDays || [],
         schedule: customRequest.schedule || "Flexible",
         tutorGenderPreference: customRequest.tutorGenderPreference || "none",

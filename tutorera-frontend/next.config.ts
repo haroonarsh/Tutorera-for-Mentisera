@@ -11,6 +11,9 @@ const IS_NON_CANONICAL_DEPLOY =
   Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== "production";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    cpus: 2,
+  },
   turbopack: {},
   images: {
     unoptimized: true,

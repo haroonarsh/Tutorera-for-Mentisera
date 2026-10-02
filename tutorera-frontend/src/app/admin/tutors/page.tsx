@@ -356,7 +356,7 @@ export default function TutorsDirectoryPage() {
                           <strong>{b.request?.subject || "Subject"}</strong>
                           <span style={{ fontWeight: 700, color: b.status === "accepted" ? STATUS_COLORS.success.color : UI_COLORS.gray500 }}>{b.status}</span>
                         </div>
-                        <span style={{ color: UI_COLORS.gray500 }}>Offered: {b.currency || "PKR"} {b.amount} · Date: {new Date(b.createdAt).toLocaleDateString()}</span>
+                        <span style={{ color: UI_COLORS.gray500 }}>Offered: {b.currency || "USD"} {b.amount} · Date: {new Date(b.createdAt).toLocaleDateString()}</span>
                       </div>
                     ))}
                   </div>

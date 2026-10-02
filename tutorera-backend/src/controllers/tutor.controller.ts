@@ -40,7 +40,7 @@ export const getOnboardingFinancialPreview = async (req: AuthRequest, res: Respo
   const profile = await TutorProfile.findOne({ user: req.user?._id }).select("countryCode currency teachingMode").lean();
   const fees = await calculateMarketplaceFees(rate, {
     countryCode: profile?.countryCode || req.user?.countryCode || "PK",
-    currency: profile?.currency || req.user?.currency || "PKR",
+    currency: profile?.currency || req.user?.currency || "USD",
     teachingMode: (profile?.teachingMode || "online") as "online" | "in-person" | "both",
   });
   res.status(200).json({ success: true, fees });

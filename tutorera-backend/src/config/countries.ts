@@ -357,8 +357,8 @@ export const MASTER_LEVELS = [
   "Test Preparation",
 ];
 
-export function formatCurrencyAmount(amount: number, currencyCode = "PKR", pricingUnit?: string): string {
-  const code = (currencyCode || "PKR").toUpperCase();
+export function formatCurrencyAmount(amount: number, currencyCode = "USD", pricingUnit?: string): string {
+  const code = (currencyCode || "USD").toUpperCase();
   const meta = SUPPORTED_CURRENCIES[code] || { symbol: code, code };
   const formatted = `${meta.symbol} ${Math.round(amount).toLocaleString()}`;
   return pricingUnit ? `${formatted}/${pricingUnit}` : formatted;

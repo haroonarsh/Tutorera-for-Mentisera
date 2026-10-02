@@ -35,7 +35,7 @@ describe("tutor payout history", () => {
     const body = res.json.mock.calls[0][0];
     expect(body.payouts).toHaveLength(1);
     expect(body.stats.currencyTotals).toEqual([
-      expect.objectContaining({ currency: "PKR", totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 }),
+      expect.objectContaining({ currency: "USD", totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 }),
     ]);
   });
 
@@ -60,7 +60,7 @@ describe("tutor payout history", () => {
       status: "pending",
       settlementStatus: "unsettled",
       tutorPayable: 770,
-      currency: "PKR",
+      currency: "USD",
     });
   });
 });

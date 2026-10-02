@@ -111,7 +111,7 @@ export default function TopRequestsSection() {
                   <header className={s.cardHead}>
                     <h3>{r.subject}</h3>
                     <span className={s.price}>
-                      {(r as any).currency || "PKR"} {Number(r.budget || 0).toLocaleString()}/{(r.pricingUnit || "hour")}
+                      {(r as any).currency || "USD"} {Number(r.budget || 0).toLocaleString()}/{(r.pricingUnit || "hour")}
                     </span>
                   </header>
                   <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap" }}>

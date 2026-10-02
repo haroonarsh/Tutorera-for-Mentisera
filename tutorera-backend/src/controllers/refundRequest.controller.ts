@@ -22,7 +22,7 @@ function today() {
 }
 
 function formatAmount(amount: number, currency?: string) {
-  return `${(currency || "PKR").toUpperCase()} ${Number(amount || 0).toLocaleString("en-US")}`;
+  return `${(currency || "USD").toUpperCase()} ${Number(amount || 0).toLocaleString("en-US")}`;
 }
 
 export const submitRefundRequest = async (req: AuthRequest, res: Response): Promise<void> => {

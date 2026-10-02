@@ -885,7 +885,7 @@ export default function AdminMatchingPage() {
                     >
                       {liveRequests.map((req) => (
                         <option key={req._id} value={req._id}>
-                          {req.subject} ({req.level}) · {req.currency || "PKR"} {req.budget?.toLocaleString()}/{req.pricingUnit || "hr"} · {req.teachingMode === "online" ? "Online" : req.city || "Home"} · Student: {req.student?.name || "Student"}
+                          {req.subject} ({req.level}) · {req.currency || "USD"} {req.budget?.toLocaleString()}/{req.pricingUnit || "hr"} · {req.teachingMode === "online" ? "Online" : req.city || "Home"} · Student: {req.student?.name || "Student"}
                         </option>
                       ))}
                     </select>
@@ -1094,7 +1094,7 @@ export default function AdminMatchingPage() {
                               <span style={{ margin: "0 0.4rem" }}>•</span>
                               <span>★ {tutor.averageRating ? tutor.averageRating.toFixed(1) : "New (4.85)"}</span>
                               <span style={{ margin: "0 0.4rem" }}>•</span>
-                              <strong style={{ color: TEXT_COLORS.body }}>{tutor.currency || "PKR"} {tutor.hourlyRate ? tutor.hourlyRate.toLocaleString() : "2,500"}/hr</strong>
+                              <strong style={{ color: TEXT_COLORS.body }}>{tutor.currency || "USD"} {tutor.hourlyRate ? tutor.hourlyRate.toLocaleString() : "2,500"}/hr</strong>
                             </div>
 
                             {/* Reasons */}

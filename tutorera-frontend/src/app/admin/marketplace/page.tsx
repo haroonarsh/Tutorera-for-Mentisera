@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
@@ -62,7 +62,7 @@ function formatPKR(value: unknown) {
 }
 
 function formatMoney(value: unknown, currency?: string) {
-  return `${currency || "PKR"} ${toNumber(value).toLocaleString()}`;
+  return `${currency || "USD"} ${toNumber(value).toLocaleString()}`;
 }
 
 function formatMetric(key: string, value: number | null | undefined) {

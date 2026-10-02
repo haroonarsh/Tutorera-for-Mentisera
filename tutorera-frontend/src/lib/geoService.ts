@@ -129,10 +129,10 @@ export function useGeoData() {
  */
 export function formatDualCurrency(
   amount: number,
-  currency: string = "PKR",
+  currency: string = "USD",
   unit?: string
 ): string {
-  const code = (currency || "PKR").toUpperCase();
+  const code = (currency || "USD").toUpperCase();
   const { amountPKR } = convertToPKR(amount, code);
 
   let formatted = "";

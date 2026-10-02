@@ -36,7 +36,7 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       .sort("-createdAt");
 
     const currencyTotals = Object.values(completedBookings.reduce((totals, booking) => {
-      const currency = booking.currency || "PKR";
+      const currency = booking.currency || "USD";
       const current = totals[currency] || { currency, totalEarnings: 0, onHoldAmount: 0 };
       current.totalEarnings += booking.tutorPayout || 0;
       if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.onHoldAmount += booking.tutorPayout || 0;
@@ -85,7 +85,7 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       subject:     (b.request as unknown as { subject?: string } | null)?.subject || "General",
       amount:      b.amount,
       tutorPayout: b.tutorPayout,
-      currency: b.currency || "PKR",
+      currency: b.currency || "USD",
       createdAt:   b.createdAt,
     }));
 
@@ -293,7 +293,7 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
     actorId: tutorId?.toString(),
     entity: "Booking",
     targetId: booking._id.toString(),
-    metadata: { tutorPayout: booking.tutorPayout || booking.tutorNet || 0, currency: booking.currency || "PKR" },
+    metadata: { tutorPayout: booking.tutorPayout || booking.tutorNet || 0, currency: booking.currency || "USD" },
   });
 
   await recordPaymentLedger({
@@ -303,7 +303,7 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
     eventType: "payout.requested",
     status: "pending",
     amount: booking.subtotal || booking.amount,
-    currency: booking.currency || "PKR",
+    currency: booking.currency || "USD",
     bookingId: booking._id.toString(),
     bidId: booking.bid?.toString(),
     studentId: booking.student.toString(),
@@ -324,7 +324,7 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
   const tutorUser = await User.findById(tutorId).select("name email");
   if (tutorUser) {
     try {
-      const mail = payoutRequestedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString(), booking.currency || "PKR");
+      const mail = payoutRequestedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString(), booking.currency || "USD");
       await sendEmail({ to: tutorUser.email, subject: mail.subject, html: mail.html, eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
     } catch (err) {
       logger.error({ err, bookingId: booking._id }, "Failed to send payout request email");
@@ -378,7 +378,7 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
   ]);
 
   const currencyTotals = Object.values(summaryRows.reduce((totals, b) => {
-    const currency = b.currency || "PKR";
+    const currency = b.currency || "USD";
     const current = totals[currency] || { currency, totalPayoutAmount: 0, pendingAmount: 0, paidAmount: 0 };
     current.totalPayoutAmount += b.tutorPayout || 0;
     if (["pending", "approved", "processing", "held"].includes(b.payoutStatus)) current.pendingAmount += b.tutorPayout || 0;

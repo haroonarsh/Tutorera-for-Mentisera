@@ -283,7 +283,7 @@ function RequestCard({ request: req }: { request: TuitionRequest }) {
   const location = req.city ? `${req.city}, ${req.countryName || req.countryCode}` : (req.countryName || req.countryCode || "Worldwide");
   const modeLabel = req.teachingMode === "online" ? "Online" : req.teachingMode === "in-person" ? "In-Person" : "Online & In-Person";
   const modeColor = req.teachingMode === "online" ? "#0329B2" : req.teachingMode === "in-person" ? "#059669" : "#7c3aed";
-  const budget = formatBudget(req.budget, req.currency || "PKR", req.pricingUnit);
+  const budget = formatBudget(req.budget, req.currency || "USD", req.pricingUnit);
 
   return (
     <Link

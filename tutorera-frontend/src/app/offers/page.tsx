@@ -88,7 +88,7 @@ function remaining(value: string, now: number) {
 }
 
 const offerMoney = (offer: Offer, amount: number, unit?: string) =>
-  formatMoney(amount, offer.currency || offer.request.currency || "PKR", unit);
+  formatMoney(amount, offer.currency || offer.request.currency || "USD", unit);
 
 import CounterOfferSheet from "@/components/marketplace/CounterOfferSheet";
 

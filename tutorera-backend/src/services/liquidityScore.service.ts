@@ -172,7 +172,7 @@ export async function getAllLiquidityScores(countryCode?: string): Promise<Recor
   for (const request of requests) {
     const modes: Array<"online" | "in-person"> = request.teachingMode === "both" ? ["online", "in-person"] : [request.teachingMode];
     for (const teachingMode of modes) {
-      const requestCurrency = (request.currency || "PKR").toUpperCase();
+      const requestCurrency = (request.currency || "USD").toUpperCase();
       const requestCountryCode = request.countryCode?.toUpperCase();
       const key = `${requestCountryCode || ""}|${requestCurrency}|${request.city}|${request.subject}|${teachingMode}`;
       segments.set(key.toLocaleLowerCase(), { countryCode: requestCountryCode, currency: requestCurrency, city: request.city!, subject: request.subject, teachingMode });

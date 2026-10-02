@@ -16,6 +16,7 @@ import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
 import Country from "../models/Country.model";
 import PaymentLedger from "../models/PaymentLedger.model";
+import ScheduledJobLease from "../models/ScheduledJobLease.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
@@ -429,7 +430,7 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
 
   for (const b of allBookings) {
     if (["received", "confirmed"].includes(b.paymentStatus)) {
-      const currency = b.currency || "PKR";
+      const currency = b.currency || "USD";
       const bucket = byCurrency[currency] || (byCurrency[currency] = { currency, count: 0, totalGMV: 0, totalTutorNet: 0, totalPlatformGross: 0, totalEstimatedGatewayFees: 0, netPlatformSettlement: 0 });
       const gmv = b.studentTotal || b.subtotal || 0;
       bucket.count += 1;
@@ -451,7 +452,7 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       byCurrency: Object.values(byCurrency),
       ledger: ledgerStatusRows.reduce((acc, row) => {
         const status = row._id?.status || "unknown";
-        const currency = row._id?.currency || "PKR";
+        const currency = row._id?.currency || "USD";
         (acc[status] ||= {})[currency] = {
           count: row.count,
           grossAmount: row.grossAmount,
@@ -500,12 +501,12 @@ export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise
         heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         heapTotalMb: Math.round(memoryUsage.heapTotal / 1024 / 1024),
       },
-      jobs: [
-        { name: "request_lifecycle_worker", interval: "15 minutes", status: "running" },
-        { name: "day_5_liquidity_escalation", interval: "15 minutes", status: "running" },
-        { name: "24h_expiry_warning_worker", interval: "15 minutes", status: "running" },
-        { name: "offer_24h_expiry_cleaner", interval: "15 minutes", status: "running" },
-      ],
+      jobs: (await ScheduledJobLease.find().sort({ name: 1 }).lean()).map((lease) => ({ name: lease.name, holderId: lease.holderId, status: lease.leaseExpiresAt && new Date(lease.leaseExpiresAt).getTime() > Date.now() ? "running" : lease.lastError ? "error" : lease.lastCompletedAt ? "healthy" : "idle", lastStartedAt: lease.lastStartedAt, lastCompletedAt: lease.lastCompletedAt, leaseExpiresAt: lease.leaseExpiresAt, lastError: lease.lastError || null, isLeaseActive: Boolean(lease.leaseExpiresAt && new Date(lease.leaseExpiresAt).getTime() > Date.now()) })),
+
+
+
+
+
     },
   });
 };
@@ -735,7 +736,7 @@ export const getStudent360 = async (req: AuthRequest, res: Response): Promise<vo
   const spendByCurrency: Record<string, number> = {};
   for (const b of bookings) {
     if (["received", "confirmed"].includes(b.paymentStatus)) {
-      const currency = b.currency || "PKR";
+      const currency = b.currency || "USD";
       spendByCurrency[currency] = (spendByCurrency[currency] || 0) + (b.studentTotal || b.subtotal || 0);
     }
   }
@@ -772,7 +773,7 @@ export const getTutor360 = async (req: AuthRequest, res: Response): Promise<void
   const earningsByCurrency: Record<string, number> = {};
   for (const b of bookings) {
     if (["received", "confirmed"].includes(b.paymentStatus)) {
-      const currency = b.currency || "PKR";
+      const currency = b.currency || "USD";
       earningsByCurrency[currency] = (earningsByCurrency[currency] || 0) + (b.tutorNet || b.tutorPayout || 0);
     }
   }

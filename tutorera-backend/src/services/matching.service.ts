@@ -372,8 +372,8 @@ export class MatchingService {
 
     // ── 5. Budget Compatibility & Currency Normalization ──
     const maxBudget = weights.budget;
-    const reqCurrency = request.currency || "PKR";
-    const tutorCurrency = tutor.currency || "PKR";
+    const reqCurrency = request.currency || "USD";
+    const tutorCurrency = tutor.currency || "USD";
     const tutorRate = tutor.hourlyRate || 0;
 
     let convertedTutorRate = tutorRate;
@@ -574,7 +574,7 @@ export class MatchingService {
         countryName: (t as any).countryName || tutorUser.countryName,
         phone: tutorUser.phone || (t as any).phone,
         hourlyRate: (t as any).hourlyRate,
-        currency: (t as any).currency || "PKR",
+        currency: (t as any).currency || "USD",
         experience: (t as any).experience || 0,
         education: (t as any).education || [],
         subjects: (t as any).subjects || [],
@@ -782,7 +782,7 @@ export class MatchingService {
       const tier1Matches = ranked.filter((m) => m.matchScore >= 80).slice(0, 15);
       // This is the ISO currency code (e.g. "AED", "USD"), not a symbol -
       // was misleadingly named currencySymbol despite never holding one.
-      const currencyCode = request.currency || "PKR";
+      const currencyCode = request.currency || "USD";
 
       const notifyList = tier1Matches.length >= 3 ? tier1Matches : ranked.slice(0, 10);
 

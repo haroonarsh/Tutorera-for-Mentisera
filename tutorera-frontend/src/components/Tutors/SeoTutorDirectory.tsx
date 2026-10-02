@@ -20,7 +20,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
   const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
   const minRate = rates.length ? Math.min(...rates) : 0;
   const maxRate = rates.length ? Math.max(...rates) : 0;
-  const displayCurrency = currency || result.tutors.find((t) => t.currency)?.currency || "PKR";
+  const displayCurrency = currency || result.tutors.find((t) => t.currency)?.currency || "USD";
   const context = filters?.city && filters?.subject ? `${filters.subject} tutoring in ${filters.city}` : `${value} tutoring`;
   const verifiedCount = result.tutors.filter((t) => t.isVerified).length;
   // A direct, numeric opening statement - the shape both AI Overviews and chat answer

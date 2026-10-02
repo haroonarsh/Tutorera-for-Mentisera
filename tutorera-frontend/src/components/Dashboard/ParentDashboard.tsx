@@ -178,7 +178,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
             <h2 id="pending-approval-title" style={{ margin: 0, color: TEXT_COLORS.primary, fontSize: "1rem" }}>Booking approvals needed</h2>
             {pendingApprovals.map((item) => (
               <div key={item._id} style={{ display: "flex", justifyContent: "space-between", gap: SPACING.space4, alignItems: "center", paddingTop: SPACING.space3, flexWrap: "wrap" }}>
-                <p style={{ margin: 0, color: TEXT_COLORS.secondary, fontSize: "0.9rem" }}><strong>{item.studentName}</strong> selected a tutor offer for <strong>{item.subject}</strong>{item.offer ? ` — ${formatMoney(item.offer.amount, item.offer.currency || item.currency || "PKR", item.offer.pricingUnit)}` : ""}.</p>
+                <p style={{ margin: 0, color: TEXT_COLORS.secondary, fontSize: "0.9rem" }}><strong>{item.studentName}</strong> selected a tutor offer for <strong>{item.subject}</strong>{item.offer ? ` — ${formatMoney(item.offer.amount, item.offer.currency || item.currency || "USD", item.offer.pricingUnit)}` : ""}.</p>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <DashButton variant="danger" size="sm" onClick={() => decideApproval(item._id, "decline")}>Decline</DashButton>
                   <DashButton variant="primary" size="sm" onClick={() => decideApproval(item._id, "approve")}>Approve & pay</DashButton>
@@ -209,7 +209,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
             <div>
               <strong style={{ color: TEXT_COLORS.primary }}>{requirement.subject}</strong>
               <span style={{ color: TEXT_COLORS.muted, fontSize: "0.82rem" }}> · {requirement.level}</span>
-              {typeof requirement.budget === "number" ? <div style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem", marginTop: 3 }}>Budget: {formatMoney(requirement.budget, requirement.currency || "PKR")}</div> : null}
+              {typeof requirement.budget === "number" ? <div style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem", marginTop: 3 }}>Budget: {formatMoney(requirement.budget, requirement.currency || "USD")}</div> : null}
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <StatusBadge tone={statusTone(requirement.status)}>{requirement.status.replace(/_/g, " ")}</StatusBadge>
@@ -293,7 +293,7 @@ export default function ParentDashboard({ userId, userName }: ParentDashboardPro
                     <p style={{ fontWeight: 600, color: TEXT_COLORS.primary, fontSize: "0.875rem", margin: 0 }}>{b.studentName}</p>
                     <p style={{ fontSize: "0.875rem", color: TEXT_COLORS.muted, margin: 0 }}>{b.tutorName}</p>
                     <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "0.2rem 0.5rem", borderRadius: "999px", backgroundColor: C.accentLight, color: C.accent, width: "fit-content" }}>{b.subject}</span>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: TEXT_COLORS.primary, margin: 0 }}>{formatMoney(b.amount, b.currency || "PKR")}</p>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: TEXT_COLORS.primary, margin: 0 }}>{formatMoney(b.amount, b.currency || "USD")}</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                       <StatusBadge tone={statusTone(b.status)}>{b.status.charAt(0).toUpperCase() + b.status.slice(1)}</StatusBadge>
                       <TeachingModeBadge mode={b.teachingMode} />

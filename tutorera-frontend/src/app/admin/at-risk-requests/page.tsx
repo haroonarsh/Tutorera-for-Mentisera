@@ -246,7 +246,7 @@ function AtRiskRequestsContent() {
                     <span>Student: <strong style={{ color: TEXT_COLORS.body }}>{item.request.student?.name}</strong></span>
                     <span>City: <strong style={{ color: TEXT_COLORS.body }}>{item.request.city || "Online"}</strong></span>
                     <span>Mode: <strong style={{ color: TEXT_COLORS.body }}>{item.request.teachingMode}</strong></span>
-                    <span>Rate: <strong style={{ color: TEXT_COLORS.body }}>{item.request.currency || "PKR"} {item.request.budget?.toLocaleString()}</strong></span>
+                    <span>Rate: <strong style={{ color: TEXT_COLORS.body }}>{item.request.currency || "USD"} {item.request.budget?.toLocaleString()}</strong></span>
                     <span>Offers: <strong style={{ color: item.offersCount === 0 ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color }}>{item.offersCount}</strong></span>
                     <span>Active: <strong>{item.hoursSinceCreated}h</strong></span>
                     <span>Expires in: <strong style={{ color: item.hoursUntilExpiry <= 24 ? STATUS_COLORS.danger.color : TEXT_COLORS.body }}>{item.hoursUntilExpiry}h</strong></span>

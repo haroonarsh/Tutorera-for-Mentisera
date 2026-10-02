@@ -79,7 +79,7 @@ function PaymentsContent() {
 
   // Summary stats
   const formatTotals = (items: Booking[], amount: (booking: Booking) => number) => Object.entries(items.reduce((totals, booking) => {
-    const currency = booking.currency || "PKR";
+    const currency = booking.currency || "USD";
     totals[currency] = (totals[currency] || 0) + amount(booking);
     return totals;
   }, {} as Record<string, number>)).map(([currency, value]) => displayAmount(value, currency)).join(" · ") || "—";
@@ -174,7 +174,7 @@ function PaymentsContent() {
           {bookings.filter(b => activeTab !== "payments" || statusFilter === "all" || b.paymentStatus === statusFilter).map(booking => {
             const platformFee = booking.platformFee || 0;
             const tutorPayout = booking.tutorPayout || 0;
-            const curr = booking.currency || "PKR";
+            const curr = booking.currency || "USD";
             return (
               <div key={booking._id} style={{ backgroundColor: UI_COLORS.surface, borderRadius: '0.875rem', padding: '1.5rem', border: `1px solid ${UI_COLORS.border}` }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>

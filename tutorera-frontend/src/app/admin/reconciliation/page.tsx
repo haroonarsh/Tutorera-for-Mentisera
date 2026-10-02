@@ -248,7 +248,7 @@ export default function ReconciliationPage() {
             </thead>
             <tbody>
               {bookings.map((b) => {
-                const cur = b.currency || "PKR";
+                const cur = b.currency || "USD";
                 return (
                 <tr key={b._id} style={{ borderBottom: `1px solid ${UI_COLORS.card}` }}>
                   <td style={{ padding: "0.9rem 1.2rem", color: TEXT_COLORS.body }}>

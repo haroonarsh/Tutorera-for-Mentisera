@@ -192,7 +192,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
         tutor: tutorUser._id,
         tutorProfile: profile._id,
         approvedHourlyRate: profile.hourlyRate,
-        currency: profile.currency || "PKR",
+        currency: profile.currency || "USD",
         version: "TTA-2026.1",
         approvedBy: req.user?._id,
         approvedAt: now,
@@ -794,7 +794,7 @@ export const updatePaymentStatus = async (
       eventType: "manual.adjustment",
       status: payoutStatus === "processing" ? "processing" : payoutStatus === "failed" ? "failed" : "pending",
       amount: booking.subtotal || booking.amount,
-      currency: booking.currency || "PKR",
+      currency: booking.currency || "USD",
       bookingId: booking._id.toString(),
       bidId: booking.bid?.toString(),
       studentId: booking.student._id?.toString() || booking.student.toString(),
@@ -822,7 +822,7 @@ export const updatePaymentStatus = async (
       eventType: "payout.completed",
       status: "succeeded",
       amount: booking.subtotal || booking.amount,
-      currency: booking.currency || "PKR",
+      currency: booking.currency || "USD",
       bookingId: booking._id.toString(),
       bidId: booking.bid?.toString(),
       studentId: booking.student._id?.toString() || booking.student.toString(),
@@ -1051,7 +1051,7 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
   const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
 
   const currencyTotals = Object.values(allConfirmed.reduce((totals, booking) => {
-    const currency = booking.currency || "PKR";
+    const currency = booking.currency || "USD";
     const current = totals[currency] || { currency, pendingAmount: 0, paidAmount: 0 };
     if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.pendingAmount += booking.tutorPayout || 0;
     if (booking.payoutStatus === "paid") current.paidAmount += booking.tutorPayout || 0;

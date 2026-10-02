@@ -110,12 +110,12 @@ export async function generateTutorPayoutReport(
     if (normalizedCurrency && !/^[A-Z]{3}$/.test(normalizedCurrency)) {
       throw Object.assign(new Error("Use a valid three-letter report currency."), { statusCode: 400 });
     }
-    const availableCurrencies = [...new Set(paidBookings.map(booking => booking.currency || "PKR"))];
+    const availableCurrencies = [...new Set(paidBookings.map(booking => booking.currency || "USD"))];
     if (!normalizedCurrency && availableCurrencies.length > 1) {
       throw Object.assign(new Error("Select a currency before generating a multi-currency payout report."), { statusCode: 400 });
     }
-    const currency = normalizedCurrency || availableCurrencies[0] || "PKR";
-    const completedBookings = paidBookings.filter(booking => (booking.currency || "PKR") === currency);
+    const currency = normalizedCurrency || availableCurrencies[0] || "USD";
+    const completedBookings = paidBookings.filter(booking => (booking.currency || "USD") === currency);
 
     const payoutData = await calculatePayoutData(completedBookings);
 
@@ -198,7 +198,7 @@ export async function calculatePayoutData(bookings: any[]) {
     tutorFee: booking.tutorFee ?? 0,
     taxOnFee: booking.tax ?? 0,
     netPayout: booking.tutorNet ?? booking.tutorPayout ?? 0,
-    currency: booking.currency || "PKR",
+    currency: booking.currency || "USD",
   }));
 
   return {

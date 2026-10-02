@@ -152,7 +152,7 @@ export const marketplaceActivatedEmail = (tutorName: string, args: CtaArgs) => {
  * exact fee for each accepted booking remains the immutable booking snapshot;
  * this document records the approved public starting rate only. */
 export const tutorMarketplaceAgreementEmail = (tutorName: string, args: CtaArgs & { hourlyRate?: number; currency?: string }) => {
-  const currency = args.currency || "PKR";
+  const currency = args.currency || "USD";
   const rate = args.hourlyRate ? `${currency} ${args.hourlyRate.toLocaleString()} per hour` : "the rate shown on your approved tutor profile";
   const subject = "Action required: accept your TUTORERA Tutor Agreement";
   const innerHtml = `

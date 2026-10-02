@@ -255,16 +255,16 @@ export default function PayoutsPage() {
                 {/* Amount */}
                 <div>
                   <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.primary, margin: 0 }}>
-                    {booking.currency || "PKR"} {(booking.amount || 0).toLocaleString()}
+                    {booking.currency || "USD"} {(booking.amount || 0).toLocaleString()}
                   </p>
                   <p style={{ fontSize: '0.7rem', color: C.gray500, margin: 0 }}>
-                    Fee: {booking.currency || "PKR"} {(booking.platformFee || 0).toLocaleString()}
+                    Fee: {booking.currency || "USD"} {(booking.platformFee || 0).toLocaleString()}
                   </p>
                 </div>
 
                 {/* Tutor Payout */}
                 <p style={{ fontSize: '0.95rem', fontWeight: '800', color: C.success, margin: 0 }}>
-                  {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
+                  {booking.currency || "USD"} {(booking.tutorPayout || 0).toLocaleString()}
                 </p>
 
                 {/* Session Status */}
@@ -353,9 +353,9 @@ export default function PayoutsPage() {
                   <div>
                     <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>Student: {booking.student?.name}</p>
                     <p style={{ fontSize: '0.875rem', fontWeight: '700', color: C.success, margin: '0.25rem 0 0' }}>
-                      Payout: {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
+                      Payout: {booking.currency || "USD"} {(booking.tutorPayout || 0).toLocaleString()}
                       <span style={{ fontSize: '0.7rem', color: C.gray500, fontWeight: '500' }}>
-                        {" "}/ {booking.currency || "PKR"} {(booking.amount || 0).toLocaleString()} total
+                        {" "}/ {booking.currency || "USD"} {(booking.amount || 0).toLocaleString()} total
                       </span>
                     </p>
                   </div>

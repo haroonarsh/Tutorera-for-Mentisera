@@ -83,7 +83,7 @@ export const getMarketplaceAnalytics = async (_req: AuthRequest, res: Response):
   type MoneyBucket = { currency: string; marketplaceGMV: number; platformRevenue: number; bookingsCount: number; agreedRateSum: number; agreedRateCount: number };
   const byCurrency = new Map<string, MoneyBucket>();
   const bucketFor = (currency: string | undefined) => {
-    const key = currency || "PKR";
+    const key = currency || "USD";
     let bucket = byCurrency.get(key);
     if (!bucket) { bucket = { currency: key, marketplaceGMV: 0, platformRevenue: 0, bookingsCount: 0, agreedRateSum: 0, agreedRateCount: 0 }; byCurrency.set(key, bucket); }
     return bucket;

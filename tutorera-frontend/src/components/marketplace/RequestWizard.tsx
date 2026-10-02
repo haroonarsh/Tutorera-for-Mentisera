@@ -82,7 +82,7 @@ export default function RequestWizard({
     level: prefill.level || "",
     description: prefill.description || "",
     budget: prefill.budget || "2000",
-    currency: prefill.currency || "PKR",
+    currency: prefill.currency || "USD",
     countryCode: prefill.countryCode || "PK",
     countryName: prefill.countryName || "Pakistan",
     timezone: prefill.timezone || "Asia/Karachi",
@@ -824,7 +824,7 @@ export default function RequestWizard({
 
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={labelStyle}>Your Proposed Rate ({form.currency || "PKR"}) *</label>
+                  <label style={labelStyle}>Your Proposed Rate ({form.currency || "USD"}) *</label>
                   <input
                     type="number"
                     min="1"
@@ -834,7 +834,7 @@ export default function RequestWizard({
                     placeholder={`e.g. ${form.currency === "PKR" ? "2000" : "30"}`}
                     style={{ ...inputStyle, fontSize: "1.1rem", fontWeight: 700 }}
                   />
-                  <RateRangeHint subject={form.subject} city={form.city} currency={form.currency || "PKR"} />
+                  <RateRangeHint subject={form.subject} city={form.city} currency={form.currency || "USD"} />
                 </div>
                 <div>
                   <label style={labelStyle}>Pricing Unit</label>
@@ -972,7 +972,7 @@ export default function RequestWizard({
                 </div>
                 <div>
                   <span style={{ color: "#64748b", display: "block" }}>Proposed Budget:</span>
-                  <strong style={{ color: "#0329b2", fontSize: "1rem" }}>{form.currency || "PKR"} {Number(form.budget).toLocaleString()}/{form.pricingUnit}</strong>
+                  <strong style={{ color: "#0329b2", fontSize: "1rem" }}>{form.currency || "USD"} {Number(form.budget).toLocaleString()}/{form.pricingUnit}</strong>
                 </div>
                 <div>
                   <span style={{ color: "#64748b", display: "block" }}>Mode & Location:</span>

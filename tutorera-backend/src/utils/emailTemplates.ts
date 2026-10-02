@@ -4,15 +4,15 @@ export function today(): string {
   return new Date().toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function formatMoney(amount: number, currency = "PKR"): string {
+export function formatMoney(amount: number, currency = "USD"): string {
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: (currency || "PKR").toUpperCase(),
+      currency: (currency || "USD").toUpperCase(),
       maximumFractionDigits: 0,
     }).format(amount);
   } catch {
-    return `${(currency || "PKR").toUpperCase()} ${amount.toLocaleString()}`;
+    return `${(currency || "USD").toUpperCase()} ${amount.toLocaleString()}`;
   }
 }
 
@@ -254,7 +254,7 @@ export const adminNewTuitionRequestEmail = (data: {
     ? `${data.city || "N/A"}${data.area ? `, ${data.area}` : ""}, ${data.countryName || "Pakistan"}`
     : `${data.countryName || "Global"} (${data.city || "Online"})`;
 
-  const currency = data.currency || "PKR";
+  const currency = data.currency || "USD";
   const formattedBudget = `${formatMoney(data.budget, currency)} / ${data.pricingUnit || "hour"}`;
 
   const html = renderTransactionalEmail({ subject: `New Tuition Request: ${data.subject} (${data.city || data.countryName || "Global"}) `,
@@ -335,7 +335,7 @@ export const tutorRejectedEmail = (name: string, reason?: string) => {
 
 // ── 4. Offers & Structured Negotiation ───────────────────────────────────────
 
-export const newBidEmail = (studentName: string, amount: number, currency = "PKR") => {
+export const newBidEmail = (studentName: string, amount: number, currency = "USD") => {
   const formatted = formatMoney(amount, currency);
   const html = renderTransactionalEmail({ subject: `New Tutor Offer for Your Tuition Request `,
     emailCategory: "Offer Update",
@@ -358,7 +358,7 @@ export const newBidEmail = (studentName: string, amount: number, currency = "PKR
   return { subject: `New Tutor Offer for Your Tuition Request  - TUTORERA`, html };
 };
 
-export const bidAcceptedEmail = (tutorName: string, studentName: string, amount: number, currency = "PKR") => {
+export const bidAcceptedEmail = (tutorName: string, studentName: string, amount: number, currency = "USD") => {
   const formatted = formatMoney(amount, currency);
   const html = renderTransactionalEmail({ subject: "Your Tutor Offer Was Accepted ",
     emailCategory: "Offer Update",
@@ -390,7 +390,7 @@ export const offerCounterReceivedEmail = (data: {
   currency?: string;
   isSenderTutor: boolean;
 }) => {
-  const currency = data.currency || "PKR";
+  const currency = data.currency || "USD";
   const formatted = formatMoney(data.counterRate, currency);
   const subjectLine = data.isSenderTutor
     ? `${data.senderName} Sent You a Counter-Offer`
@@ -430,7 +430,7 @@ interface BookingSessionDetails {
   currency?: string;
 }
 
-export const bookingConfirmedEmail = (studentName: string, tutorName: string, amount: number, currency = "PKR") => {
+export const bookingConfirmedEmail = (studentName: string, tutorName: string, amount: number, currency = "USD") => {
   const formatted = formatMoney(amount, currency);
   const html = renderTransactionalEmail({ subject: "Your Booking Is Confirmed ",
     emailCategory: "Booking Confirmation",
@@ -496,7 +496,7 @@ export const directBookingAcceptedEmail = (
   if (startTime && endTime) rows.push({ label: "Time", value: `${startTime} – ${endTime}` });
 
   if (paymentInfo) {
-    const formatted = formatMoney(paymentInfo.amount, paymentInfo.currency || "PKR");
+    const formatted = formatMoney(paymentInfo.amount, paymentInfo.currency || "USD");
     rows.push({ label: "Total Amount", value: formatted, highlight: true });
     rows.push({ label: "Payment Status", value: "Awaiting Payment", isStatus: true, statusVariant: "warning" as const });
   }
@@ -571,7 +571,7 @@ export const paymentConfirmedEmail = (
   amount: number,
   details?: BookingSessionDetails
 ) => {
-  const currency = details?.currency || "PKR";
+  const currency = details?.currency || "USD";
   const formatted = formatMoney(amount, currency);
   const bookingId = details?.bookingId || `PAY-${Date.now()}`;
   const subjectPart = details?.subject ? ` — ${details.subject}` : "";
@@ -611,7 +611,7 @@ export const paymentFailedEmail = (
   amount: number,
   details?: BookingSessionDetails
 ) => {
-  const currency = details?.currency || "PKR";
+  const currency = details?.currency || "USD";
   const formatted = formatMoney(amount, currency);
   const bookingId = details?.bookingId || `PAY-${Date.now()}`;
 
@@ -644,7 +644,7 @@ export const paymentFailedNotifyTutorEmail = (
   amount: number,
   details?: BookingSessionDetails
 ) => {
-  const currency = details?.currency || "PKR";
+  const currency = details?.currency || "USD";
   const formatted = formatMoney(amount, currency);
 
   const html = renderTransactionalEmail({ subject: `Student Payment Delayed for Booking with ${studentName} `,
@@ -670,7 +670,7 @@ export const paymentFailedNotifyTutorEmail = (
 
 // ── 7. Tutor Payouts ─────────────────────────────────────────────────────────
 
-export const payoutRequestedEmail = (tutorName: string, amount: number, bookingId: string, currency = "PKR") => {
+export const payoutRequestedEmail = (tutorName: string, amount: number, bookingId: string, currency = "USD") => {
   const formatted = formatMoney(amount, currency);
   const html = renderTransactionalEmail({ subject: "Payout Request Received ",
     emailCategory: "Payout Update",
@@ -694,7 +694,7 @@ export const payoutRequestedEmail = (tutorName: string, amount: number, bookingI
   return { subject: "Payout Request Received  - TUTORERA", html };
 };
 
-export const payoutProcessedEmail = (tutorName: string, amount: number, bookingId: string, currency = "PKR") => {
+export const payoutProcessedEmail = (tutorName: string, amount: number, bookingId: string, currency = "USD") => {
   const formatted = formatMoney(amount, currency);
   const html = renderTransactionalEmail({ subject: "Your Payout Has Been Sent ",
     emailCategory: "Payout Update",
@@ -718,7 +718,7 @@ export const payoutProcessedEmail = (tutorName: string, amount: number, bookingI
   return { subject: "Your Payout Has Been Sent  - TUTORERA", html };
 };
 
-export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: string, reason: string, currency = "PKR") => {
+export const payoutFailedEmail = (tutorName: string, amount: number, bookingId: string, reason: string, currency = "USD") => {
   const formatted = formatMoney(amount, currency);
   const html = renderTransactionalEmail({ subject: "Action Required: We Couldn’t Complete Your Payout ",
     emailCategory: "Payout Alert",

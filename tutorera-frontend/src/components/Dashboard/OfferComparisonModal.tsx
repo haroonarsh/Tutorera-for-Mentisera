@@ -48,7 +48,7 @@ export default function OfferComparisonModal({
       label: "Rate",
       render: (bid) => (
         <span style={{ fontWeight: 700, fontSize: "1rem" }}>
-          {formatMoney(bid.amount, bid.currency || "PKR", bid.pricingUnit || "hour")}
+          {formatMoney(bid.amount, bid.currency || "USD", bid.pricingUnit || "hour")}
         </span>
       ),
     },

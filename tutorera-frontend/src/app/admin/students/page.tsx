@@ -244,7 +244,7 @@ export default function StudentsDirectoryPage() {
                           <strong>{r.subject} ({r.level})</strong>
                           <span style={{ fontWeight: 700, color: r.status === "expired" ? STATUS_COLORS.danger.color : STATUS_COLORS.success.color }}>{r.status}</span>
                         </div>
-                        <span style={{ color: TEXT_COLORS.muted }}>Budget: {r.currency || "PKR"} {r.budget} · Mode: {r.teachingMode}</span>
+                        <span style={{ color: TEXT_COLORS.muted }}>Budget: {r.currency || "USD"} {r.budget} · Mode: {r.teachingMode}</span>
                       </div>
                     ))}
                   </div>
@@ -260,7 +260,7 @@ export default function StudentsDirectoryPage() {
                       <div key={b._id} style={{ padding: "0.75rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.5rem", fontSize: "0.8rem" }}>
                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                           <strong>Tutor: {b.tutor?.name || "Tutor"}</strong>
-                          <span style={{ fontWeight: 700, color: UI_COLORS.accent }}>{b.currency || "PKR"} {b.studentTotal || b.amount}</span>
+                          <span style={{ fontWeight: 700, color: UI_COLORS.accent }}>{b.currency || "USD"} {b.studentTotal || b.amount}</span>
                         </div>
                         <span style={{ color: TEXT_COLORS.muted }}>Status: {b.status} · Payment: {b.paymentStatus}</span>
                       </div>
