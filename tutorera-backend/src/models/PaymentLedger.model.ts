@@ -57,5 +57,6 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
 
 paymentLedgerSchema.index({ provider: 1, providerEventId: 1 }, { unique: true, sparse: true });
 paymentLedgerSchema.index({ providerTransactionId: 1, eventType: 1, createdAt: -1 });
+paymentLedgerSchema.index({ provider: 1, eventType: 1, status: 1, updatedAt: 1 });
 
 export default mongoose.model<IPaymentLedger>("PaymentLedger", paymentLedgerSchema);

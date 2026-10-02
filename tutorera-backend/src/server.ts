@@ -16,6 +16,7 @@ import { sendAgreementReminders } from "./services/legalAgreementReminder.servic
 import { sendMissingDocumentsReminders } from "./services/missingDocumentsReminder.service";
 import { ensureLaunchMarkets } from "./services/market.service";
 import { assertSwichRuntimeConfiguration } from "./services/swichProvider.service";
+import { processPendingSwichCheckouts } from "./services/paymentReconciliation.service";
 
 dotenv.config();
 
@@ -51,10 +52,13 @@ const requestLifecycleTimer = setInterval(() => processRequestLifecycle(io).catc
 requestLifecycleTimer.unref();
 const payoutTimer = setInterval(() => processPendingPayouts().catch(err => logger.error({ err }, "Payout processing failed")), 60 * 60 * 1000);
 payoutTimer.unref();
+const paymentReconciliationTimer = setInterval(() => processPendingSwichCheckouts(io).catch(err => logger.error({ err }, "Switch checkout reconciliation failed")), 10 * 60 * 1000);
+paymentReconciliationTimer.unref();
 setTimeout(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
 setTimeout(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
 setTimeout(() => processRequestLifecycle(io).catch(err => logger.error({ err }, "Initial request lifecycle processing failed")), 15_000).unref();
 setTimeout(() => processPendingPayouts().catch(err => logger.error({ err }, "Initial payout processing failed")), 30_000).unref();
+setTimeout(() => processPendingSwichCheckouts(io).catch(err => logger.error({ err }, "Initial Switch checkout reconciliation failed")), 60_000).unref();
 
 // Exchange rate refresh — runs hourly, warm cache on boot after 5 s
 const exchangeRateTimer = setInterval(() => refreshRates().catch(err => logger.error({ err }, "Exchange rate refresh failed")), 60 * 60 * 1000);
@@ -92,6 +96,7 @@ async function gracefulShutdown(signal: string) {
   clearInterval(abandonedJourneyTimer);
   clearInterval(requestLifecycleTimer);
   clearInterval(payoutTimer);
+  clearInterval(paymentReconciliationTimer);
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 
