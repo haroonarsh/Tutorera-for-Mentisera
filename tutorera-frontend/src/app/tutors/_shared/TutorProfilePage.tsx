@@ -29,6 +29,7 @@ import AvatarImage from "@/components/Common/AvatarImage";
 import TutorVideoPlayer from "@/components/Tutors/TutorVideoPlayer";
 import ShareProfileButton from "@/components/Tutors/ShareProfileButton";
 import { fetchTutors, tutorProfileHref } from "@/lib/tutor-directory";
+import { assessTutorSeoQuality } from "@/lib/tutor-seo";
 import TutorCard from "@/components/Tutors/TutorCard";
 import { SITE_URL } from "@/lib/site";
 import type { Review, TutorProfile } from "@/types/tutor";
@@ -53,6 +54,15 @@ export async function generateTutorProfileMetadata(tutor: TutorProfile | null): 
       robots: { index: false, follow: true },
     };
   }
+
+  // Oct 2026 incident: a cached /tutors/.../testing-user URL kept
+  // appearing in results because the profile detail page served 200
+  // with structured data even for accounts that fail the SEO quality
+  // bar. If the shared gate says a profile is not indexable (test-name
+  // pattern, missing core data, unverified, etc.) emit robots noindex
+  // so a crawler that already has the URL stops ranking it. The page
+  // body still renders for direct human visitors.
+  const notIndexable = !assessTutorSeoQuality(tutor).indexable;
 
   const name = formatName(tutor.user?.name || tutor.fullName);
   const primarySubject = tutor.subjects?.[0] || "Tuition";
@@ -79,6 +89,7 @@ export async function generateTutorProfileMetadata(tutor: TutorProfile | null): 
     alternates: {
       canonical,
     },
+    robots: notIndexable ? { index: false, follow: false } : undefined,
     openGraph: {
       title: `${title} | TUTORERA`,
       description,
@@ -144,11 +155,26 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
 
   const { reviews, slots } = await extras(tutorUserId);
 
+  // Spec §42 + Oct 2026 incident: this profile's own indexability
+  // decides whether we emit ProfilePage/Person/Offer/AggregateRating
+  // JSON-LD at all. If the tutor fails the gate (test name, missing
+  // core data, unverified), schema is suppressed so crawlers can't
+  // ingest it as structured marketplace facts even if they fetch the
+  // page via a stale link.
+  const indexableSelf = assessTutorSeoQuality(tutor).indexable;
+
   const primarySubject = tutor.subjects?.[0];
   const similarTutorsResult = primarySubject
-    ? await fetchTutors({ subject: primarySubject, countryCode }, 5)
+    ? await fetchTutors({ subject: primarySubject, countryCode }, 10)
     : { tutors: [] };
-  const similarTutors = similarTutorsResult.tutors.filter((t) => t._id !== tutor._id).slice(0, 4);
+  // Related-tutor section is a major source of internal links a crawler
+  // uses to discover other profiles. If an unindexable account (e.g.
+  // "Testing User") shares a subject with the current tutor, it would
+  // otherwise be linked here on real tutors' pages. Gate it the same
+  // way the sitemap and SEO landings now do.
+  const similarTutors = similarTutorsResult.tutors
+    .filter((t) => t._id !== tutor._id && assessTutorSeoQuality(t).indexable)
+    .slice(0, 4);
 
   const hasVideo = Boolean(tutor.videoIntro);
   const isHomeTutor = tutor.teachingMode === "in-person" || tutor.teachingMode === "both";
@@ -257,10 +283,12 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
         color: "#021550",
       }}
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
-      />
+      {indexableSelf && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
+        />
+      )}
 
       {/* ── COVER BANNER & BREADCRUMB ── */}
       <section
