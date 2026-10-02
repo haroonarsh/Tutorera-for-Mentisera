@@ -98,8 +98,15 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       changeFrequency: "monthly" as const,
       priority: 0.82,
     }));
+    // Curated student-intent routes (Islamabad, Rawalpindi, Lahore,
+    // Karachi × tuition / home-tuition / online-tuition) are included
+    // unconditionally. These pages are not supply directories — they
+    // explain how to post a requirement for that city, with an
+    // in-content supply block that already degrades gracefully to a
+    // zero-state. Gating them on a transient cityInventory check caused
+    // them to drop out of the sitemap during the Oct 2026 incident even
+    // though the pages themselves rendered correctly.
     const cityStudentIntent: MetadataRoute.Sitemap = PK_CITY_TUITION_INTENTS
-      .filter((city) => cityInventory.has(CITIES[city].toLowerCase()))
       .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
       url: `${SITE_URL}/pk/${city}/${intent}`,
       lastModified,

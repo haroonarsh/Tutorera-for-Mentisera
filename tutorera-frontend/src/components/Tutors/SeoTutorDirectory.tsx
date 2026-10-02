@@ -1,12 +1,21 @@
 import styles from "@/app/tutors/page.module.css";
 import TutorCard from "@/components/Tutors/TutorCard";
 import { fetchTutors,tutorProfileHref,type DirectoryKind,type TutorSearchFilters } from "@/lib/tutor-directory";
+import { assessTutorSeoQuality } from "@/lib/tutor-seo";
 import Link from "next/link";
 
 interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilters; title: string; description: string; canonicalPath: string; currency?: string; relatedLinks?: { label: string, href: string }[]; }
 
 export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency, relatedLinks }: Props) {
-  const result = await fetchTutors(filters ?? { [kind]: value });
+  const raw = await fetchTutors(filters ?? { [kind]: value });
+  // Oct 2026 incident: the backend occasionally returns archived/test
+  // accounts (e.g. "Testing User") that still carry isVerified: true, and
+  // the SEO landing page would then both render them AND emit them into
+  // ItemList / AggregateOffer / Course JSON-LD. Reuse the same gate the
+  // sitemap uses so the two surfaces can never disagree about what counts
+  // as indexable supply.
+  const indexableTutors = raw.tutors.filter((tutor) => assessTutorSeoQuality(tutor).indexable);
+  const result = { ...raw, tutors: indexableTutors, total: indexableTutors.length };
   const rates = result.tutors.map((tutor) => tutor.hourlyRate).filter(Boolean);
   const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
   const minRate = rates.length ? Math.min(...rates) : 0;

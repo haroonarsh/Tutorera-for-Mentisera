@@ -1,8 +1,23 @@
-import { CANONICAL_HOST,REDIRECT_HOSTS,SEO_PRIVATE_PATHS } from "@/constants/seoRoutes";
-import { NextRequest,NextResponse } from "next/server";
+import { CANONICAL_HOST, REDIRECT_HOSTS, SEO_PRIVATE_PATHS, isNonCanonicalHost } from "@/constants/seoRoutes";
+import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const host = request.nextUrl.hostname.toLowerCase();
+
+  // Vercel preview / staging host — pin to noindex AND redirect to the
+  // canonical host so a bot that already pulled a *.vercel.app URL stops
+  // caching it. Headers are set on the redirect itself so even the 301
+  // carries the noindex directive.
+  if (isNonCanonicalHost(host)) {
+    const destination = request.nextUrl.clone();
+    destination.protocol = "https";
+    destination.hostname = CANONICAL_HOST;
+    destination.port = "";
+    const redirect = NextResponse.redirect(destination, 301);
+    redirect.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    return redirect;
+  }
+
   if (REDIRECT_HOSTS.has(host)) {
     const destination = request.nextUrl.clone();
     destination.protocol = "https";
