@@ -499,7 +499,7 @@ tutorProfileSchema.pre("save", function () {
     (p.cnicVerificationStatus === "approved" &&
       p.degreeVerificationStatus === "approved" &&
       p.demoVideoStatus === "approved") ||
-    p.verificationStatus === "approved";
+    (p.verificationStatus === "approved" && p.marketplaceEligible);
   const subjectApprovalSatisfied = hasApprovedTeachingSubject(p);
 
   if (coreApproved) {
@@ -521,9 +521,6 @@ tutorProfileSchema.pre("save", function () {
     } else if (!p.agreementAcceptedAt && p.legacyAgreementStatus !== "accepted" && !p.marketplaceEligible) {
       // NON-NEGOTIABLE RULE: admin/document approval does NOT make a tutor active!
       // Must be approved_pending_agreement until explicit electronic contract acceptance succeeds.
-      // marketplaceEligible is retained for profiles activated before the
-      // agreement timestamp was introduced; those historical activations are
-      // handled as a compatibility state rather than being revoked on save.
       p.tutorStatus = "approved_pending_agreement";
       p.agreementAcceptanceRequired = true;
       p.marketplaceEligible = false;

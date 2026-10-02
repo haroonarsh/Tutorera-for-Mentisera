@@ -24,14 +24,12 @@ import s from "./Navbar.module.css";
 // Pricing / Research / Guides) now lives in the footer (§51) and inside the
 // destination pages themselves, not as mega menus off the top nav.
 const primaryLinks = [
-  // "Find Tuition" — the tuition-request marketplace landing where students
-  // and parents start; points at the PK home-tuition hub since PK is the
-  // primary market and /pk/[intent] renders that page.
   { label: "Find Tuition", href: "/pk/home-tuition" },
   { label: "Find Tutors", href: "/tutors" },
   { label: "Subjects", href: "/subjects" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "Safety", href: "/safety" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 function notificationIcon(type: string) {

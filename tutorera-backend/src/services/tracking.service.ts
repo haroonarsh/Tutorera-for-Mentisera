@@ -2,6 +2,7 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import User from "../models/User.model";
 import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
+import { policeIsRequired as activationPoliceIsRequired } from "./tutorActivation.service";
 import TutorApplicationStatusHistory, {
   ITutorApplicationStatusHistory,
   StatusEvent,
@@ -219,7 +220,10 @@ function hasDemoVideo(profile: ITutorProfile): boolean {
 }
 
 export function policeIsRequired(profile: ITutorProfile): boolean {
-  return profile.teachingMode === "in-person" || profile.teachingMode === "both";
+  // Keep tracking and activation on the same market-specific home-tuition
+  // safety policy. A generic in-person check caused status screens to disagree
+  // with the activation decision in markets where this document is not required.
+  return activationPoliceIsRequired(profile);
 }
 
 function hasPolice(profile: ITutorProfile): boolean {

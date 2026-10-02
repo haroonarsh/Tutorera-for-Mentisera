@@ -59,7 +59,7 @@ export default function TutorProfileActions(props: Props) {
   return <>
     {loaded && isStudent && <button disabled={saving} onClick={async () => { setSaving(true); await toggleFavourite(props.profileId); setSaving(false); }} style={{ width: "100%", display: "flex", justifyContent: "center", gap: ".5rem", padding: ".75rem", marginBottom: ".75rem", borderRadius: 8, border: "1px solid #fecdd3", background: saved ? "#fff1f2" : "white", color: "#C81B7F", fontWeight: 700 }}><Heart size={17} fill={saved ? "currentColor" : "none"} />{saved ? "Saved to Favourites" : "Save to Favourites"}</button>}
     <button type="button" onClick={openInvitationPicker} style={{ width: "100%", padding: ".85rem", border: "1.5px solid #0329b2", borderRadius: 8, background: "#EEF5FF", color: "#0329b2", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", fontSize: "0.875rem", boxSizing: "border-box" }}>
-      <PlusCircle size={16} aria-hidden="true" /> Create a Requirement for This Tutor
+      <PlusCircle size={16} aria-hidden="true" /> Invite to My Tuition Requirement
     </button>
     <button type="button" onClick={() => setBooking(true)} style={{ width: "100%", padding: ".8rem", border: "1px solid #bfdbfe", borderRadius: 8, background: "white", color: "#0329B2", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", marginTop: "0.75rem" }}>
       <Calendar size={18} aria-hidden="true" /> Request this tutor directly

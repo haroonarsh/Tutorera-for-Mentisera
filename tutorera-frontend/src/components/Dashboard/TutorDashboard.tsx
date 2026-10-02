@@ -642,7 +642,7 @@ interface Props {
 }
 
 export default function TutorDashboard({ userName, userAvatar, userId }: Props) {
-  const [tab, setTab]               = useState<Tab>("bookings");
+  const [tab, setTab]               = useState<Tab>("recommended");
   const [bookings, setBookings]     = useState<DashBooking[]>([]);
   const [recommended, setRecommended] = useState<RankedRequestMatch[]>([]);
   const [loadingRec, setLoadingRec] = useState(false);
@@ -866,7 +866,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
   >
     <Sparkles size={14} style={{ color: tab === "recommended" ? C.cyan : C.gold }} />
-    ✨ Matched For You
+    ✨ Tuition Opportunities
     {recommended.length > 0 && (
       <span className={`${s.tabBadge} ${tab === "recommended" ? s.tabActiveBadge : ""}`} style={{ background: C.gold, color: "#fff" }}>
         {recommended.length}

@@ -110,14 +110,14 @@ export default function QuickRequestComposer() {
               letterSpacing: "0.05em",
             }}
           >
-            Student Demand
+            Quick Start
           </span>
-          <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#021550", margin: 0 }}>
-            What Tutor Do You Need?
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#021550", margin: 0 }}>
+            What do you need help with?
           </h2>
         </div>
         <span style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-          <Sparkles size={14} color="#f59e0b" /> Verified tutors send offers to your budget
+          <Sparkles size={14} color="#f59e0b" /> Suitable tutors send offers to your budget
         </span>
       </div>
 
@@ -314,6 +314,7 @@ export default function QuickRequestComposer() {
         <div>
           <button
             type="submit"
+            id="quick-find-my-tutor-btn"
             style={{
               width: "100%",
               background: "linear-gradient(135deg, #0329b2 0%, #016ef8 100%)",
@@ -332,9 +333,12 @@ export default function QuickRequestComposer() {
               minHeight: "48px",
             }}
           >
-            <span>Find Tutors for My Requirement</span>
+            <span>Find My Tutor</span>
             <ArrowRight size={18} />
           </button>
+          <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#64748b", margin: "0.4rem 0 0" }}>
+            Starts your tuition requirement so suitable tutors can send you offers.
+          </p>
         </div>
       </form>
 
