@@ -50,39 +50,74 @@ const reconcilePendingSwitchCheckouts = () => runWithJobLease(
   9 * 60 * 1000,
   () => processPendingSwichCheckouts(io),
 );
-const offerExpiryTimer = setInterval(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Offer expiry processing failed")), 15 * 60 * 1000);
+const processExpiringOffers = () => runWithJobLease(
+  "offer-expiry-processing",
+  14 * 60 * 1000,
+  () => processOfferExpirations(io),
+);
+const recoverAbandonedJourneys = () => runWithJobLease(
+  "abandoned-journey-recovery",
+  59 * 60 * 1000,
+  () => processAbandonedJourneyRecovery(),
+);
+const processRequestLifecycles = () => runWithJobLease(
+  "request-lifecycle-processing",
+  14 * 60 * 1000,
+  () => processRequestLifecycle(io),
+);
+const processTutorPayouts = () => runWithJobLease(
+  "pending-payout-processing",
+  59 * 60 * 1000,
+  () => processPendingPayouts(),
+);
+const refreshExchangeRates = () => runWithJobLease(
+  "exchange-rate-refresh",
+  59 * 60 * 1000,
+  () => refreshRates(),
+);
+const remindAgreementSigners = () => runWithJobLease(
+  "agreement-reminder-delivery",
+  23 * 60 * 60 * 1000,
+  () => sendAgreementReminders(io),
+);
+const remindMissingDocuments = () => runWithJobLease(
+  "missing-document-reminder-delivery",
+  23 * 60 * 60 * 1000,
+  () => sendMissingDocumentsReminders(io),
+);
+const offerExpiryTimer = setInterval(() => processExpiringOffers().catch(err => logger.error({ err }, "Offer expiry processing failed")), 15 * 60 * 1000);
 offerExpiryTimer.unref();
-const abandonedJourneyTimer = setInterval(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Abandoned journey recovery failed")), 60 * 60 * 1000);
+const abandonedJourneyTimer = setInterval(() => recoverAbandonedJourneys().catch(err => logger.error({ err }, "Abandoned journey recovery failed")), 60 * 60 * 1000);
 abandonedJourneyTimer.unref();
-const requestLifecycleTimer = setInterval(() => processRequestLifecycle(io).catch(err => logger.error({ err }, "Request lifecycle processing failed")), 15 * 60 * 1000);
+const requestLifecycleTimer = setInterval(() => processRequestLifecycles().catch(err => logger.error({ err }, "Request lifecycle processing failed")), 15 * 60 * 1000);
 requestLifecycleTimer.unref();
-const payoutTimer = setInterval(() => processPendingPayouts().catch(err => logger.error({ err }, "Payout processing failed")), 60 * 60 * 1000);
+const payoutTimer = setInterval(() => processTutorPayouts().catch(err => logger.error({ err }, "Payout processing failed")), 60 * 60 * 1000);
 payoutTimer.unref();
 const paymentReconciliationTimer = setInterval(() => reconcilePendingSwitchCheckouts().catch(err => logger.error({ err }, "Switch checkout reconciliation failed")), 10 * 60 * 1000);
 paymentReconciliationTimer.unref();
-setTimeout(() => processOfferExpirations(io).catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
-setTimeout(() => processAbandonedJourneyRecovery().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
-setTimeout(() => processRequestLifecycle(io).catch(err => logger.error({ err }, "Initial request lifecycle processing failed")), 15_000).unref();
-setTimeout(() => processPendingPayouts().catch(err => logger.error({ err }, "Initial payout processing failed")), 30_000).unref();
+setTimeout(() => processExpiringOffers().catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
+setTimeout(() => recoverAbandonedJourneys().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
+setTimeout(() => processRequestLifecycles().catch(err => logger.error({ err }, "Initial request lifecycle processing failed")), 15_000).unref();
+setTimeout(() => processTutorPayouts().catch(err => logger.error({ err }, "Initial payout processing failed")), 30_000).unref();
 setTimeout(() => reconcilePendingSwitchCheckouts().catch(err => logger.error({ err }, "Initial Switch checkout reconciliation failed")), 60_000).unref();
 
 // Exchange rate refresh — runs hourly, warm cache on boot after 5 s
-const exchangeRateTimer = setInterval(() => refreshRates().catch(err => logger.error({ err }, "Exchange rate refresh failed")), 60 * 60 * 1000);
+const exchangeRateTimer = setInterval(() => refreshExchangeRates().catch(err => logger.error({ err }, "Exchange rate refresh failed")), 60 * 60 * 1000);
 exchangeRateTimer.unref();
-setTimeout(() => refreshRates().catch(err => logger.error({ err }, "Initial exchange rate refresh failed")), 5_000).unref();
+setTimeout(() => refreshExchangeRates().catch(err => logger.error({ err }, "Initial exchange rate refresh failed")), 5_000).unref();
 
 // Legal agreement reminders — already-activated tutors who still haven't
 // accepted the current Tutor Agreement get emailed once daily (throttled
 // inside the service itself) until they sign; publishAdminAgreement also
 // fires an immediate one when a new version is published, so this daily
 // run is the "keep nudging" half, not the only trigger.
-const agreementReminderTimer = setInterval(() => sendAgreementReminders(io).catch(err => logger.error({ err }, "Legal agreement reminder run failed")), 24 * 60 * 60 * 1000);
+const agreementReminderTimer = setInterval(() => remindAgreementSigners().catch(err => logger.error({ err }, "Legal agreement reminder run failed")), 24 * 60 * 60 * 1000);
 agreementReminderTimer.unref();
-setTimeout(() => sendAgreementReminders(io).catch(err => logger.error({ err }, "Initial legal agreement reminder run failed")), 40_000).unref();
+setTimeout(() => remindAgreementSigners().catch(err => logger.error({ err }, "Initial legal agreement reminder run failed")), 40_000).unref();
 
-const missingDocumentsReminderTimer = setInterval(() => sendMissingDocumentsReminders(io).catch(err => logger.error({ err }, "Missing documents reminder run failed")), 24 * 60 * 60 * 1000);
+const missingDocumentsReminderTimer = setInterval(() => remindMissingDocuments().catch(err => logger.error({ err }, "Missing documents reminder run failed")), 24 * 60 * 60 * 1000);
 missingDocumentsReminderTimer.unref();
-setTimeout(() => sendMissingDocumentsReminders(io).catch(err => logger.error({ err }, "Initial missing documents reminder run failed")), 50_000).unref();
+setTimeout(() => remindMissingDocuments().catch(err => logger.error({ err }, "Initial missing documents reminder run failed")), 50_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
