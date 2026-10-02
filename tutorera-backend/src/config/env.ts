@@ -68,6 +68,10 @@ export function validateEnv(): void {
                 errors.push(`  - ${key} must be a non-sandbox HTTPS endpoint in production`);
             }
         }
+        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || "live").trim().toLowerCase();
+        if (swichMode === "sandbox") {
+            errors.push("  - SWICH_MODE cannot be set to sandbox in production");
+        }
     }
 
     if (errors.length > 0) {

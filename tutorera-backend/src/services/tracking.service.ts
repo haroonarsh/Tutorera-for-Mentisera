@@ -2,7 +2,7 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import User from "../models/User.model";
 import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
-import { policeIsRequired as activationPoliceIsRequired } from "./tutorActivation.service";
+import { isProfileMarketplaceEligible, policeIsRequired as activationPoliceIsRequired } from "./tutorActivation.service";
 import TutorApplicationStatusHistory, {
   ITutorApplicationStatusHistory,
   StatusEvent,
@@ -231,38 +231,24 @@ function hasPolice(profile: ITutorProfile): boolean {
 }
 
 export function isMarketplaceEligible(profile: ITutorProfile): boolean {
-  const agreementSigned = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
-  const accessIsBlocked = Boolean(
-    profile.suspendedAt ||
-    profile.reVerificationRequired ||
-    profile.tutorStatus === "suspended" ||
-    profile.tutorStatus === "reverification_required" ||
-    profile.tutorStatus === "terminated"
-  );
-
-  // Profiles activated before agreement acceptance was persisted have a
-  // marketplaceEligible flag, but no agreementAcceptedAt timestamp. Keep that
-  // activation authoritative instead of showing a listed tutor as pending (or
-  // silently revoking their marketplace access). New approvals still follow
-  // the strict agreement gate below.
-  if (profile.marketplaceEligible && !accessIsBlocked) return true;
-
-  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
-    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
-  );
-
-  return Boolean(
-    profile.isVerified &&
-    profile.onboardingComplete &&
-    profile.demoVideoStatus === "approved" &&
-    profile.cnicVerificationStatus === "approved" &&
-    profile.degreeVerificationStatus === "approved" &&
-    hasApprovedTeachingSubject &&
-    profile.verificationStatus === "approved" &&
-    agreementSigned &&
-    !accessIsBlocked
-  );
+  return isProfileMarketplaceEligible(profile);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export function isHomeTuitionEligible(profile: ITutorProfile): boolean {
   if (!policeIsRequired(profile)) return false;

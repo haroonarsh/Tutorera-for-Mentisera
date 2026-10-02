@@ -86,7 +86,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
 
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: booking.studentTotal || booking.amount,
-      currency: booking.currency || "PKR",
+      currency: booking.currency || "USD",
       marketCountryCode: booking.countryCode,
       customerMobileNo: payer?.phone || "03000000000",
       customerEmail: payer?.email || student.email,
@@ -260,7 +260,7 @@ export const confirmSwichPayment = async (req: AuthRequest, res: Response): Prom
       const expectedAmount = appliedPromo
         ? Math.round((baseExpectedAmount - appliedPromo.discountAmount) * 100) / 100
         : baseExpectedAmount;
-      const expectedCurrency = (bid.currency || request?.currency || "PKR").toUpperCase();
+      const expectedCurrency = (bid.currency || request?.currency || "USD").toUpperCase();
 
       if (!request || result.amount !== expectedAmount || result.currency.toUpperCase() !== expectedCurrency) {
         logger.error({ requestId: req.id, bidId, expectedAmount, receivedAmount: result.amount, expectedCurrency, receivedCurrency: result.currency }, "Swich payment confirm amount or currency did not match the accepted offer");
@@ -302,7 +302,7 @@ export const confirmSwichPayment = async (req: AuthRequest, res: Response): Prom
     }
 
     const expectedAmount = booking.studentTotal || booking.amount;
-    const expectedCurrency = (booking.currency || "PKR").toUpperCase();
+    const expectedCurrency = (booking.currency || "USD").toUpperCase();
     if (result.amount !== expectedAmount || result.currency.toUpperCase() !== expectedCurrency) {
       logger.error({ requestId: req.id, bookingId: booking._id, expectedAmount, receivedAmount: result.amount, expectedCurrency, receivedCurrency: result.currency }, "Swich payment confirm amount or currency did not match the booking");
       res.status(422).json({ success: false, message: "Payment amount or currency mismatch" });

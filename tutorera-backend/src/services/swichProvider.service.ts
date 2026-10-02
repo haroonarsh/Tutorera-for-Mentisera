@@ -76,8 +76,36 @@ function configuredBaseUrl(name: "SWICH_AUTH_BASE_URL" | "SWICH_API_BASE_URL", s
 
 /** Fails closed before any production checkout can reach a sandbox host. */
 export function assertSwichRuntimeConfiguration(): void {
+    if (isProduction()) {
+        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || "live").trim().toLowerCase();
+        if (swichMode === "sandbox") {
+            const error = new Error("SWICH_MODE cannot be set to sandbox in production environment") as Error & { statusCode?: number; code?: string };
+            error.statusCode = 503;
+            error.code = "SWICH_SANDBOX_MODE_DISALLOWED";
+            throw error;
+        }
+    }
     configuredBaseUrl("SWICH_AUTH_BASE_URL", SANDBOX_AUTH_BASE_URL);
     configuredBaseUrl("SWICH_API_BASE_URL", SANDBOX_API_BASE_URL);
+    if (isProduction()) {
+        requireEnv("SWICH_CLIENT_ID");
+        requireEnv("SWICH_CLIENT_SECRET");
+    }
+}
+
+/**
+ * Non-money production smoke test to verify Switch OAuth credentials and connectivity
+ * without initiating any payment session or financial transaction.
+ */
+export async function verifySwichConnectivity(): Promise<{ connected: boolean; mode: string; authUrl: string; apiUrl: string }> {
+    assertSwichRuntimeConfiguration();
+    const token = await getAccessToken();
+    return {
+        connected: Boolean(token),
+        mode: isProduction() ? "live" : (process.env.SWICH_MODE || process.env.SWICH_ENV || "sandbox").toLowerCase(),
+        authUrl: swichAuthBaseUrl(),
+        apiUrl: swichApiBaseUrl(),
+    };
 }
 
 function swichAuthBaseUrl(): string {

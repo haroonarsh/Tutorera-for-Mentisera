@@ -200,7 +200,7 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       city: request.city,
       area: request.area,
       budget: request.budget,
-      currency: request.currency || "PKR",
+      currency: request.currency || "USD",
       budgetPKR: amountPKR,
       pricingUnit: request.pricingUnit || "hour",
       schedule: request.schedule,
@@ -552,7 +552,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
-  const currency = requested.currency || "PKR";
+  const currency = requested.currency || "USD";
   if (!requested.allowCounterOffers && req.body.amount !== requested.budget) {
     res.status(409).json({ success: false, code: "COUNTERS_DISABLED", message: `This request only accepts the proposed rate of ${currency} ${requested.budget.toLocaleString()}.` });
     return;
@@ -599,9 +599,9 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     request: new Types.ObjectId(req.params.id as string),
     tutor: req.user?._id,
     amount: req.body.amount,
-    currency: request.currency || tutorProfile.currency || "PKR",
+    currency: request.currency || tutorProfile.currency || "USD",
     originalAmount: req.body.amount,
-    originalCurrency: request.currency || tutorProfile.currency || "PKR",
+    originalCurrency: request.currency || tutorProfile.currency || "USD",
     convertedRequestAmount: req.body.amount,
     exchangeRate: 1,
     message: req.body.message,
@@ -881,7 +881,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
-      currency: bid.currency || "PKR",
+      currency: bid.currency || "USD",
       marketCountryCode: request.countryCode,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
@@ -1340,7 +1340,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
       city: request.city,
       area: request.area,
       budget: request.budget,
-      currency: request.currency || "PKR",
+      currency: request.currency || "USD",
       budgetPKR: amountPKR,
       pricingUnit: request.pricingUnit || "hour",
       schedule: request.schedule,
@@ -1511,7 +1511,7 @@ if (teachingMode && teachingMode !== "all") {
         level: r.level,
         budget: r.budget,
         pricingUnit: r.pricingUnit || "hour",
-        currency: r.currency || "PKR",
+        currency: r.currency || "USD",
         teachingMode: r.teachingMode,
         city: r.city || (r.student as any)?.city || "",
         countryCode: r.countryCode || (r.student as any)?.countryCode || "PK",

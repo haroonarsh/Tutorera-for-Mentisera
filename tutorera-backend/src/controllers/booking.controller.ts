@@ -205,7 +205,7 @@ export const bookAgainFromBooking = async (req: AuthRequest, res: Response): Pro
     sessionDurationMinutes: request?.sessionDurationMinutes || 60,
     sessionsPerWeek: request?.sessionsPerWeek || 1,
     budget: booking.finalAgreedRate || booking.amount,
-    currency: request?.currency || "PKR",
+    currency: request?.currency || "USD",
     pricingUnit: booking.pricingUnit || request?.pricingUnit || "hour",
     allowCounterOffers: true,
     sourceBookingId: booking._id.toString(),

@@ -100,8 +100,8 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     await OfferNegotiation.updateMany({ offer: offer._id, status: "active" }, { status: "superseded" }, { session });
     const expiresAt = expiry(); const reasons = moderationReasons(req.body.message, req.body.amount, offer.initialStudentRate);
     let amountUSD: number | undefined;
-    try { amountUSD = await convertAmount(req.body.amount, offer.currency || "PKR", "USD"); } catch { /* non-critical */ }
-    [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, currency: offer.currency || "PKR", amountUSD, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
+    try { amountUSD = await convertAmount(req.body.amount, offer.currency || "USD", "USD"); } catch { /* non-critical */ }
+    [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, currency: offer.currency || "USD", amountUSD, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
     offer.amount = req.body.amount; offer.status = "countered"; offer.expiresAt = expiresAt; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save({ session });
     request.status = "negotiating"; await request.save({ session }); savedOffer = offer; recipient = isStudent ? offer.tutor.toString() : request.student.toString(); finalCounterOffer = roleCount === 2;
   }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
@@ -282,7 +282,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
       const checkoutUrl = await paymentProvider.createCheckout({
         amount: fees.studentTotal,
-        currency: offer.currency || request.currency || "PKR",
+        currency: offer.currency || request.currency || "USD",
         marketCountryCode: request.countryCode,
         customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
@@ -404,7 +404,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
-      currency: offer.currency || request.currency || "PKR",
+      currency: offer.currency || request.currency || "USD",
       marketCountryCode: request.countryCode,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",

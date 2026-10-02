@@ -20,8 +20,10 @@ beforeAll(async () => {
   // MONGOMS_DISABLE_MD5_CHECK flag is ignored and causes every suite to fail
   // before the first test when mirrors serve a different checksum file.
   process.env.MONGOMS_MD5_CHECK = "0";
+  process.env.MONGOMS_STARTUP_TIMEOUT = "60000";
   replSet = await MongoMemoryReplSet.create({
     replSet: { count: 1 },
+    instanceOpts: [{ launchTimeout: 60000 }],
   });
   const uri = replSet.getUri();
   await mongoose.connect(uri);

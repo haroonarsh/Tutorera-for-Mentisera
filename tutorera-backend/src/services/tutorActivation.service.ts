@@ -33,6 +33,36 @@ export function policeIsRequired(profile: ITutorProfile): boolean {
   return inPerson && homeCountries.includes(country);
 }
 
+export function isProfileMarketplaceEligible(profile: ITutorProfile): boolean {
+  const accessIsBlocked = Boolean(
+    profile.suspendedAt ||
+    profile.reVerificationRequired ||
+    profile.tutorStatus === "suspended" ||
+    profile.tutorStatus === "reverification_required" ||
+    profile.tutorStatus === "terminated"
+  );
+  if (accessIsBlocked) return false;
+
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
+    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
+  );
+  if (!hasApprovedTeachingSubject) return false;
+
+  const agreementSatisfied = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
+  if (!agreementSatisfied) return false;
+
+  const coreDocumentsApproved =
+    profile.cnicVerificationStatus === "approved" &&
+    profile.degreeVerificationStatus === "approved" &&
+    profile.demoVideoStatus === "approved";
+
+  return Boolean(
+    profile.isVerified &&
+    profile.verificationStatus === "approved" &&
+    coreDocumentsApproved
+  );
+}
+
 /**
  * Authoritative central evaluator determining whether a tutor has satisfied
  * ALL mandatory requirements to receive marketplace activation.

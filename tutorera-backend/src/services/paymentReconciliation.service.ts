@@ -46,6 +46,15 @@ export async function reconcileSwichCheckout(basketId: string, io?: SocketIOServ
 
   const result = await paymentProvider.confirmCheckout(basketId);
   if (!result.confirmed) {
+    const STALE_SESSION_THRESHOLD_MS = 35 * 60 * 1000;
+    const checkoutAge = checkout.createdAt ? Date.now() - new Date(checkout.createdAt).getTime() : 0;
+    if (checkoutAge > STALE_SESSION_THRESHOLD_MS) {
+      logger.warn(
+        { basketId, ageMinutes: Math.round(checkoutAge / 60000), sessionStatus: result.sessionStatus },
+        "Stale Switch checkout session remains unresolved after timeout threshold"
+      );
+    }
+
     if (["Failed", "Expired", "Cancelled"].includes(result.sessionStatus)) {
       await PaymentLedger.updateOne({ _id: checkout._id, status: "pending" }, { $set: { status: "failed", "metadata.sessionStatus": result.sessionStatus } });
       await recordPaymentLedger({

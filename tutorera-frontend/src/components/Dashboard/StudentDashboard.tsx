@@ -131,7 +131,7 @@ function BookingCard({
   const router = useRouter();
   const [paying, setPaying] = useState(false);
   const [rebooking, setRebooking] = useState(false);
-  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "PKR", unit);
+  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "USD", unit);
 
   const handlePay = async () => {
     setPaying(true);
@@ -368,7 +368,7 @@ function BookingCard({
               { label: "Student Marketplace Fee", value: money(booking.studentFee || 0) },
               { label: "Tax", value: money(booking.tax || 0) },
               { label: "Total Payable", value: money(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
-              { label: "Currency", value: booking.currency || booking.request?.currency || "PKR" },
+              { label: "Currency", value: booking.currency || booking.request?.currency || "USD" },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: C.surface, borderRadius: '0.375rem', border: `1px solid ${STATUS_COLORS.success.border}`, flexWrap: 'wrap', gap: '0.25rem' }}>
                 <span style={{ fontSize: '0.7rem', color: UI_COLORS.success, fontWeight: 600 }}>{item.label}</span>
@@ -490,7 +490,7 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
           <Avatar name={tutor.user.name} avatar={tutor.user.avatar} />
           <div>
             <p className={s.personName}>{tutor.user.name}</p>
-            <p className={s.personSub}>{tutor.city} · {formatMoney(tutor.hourlyRate, tutor.currency || "PKR", "hour")}</p>
+            <p className={s.personSub}>{tutor.city} · {formatMoney(tutor.hourlyRate, tutor.currency || "USD", "hour")}</p>
           </div>
         </Link>
         <button type="button" className={s.btnIcon} onClick={handleRemove} disabled={removing}
@@ -719,7 +719,7 @@ function RequestCard({
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          Budget: {formatMoney(request.budget, request.currency || "PKR", request.pricingUnit || "hour")}
+          Budget: {formatMoney(request.budget, request.currency || "USD", request.pricingUnit || "hour")}
         </span>
         <span className={s.infoChip}>{request.teachingMode}</span>
         <span className={s.infoChip}>{request.schedule}</span>
@@ -824,7 +824,7 @@ function RequestCard({
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 6 }}>
                         <div>
                           <p className={s.bidTutorName}>{bid.tutor.name}</p>
-                          <p className={s.bidAmount}>{formatMoney(bid.amount, bid.currency || request.currency || "PKR", bid.pricingUnit || "hour")}</p>
+                          <p className={s.bidAmount}>{formatMoney(bid.amount, bid.currency || request.currency || "USD", bid.pricingUnit || "hour")}</p>
                         </div>
                         {bid.matchScore ? (
                           <MatchScoreBadge
@@ -907,10 +907,10 @@ function RequestCard({
           )}
       {countering && (
         <DashCard padding="sm" accent={C.accent} style={{ marginTop: 12, background: C.accentLight, borderColor: STATUS_COLORS.info.border }} role="dialog" aria-modal="true" aria-label="Counter offer">
-          <strong>Counter tutor offer of {formatMoney(countering.amount, countering.currency || "PKR")}</strong>
-          <p style={{fontSize:12,color:TEXT_COLORS.muted}}>Student proposed {formatMoney(countering.initialStudentRate, countering.currency || "PKR", countering.pricingUnit)}. Current tutor offer is {formatMoney(countering.amount, countering.currency || "PKR", countering.pricingUnit)}. {counterLimitText}</p>
+          <strong>Counter tutor offer of {formatMoney(countering.amount, countering.currency || "USD")}</strong>
+          <p style={{fontSize:12,color:TEXT_COLORS.muted}}>Student proposed {formatMoney(countering.initialStudentRate, countering.currency || "USD", countering.pricingUnit)}. Current tutor offer is {formatMoney(countering.amount, countering.currency || "USD", countering.pricingUnit)}. {counterLimitText}</p>
           <div style={{display:"grid",gap:8}}>
-            <input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder={`Amount in ${countering.currency || "PKR"}`}/>
+            <input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder={`Amount in ${countering.currency || "USD"}`}/>
             <textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/>
             <div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div>
           </div>
@@ -1332,7 +1332,7 @@ const fetchRequests = useCallback(async () => {
                 {refundRequests.map((rf) => {
                   const bkg = typeof rf.booking === "object" ? rf.booking : null;
                   const bkgId = bkg?._id || (typeof rf.booking === "string" ? rf.booking : "—");
-                  const currency = bkg?.currency || "PKR";
+                  const currency = bkg?.currency || "USD";
                   const statusTone =
                     rf.status === "approved" || rf.status === "processed"
                       ? "success"

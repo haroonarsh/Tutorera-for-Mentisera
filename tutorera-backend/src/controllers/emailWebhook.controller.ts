@@ -42,6 +42,11 @@ const TIMESTAMP_BY_STATUS: Partial<Record<EmailLogStatus, string>> = {
 // @route   POST /api/v1/webhooks/resend
 // @access  Public, verified by Resend/Svix signature when RESEND_WEBHOOK_SECRET is set
 export const handleResendWebhook = async (req: Request, res: Response): Promise<void> => {
+  if (process.env.RESEND_WEBHOOK_ENABLED === "false") {
+    res.status(503).json({ success: false, message: "Resend webhook processing is disabled" });
+    return;
+  }
+
   try {
     const payloadText = Buffer.isBuffer((req as any).rawBody)
       ? (req as any).rawBody.toString("utf8")
@@ -107,30 +112,41 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
 
     res.status(200).json({ success: true, matched: true, status });
   } catch (error: any) {
-    res.status(400).json({ success: false, message: error?.message || "Invalid Resend webhook" });
+    const statusCode = typeof error?.statusCode === "number" ? error.statusCode : 400;
+    res.status(statusCode).json({ success: false, message: error?.message || "Invalid Resend webhook" });
   }
 };
 
 function verifyResendPayload(req: Request, payloadText: string): ResendWebhookPayload {
-  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET?.trim();
   if (!webhookSecret) {
     // An email-delivery webhook changes audit state. Accepting a JSON body
     // without an Svix signature lets any internet client forge delivery,
     // bounce, or open events. A local/dev environment can simply leave the
     // webhook uncalled; it must never become an unsigned public endpoint.
-    throw new Error("Resend webhook verification is not configured");
+    const error = new Error("Resend webhook verification is not configured") as Error & { statusCode?: number };
+    error.statusCode = 503;
+    throw error;
   }
 
   const id = req.header("svix-id");
   const timestamp = req.header("svix-timestamp");
   const signature = req.header("svix-signature");
   if (!id || !timestamp || !signature) {
-    throw new Error("Missing Resend webhook signature headers");
+    const error = new Error("Missing Resend webhook signature headers") as Error & { statusCode?: number };
+    error.statusCode = 401;
+    throw error;
   }
 
-  return resend.webhooks.verify({
-    payload: payloadText,
-    headers: { id, timestamp, signature },
-    webhookSecret,
-  }) as ResendWebhookPayload;
+  try {
+    return resend.webhooks.verify({
+      payload: payloadText,
+      headers: { id, timestamp, signature },
+      webhookSecret,
+    }) as ResendWebhookPayload;
+  } catch (verifyErr: any) {
+    const error = new Error("Invalid Resend webhook signature") as Error & { statusCode?: number };
+    error.statusCode = 401;
+    throw error;
+  }
 }

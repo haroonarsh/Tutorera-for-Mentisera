@@ -23,7 +23,7 @@ export const PRIVACY_VERSION = "2026.2-GLOBAL";
 export const LAST_LEGAL_UPDATE = "September 2026";
 
 // Authoritative frontend mirror of backend MARKETPLACE_FEES. Historical bookings store a snapshot.
-export const MARKETPLACE_FEES = Object.freeze({ studentPlatformFeePercent: 0, tutorPlatformFeePercent: 20, taxRatePercent: 15, minimumFee: 0, currency: "PKR", effectiveFrom: "2026-08-30" });
+export const MARKETPLACE_FEES = Object.freeze({ studentPlatformFeePercent: 0, tutorPlatformFeePercent: 20, taxRatePercent: 15, minimumFee: 0, currency: "USD", effectiveFrom: "2026-08-30" });
 export const PLATFORM_FEE_PERCENT = MARKETPLACE_FEES.tutorPlatformFeePercent;
 export const GST_ON_PLATFORM_FEE_PERCENT = MARKETPLACE_FEES.taxRatePercent;
 export const GST_EFFECTIVE_PERCENT = (PLATFORM_FEE_PERCENT * GST_ON_PLATFORM_FEE_PERCENT) / 100;
@@ -34,8 +34,8 @@ export function formatPKR(amount: number, unit?: string) {
   return unit ? `${formatted} / ${unit}` : formatted;
 }
 
-export function formatMoney(amount: number, currency: string = "PKR", unit?: string) {
-  const curr = (currency || "PKR").toUpperCase();
+export function formatMoney(amount: number, currency: string = "USD", unit?: string) {
+  const curr = (currency || "USD").toUpperCase();
   const formatted = `${curr} ${Math.round(amount).toLocaleString()}`;
   return unit ? `${formatted} / ${unit}` : formatted;
 }
