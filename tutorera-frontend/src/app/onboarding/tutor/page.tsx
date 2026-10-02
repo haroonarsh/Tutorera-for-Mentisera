@@ -3,7 +3,7 @@ import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
-import { convertToPKR,useGeoData } from "@/lib/geoService";
+import { convertToPKR, useGeoData } from "@/lib/geoService";
 import { Country } from "@/lib/location";
 import { AlertTriangle,BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -67,7 +67,7 @@ export default function TutorOnboardingPage() {
     cityRef: undefined as string | undefined,
     city: "",
     timezone: "Asia/Karachi",
-    currency: "PKR",
+    currency: "USD",
     onlineCountryReach: [] as string[],
     gender: "male",
     dateOfBirth: "",
@@ -108,7 +108,7 @@ export default function TutorOnboardingPage() {
   const [step4, setStep4] = useState({
     bio: "",
     hourlyRate: "",
-    currency: "PKR",
+    currency: "USD",
     serviceAreas: "",
     travelRadiusKm: "10",
     teachingMode: "both" as "online" | "in-person" | "both",
@@ -151,7 +151,7 @@ export default function TutorOnboardingPage() {
               cityRef: p.cityRef || undefined,
               city: p.city || p.user?.city || "",
               timezone: p.timezone || p.user?.timezone || "Asia/Karachi",
-              currency: p.currency || "PKR",
+              currency: p.currency || "USD",
               onlineCountryReach: Array.isArray(p.onlineCountryReach) ? p.onlineCountryReach : [],
               gender: p.gender || "male",
               dateOfBirth: p.dateOfBirth ? p.dateOfBirth.slice(0, 10) : "",
@@ -180,7 +180,7 @@ export default function TutorOnboardingPage() {
             setStep4({
               bio: p.bio || "",
               hourlyRate: p.hourlyRate ? String(p.hourlyRate) : "",
-              currency: p.currency || "PKR",
+              currency: p.currency || "USD",
               serviceAreas: Array.isArray(p.serviceAreas) ? p.serviceAreas.join(", ") : (p.serviceAreas || ""),
               travelRadiusKm: p.travelRadiusKm ? String(p.travelRadiusKm) : "10",
               teachingMode: p.teachingMode || "both",
@@ -829,9 +829,9 @@ export default function TutorOnboardingPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
-                      Hourly Rate ({step1.currency || "PKR"}) *
+                      Hourly Rate ({step1.currency || "USD"}) *
                     </label>
-                    <input title="Set your proposed hourly rate. The earnings panel shows the current estimated amount you receive after applicable deductions." type="number" value={step4.hourlyRate} onChange={e => setStep4({ ...step4, hourlyRate: e.target.value })} placeholder={step1.currency === "PKR" ? "e.g. 2000" : "e.g. 50"}
+                    <input title="Set your proposed hourly rate. The earnings panel shows the current estimated amount you receive after applicable deductions." type="number" value={step4.hourlyRate} onChange={e => setStep4({ ...step4, hourlyRate: e.target.value })} placeholder="e.g. 50"
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />

@@ -61,8 +61,10 @@ export const COUNTRIES: CountryData[] = [
   {
     code: "PK",
     name: "Pakistan",
-    currency: "PKR",
-    currencySymbol: "Rs.",
+    // All enabled markets settle new marketplace activity in USD. PKR remains
+    // available only for rendering historical snapshots.
+    currency: "USD",
+    currencySymbol: "$",
     phoneCode: "+92",
     defaultTimezone: "Asia/Karachi",
     flag: "🇵🇰",
@@ -121,8 +123,8 @@ export function getCitiesForCountry(code?: string): City[] {
   return country ? country.cities : [];
 }
 
-export function formatCurrencyAmount(amount: number, currencyCode = "PKR", pricingUnit?: string): string {
-  const code = (currencyCode || "PKR").toUpperCase();
+export function formatCurrencyAmount(amount: number, currencyCode = "USD", pricingUnit?: string): string {
+  const code = (currencyCode || "USD").toUpperCase();
   const meta = SUPPORTED_CURRENCIES[code] || { symbol: code, code } as any;
   const formatted = `${meta.symbol} ${Math.round(amount).toLocaleString()}`;
   return pricingUnit ? `${formatted}/${pricingUnit}` : formatted;

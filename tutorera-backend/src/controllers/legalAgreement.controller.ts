@@ -57,7 +57,7 @@ export const getCurrentTutorAgreement = async (req: AuthRequest, res: Response):
 
   const feeSnapshot = await calculateMarketplaceFees(1000, {
     countryCode: country,
-    currency: profile.currency || "PKR",
+    currency: profile.currency || "USD",
     teachingMode: profile.teachingMode || "online",
   });
 
@@ -279,7 +279,7 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
   // 9. Fee disclosure snapshot
   const feeCalculation = await calculateMarketplaceFees(1000, {
     countryCode: profile.countryCode || "PK",
-    currency: profile.currency || "PKR",
+    currency: profile.currency || "USD",
     teachingMode: profile.teachingMode || "online",
   });
 

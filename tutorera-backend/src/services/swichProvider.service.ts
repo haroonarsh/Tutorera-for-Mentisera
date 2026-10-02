@@ -190,7 +190,10 @@ export const swichProvider = {
      * this object with null/empty values."
      */
     async createCheckout(params: SwichCheckoutParams): Promise<{ checkoutUrl: string; paymentSessionGuid: string }> {
-        const currency = (params.currency || "PKR").toUpperCase();
+        // Settlement currency is owned by the market configuration. A caller
+        // that omitted it is a server-side defect, not a reason to resurrect
+        // the retired Pakistan-only PKR fallback.
+        const currency = (params.currency || "USD").toUpperCase();
         assertSwichCheckoutCapability(params.marketCountryCode, currency);
         const accessToken = await getAccessToken();
 

@@ -131,7 +131,7 @@ const legalAgreementSchema = new Schema<ILegalAgreement>(
     feeScheduleSnapshot: {
       marketplaceFeePercent: { type: Number, default: 20 },
       taxRatePercent: { type: Number, default: 0 },
-      currency: { type: String, default: "PKR" },
+      currency: { type: String, default: "USD" },
       effectiveFrom: { type: String, default: "2026-08-30" },
     },
     companyDetails: {

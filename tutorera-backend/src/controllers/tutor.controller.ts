@@ -745,13 +745,10 @@ export const saveOnboardingStep = async (
       parsedData.teachingMode
     );
 
-    // Step 1 already set the correct market-derived currency (e.g. AED for a
-    // UAE tutor). This step's rate-setting form doesn't necessarily resubmit
-    // currency, so `parsedData.currency || "PKR"` was silently clobbering a
-    // correctly-set non-PKR currency back to PKR whenever it wasn't
-    // resubmitted - falling back to the profile's own already-set currency
-    // instead of a hardcoded PKR default.
-    const nextCurrency = parsedData.currency || profile.currency || "PKR";
+    // Currency is a market settlement rule, not a tutor-editable price-form
+    // field. Step 1 resolves it from MarketConfig; retain that snapshot here
+    // so a stale client payload cannot change a USD market back to PKR.
+    const nextCurrency = profile.currency || "USD";
     updateData = {
       bio: parsedData.bio,
       hourlyRate: parseInt(parsedData.hourlyRate),

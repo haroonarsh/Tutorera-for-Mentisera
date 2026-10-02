@@ -43,7 +43,7 @@ interface RateRowProps {
   prefix?: string;
 }
 
-function RateRow({ label, value, color = C.primary, bgColor, bold, prefix = "PKR " }: RateRowProps) {
+function RateRow({ label, value, color = C.primary, bgColor, bold, prefix = "USD " }: RateRowProps) {
   return (
     <div style={{
       display: "flex",
@@ -88,7 +88,7 @@ interface ComparisonRow {
   label: string;
 }
 
-function ComparisonTable({ rows, selected }: { rows: ComparisonRow[]; selected: number }) {
+function ComparisonTable({ rows, selected, currency }: { rows: ComparisonRow[]; selected: number; currency: string }) {
   return (
     <div style={{ overflow: "hidden", borderRadius: 10, border: `1px solid ${UI_COLORS.border}` }}>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1.2fr", padding: "0.5rem 1rem", background: UI_COLORS.gray50, borderBottom: `1px solid ${UI_COLORS.border}` }}>
@@ -108,13 +108,13 @@ function ComparisonTable({ rows, selected }: { rows: ComparisonRow[]; selected: 
             borderBottom: i < rows.length - 1 ? `1px solid ${UI_COLORS.border}` : "none",
           }}>
             <span style={{ fontSize: "0.85rem", fontWeight: isSelected ? "700" : "500", color: isSelected ? C.green : C.primary }}>
-              PKR {r.rate.toLocaleString()}/hr {isSelected && "←"}
+              {currency} {r.rate.toLocaleString()}/hr {isSelected && "←"}
             </span>
             <span style={{ fontSize: "0.85rem", fontWeight: "600", color: C.green }}>
-              PKR {r.net.toLocaleString()}
+              {currency} {r.net.toLocaleString()}
             </span>
             <span style={{ fontSize: "0.8rem", color: diff > 0 ? C.green : diff < 0 ? TEXT_COLORS.danger : C.gray500 }}>
-              {i === 0 ? "—" : `${diff >= 0 ? "+" : ""}PKR ${diff.toLocaleString()}`}
+              {i === 0 ? "—" : `${diff >= 0 ? "+" : ""}${currency} ${diff.toLocaleString()}`}
             </span>
           </div>
         );
@@ -123,19 +123,20 @@ function ComparisonTable({ rows, selected }: { rows: ComparisonRow[]; selected: 
   );
 }
 
-export default function CommissionCalculator() {
-  const [rate, setRate] = useState(1000);
-  const [inputValue, setInputValue] = useState("1000");
+export default function CommissionCalculator({ currency = "USD" }: { currency?: string }) {
+  const settlementCurrency = currency.toUpperCase();
+  const [rate, setRate] = useState(30);
+  const [inputValue, setInputValue] = useState("30");
 
   const fees = calculateFees(rate);
 
-  const presets = [500, 1000, 1500, 2000, 3000, 5000];
+  const presets = [15, 30, 45, 60, 75, 100];
 
-  const comparisonRates = [500, 750, 1000, 1500, 2000, 3000];
+  const comparisonRates = [15, 20, 30, 45, 60, 75];
   const comparisonRows: ComparisonRow[] = comparisonRates.map(r => ({
     rate: r,
     net: calculateFees(r).netEarnings,
-    label: `PKR ${r}/hr`,
+    label: `${settlementCurrency} ${r}/hr`,
   }));
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +198,7 @@ export default function CommissionCalculator() {
               padding: "0.75rem 1rem",
               gap: 8,
             }}>
-              <span style={{ fontSize: "0.9rem", fontWeight: 600, color: C.accent, flexShrink: 0 }}>PKR</span>
+              <span style={{ fontSize: "0.9rem", fontWeight: 600, color: C.accent, flexShrink: 0 }}>{settlementCurrency}</span>
               <input
                 type="text"
                 value={inputValue}
@@ -211,7 +212,7 @@ export default function CommissionCalculator() {
                   width: "100%",
                   outline: "none",
                 }}
-                aria-label="Hourly rate in PKR"
+                aria-label={`Hourly rate in ${settlementCurrency}`}
               />
               <span style={{ fontSize: "0.8rem", fontWeight: 600, color: C.gray500, flexShrink: 0 }}>/ hour</span>
             </div>
@@ -221,17 +222,17 @@ export default function CommissionCalculator() {
           <div style={{ padding: "0 0.25rem", marginBottom: "1rem" }}>
             <input
               type="range"
-              min={100}
-              max={10000}
-              step={50}
+              min={5}
+              max={500}
+              step={5}
               value={rate}
               onChange={handleSliderChange}
               style={{ width: "100%", accentColor: C.accent, cursor: "pointer" }}
               aria-label="Rate slider"
             />
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span style={{ fontSize: "0.7rem", color: C.gray500 }}>PKR 100</span>
-              <span style={{ fontSize: "0.7rem", color: C.gray500 }}>PKR 10,000/hr</span>
+              <span style={{ fontSize: "0.7rem", color: C.gray500 }}>{settlementCurrency} 5</span>
+              <span style={{ fontSize: "0.7rem", color: C.gray500 }}>{settlementCurrency} 500/hr</span>
             </div>
           </div>
 
@@ -253,7 +254,7 @@ export default function CommissionCalculator() {
                   transition: "all 0.15s",
                 }}
               >
-                PKR {p.toLocaleString()}
+                {settlementCurrency} {p.toLocaleString()}
               </button>
             ))}
           </div>
@@ -268,19 +269,21 @@ export default function CommissionCalculator() {
             This is exactly what you keep after TUTORERA fees.
           </p>
 
-          <RateRow label="Your hourly rate" value={fees.rate} color={C.primary} />
+          <RateRow label="Your hourly rate" value={fees.rate} color={C.primary} prefix={`${settlementCurrency} `} />
           <div style={{ height: 1, background: UI_COLORS.border, margin: "0.25rem 0" }} />
           <RateRow
             label={`Platform fee (${PLATFORM_FEE_PERCENT}%)`}
             value={fees.platformFee}
             color={TEXT_COLORS.danger}
             bgColor={STATUS_COLORS.danger.bg}
+            prefix={`${settlementCurrency} `}
           />
           <RateRow
             label={`GST on fee (${GST_ON_PLATFORM_FEE_PERCENT}% of ${PLATFORM_FEE_PERCENT}%)`}
             value={fees.taxOnFee}
             color={TEXT_COLORS.danger}
             bgColor={STATUS_COLORS.danger.bg}
+            prefix={`${settlementCurrency} `}
           />
           <div style={{ height: 2, background: UI_COLORS.border, margin: "0.25rem 0" }} />
           <RateRow
@@ -289,6 +292,7 @@ export default function CommissionCalculator() {
             color={TEXT_COLORS.danger}
             bold
             bgColor={STATUS_COLORS.danger.bg}
+            prefix={`${settlementCurrency} `}
           />
           <RateRow
             label="You take home"
@@ -296,6 +300,7 @@ export default function CommissionCalculator() {
             color={C.green}
             bold
             bgColor={STATUS_COLORS.success.bg}
+            prefix={`${settlementCurrency} `}
           />
 
           <BreakdownBar netPercent={fees.effectiveTakeHomePercent} />
@@ -311,7 +316,7 @@ export default function CommissionCalculator() {
             ].map(item => (
               <div key={item.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0.75rem", background: UI_COLORS.gray50, borderRadius: 7 }}>
                 <span style={{ fontSize: "0.8rem", color: C.gray500 }}>{item.label}</span>
-                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: item.color }}>PKR {item.value.toLocaleString()}</span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: item.color }}>{settlementCurrency} {item.value.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -326,7 +331,7 @@ export default function CommissionCalculator() {
         <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: C.gray500 }}>
           See how your net earnings scale with different hourly rates.
         </p>
-        <ComparisonTable rows={comparisonRows} selected={rate} />
+        <ComparisonTable rows={comparisonRows} selected={rate} currency={settlementCurrency} />
       </DashCard>
 
       {/* ── Fee structure facts ── */}

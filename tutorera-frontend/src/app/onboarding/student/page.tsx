@@ -39,7 +39,7 @@ export default function StudentOnboardingPage() {
     cityRef: undefined as string | undefined,
     city: "",
     timezone: "Asia/Karachi",
-    currency: "PKR",
+    currency: "USD",
     gender: "male",
     dateOfBirth: "",
   });

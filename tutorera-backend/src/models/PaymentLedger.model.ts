@@ -39,7 +39,9 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     eventType: { type: String, enum: ["checkout.created", "payment.succeeded", "payment.failed", "payment.refunded", "payout.requested", "payout.completed", "manual.adjustment"], required: true },
     status: { type: String, enum: ["pending", "succeeded", "failed", "refunded", "processing"], required: true },
     grossAmount: { type: Number, required: true, min: 0 },
-    currency: { type: String, required: true, trim: true, default: "PKR" },
+    // Historical rows retain their stored currency. New ledgers are created
+    // in the active market's USD settlement currency.
+    currency: { type: String, required: true, trim: true, default: "USD" },
     studentPayment: { type: Number, default: 0, min: 0 },
     studentFee: { type: Number, default: 0, min: 0 },
     tutorFee: { type: Number, default: 0, min: 0 },
