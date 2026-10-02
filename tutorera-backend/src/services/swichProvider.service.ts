@@ -36,11 +36,57 @@ export interface SwichSessionStatus {
     expiryAt: string;
 }
 
-const AUTH_BASE_URL = "https://sandbox-auth.swichnow.com"; // Confirm the live host with Switch before production.
-const API_BASE_URL = "https://sandbox-api.swichnow.com"; // TODO: same caution for the live API host
+const SANDBOX_AUTH_BASE_URL = "https://sandbox-auth.swichnow.com";
+const SANDBOX_API_BASE_URL = "https://sandbox-api.swichnow.com";
 const DEFAULT_CATEGORIES = ["ewallet", "visamastercardpayment", "bankaccount", "rtpnowpayment"];
-const SWICH_AUTH_BASE_URL = process.env.SWICH_AUTH_BASE_URL?.trim() || AUTH_BASE_URL;
-const SWICH_API_BASE_URL = process.env.SWICH_API_BASE_URL?.trim() || API_BASE_URL;
+
+function isProduction(): boolean {
+    return process.env.NODE_ENV === "production";
+}
+
+function configuredBaseUrl(name: "SWICH_AUTH_BASE_URL" | "SWICH_API_BASE_URL", sandboxFallback: string): string {
+    const configured = process.env[name]?.trim();
+    if (!configured) {
+        if (isProduction()) {
+            const error = new Error(`${name} must be configured in production; sandbox payment hosts are not allowed`) as Error & { statusCode?: number; code?: string };
+            error.statusCode = 503;
+            error.code = "SWICH_PRODUCTION_URL_MISSING";
+            throw error;
+        }
+        return sandboxFallback;
+    }
+
+    let url: URL;
+    try {
+        url = new URL(configured);
+    } catch {
+        const error = new Error(`${name} must be a valid HTTPS URL`) as Error & { statusCode?: number; code?: string };
+        error.statusCode = 503;
+        error.code = "SWICH_BASE_URL_INVALID";
+        throw error;
+    }
+    if (url.protocol !== "https:" || (isProduction() && /sandbox/i.test(url.hostname))) {
+        const error = new Error(`${name} must be a non-sandbox HTTPS endpoint in production`) as Error & { statusCode?: number; code?: string };
+        error.statusCode = 503;
+        error.code = "SWICH_PRODUCTION_URL_INVALID";
+        throw error;
+    }
+    return url.origin;
+}
+
+/** Fails closed before any production checkout can reach a sandbox host. */
+export function assertSwichRuntimeConfiguration(): void {
+    configuredBaseUrl("SWICH_AUTH_BASE_URL", SANDBOX_AUTH_BASE_URL);
+    configuredBaseUrl("SWICH_API_BASE_URL", SANDBOX_API_BASE_URL);
+}
+
+function swichAuthBaseUrl(): string {
+    return configuredBaseUrl("SWICH_AUTH_BASE_URL", SANDBOX_AUTH_BASE_URL);
+}
+
+function swichApiBaseUrl(): string {
+    return configuredBaseUrl("SWICH_API_BASE_URL", SANDBOX_API_BASE_URL);
+}
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
@@ -101,7 +147,7 @@ async function getAccessToken(): Promise<string> {
 
     try {
         const response = await axios.post(
-        `${SWICH_AUTH_BASE_URL}/connect/token`,
+        `${swichAuthBaseUrl()}/connect/token`,
         {
             client_id: clientId,
             client_secret: clientSecret,
@@ -197,7 +243,7 @@ export const swichProvider = {
         };
 
         try {
-        const response = await axios.post(`${SWICH_API_BASE_URL}/gateway/paymentsession/initiate`, body, {
+        const response = await axios.post(`${swichApiBaseUrl()}/gateway/paymentsession/initiate`, body, {
             headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -251,7 +297,7 @@ export const swichProvider = {
         const accessToken = await getAccessToken();
 
         try {
-        const response = await axios.get(`${SWICH_API_BASE_URL}/gateway/paymentsession/get`, {
+        const response = await axios.get(`${swichApiBaseUrl()}/gateway/paymentsession/get`, {
             params: { paymentSessionGuid },
             headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
             timeout: 15_000,

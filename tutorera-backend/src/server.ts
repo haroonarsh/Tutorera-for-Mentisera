@@ -15,6 +15,7 @@ import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
 import { sendAgreementReminders } from "./services/legalAgreementReminder.service";
 import { sendMissingDocumentsReminders } from "./services/missingDocumentsReminder.service";
 import { ensureLaunchMarkets } from "./services/market.service";
+import { assertSwichRuntimeConfiguration } from "./services/swichProvider.service";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ dotenv.config();
 // If this fails, the process exits immediately (see config/env.ts) instead
 // of starting in a broken state and failing confusingly later.
 validateEnv();
+assertSwichRuntimeConfiguration();
 
 const httpServer = http.createServer(app);
 

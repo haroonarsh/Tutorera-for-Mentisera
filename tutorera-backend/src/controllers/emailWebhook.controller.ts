@@ -114,7 +114,11 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
 function verifyResendPayload(req: Request, payloadText: string): ResendWebhookPayload {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    return JSON.parse(payloadText) as ResendWebhookPayload;
+    // An email-delivery webhook changes audit state. Accepting a JSON body
+    // without an Svix signature lets any internet client forge delivery,
+    // bounce, or open events. A local/dev environment can simply leave the
+    // webhook uncalled; it must never become an unsigned public endpoint.
+    throw new Error("Resend webhook verification is not configured");
   }
 
   const id = req.header("svix-id");

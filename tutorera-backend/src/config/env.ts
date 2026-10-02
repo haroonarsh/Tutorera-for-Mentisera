@@ -55,6 +55,21 @@ export function validateEnv(): void {
         }
     }
 
+    // Payment and webhook configuration must fail closed in production. The
+    // non-production sandbox defaults deliberately remain available for the
+    // isolated provider tests, but production must never silently use them.
+    if (process.env.NODE_ENV === "production") {
+        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "RESEND_WEBHOOK_SECRET"]) {
+            if (!process.env[key]?.trim()) errors.push(`  - ${key} is required in production`);
+        }
+        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL"]) {
+            const value = process.env[key]?.trim();
+            if (value && (!value.startsWith("https://") || /sandbox/i.test(value))) {
+                errors.push(`  - ${key} must be a non-sandbox HTTPS endpoint in production`);
+            }
+        }
+    }
+
     if (errors.length > 0) {
         console.error("Environment validation failed:\n" + errors.join("\n"));
         console.error("\nFix the environment variables before starting the server.");
