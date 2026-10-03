@@ -6,6 +6,25 @@ import { Activity, ArrowLeft, RefreshCw, CheckCircle, Database, Server, Clock, C
 import api from "@/lib/axios";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
+// Matches the backend getSystemHealth payload exactly
+// (see tutorera-backend/src/controllers/adminControlTower.controller.ts).
+// The earlier shape was `{name, interval, status}` only — which both
+// claimed a field the backend never sent (`interval`) and dropped the
+// actionable lease fields the UI should surface (`holderId`, timestamps,
+// `lastError`).
+type JobStatus = "running" | "healthy" | "error" | "idle";
+
+interface JobLeaseInfo {
+  name: string;
+  holderId: string | null;
+  status: JobStatus | string;
+  lastStartedAt: string | null;
+  lastCompletedAt: string | null;
+  leaseExpiresAt: string | null;
+  lastError: string | null;
+  isLeaseActive: boolean;
+}
+
 interface HealthData {
   api: string;
   database: string;
@@ -16,11 +35,33 @@ interface HealthData {
     heapUsedMb: number;
     heapTotalMb: number;
   };
-  jobs: Array<{
-    name: string;
-    interval: string;
-    status: string;
-  }>;
+  jobs: JobLeaseInfo[];
+}
+
+const JOB_DESCRIPTIONS: Record<string, string> = {
+  request_lifecycle_worker: "Transition 7-day expired requests to archival state; preserve historical offers",
+  day_5_liquidity_escalation: "Flag zero-offer requests on Day 5 and dispatch proactive tutor push notifications",
+  "24h_expiry_warning_worker": "Alert students 24 hours prior to tuition request automatic expiration",
+  offer_24h_expiry_cleaner: "Cancel pending tutor proposals exceeding the 24-hour response window",
+  switch_payment_reconciliation: "Reconcile pending Switch checkouts whose browser never returned",
+  tutor_payout_processing: "Process tutor payouts for completed, cleared bookings",
+  abandoned_journey_recovery: "Nudge students who left a tuition request wizard partway",
+  exchange_rate_refresh: "Refresh FX reference rates for multi-currency settlement",
+  agreement_signer_reminder: "Remind tutors pending acceptance of the current tutor agreement",
+  missing_documents_reminder: "Remind tutors with incomplete verification documents",
+};
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 0) return "scheduled";
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h ago`;
 }
 
 export default function SystemHealthPage() {
@@ -216,39 +257,71 @@ export default function SystemHealthPage() {
               <tr style={{ background: UI_COLORS.card, borderBottom: `1px solid ${UI_COLORS.border}`, color: TEXT_COLORS.muted }}>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Worker Subsystem</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Responsibility</th>
-                <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Polling Frequency</th>
+                <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Last run</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>Status</th>
                 <th style={{ padding: "0.75rem 1rem", fontWeight: 600, textAlign: "right" }}>Health Signal</th>
               </tr>
             </thead>
             <tbody>
+              {(!health?.jobs || health.jobs.length === 0) && (
+                <tr><td colSpan={5} style={{ padding: "1.5rem 1rem", color: TEXT_COLORS.muted, textAlign: "center" }}>No scheduled jobs have reported yet.</td></tr>
+              )}
               {health?.jobs.map((job) => {
-                let description = "Autonomous backend routine";
-                if (job.name === "request_lifecycle_worker") description = "Transition 7-day expired requests to archival state; preserve historical offers";
-                if (job.name === "day_5_liquidity_escalation") description = "Flag zero-offer requests on Day 5 and dispatch proactive tutor push notifications";
-                if (job.name === "24h_expiry_warning_worker") description = "Alert students 24 hours prior to tuition request automatic expiration";
-                if (job.name === "offer_24h_expiry_cleaner") description = "Cancel pending tutor proposals exceeding the 24-hour response window";
+                const description = JOB_DESCRIPTIONS[job.name] || "Autonomous backend routine";
+
+                // Status badge comes from the backend's canonical computation
+                // (running / healthy / error / idle), not from a hardcoded
+                // "RUNNING" string. This was the bug — admins previously
+                // saw all-green regardless of lease state.
+                const statusKey = (job.status || "idle").toLowerCase();
+                const statusTone =
+                  statusKey === "error" ? STATUS_COLORS.danger :
+                  statusKey === "running" ? STATUS_COLORS.info :
+                  statusKey === "healthy" ? STATUS_COLORS.success :
+                  STATUS_COLORS.warning; // idle
+
+                const lastRunLabel =
+                  job.lastCompletedAt ? formatRelative(job.lastCompletedAt) :
+                  job.lastStartedAt ? `started ${formatRelative(job.lastStartedAt)}` :
+                  "never";
 
                 return (
                   <tr key={job.name} style={{ borderBottom: `1px solid ${UI_COLORS.card}` }}>
                     <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: TEXT_COLORS.body, fontFamily: "monospace", fontSize: "0.8rem" }}>
                       {job.name}
+                      {job.holderId && (
+                        <div style={{ fontSize: "0.68rem", color: TEXT_COLORS.muted, fontWeight: 400, marginTop: 2 }}>
+                          holder: <span style={{ fontFamily: "monospace" }}>{job.holderId}</span>
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: "0.75rem 1rem", color: UI_COLORS.gray500, maxWidth: "340px", fontSize: "0.8rem" }}>
                       {description}
                     </td>
-                    <td style={{ padding: "0.75rem 1rem", color: TEXT_COLORS.muted }}>
-                      Every {job.interval}
+                    <td style={{ padding: "0.75rem 1rem", color: TEXT_COLORS.muted, fontSize: "0.8rem" }}>
+                      {lastRunLabel}
                     </td>
                     <td style={{ padding: "0.75rem 1rem" }}>
-                      <span style={{ background: STATUS_COLORS.success.bg, color: STATUS_COLORS.success.color, padding: "0.2rem 0.55rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, border: `1px solid ${STATUS_COLORS.success.border}` }}>
-                        RUNNING
+                      <span style={{ background: statusTone.bg, color: statusTone.color, padding: "0.2rem 0.55rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, border: `1px solid ${statusTone.border}`, textTransform: "uppercase" }}>
+                        {statusKey}
                       </span>
                     </td>
                     <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
-                      <span style={{ color: STATUS_COLORS.success.color, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.78rem", fontWeight: 600 }}>
-                        <CheckCircle size={14} /> Normal
-                      </span>
+                      {job.lastError ? (
+                        <span title={job.lastError} style={{ color: STATUS_COLORS.danger.color, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.78rem", fontWeight: 600, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          ⚠ {job.lastError}
+                        </span>
+                      ) : statusKey === "running" ? (
+                        <span style={{ color: STATUS_COLORS.info.color, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.78rem", fontWeight: 600 }}>
+                          <Activity size={14} /> In progress
+                        </span>
+                      ) : statusKey === "healthy" ? (
+                        <span style={{ color: STATUS_COLORS.success.color, display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.78rem", fontWeight: 600 }}>
+                          <CheckCircle size={14} /> Normal
+                        </span>
+                      ) : (
+                        <span style={{ color: TEXT_COLORS.muted, fontSize: "0.78rem" }}>awaiting first run</span>
+                      )}
                     </td>
                   </tr>
                 );
