@@ -3,6 +3,36 @@ import { SITE_URL } from "@/lib/site";
 import { getEditorialArticle, categoryToSlug } from "@/lib/editorial-content";
 import { extractFaqPairs } from "@/lib/blog-markdown";
 
+// Institutional author identities currently in use. When article.author.name
+// matches one of these, the Article's author is emitted as @type Organization
+// (which is accurate — these guides are collective editorial output). Any
+// other name is a human writer and gets @type Person with the author URL as
+// the stable identifier, so the Person is a real graph node Google can
+// resolve, not a misrepresented organization. Add future institutional
+// identities here when they ship, not with heuristic string matching.
+const INSTITUTIONAL_AUTHORS = new Set<string>([
+  "TUTORERA Editorial Team",
+  "TUTORERA Platform Operations",
+]);
+
+function authorSchema(name: string, url: string) {
+  const absoluteUrl = url.startsWith("http") ? url : `${SITE_URL}${url}`;
+  if (INSTITUTIONAL_AUTHORS.has(name)) {
+    return { "@type": "Organization", name, url: absoluteUrl };
+  }
+  // Person path: @id anchors the Person so repeated articles by the same
+  // author collapse to one graph node across pages; `url` keeps the
+  // author-page link; `worksFor` ties the human to the TUTORERA org
+  // (@id reference to the global Organization in layout.tsx).
+  return {
+    "@type": "Person",
+    "@id": `${absoluteUrl}#person`,
+    name,
+    url: absoluteUrl,
+    worksFor: { "@id": `${SITE_URL}/#organization` },
+  };
+}
+
 const titles: Record<string, string> = {
   "how-to-find-a-trusted-tutor-in-pakistan": "How to Find a Trusted Tutor in Pakistan",
   "online-vs-home-tuition-in-pakistan": "Online Tutoring vs Home Tuition in Pakistan",
@@ -31,6 +61,10 @@ export default async function Layout({ children, params }: Props) {
   const url = `${SITE_URL}/blog/${slug}`;
   const category = article?.category || "Guides";
 
+  const authorName = article?.author.name || "TUTORERA Editorial Team";
+  const authorUrl = article?.author.url || "/editorial-policy";
+  const reviewerName = article?.reviewer.name || "TUTORERA Platform Operations";
+
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -40,11 +74,13 @@ export default async function Layout({ children, params }: Props) {
     mainEntityOfPage: url,
     datePublished: article?.createdAt,
     dateModified: article?.updatedAt,
-    // Content is institutionally authored and reviewed, not written by a
-    // named individual - Organization correctly reflects that, rather than
-    // a Person + sameAs that would misrepresent how these guides are made.
-    author: { "@type": "Organization", name: article?.author.name || "TUTORERA Editorial Team", url: `${SITE_URL}${article?.author.url || "/editorial-policy"}` },
-    reviewedBy: { "@type": "Organization", name: article?.reviewer.name || "TUTORERA Platform Operations", url: `${SITE_URL}/content-review-policy` },
+    // Author type is now derived from the name — institutional sources
+    // emit Organization (unchanged); any override to a human writer emits
+    // Person with the author's URL as a stable graph identifier. The
+    // reviewer stays Organization because content review is always a
+    // platform-operations activity, not a single named reviewer.
+    author: authorSchema(authorName, authorUrl),
+    reviewedBy: { "@type": "Organization", name: reviewerName, url: `${SITE_URL}/content-review-policy` },
     publisher: { "@id": `${SITE_URL}/#organization` },
     image: article?.coverImage ? `${SITE_URL}${article.coverImage}` : `${SITE_URL}/og-image.png`,
   };
