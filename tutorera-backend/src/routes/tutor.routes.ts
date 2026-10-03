@@ -2,12 +2,14 @@ import { Router } from "express";
 import {
   createOrUpdateProfile,
   getMyProfile,
-  getTutorById,
-  getAllTutors,
-  getTutorSeoFacets,
   saveOnboardingStep,
   getOnboardingStatus,
 } from "../controllers/tutor.controller";
+import {
+  getPublicTutorById,
+  getPublicTutors,
+  getPublicTutorSeoFacets,
+} from "../controllers/publicTutor.controller";
 import {
   saveAvailability,
   getTutorAvailability,
@@ -20,11 +22,11 @@ import { uploadVerification } from "../middlewares/upload.middleware";
 
 const router = Router();
 
-// Public
-router.get("/seo-facets", getTutorSeoFacets);
-router.get("/", getAllTutors);
+// Public — all tutor exposure is gated by the canonical marketplace eligibility rule.
+router.get("/seo-facets", getPublicTutorSeoFacets);
+router.get("/", getPublicTutors);
 router.get("/:tutorUserId/availability", getTutorAvailability);
-router.get("/:id", getTutorById);
+router.get("/:id", getPublicTutorById);
 
 // Availability (tutor)
 router.post("/availability", protect, authorize("tutor"), validateAvailability(saveAvailabilitySchema), saveAvailability);
