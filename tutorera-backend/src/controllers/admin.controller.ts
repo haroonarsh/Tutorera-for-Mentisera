@@ -1541,13 +1541,20 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
     ws1.addRow([]);
 
     // Revenue summary
-    styleSection(ws1.addRow(["💰 REVENUE SUMMARY", ""]));
-    styleHeader(ws1.addRow(["Metric", "Amount (PKR)"]));
+    // Audit P1-01 / P2: totals here are summed across whatever currency
+    // each booking carries without FX conversion, so labelling a single
+    // "PKR" column was both wrong (not every row is PKR under the global
+    // USD settlement) and misleading (mixing currencies into one scalar).
+    // The columns are kept numeric; downstream readers should split by
+    // currency using the Bookings Detail sheet, which carries per-row
+    // currency context.
+    styleSection(ws1.addRow(["💰 REVENUE SUMMARY (per-row currency; see Bookings Detail)", ""]));
+    styleHeader(ws1.addRow(["Metric", "Amount"]));
     [
-      ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
-      ["Platform Fee (20%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
-      ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
-      ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
+      ["Total Session Revenue", totalRevenue],
+      ["Platform Fee (20%)", platformFeeTotal],
+      ["GST on Platform Fee (15%)", gstTotal],
+      ["Total Tutor Payouts", tutorPayoutTotal],
     ].forEach(([k, v]) => ws1.addRow([k, v]));
 
     ws1.addRow([]);
@@ -1569,7 +1576,9 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       { header: "Booking ID", key: "id", width: 28 },
       { header: "Student", key: "student", width: 22 },
       { header: "Tutor", key: "tutor", width: 22 },
-      { header: "Amount (PKR)", key: "amount", width: 16 },
+      // Audit P1-01: carry the per-row currency instead of asserting PKR.
+      { header: "Currency", key: "currency", width: 10 },
+      { header: "Amount", key: "amount", width: 16 },
       { header: "Platform Fee", key: "fee", width: 16 },
       { header: "Tutor Payout", key: "payout", width: 16 },
       { header: "Status", key: "status", width: 14 },
@@ -1584,15 +1593,16 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       const student = b.student as unknown as { name: string } | null;
       const tutor   = b.tutor   as unknown as { name: string } | null;
       ws2.addRow({
-        id:      b._id.toString(),
-        student: student?.name || "—",
-        tutor:   tutor?.name   || "—",
-        amount:  b.amount || 0,
+        id:       b._id.toString(),
+        student:  student?.name || "—",
+        tutor:    tutor?.name   || "—",
+        currency: b.currency || "",
+        amount:   b.amount || 0,
         fee,
         payout,
-        status:  b.status,
-        mode:    b.teachingMode,
-        date:    new Date(b.createdAt).toLocaleDateString("en-PK"),
+        status:   b.status,
+        mode:     b.teachingMode,
+        date:     new Date(b.createdAt).toLocaleDateString("en-PK"),
       });
     }
 
@@ -1604,7 +1614,10 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       { header: "Tutor Name", key: "name", width: 24 },
       { header: "Email", key: "email", width: 28 },
       { header: "Bookings", key: "bookings", width: 14 },
-      { header: "Earnings (PKR)", key: "earnings", width: 18 },
+      // Audit P1-01: tutor earnings sum across whatever currency each
+      // settled booking carried. The label is kept neutral; split
+      // per-currency downstream from the Bookings Detail sheet.
+      { header: "Earnings", key: "earnings", width: 18 },
       { header: "Avg. Rating", key: "rating", width: 14 },
       { header: "Total Reviews", key: "reviews", width: 16 },
     ];
@@ -1716,14 +1729,18 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
     ].forEach(([k, v]) => drawTableRow([String(k), String(v)], bWidths));
 
     // ── 2. Revenue ──
-    drawSectionTitle("💰  REVENUE & FEES");
+    // Audit P1-01: see the Excel sibling above — these totals aggregate
+    // across whatever currency each booking carried, so a fixed "PKR"
+    // column misrepresents USD/AED/GBP settlements under the global
+    // settlement policy. Labels kept currency-neutral.
+    drawSectionTitle("💰  REVENUE & FEES (per-row currency; see Bookings Detail)");
     const rWidths = [350, 145];
-    drawTableRow(["Metric", "Amount (PKR)"], rWidths, true);
+    drawTableRow(["Metric", "Amount"], rWidths, true);
     [
-      ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
-      ["Platform Fee (20%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
-      ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
-      ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
+      ["Total Session Revenue", totalRevenue.toLocaleString()],
+      ["Platform Fee (20%)", platformFeeTotal.toLocaleString()],
+      ["GST on Platform Fee (15%)", gstTotal.toLocaleString()],
+      ["Total Tutor Payouts", tutorPayoutTotal.toLocaleString()],
     ].forEach(([k, v]) => drawTableRow([k, v], rWidths));
 
     // ── 3. User Summary ──
@@ -1744,7 +1761,10 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       drawTableRow([
         t.name, t.email,
         String(t.bookings),
-        `Rs.${t.earnings.toLocaleString()}`,
+        // Audit P1-01: no currency prefix — earnings aggregate across
+        // the tutor's settled bookings, which may be in multiple
+        // currencies under the global settlement policy.
+        t.earnings.toLocaleString(),
         t.avgRating.toFixed(1),
       ], tWidths)
     );

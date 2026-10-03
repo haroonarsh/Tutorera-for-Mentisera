@@ -47,7 +47,10 @@ interface LinkedLearner {
 }
 
 export default function DirectBookingModal({
-  tutorId, tutorUserId, tutorName, hourlyRate, currency = "PKR",
+  // Audit P1-01: default to USD (global settlement). Callers knowing the
+  // tutor's real currency pass it explicitly; the fallback must not
+  // silently book a non-PK tutor's session at a PKR rate.
+  tutorId, tutorUserId, tutorName, hourlyRate, currency = "USD",
   tutorSubjects, tutorTeachingMode, tutorCity,
   initialSubject = "", initialLevel = "",
   onClose, onSuccess,

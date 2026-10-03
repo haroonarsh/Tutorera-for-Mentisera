@@ -14,7 +14,11 @@ type Payout = {
 
 type Response = { stats: { currencyTotals: { currency: string; pendingAmount: number; paidAmount: number }[] }; payouts: Payout[] };
 const statuses = ["all", "pending", "approved", "processing", "paid", "failed", "held"];
-const money = (value: number, currency = "PKR") => `${currency} ${Number(value || 0).toLocaleString("en-PK")}`;
+// Audit P1-01: default to USD (the global settlement currency). Payout
+// rows almost always carry a currency explicitly; the fallback must not
+// silently stamp PKR on a non-PK ledger entry. Locale is left as en-PK
+// since this component is only reached inside PK operational tooling.
+const money = (value: number, currency = "USD") => `${currency} ${Number(value || 0).toLocaleString("en-PK")}`;
 const date = (value?: string) => value ? new Intl.DateTimeFormat("en-PK", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : null;
 
 export default function PayoutTimeline() {

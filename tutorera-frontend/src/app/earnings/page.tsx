@@ -160,7 +160,9 @@ export default function EarningsPage() {
   const maxSubject = data ? Math.max(...(data.subjectBreakdown.map(s => s.count)), 1) : 1;
   const payoutTotals = tutorData?.stats.currencyTotals ?? [];
   const hasMultiplePayoutCurrencies = payoutTotals.length > 1;
-  const formatMoney = (amount: number, currency = "PKR") => `${currency} ${amount.toLocaleString()}`;
+  // Audit P1-01: default to the global settlement currency (USD), not PKR.
+  // Call sites that know the real currency pass it explicitly.
+  const formatMoney = (amount: number, currency = "USD") => `${currency} ${amount.toLocaleString()}`;
 
   // Stat cards
   const statCards = isTutor ? [
