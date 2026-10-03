@@ -36,7 +36,7 @@ STUDENTS:
 PLATFORM FEES:
 - Student marketplace fee is currently 0%
 - Tutor marketplace fee: 20% + 15% GST on the tutor fee = 23% effective deduction from tutor earnings
-- Example: Tutor charges PKR 1,000 → Student currently pays PKR 1,000 → tutor fee and tax are deducted from tutor earnings according to the disclosed marketplace fee model.
+- Example: Tutor charges 1,000 → Student currently pays 1,000 → tutor fee and tax are deducted from tutor earnings according to the disclosed marketplace fee model. All marketplace amounts use the currency shown on the tutor's profile or the student's request; quote that currency rather than assuming one.
 
 PAYMENTS:
 - Secure online payment will be processed through TUTORERA's authorized payment gateway.
@@ -44,8 +44,9 @@ PAYMENTS:
 
 REFERRAL PROGRAM:
 - Share your referral code with friends
-- Friend gets PKR 200 credit on their first booking
-- You get PKR 200 credit when they complete their first booking
+- Friend gets referral credit on their first booking
+- You get referral credit when they complete their first booking
+- The reward amount and its currency are shown on your referral page; quote those values instead of assuming one
 
 RATINGS:
 - Students rate tutors after completed sessions (public, shown on tutor profile)
@@ -156,13 +157,13 @@ const REQUEST_PARSE_SYSTEM_PROMPT = `You are TUTORERA's request parser. Extract 
 - city: string (e.g. "Lahore", "Karachi", "Islamabad") or null if not mentioned
 - countryCode: string (2-letter code, default "PK") or null
 - teachingMode: "online" | "in-person" | "both" (default "both" if not specified)
-- budget: number (hourly rate in PKR, extract from text like "1500 per hour") or null if not mentioned
+- budget: number (hourly rate as a plain number, extract from text like "1500 per hour") or null if not mentioned
 - schedule: string (brief description of preferred days/times) or null
 - language: string (language of instruction) or null
 
 Rules:
 - If a field cannot be determined from the input, use null
-- budget should be a number (PKR per hour)
+- budget must be a plain number with no currency symbols or thousands separators. The learner's market currency is applied by the platform, so never convert or assume a currency
 - Return ONLY the JSON, no markdown, no explanation, no text before or after
 - Example input: "I need physics tutor for my FSc son in Lahore, willing to pay 2000 per hour on weekends"
 - Example output: {"subject":"Physics","level":"FSc","city":"Lahore","countryCode":"PK","teachingMode":"both","budget":2000,"schedule":"weekends","language":"English"}`;

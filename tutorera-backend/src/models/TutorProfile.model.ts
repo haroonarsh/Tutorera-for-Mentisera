@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { EDUCATION_LEVELS, normalizeEducationLevels, normalizeEducationLevel } from "../config/educationLevels";
+import { evaluateMarketplaceAccess } from "../services/eligibility.service";
 import logger from "../config/logger";
 
 export type TutorStatus =
@@ -452,7 +453,7 @@ function policeIsRequired(profile: ITutorProfile): boolean {
 }
 
 function hasApprovedTeachingSubject(profile: ITutorProfile | Record<string, any>): boolean {
-  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: any) =>
+  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: ITutorProfile['subjectEligibility'][number]) =>
     entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
   );
 }
@@ -469,24 +470,24 @@ function hasApprovedTeachingSubject(profile: ITutorProfile | Record<string, any>
 // verification decisions that shouldn't revalidate legacy application data)
 // still always run pre("save"), so putting this fix only in pre("validate")
 // left every such save able to trip the same index error again.
-function repairInvalidLocation(p: any) {
+function repairInvalidLocation(p: ITutorProfile) {
   if (p.location && (!Array.isArray(p.location.coordinates) || p.location.coordinates.length !== 2)) {
     p.location = undefined;
   }
 }
 
 tutorProfileSchema.pre("validate", function () {
-  const p = this as any;
+  const p = this as ITutorProfile;
   if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
-    p.levels = normalizeEducationLevels(p.levels) as any;
+    p.levels = normalizeEducationLevels(p.levels) as string[];
   }
   repairInvalidLocation(p);
 });
 
 tutorProfileSchema.pre("save", function () {
-  const p = this as any;
+  const p = this as ITutorProfile;
   if (p.isModified && p.isModified("levels") && Array.isArray(p.levels)) {
-    p.levels = normalizeEducationLevels(p.levels) as any;
+    p.levels = normalizeEducationLevels(p.levels) as string[];
   }
   repairInvalidLocation(p);
   // avatarVerificationStatus "not_submitted" means either a tutor who
@@ -497,25 +498,20 @@ tutorProfileSchema.pre("save", function () {
   // Core marketplace documents: CNIC, Degree, and Demo Video are the mandatory
   // credentials for marketplace approval. Police clearance only gates home tuition.
   //
-  // Audit P1-03: the second branch below is the "grandfather bypass" the
-  // forensic audit flagged — a profile that was marked marketplaceEligible
-  // under an earlier (pre-current-document) policy keeps coreApproved
-  // without the current CNIC/degree/demo-video check. Removing it in one
-  // step would deactivate any legacy active tutor whose documents were
-  // never re-approved. This commit does NOT change behaviour; it just
-  // emits a WARN every time the bypass fires so operations can enumerate
-  // the affected profiles before an explicit grandfather policy /
-  // migration is deployed. Once the real count is known, replace this
-  // branch with `p.grandfathered === true` plus a one-shot backfill.
-  const coreDocsApproved =
-    p.cnicVerificationStatus === "approved" &&
-    p.degreeVerificationStatus === "approved" &&
-    p.demoVideoStatus === "approved";
-  const grandfatherBypassActive =
-    !coreDocsApproved &&
-    p.verificationStatus === "approved" &&
-    p.marketplaceEligible;
-  if (grandfatherBypassActive) {
+  // Audit P1-03: the eligibility rules below are no longer re-implemented
+  // here. They live in services/eligibility.service.ts, which the activation
+  // service and the tracking read paths also call, so a tutor cannot be public
+  // according to one authority and ineligible according to another. The only
+  // per-caller input is whether the persisted legacy activation flag may stand
+  // in for missing document approvals — the save hook passes the profile's own
+  // flag so a read or save never revokes a legacy active tutor, and the bypass
+  // that uses it is reported by `npm run audit:grandfathered-tutors`.
+  const access = evaluateMarketplaceAccess(p, { grandfathered: Boolean(p.marketplaceEligible) });
+  const coreApproved = access.coreApproved;
+  const subjectApprovalSatisfied = access.subjectApproved;
+  const agreementSatisfied = access.agreementSatisfied;
+
+  if (access.grandfatherBypassActive) {
     logger.warn(
       {
         tutorProfileId: p._id?.toString?.(),
@@ -527,8 +523,6 @@ tutorProfileSchema.pre("save", function () {
       "tutor-profile.grandfather-bypass: profile kept coreApproved only via legacy marketplaceEligible flag",
     );
   }
-  const coreApproved = coreDocsApproved || grandfatherBypassActive;
-  const subjectApprovalSatisfied = hasApprovedTeachingSubject(p);
 
   if (coreApproved) {
     p.verificationStatus = "approved";
@@ -546,7 +540,7 @@ tutorProfileSchema.pre("save", function () {
       p.tutorStatus = "approved_pending_subject_approval";
       p.agreementAcceptanceRequired = false;
       p.marketplaceEligible = false;
-    } else if (!p.agreementAcceptedAt && p.legacyAgreementStatus !== "accepted" && !p.marketplaceEligible) {
+    } else if (!agreementSatisfied && !p.marketplaceEligible) {
       // NON-NEGOTIABLE RULE: admin/document approval does NOT make a tutor active!
       // Must be approved_pending_agreement until explicit electronic contract acceptance succeeds.
       p.tutorStatus = "approved_pending_agreement";

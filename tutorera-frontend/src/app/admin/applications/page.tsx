@@ -5,35 +5,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import { AdminApplicationRow, CanonicalStatus } from "@/types/tracking";
+import { CANONICAL_STATUSES, CANONICAL_STATUS_LABELS } from "@/contracts/tracking.contract";
 import { showError } from "@/lib/toast";
 import s from "@/components/Tracking/tracking.module.css";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
-const STATUS_LABELS: Record<CanonicalStatus, string> = {
-  APPLICATION_STARTED: "Application started",
-  DOCUMENTS_REQUIRED: "Documents required",
-  APPLICATION_SUBMITTED: "Application submitted",
-  UNDER_REVIEW: "Under review",
-  ACTION_REQUIRED: "Action required",
-  VERIFICATION_IN_PROGRESS: "Verification in progress",
-  SUBJECT_ELIGIBILITY_REQUIRED: "Teaching subject approval required",
-  APPROVED_FOR_MARKETPLACE: "Marketplace active",
-  APPROVED_PENDING_AGREEMENT: "Approved (Agreement Pending)",
-  AGREEMENT_PENDING: "Agreement pending",
-  AGREEMENT_REACCEPTANCE_REQUIRED: "Agreement re-acceptance required",
-  HOME_TUITION_VERIFICATION_REQUIRED: "Home tuition pending",
-  HOME_TUITION_ELIGIBLE: "Home tuition eligible",
-  REJECTED: "Rejected",
-  SUSPENDED: "Suspended",
-  RE_VERIFICATION_REQUIRED: "Re-verification",
-};
+const STATUS_LABELS = CANONICAL_STATUS_LABELS;
 
-const ALL_STATUSES: CanonicalStatus[] = [
-  "APPLICATION_STARTED", "DOCUMENTS_REQUIRED", "APPLICATION_SUBMITTED", "UNDER_REVIEW",
-  "ACTION_REQUIRED", "VERIFICATION_IN_PROGRESS", "SUBJECT_ELIGIBILITY_REQUIRED", "APPROVED_FOR_MARKETPLACE",
-  "APPROVED_PENDING_AGREEMENT", "AGREEMENT_PENDING", "AGREEMENT_REACCEPTANCE_REQUIRED",
-  "HOME_TUITION_VERIFICATION_REQUIRED", "HOME_TUITION_ELIGIBLE", "REJECTED", "SUSPENDED", "RE_VERIFICATION_REQUIRED",
-];
+const ALL_STATUSES: CanonicalStatus[] = [...CANONICAL_STATUSES];
 
 /** Carries the current filters + page into the detail page's URL so it can
  * rebuild the same filtered queue and offer Prev/Next navigation between

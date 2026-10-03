@@ -13,6 +13,8 @@ interface ReferralData {
   referralCode: string;
   referralLink: string;
   referralCredit: number;
+  referralCreditCurrency: string;
+  program: { referrerRewardAmount: number; referredDiscountAmount: number; currency: string; isActive: boolean };
   stats: {
     totalReferred: number;
     creditedCount: number;
@@ -24,6 +26,7 @@ interface ReferralData {
     referred: { name: string; createdAt: string };
     status: "pending" | "credited";
     creditAmount: number;
+    creditCurrency: string;
     createdAt: string;
   }[];
 }
@@ -87,7 +90,7 @@ export default function ReferralPage() {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '999px', padding: '0.5rem 1.25rem', marginBottom: '2rem' }}>
               <Coins size={16} color="#34d399" />
               <span style={{ color: '#34d399', fontWeight: 700, fontSize: '0.9rem' }}>
-                Your credit balance: Rs. {data.referralCredit.toLocaleString()}
+                Your credit balance: {data.referralCreditCurrency} {data.referralCredit.toLocaleString()}
               </span>
             </div>
           )}
@@ -148,8 +151,8 @@ export default function ReferralPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem' }}>
             {[
               { step: "01", emoji: "🔗", title: "Share your link", desc: "Send your unique referral link or code to friends who want to learn." },
-              { step: "02", emoji: "🎁", title: "They get Rs. 200 off", desc: "Your friend gets Rs. 200 credit applied to their first booking." },
-              { step: "03", emoji: "💰", title: "You earn Rs. 200", desc: "Once they complete their first booking, Rs. 200 is added to your credit balance." },
+              { step: "02", emoji: "🎁", title: `They get ${data.program.currency} ${data.program.referredDiscountAmount} off`, desc: `Your friend gets ${data.program.currency} ${data.program.referredDiscountAmount} credit applied to their first booking.` },
+              { step: "03", emoji: "💰", title: `You earn ${data.program.currency} ${data.program.referrerRewardAmount}`, desc: `Once they complete their first booking, ${data.program.currency} ${data.program.referrerRewardAmount} is added to your credit balance.` },
             ].map(item => (
               <div key={item.step} style={{ textAlign: 'center' }}>
                 <div style={{ width: 56, height: 56, backgroundColor: '#EEF5FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.875rem', fontSize: '1.5rem' }}>
@@ -181,7 +184,7 @@ export default function ReferralPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: r.status === "credited" ? '#16a34a' : '#d97706' }}>
-                      {r.status === "credited" ? `+Rs. ${r.creditAmount}` : "Pending first booking"}
+                      {r.status === "credited" ? `+${r.creditCurrency} ${r.creditAmount}` : "Pending first booking"}
                     </span>
                     <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, backgroundColor: r.status === "credited" ? '#f0fdf4' : '#fffbeb', color: r.status === "credited" ? '#16a34a' : '#d97706' }}>
                       {r.status === "credited" ? "Credited" : "Pending"}

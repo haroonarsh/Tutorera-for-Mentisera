@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import LegalAgreement, { ILegalAgreement, AgreementDocumentType } from "../models/LegalAgreement.model";
+import { COUNTRIES } from "../config/countries";
 
 export function computeAgreementHash(content: string, schedule: string = ""): string {
   const normalized = `${content.trim()}\n---SCHEDULE---\n${schedule.trim()}`.replace(/\r\n/g, "\n");
@@ -173,7 +174,11 @@ export async function seedDefaultLegalAgreements(): Promise<ILegalAgreement> {
     feeScheduleSnapshot: {
       marketplaceFeePercent: 20,
       taxRatePercent: 0,
-      currency: "PKR",
+      // This seed is the Pakistan legal schedule, so its disclosed currency is
+      // the Pakistani market's own currency rather than a settlement default.
+      // The live tutor-facing disclosure is built from the real fee config in
+      // legalAgreement.controller.ts, not from this seed.
+      currency: COUNTRIES.find((c) => c.code === "PK")?.currency || "PKR",
       effectiveFrom: "2026-08-30",
     },
     companyDetails: {

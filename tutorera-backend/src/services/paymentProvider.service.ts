@@ -2,6 +2,14 @@ import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { swichProvider } from "./swichProvider.service";
+import { httpError } from "../utils/httpError";
+
+/** PaymentLedger.metadata is Mixed; read it without casting the document. */
+function readLedgerString(metadata: unknown, key: string): string | undefined {
+  if (!metadata || typeof metadata !== "object") return undefined;
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
 
 export type PaymentProviderName = "swich";
 export type LedgerProviderName = PaymentProviderName | "manual";
@@ -84,11 +92,9 @@ export const paymentProvider = {
    */
   async confirmCheckout(basketId: string): Promise<{ confirmed: boolean; sessionStatus: string; amount: number; currency: string }> {
     const ledgerEntry = await PaymentLedger.findOne({ providerTransactionId: basketId, eventType: "checkout.created" }).sort("-createdAt");
-    const paymentSessionGuid = (ledgerEntry?.metadata as any)?.paymentSessionGuid;
+    const paymentSessionGuid = readLedgerString(ledgerEntry?.metadata, "paymentSessionGuid");
     if (!paymentSessionGuid) {
-      const error = new Error("No payment session found for this transaction") as Error & { statusCode?: number };
-      error.statusCode = 404;
-      throw error;
+      throw httpError("No payment session found for this transaction", 404, "PAYMENT_SESSION_MISSING");
     }
 
     const session = await swichProvider.getPaymentSessionStatus(paymentSessionGuid);

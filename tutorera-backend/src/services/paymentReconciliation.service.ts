@@ -7,6 +7,7 @@ import logger from "../config/logger";
 import { finalizeBidAcceptance } from "../controllers/request.controller";
 import { paymentProvider, recordPaymentLedger } from "./paymentProvider.service";
 import { finalizePromoRedemption, getAppliedPromoForBasket } from "./promoCode.service";
+import { messageOf } from "../utils/httpError";
 
 export type SwichReconciliationResult = {
   basketId: string;
@@ -145,9 +146,9 @@ export async function processPendingSwichCheckouts(io?: SocketIOServer): Promise
     try {
       const reconciliation = await reconcileSwichCheckout(checkout.providerTransactionId, io);
       if (reconciliation.confirmed) result.settled += 1;
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.failed += 1;
-      result.errors.push(`${checkout.providerTransactionId}: ${error?.message || "unknown reconciliation error"}`);
+      result.errors.push(`${checkout.providerTransactionId}: ${messageOf(error, "unknown reconciliation error")}`);
       logger.error({ err: error, basketId: checkout.providerTransactionId }, "Switch checkout reconciliation failed");
     }
   }

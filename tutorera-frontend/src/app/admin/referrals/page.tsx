@@ -3,6 +3,7 @@ import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { Gift, Save } from "lucide-react";
 import api from "@/lib/axios";
+import { CURRENCY_OPTIONS } from "@/lib/currency";
 import { showSuccess, showError } from "@/lib/toast";
 
 const C = UI_COLORS;
@@ -13,18 +14,20 @@ interface Referral {
   referred: { name: string; email: string; createdAt: string };
   status: "pending" | "credited";
   creditAmount: number;
+  creditCurrency: string;
   createdAt: string;
 }
 
 interface ReferralConfig {
   referrerRewardAmount: number;
   referredDiscountAmount: number;
+  currency: string;
   isActive: boolean;
 }
 
 function ReferralConfigPanel() {
-  const [config, setConfig] = useState<ReferralConfig | null>(null);
-  const [form, setForm] = useState({ referrerRewardAmount: "200", referredDiscountAmount: "200", isActive: true });
+  const [, setConfig] = useState<ReferralConfig | null>(null);
+  const [form, setForm] = useState({ referrerRewardAmount: "200", referredDiscountAmount: "200", currency: "USD", isActive: true });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -33,7 +36,7 @@ function ReferralConfigPanel() {
       .then(res => {
         const c: ReferralConfig = res.data.config;
         setConfig(c);
-        setForm({ referrerRewardAmount: String(c.referrerRewardAmount), referredDiscountAmount: String(c.referredDiscountAmount), isActive: c.isActive });
+        setForm({ referrerRewardAmount: String(c.referrerRewardAmount), referredDiscountAmount: String(c.referredDiscountAmount), currency: c.currency || "USD", isActive: c.isActive });
       })
       .catch(err => showError(err, "Failed to load referral configuration"))
       .finally(() => setLoading(false));
@@ -45,6 +48,7 @@ function ReferralConfigPanel() {
       const res = await api.put("/admin/referral-config", {
         referrerRewardAmount: Number(form.referrerRewardAmount),
         referredDiscountAmount: Number(form.referredDiscountAmount),
+        currency: form.currency,
         isActive: form.isActive,
       });
       setConfig(res.data.config);
@@ -61,10 +65,20 @@ function ReferralConfigPanel() {
   return (
     <div style={{ backgroundColor: C.surface, borderRadius: '0.875rem', border: `1px solid ${C.border}`, padding: '1.5rem', marginBottom: '1.5rem' }}>
       <h2 style={{ fontSize: '1rem', fontWeight: 700, color: C.primary, margin: '0 0 0.25rem' }}>Reward Configuration</h2>
-      <p style={{ color: C.gray500, fontSize: '0.82rem', margin: '0 0 1.1rem' }}>Adjust the referral rewards without a code deploy. Existing credited referrals keep their original amount.</p>
+      <p style={{ color: C.gray500, fontSize: '0.82rem', margin: '0 0 1.1rem' }}>Adjust the referral rewards without a code deploy. Existing credited referrals keep their original amount and currency.</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.1rem' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>Referrer Reward (Rs.)</label>
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>Reward Currency</label>
+          <select
+            value={form.currency}
+            onChange={e => setForm({ ...form, currency: e.target.value })}
+            style={{ width: '100%', padding: '0.55rem 0.7rem', border: `1px solid ${C.border}`, borderRadius: '0.4rem', fontSize: '0.9rem', boxSizing: 'border-box', backgroundColor: 'white' }}
+          >
+            {CURRENCY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>Referrer Reward ({form.currency})</label>
           <input
             type="number"
             value={form.referrerRewardAmount}
@@ -73,7 +87,7 @@ function ReferralConfigPanel() {
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>New Signup Discount (Rs.)</label>
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.82rem', color: TEXT_COLORS.secondary }}>New Signup Discount ({form.currency})</label>
           <input
             type="number"
             value={form.referredDiscountAmount}
@@ -102,14 +116,14 @@ function ReferralConfigPanel() {
 export default function AdminReferralsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalCredit, setTotalCredit] = useState(0);
+  const [creditByCurrency, setCreditByCurrency] = useState<{ currency: string; total: number }[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "credited">("all");
 
   useEffect(() => {
     api.get("/admin/referrals")
       .then(res => {
         setReferrals(res.data.referrals);
-        setTotalCredit(res.data.totalCreditIssued);
+        setCreditByCurrency(res.data.creditByCurrency || []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -122,7 +136,7 @@ export default function AdminReferralsPage() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Referral Program</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-          Total credit issued: <strong style={{ color: C.primary }}>Rs. {totalCredit.toLocaleString()}</strong>
+          Total credit issued: <strong style={{ color: C.primary }}>{creditByCurrency.length ? creditByCurrency.map(item => `${item.currency} ${item.total.toLocaleString()}`).join(" · ") : "0"}</strong>
         </p>
       </div>
 
@@ -177,7 +191,7 @@ export default function AdminReferralsPage() {
                     {new Date(r.referred.createdAt).toLocaleDateString()}
                   </td>
                   <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: C.primary, fontSize: '0.875rem' }}>
-                    Rs. {r.creditAmount}
+                    {r.creditCurrency} {r.creditAmount}
                   </td>
                   <td style={{ padding: '1rem 1.25rem' }}>
                     <span style={{ padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: r.status === "credited" ? STATUS_COLORS.success.bg : STATUS_COLORS.warning.bg, color: r.status === "credited" ? STATUS_COLORS.success.color : STATUS_COLORS.warning.color }}>

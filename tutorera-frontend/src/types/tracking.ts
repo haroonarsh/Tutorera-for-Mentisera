@@ -1,20 +1,14 @@
-export type CanonicalStatus =
-  | "APPLICATION_STARTED"
-  | "DOCUMENTS_REQUIRED"
-  | "APPLICATION_SUBMITTED"
-  | "UNDER_REVIEW"
-  | "ACTION_REQUIRED"
-  | "VERIFICATION_IN_PROGRESS"
-  | "SUBJECT_ELIGIBILITY_REQUIRED"
-  | "APPROVED_FOR_MARKETPLACE"
-  | "APPROVED_PENDING_AGREEMENT"
-  | "AGREEMENT_PENDING"
-  | "AGREEMENT_REACCEPTANCE_REQUIRED"
-  | "HOME_TUITION_VERIFICATION_REQUIRED"
-  | "HOME_TUITION_ELIGIBLE"
-  | "REJECTED"
-  | "SUSPENDED"
-  | "RE_VERIFICATION_REQUIRED";
+export type { CanonicalStatus };
+export {
+  CANONICAL_STATUSES,
+  CANONICAL_STATUS_LABELS,
+  TUTOR_ACTION_STATUSES,
+  TERMINAL_STATUSES,
+  MARKETPLACE_ACTIVE_STATUSES,
+  HOME_TUITION_PENDING_STATUSES,
+  getCanonicalStatusLabel,
+} from "@/contracts/tracking.contract";
+import type { CanonicalStatus } from "@/contracts/tracking.contract";
 
 export type ComponentStatus =
   | "not_required"

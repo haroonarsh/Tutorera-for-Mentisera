@@ -167,7 +167,8 @@ export async function processAbandonedJourneyRecovery() {
     await NotificationService.publishEvent(student._id?.toString(), eventName, {
       day,
       tutorName: tutor?.name,
-      amount: booking.studentTotal || booking.amount,
+amount: booking.studentTotal || booking.amount,
+      currency: booking.currency,
       subject: "Complete your payment",
       html: "Your booking is waiting for payment.",
       relatedEntityType: "Booking",

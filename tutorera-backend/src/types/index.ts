@@ -42,6 +42,7 @@ export interface IUser extends Document {
   resetPasswordExpire?: Date;
   referralCode?: string;
   referralCredit: number;
+  referralCreditCurrency: string;
   referredBy?: Types.ObjectId;
   googleId?: string;
   authProvider: AuthProvider;

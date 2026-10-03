@@ -1,6 +1,7 @@
 import MarketConfig, { IMarketConfig } from "../models/MarketConfig.model";
 import { seedTaxConfigs } from "./pricing.service";
 import { getSwichCapabilities } from "./swichProvider.service";
+import { httpError } from "../utils/httpError";
 
 export const LAUNCH_MARKETS = {
   PK: {
@@ -127,34 +128,22 @@ export function marketFeatureEnabled(market: IMarketConfig, feature: string): bo
 export async function assertMarketFeature(countryCode: string | undefined, feature: string): Promise<IMarketConfig> {
   const market = await resolveMarket(countryCode);
   if (!market || !market.isActive || !marketFeatureEnabled(market, feature)) {
-    const error = new Error("This marketplace feature is not available in the selected market.") as Error & { statusCode: number; code: string };
-    error.statusCode = 422;
-    error.code = "MARKET_FEATURE_UNAVAILABLE";
-    throw error;
+    throw httpError("This marketplace feature is not available in the selected market.", 422, "MARKET_FEATURE_UNAVAILABLE");
   }
   return market;
 }
 
 export async function assertAcceptanceAvailable(countryCode?: string): Promise<IMarketConfig> {
   const market = await resolveMarket(countryCode);
-  if (!market || market.launchStatus !== "live" || !market.paymentsEnabled || !marketFeatureEnabled(market, "acceptance")) {
-    const error = new Error("Offer acceptance and payment are not available in this discovery-beta market yet.") as Error & { statusCode: number; code: string };
-    error.statusCode = 409;
-    error.code = "MARKET_DISCOVERY_ONLY";
-    throw error;
+if (!market || market.launchStatus !== "live" || !market.paymentsEnabled || !marketFeatureEnabled(market, "acceptance")) {
+    throw httpError("Offer acceptance and payment are not available in this discovery-beta market yet.", 409, "MARKET_DISCOVERY_ONLY");
   }
-  if (market.paymentProvider !== "swich") {
-    const error = new Error("No compliant payment provider is configured for this market.") as Error & { statusCode: number; code: string };
-    error.statusCode = 409;
-    error.code = "PAYMENT_PROVIDER_UNAVAILABLE";
-    throw error;
+if (market.paymentProvider !== "swich") {
+    throw httpError("No compliant payment provider is configured for this market.", 409, "PAYMENT_PROVIDER_UNAVAILABLE");
   }
   const capabilities = getSwichCapabilities();
-  if (!capabilities.markets.has(market.countryCode) || !capabilities.currencies.has(market.currency)) {
-    const error = new Error("Switch is not approved for this market and currency yet.") as Error & { statusCode: number; code: string };
-    error.statusCode = 409;
-    error.code = "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED";
-    throw error;
+if (!capabilities.markets.has(market.countryCode) || !capabilities.currencies.has(market.currency)) {
+    throw httpError("Switch is not approved for this market and currency yet.", 409, "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED");
   }
   return market;
 }

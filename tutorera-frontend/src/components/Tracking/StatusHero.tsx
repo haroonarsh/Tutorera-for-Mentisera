@@ -1,6 +1,12 @@
 "use client";
 
 import { CanonicalStatus } from "@/types/tracking";
+import {
+  TUTOR_ACTION_STATUSES,
+  TERMINAL_STATUSES,
+  MARKETPLACE_ACTIVE_STATUSES,
+  HOME_TUITION_PENDING_STATUSES,
+} from "@/contracts/tracking.contract";
 import s from "./tracking.module.css";
 
 export function StatusHero({
@@ -18,14 +24,14 @@ export function StatusHero({
   lastUpdatedAt: string;
   submittedAt: string | null;
 }) {
-  const variant =
-    canonicalStatus === "REJECTED" || canonicalStatus === "SUSPENDED"
+const variant =
+    (TERMINAL_STATUSES as readonly string[]).includes(canonicalStatus)
       ? "danger"
-      : canonicalStatus === "ACTION_REQUIRED" || canonicalStatus === "RE_VERIFICATION_REQUIRED" || canonicalStatus === "SUBJECT_ELIGIBILITY_REQUIRED"
+      : (TUTOR_ACTION_STATUSES as readonly string[]).includes(canonicalStatus)
         ? "warn"
-        : canonicalStatus === "APPROVED_FOR_MARKETPLACE" || canonicalStatus === "HOME_TUITION_ELIGIBLE"
+        : (MARKETPLACE_ACTIVE_STATUSES as readonly string[]).includes(canonicalStatus)
           ? "success"
-          : canonicalStatus === "HOME_TUITION_VERIFICATION_REQUIRED"
+          : (HOME_TUITION_PENDING_STATUSES as readonly string[]).includes(canonicalStatus)
             ? "muted"
             : "";
   return (

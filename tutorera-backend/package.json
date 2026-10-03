@@ -13,7 +13,10 @@
     "geo:import": "tsx src/scripts/importGeoNames.ts",
     "migrate:pk": "tsx src/scripts/migrateLegacyPakistan.ts",
     "migrate:levels": "tsx src/scripts/normalizeTutorProfileLevels.ts",
-    "migrate:launch-markets": "tsx src/scripts/reconcileGlobalLaunchMarkets.ts"
+    "migrate:launch-markets": "tsx src/scripts/reconcileGlobalLaunchMarkets.ts",
+    "migrate:referral-currency": "tsx src/scripts/migrateReferralCurrency.ts",
+    "contracts:generate": "tsx src/scripts/generateFrontendContracts.ts",
+    "audit:grandfathered-tutors": "tsx src/scripts/auditGrandfatheredTutors.ts"
   },
   "keywords": [],
   "author": "",

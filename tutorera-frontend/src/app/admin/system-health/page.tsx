@@ -23,6 +23,18 @@ interface JobLeaseInfo {
   leaseExpiresAt: string | null;
   lastError: string | null;
   isLeaseActive: boolean;
+  consecutiveFailures: number;
+  totalRuns: number;
+  totalFailures: number;
+  lastDurationMs: number | null;
+  lastSucceededAt: string | null;
+}
+
+interface RecentJobFailure {
+  jobName: string;
+  startedAt: string;
+  durationMs: number;
+  error: string | null;
 }
 
 interface HealthData {
@@ -36,6 +48,8 @@ interface HealthData {
     heapTotalMb: number;
   };
   jobs: JobLeaseInfo[];
+  degradedJobs: string[];
+  recentJobFailures: RecentJobFailure[];
 }
 
 const JOB_DESCRIPTIONS: Record<string, string> = {
@@ -328,7 +342,37 @@ export default function SystemHealthPage() {
               })}
             </tbody>
           </table>
+
+          <div style={{ padding: "0.75rem 1rem", borderTop: `1px solid ${UI_COLORS.card}`, color: TEXT_COLORS.muted, fontSize: "0.75rem", display: "flex", flexWrap: "wrap", gap: "1.25rem" }}>
+            {health?.jobs.map((job) => (
+              <span key={`counters-${job.name}`}>
+                {job.name}: {job.consecutiveFailures} consecutive failure{job.consecutiveFailures === 1 ? "" : "s"} · {job.totalRuns - job.totalFailures}/{job.totalRuns} runs ok
+                {job.lastDurationMs !== null && <> · {job.lastDurationMs} ms</>}
+              </span>
+            ))}
+          </div>
         </div>
+
+        {health?.degradedJobs?.length ? (
+          <div role="alert" style={{ background: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, color: STATUS_COLORS.danger.color, borderRadius: "0.75rem", padding: "1rem 1.25rem", marginTop: "1.25rem", fontWeight: 600 }}>
+            Failing on consecutive runs: {health.degradedJobs.join(", ")}. The lease is released and retried on the next tick, but no run has succeeded since the last failure.
+          </div>
+        ) : null}
+
+        {health?.recentJobFailures?.length ? (
+          <div style={{ marginTop: "1.5rem" }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: TEXT_COLORS.body, margin: "0 0 0.75rem" }}>Recent job failures</h3>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {health.recentJobFailures.map((failure, index) => (
+                <li key={`${failure.jobName}-${failure.startedAt}-${index}`} style={{ background: UI_COLORS.card, border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.5rem", padding: "0.6rem 0.85rem", fontSize: "0.78rem" }}>
+                  <strong style={{ fontFamily: "monospace", color: TEXT_COLORS.body }}>{failure.jobName}</strong>
+                  <span style={{ color: TEXT_COLORS.muted }}> · {formatRelative(failure.startedAt)} · {failure.durationMs} ms</span>
+                  {failure.error && <div style={{ color: STATUS_COLORS.danger.color, marginTop: 4, wordBreak: "break-word" }}>{failure.error}</div>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </div>
   );

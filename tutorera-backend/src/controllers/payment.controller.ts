@@ -14,6 +14,7 @@ import logger from "../config/logger";
 import { calculateMarketplaceFees } from "../services/pricing.service";
 import { assertAcceptanceAvailable } from "../services/market.service";
 import { getAppliedPromoForBasket, previewPromoDiscount, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
+import { codeOf, messageOf, statusCodeOf } from "../utils/httpError";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
@@ -41,11 +42,11 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
 
   try {
     await assertAcceptanceAvailable(booking.countryCode);
-  } catch (marketError: any) {
-    res.status(marketError.statusCode || 409).json({
+  } catch (marketError: unknown) {
+    res.status(statusCodeOf(marketError, 409)).json({
       success: false,
-      code: marketError.code || "MARKET_DISCOVERY_ONLY",
-      message: marketError.message,
+      code: codeOf(marketError, "MARKET_DISCOVERY_ONLY"),
+      message: messageOf(marketError, "Acceptance is not available in this market yet."),
       market: booking.countryCode,
     });
     return;
@@ -113,14 +114,13 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     });
 
     res.status(200).json({ success: true, checkoutUrl });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof PromoCodeError) {
       res.status(err.statusCode).json({ success: false, message: err.message });
       return;
     }
     logger.error({ requestId: req.id, err }, "Failed to create payment checkout session");
-    const statusCode = err?.statusCode || 502;
-    res.status(statusCode).json({ success: false, message: "Unable to start payment. Please try again." });
+    res.status(statusCodeOf(err, 502)).json({ success: false, message: "Unable to start payment. Please try again." });
   }
 };
 
@@ -335,9 +335,8 @@ export const confirmSwichPayment = async (req: AuthRequest, res: Response): Prom
     });
 
     res.status(200).json({ success: true, confirmed: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error({ requestId: req.id, err, basketId }, "Failed to confirm Swich payment");
-    const statusCode = err?.statusCode || 500;
-    res.status(statusCode).json({ success: false, message: "Unable to confirm payment. Please try again." });
+    res.status(statusCodeOf(err, 500)).json({ success: false, message: "Unable to confirm payment. Please try again." });
   }
 };

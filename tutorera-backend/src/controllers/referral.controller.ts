@@ -5,18 +5,27 @@ import Referral from "../models/Referral.model";
 import Booking from "../models/Booking.model";
 import ReferralConfig from "../models/ReferralConfig.model";
 import sendEmail from "../utils/sendEmail";
+import { formatCurrencyAmount, SUPPORTED_CURRENCIES } from "../config/countries";
 import crypto from "crypto";
 
 // Defaults used until an admin saves a ReferralConfig document (or if the
 // config is later deleted) - keeps the reward amounts working out of the box
 // while still being adjustable from /admin/referral-config without a deploy.
-const DEFAULT_REFERRAL_CREDIT_PKR = 200;
-const DEFAULT_REFERRED_DISCOUNT_PKR = 200;
+// Amounts are denominated in the config currency, which defaults to the global
+// settlement currency (USD) rather than assuming a Pakistan market.
+const DEFAULT_REFERRAL_CREDIT_AMOUNT = 200;
+const DEFAULT_REFERRED_DISCOUNT_AMOUNT = 200;
+const DEFAULT_REFERRAL_CURRENCY = "USD";
 
-async function getReferralConfig(): Promise<{ referrerRewardAmount: number; referredDiscountAmount: number; isActive: boolean }> {
+async function getReferralConfig(): Promise<{ referrerRewardAmount: number; referredDiscountAmount: number; currency: string; isActive: boolean }> {
   const config = await ReferralConfig.findOne();
-  if (!config) return { referrerRewardAmount: DEFAULT_REFERRAL_CREDIT_PKR, referredDiscountAmount: DEFAULT_REFERRED_DISCOUNT_PKR, isActive: true };
-  return { referrerRewardAmount: config.referrerRewardAmount, referredDiscountAmount: config.referredDiscountAmount, isActive: config.isActive };
+  if (!config) return { referrerRewardAmount: DEFAULT_REFERRAL_CREDIT_AMOUNT, referredDiscountAmount: DEFAULT_REFERRED_DISCOUNT_AMOUNT, currency: DEFAULT_REFERRAL_CURRENCY, isActive: true };
+  return {
+    referrerRewardAmount: config.referrerRewardAmount,
+    referredDiscountAmount: config.referredDiscountAmount,
+    currency: config.currency || DEFAULT_REFERRAL_CURRENCY,
+    isActive: config.isActive,
+  };
 }
 
 // Generate a unique referral code
@@ -60,6 +69,8 @@ export const getMyReferral = async (req: AuthRequest, res: Response): Promise<vo
     referralCode: user.referralCode,
     referralLink: `${process.env.CLIENT_URL}/register?ref=${user.referralCode}`,
     referralCredit: user.referralCredit,
+    referralCreditCurrency: user.referralCreditCurrency || DEFAULT_REFERRAL_CURRENCY,
+    program: await getReferralConfig(),
     stats: { totalReferred, creditedCount, pendingCount, totalEarned },
     referrals,
   });
@@ -101,15 +112,30 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  const { referrerRewardAmount, referredDiscountAmount, isActive } = await getReferralConfig();
+  const { referrerRewardAmount, referredDiscountAmount, currency, isActive } = await getReferralConfig();
   if (!isActive) {
     res.status(400).json({ success: false, message: "The referral program is currently paused." });
+    return;
+  }
+
+  // A user carries one referral balance. Crediting a new currency into a
+  // balance that already holds a different one would silently mix units, so an
+  // established balance currency stays authoritative and the new reward is
+  // rejected rather than merged. A zero balance adopts the config currency.
+  const hasBalance = (currentUser.referralCredit || 0) > 0;
+  const balanceCurrency = hasBalance ? (currentUser.referralCreditCurrency || DEFAULT_REFERRAL_CURRENCY) : currency;
+  if (hasBalance && balanceCurrency !== currency) {
+    res.status(400).json({
+      success: false,
+      message: `Your referral credit balance is held in ${balanceCurrency} and cannot also receive a ${currency} reward.`,
+    });
     return;
   }
 
   // Link the referral
   currentUser.referredBy = referrer._id;
   currentUser.referralCredit = (currentUser.referralCredit || 0) + referredDiscountAmount;
+  currentUser.referralCreditCurrency = balanceCurrency;
   await currentUser.save();
 
   // Create referral record
@@ -118,6 +144,7 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     referred: currentUser._id,
     status: "pending",
     creditAmount: referrerRewardAmount,
+    creditCurrency: currency,
   });
 
   // Notify referrer
@@ -128,7 +155,7 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">Your referral link worked! 🎉</h2>
         <p><strong>${currentUser.name}</strong> just signed up using your referral code.</p>
-        <p>You'll receive <strong>Rs. ${referrerRewardAmount} credit</strong> once they complete their first booking.</p>
+        <p>You'll receive <strong>${formatCurrencyAmount(referrerRewardAmount, currency)} credit</strong> once they complete their first booking.</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Referral Program</p>
       </div>
@@ -137,8 +164,9 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
 
   res.status(200).json({
     success: true,
-    message: `Referral code applied! You've received Rs. ${referredDiscountAmount} credit to use on your first booking.`,
+    message: `Referral code applied! You've received ${formatCurrencyAmount(referredDiscountAmount, balanceCurrency)} credit to use on your first booking.`,
     creditAdded: referredDiscountAmount,
+    creditCurrency: balanceCurrency,
   });
 };
 
@@ -159,8 +187,10 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
     // Credit the referrer with the amount locked in when this referral was
     // created (not the current config value, in case it has since changed).
     const creditAmount = referral.creditAmount;
+    const creditCurrency = referral.creditCurrency || DEFAULT_REFERRAL_CURRENCY;
     await User.findByIdAndUpdate(user.referredBy, {
       $inc: { referralCredit: creditAmount },
+      $set: { referralCreditCurrency: creditCurrency },
     });
 
     // Mark referral as credited
@@ -172,13 +202,13 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
     if (referrer) {
       await sendEmail({
         to: referrer.email,
-        subject: `💰 You earned Rs. ${creditAmount} referral credit — TUTORERA®`,
+        subject: `💰 You earned ${formatCurrencyAmount(creditAmount, creditCurrency)} referral credit — TUTORERA®`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1a1a2e;">Rs. ${creditAmount} credit added! 💰</h2>
+            <h2 style="color: #1a1a2e;">${formatCurrencyAmount(creditAmount, creditCurrency)} credit added! 💰</h2>
             <p>Your referral <strong>${user.name}</strong> just completed their first booking.</p>
-            <p>We've added <strong>Rs. ${creditAmount}</strong> to your TUTORERA® credit balance.</p>
-            <p>Your total credit balance: <strong>Rs. ${(referrer.referralCredit || 0) + creditAmount}</strong></p>
+            <p>We've added <strong>${formatCurrencyAmount(creditAmount, creditCurrency)}</strong> to your TUTORERA® credit balance.</p>
+            <p>Your total credit balance: <strong>${formatCurrencyAmount((referrer.referralCredit || 0) + creditAmount, creditCurrency)}</strong></p>
             <hr />
             <p style="color: #6b7280; font-size: 0.875rem;">Share your referral link to earn more credit.</p>
             <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Referral Program</p>
@@ -200,14 +230,24 @@ export const getAllReferrals = async (req: AuthRequest, res: Response): Promise<
     .populate("referred", "name email createdAt")
     .sort("-createdAt");
 
-  const totalCredit = referrals
+  // Credits are issued in the config currency, but a currency change never
+  // rewrites history: totals are grouped per currency so PKR and USD rewards
+  // are never summed into one meaningless number.
+  const creditedByCurrency = referrals
     .filter(r => r.status === "credited")
-    .reduce((sum, r) => sum + r.creditAmount, 0);
+    .reduce((grouped, r) => {
+      const currency = r.creditCurrency || DEFAULT_REFERRAL_CURRENCY;
+      grouped[currency] = (grouped[currency] || 0) + (r.creditAmount || 0);
+      return grouped;
+    }, {} as Record<string, number>);
+
+  const creditByCurrency = Object.entries(creditedByCurrency).map(([currency, total]) => ({ currency, total }));
 
   res.status(200).json({
     success: true,
     total: referrals.length,
-    totalCreditIssued: totalCredit,
+    totalCreditIssued: creditByCurrency.length === 1 ? creditByCurrency[0].total : null,
+    creditByCurrency,
     referrals,
   });
 };
@@ -225,10 +265,19 @@ export const getReferralConfigAdmin = async (_req: AuthRequest, res: Response): 
 // @route   PUT /api/admin/referral-config
 // @access  Private (admin)
 export const updateReferralConfigAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { referrerRewardAmount, referredDiscountAmount, isActive } = req.body;
+  const { referrerRewardAmount, referredDiscountAmount, currency, isActive } = req.body;
 
   let config = await ReferralConfig.findOne();
   if (!config) config = new ReferralConfig({});
+
+  if (currency !== undefined) {
+    const code = String(currency).trim().toUpperCase();
+    if (!SUPPORTED_CURRENCIES[code]) {
+      res.status(400).json({ success: false, message: `Unsupported currency: ${code}` });
+      return;
+    }
+    config.currency = code;
+  }
 
   if (referrerRewardAmount !== undefined) {
     if (referrerRewardAmount < 0) {

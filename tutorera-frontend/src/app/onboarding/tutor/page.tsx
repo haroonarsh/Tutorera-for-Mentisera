@@ -114,7 +114,7 @@ export default function TutorOnboardingPage() {
     teachingMode: "both" as "online" | "in-person" | "both",
   });
   const [availability, setAvailability] = useState<{ day: string; slots: string[] }[]>([]);
-  const [pricingInsight, setPricingInsight] = useState<{ min: number | null; max: number | null; median: number | null; count: number } | null>(null);
+  const [pricingInsight, setPricingInsight] = useState<{ currency: string; min: number | null; max: number | null; median: number | null; count: number } | null>(null);
   const [feePreview, setFeePreview] = useState<{ tutorNet: number; tutorFee: number; tax: number; currency: string } | null>(null);
 
   // Step 5
@@ -842,7 +842,7 @@ export default function TutorOnboardingPage() {
                     )}
                     {pricingInsight && pricingInsight.median && (
                       <p style={{ margin: "0.35rem 0 0", fontSize: "0.72rem", color: "#16a34a", fontWeight: 500 }}>
-                        💡 Similar tutors in {step1.city} charge {step1.currency || "USD"} {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: {step1.currency || "USD"} {pricingInsight.median?.toLocaleString()})
+                        💡 Similar tutors in {step1.city} charge ≈ {pricingInsight.currency} {pricingInsight.min?.toLocaleString()}–{pricingInsight.max?.toLocaleString()}/hr (median: {pricingInsight.currency} {pricingInsight.median?.toLocaleString()})
                       </p>
                     )}
                   </div>

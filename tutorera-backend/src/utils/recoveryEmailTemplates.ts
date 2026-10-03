@@ -123,7 +123,7 @@ export const studentPaymentAbandonedEmail = (
   stage: number,
   tutorName?: string,
   amount?: number,
-  currency = "PKR"
+  currency?: string
 ) => {
   const isFinal = stage >= 3;
   const isFirst = stage === 1;

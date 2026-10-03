@@ -6,6 +6,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export interface IReferralConfig extends Document {
   referrerRewardAmount: number;
   referredDiscountAmount: number;
+  currency: string;
   isActive: boolean;
   updatedBy?: Types.ObjectId;
   updatedAt?: Date;
@@ -15,6 +16,7 @@ const referralConfigSchema = new Schema<IReferralConfig>(
   {
     referrerRewardAmount: { type: Number, default: 200, min: 0 },
     referredDiscountAmount: { type: Number, default: 200, min: 0 },
+    currency: { type: String, uppercase: true, trim: true, default: "USD" },
     isActive: { type: Boolean, default: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },

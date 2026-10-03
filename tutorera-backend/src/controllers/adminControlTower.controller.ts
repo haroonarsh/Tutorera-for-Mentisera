@@ -17,6 +17,7 @@ import MarketConfig from "../models/MarketConfig.model";
 import Country from "../models/Country.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import ScheduledJobLease from "../models/ScheduledJobLease.model";
+import ScheduledJobRun from "../models/ScheduledJobRun.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
@@ -489,6 +490,21 @@ export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise
   const memoryUsage = process.memoryUsage();
   const uptimeSeconds = Math.floor(process.uptime());
 
+  const [leases, recentJobFailures, recentSuccesses] = await Promise.all([
+    ScheduledJobLease.find().sort({ name: 1 }).lean(),
+    ScheduledJobRun.find({ status: "failed" }).sort({ startedAt: -1 }).limit(10).lean(),
+    ScheduledJobRun.find({ status: "succeeded" }).sort({ startedAt: -1 }).limit(200).lean(),
+  ]);
+
+  // A job that has failed on consecutive runs needs a human even when its
+  // lease has since been released, so the alert is derived from the durable
+  // counters rather than from "is a lease held right now".
+  const lastSuccessByJob = new Map<string, Date>();
+  for (const run of recentSuccesses) {
+    if (!lastSuccessByJob.has(run.jobName)) lastSuccessByJob.set(run.jobName, run.startedAt);
+  }
+  const degradedJobNames = leases.filter((lease) => (lease.consecutiveFailures || 0) > 0).map((lease) => lease.name);
+
   res.json({
     success: true,
     health: {
@@ -501,7 +517,31 @@ export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise
         heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         heapTotalMb: Math.round(memoryUsage.heapTotal / 1024 / 1024),
       },
-      jobs: (await ScheduledJobLease.find().sort({ name: 1 }).lean()).map((lease) => ({ name: lease.name, holderId: lease.holderId, status: lease.leaseExpiresAt && new Date(lease.leaseExpiresAt).getTime() > Date.now() ? "running" : lease.lastError ? "error" : lease.lastCompletedAt ? "healthy" : "idle", lastStartedAt: lease.lastStartedAt, lastCompletedAt: lease.lastCompletedAt, leaseExpiresAt: lease.leaseExpiresAt, lastError: lease.lastError || null, isLeaseActive: Boolean(lease.leaseExpiresAt && new Date(lease.leaseExpiresAt).getTime() > Date.now()) })),
+      jobs: leases.map((lease) => {
+        const leaseActive = Boolean(lease.leaseExpiresAt && new Date(lease.leaseExpiresAt).getTime() > Date.now());
+        return {
+          name: lease.name,
+          holderId: lease.holderId,
+          status: leaseActive ? "running" : lease.lastError ? "error" : lease.lastCompletedAt ? "healthy" : "idle",
+          lastStartedAt: lease.lastStartedAt,
+          lastCompletedAt: lease.lastCompletedAt,
+          leaseExpiresAt: lease.leaseExpiresAt,
+          lastError: lease.lastError || null,
+          isLeaseActive: leaseActive,
+          consecutiveFailures: lease.consecutiveFailures || 0,
+          totalRuns: lease.totalRuns || 0,
+          totalFailures: lease.totalFailures || 0,
+          lastDurationMs: lease.lastDurationMs ?? null,
+          lastSucceededAt: lastSuccessByJob.get(lease.name) || null,
+        };
+      }),
+      recentJobFailures: recentJobFailures.map((run) => ({
+        jobName: run.jobName,
+        startedAt: run.startedAt,
+        durationMs: run.durationMs,
+        error: run.error || null,
+      })),
+      degradedJobs: degradedJobNames,
 
 
 

@@ -2,9 +2,11 @@ import mongoose, { Types } from "mongoose";
 import { Response } from "express";
 import { Request as ExpressRequest } from "express"; 
 import { AuthRequest } from "../types";
+import IUser from "../models/User.model";
 import Request from "../models/Request.model";
+import { ITutorProfile } from "../models/TutorProfile.model";
 import Bid from "../models/Bid.model";
-import Booking from "../models/Booking.model";
+import { IBooking } from "../models/Booking.model";
 import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
@@ -250,7 +252,7 @@ export const saveRequestDraftProgress = async (req: AuthRequest, res: Response):
 // @route   GET /api/requests
 // @access  Private
 export const getAllRequests = async (req: AuthRequest, res: Response): Promise<void> => {
-  let tutorProfile: any = null;
+  let tutorProfile: ITutorProfile | null = null;
   // Block unapproved tutors
   if (req.user?.role === "tutor") {
     const TutorProfile = (await import("../models/TutorProfile.model")).default;
@@ -519,7 +521,7 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
   }
 
   const subjectMatches = tutorProfile.subjects.some(subject => subject.toLowerCase() === requested.subject.toLowerCase());
-  const levelMatches = tutorProfile.levels.includes(requested.level as any);
+  const levelMatches = tutorProfile.levels.includes(requested.level as string);
   const modeMatches = tutorProfile.teachingMode === "both" || requested.teachingMode === "both" || tutorProfile.teachingMode === requested.teachingMode;
   
   // Dual location matching model:
@@ -928,7 +930,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
   const session = await mongoose.startSession();
 
   try {
-    let responseBooking: any = null;
+    let responseBooking: IBooking | null = null;
     let responsePayload: {
       bidTutor: string;
       requestStudent: string;
@@ -1027,9 +1029,9 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         // was ever created — no manual confirmation step needed.
         paymentStatus: "confirmed",
         paymentNote: "Paid via authorized payment gateway before booking creation",
-      } as any], { session });
+      } as Partial<IBooking>], { session });
       const booking = bookingArr[0];
-      await syncStudentTutorRelationship(booking as any, session);
+      await syncStudentTutorRelationship(booking as IBooking, session);
 
       await OfferNegotiation.updateMany({ offer: bid._id, status: "active" }, { status: "accepted" }, { session });
 
@@ -1074,7 +1076,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
 
       if (appliedPromoForRedemption) {
         const promo = appliedPromoForRedemption as { promoCodeId: string; code: string; discountAmount: number; originalAmount: number };
-        await finalizePromoRedemption(promo.promoCodeId, payload.requestStudent, (responseBooking as any)._id.toString(), promo.originalAmount, promo.discountAmount).catch(err =>
+        await finalizePromoRedemption(promo.promoCodeId, payload.requestStudent, responseBooking._id.toString(), promo.originalAmount, promo.discountAmount).catch(err =>
           console.error("Failed to record promo code redemption for booking:", err)
         );
       }
@@ -1181,7 +1183,7 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     res.status(422).json({ success: false, code: "TUTOR_MODE_UNAVAILABLE", message: "This tutor is not available for the selected teaching mode." });
     return;
   }
-  const market = await resolveMarket(req.body.countryCode || (req.user as any)?.countryCode || tutorProfile.countryCode || "PK");
+  const market = await resolveMarket(req.body.countryCode || (req.user as IUser)?.countryCode || tutorProfile.countryCode || "PK");
   if (!market || !market.isActive || !market.studentRegistration) {
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Direct booking is not available in the selected market." });
     return;
@@ -1497,25 +1499,25 @@ if (teachingMode && teachingMode !== "all") {
     { $group: { _id: "$request", count: { $sum: 1 } } },
   ]);
   const offersByRequest = new Map(offerTotals.map((row) => [row._id.toString(), row.count as number]));
-  const sanitizedRequests = requests.map((r) => {
-      const offersCount = offersByRequest.get(r._id.toString()) || 0;
-      const rawName = (r.student as any)?.name || "Student";
-      const nameParts = rawName.trim().split(" ");
-      const sanitizedName = nameParts.length > 1
-        ? `${nameParts[0]} ${nameParts[1].charAt(0)}.`
-        : nameParts[0] || "Verified Student";
+   const sanitizedRequests = requests.map((r) => {
+       const offersCount = offersByRequest.get(r._id.toString()) || 0;
+       const rawName = (r.student as IUser)?.name || "Student";
+       const nameParts = rawName.trim().split(" ");
+       const sanitizedName = nameParts.length > 1
+         ? `${nameParts[0]} ${nameParts[1].charAt(0)}.`
+         : nameParts[0] || "Verified Student";
 
-      return {
-        _id: r._id,
-        subject: r.subject,
-        level: r.level,
-        budget: r.budget,
-        pricingUnit: r.pricingUnit || "hour",
-        currency: r.currency || "USD",
-        teachingMode: r.teachingMode,
-        city: r.city || (r.student as any)?.city || "",
-        countryCode: r.countryCode || (r.student as any)?.countryCode || "PK",
-        countryName: r.countryName || (r.student as any)?.countryName || "Pakistan",
+       return {
+         _id: r._id,
+         subject: r.subject,
+         level: r.level,
+         budget: r.budget,
+         pricingUnit: r.pricingUnit || "hour",
+         currency: r.currency || "USD",
+         teachingMode: r.teachingMode,
+         city: r.city || (r.student as IUser)?.city || "",
+         countryCode: r.countryCode || (r.student as IUser)?.countryCode || "PK",
+         countryName: r.countryName || (r.student as IUser)?.countryName || "Pakistan",
         schedule: r.schedule,
         description: "Learning goals will be shared after a tutor is selected.",
         status: r.status,

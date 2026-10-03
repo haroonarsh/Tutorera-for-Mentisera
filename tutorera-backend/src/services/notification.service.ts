@@ -154,11 +154,11 @@ export class NotificationService {
       "direct_booking_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 3, payload.tutorName, payload.subjectName),
       "direct_booking_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 7, payload.tutorName, payload.subjectName),
       
-      "payment_abandoned_1h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1/24, payload.tutorName, payload.amount),
-      "payment_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1, payload.tutorName, payload.amount),
-      "payment_abandoned_48h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 2, payload.tutorName, payload.amount),
-      "payment_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 3, payload.tutorName, payload.amount),
-      "payment_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 7, payload.tutorName, payload.amount),
+      "payment_abandoned_1h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1/24, payload.tutorName, payload.amount, payload.currency),
+      "payment_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1, payload.tutorName, payload.amount, payload.currency),
+      "payment_abandoned_48h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 2, payload.tutorName, payload.amount, payload.currency),
+      "payment_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 3, payload.tutorName, payload.amount, payload.currency),
+      "payment_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 7, payload.tutorName, payload.amount, payload.currency),
 
       "review_requested": (name: string, payload: any) => templates.reviewRequestEmail(name, payload.tutorName, payload.subject, payload.bookingId),
     };

@@ -400,7 +400,7 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
       studentName: (p.student as unknown as { name?: string } | null)?.name || "Student",
       subject: (p.request as unknown as { subject?: string } | null)?.subject || "General",
       amount: p.amount,
-      currency: "PKR",
+      currency: p.currency || "USD",
       subtotal: p.subtotal,
       tutorFee: p.tutorFee,
       tax: p.tax,

@@ -7,6 +7,10 @@ export interface IScheduledJobLease extends Document {
   lastStartedAt?: Date;
   lastCompletedAt?: Date;
   lastError?: string;
+  consecutiveFailures: number;
+  totalRuns: number;
+  totalFailures: number;
+  lastDurationMs?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -18,6 +22,13 @@ const scheduledJobLeaseSchema = new Schema<IScheduledJobLease>({
   lastStartedAt: { type: Date },
   lastCompletedAt: { type: Date },
   lastError: { type: String, maxlength: 2000 },
+  // Counters make a repeatedly failing job visible without reading logs: the
+  // admin system-health panel reports these, and a non-zero consecutive count
+  // is what an operator alerts on.
+  consecutiveFailures: { type: Number, default: 0, min: 0 },
+  totalRuns: { type: Number, default: 0, min: 0 },
+  totalFailures: { type: Number, default: 0, min: 0 },
+  lastDurationMs: { type: Number, min: 0 },
 }, { timestamps: true });
 
 export default mongoose.model<IScheduledJobLease>("ScheduledJobLease", scheduledJobLeaseSchema);

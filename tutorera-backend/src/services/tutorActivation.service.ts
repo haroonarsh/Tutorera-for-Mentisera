@@ -4,6 +4,11 @@ import TutorProfile, { ITutorProfile, TutorStatus } from "../models/TutorProfile
 import TutorAgreementAcceptance from "../models/TutorAgreementAcceptance.model";
 import { getApplicableAgreement } from "./legalAgreement.service";
 import { setAccountStatus } from "./accountLifecycle.service";
+import {
+  evaluateMarketplaceAccess,
+  hasApprovedTeachingSubject,
+  hasCoreDocumentsApproved,
+} from "./eligibility.service";
 
 export interface ActivationEvaluationResult {
   isEligible: boolean;
@@ -34,33 +39,7 @@ export function policeIsRequired(profile: ITutorProfile): boolean {
 }
 
 export function isProfileMarketplaceEligible(profile: ITutorProfile): boolean {
-  const accessIsBlocked = Boolean(
-    profile.suspendedAt ||
-    profile.reVerificationRequired ||
-    profile.tutorStatus === "suspended" ||
-    profile.tutorStatus === "reverification_required" ||
-    profile.tutorStatus === "terminated"
-  );
-  if (accessIsBlocked) return false;
-
-  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
-    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
-  );
-  if (!hasApprovedTeachingSubject) return false;
-
-  const agreementSatisfied = Boolean(profile.agreementAcceptedAt) || profile.legacyAgreementStatus === "accepted";
-  if (!agreementSatisfied) return false;
-
-  const coreDocumentsApproved =
-    profile.cnicVerificationStatus === "approved" &&
-    profile.degreeVerificationStatus === "approved" &&
-    profile.demoVideoStatus === "approved";
-
-  return Boolean(
-    profile.isVerified &&
-    profile.verificationStatus === "approved" &&
-    coreDocumentsApproved
-  );
+  return evaluateMarketplaceAccess(profile).eligible;
 }
 
 /**
@@ -137,12 +116,10 @@ export async function evaluateTutorActivation(
     reasons.push("Profile onboarding is incomplete.");
   }
 
-  // A tutor may select subjects during onboarding, but no subject becomes
+// A tutor may select subjects during onboarding, but no subject becomes
   // teachable until an administrator approves its precise levels. This is a
   // separate trust gate from document verification.
-  const subjectEligibilityApproved = Boolean((profile.subjectEligibility || []).some((entry) =>
-    entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
-  ));
+  const subjectEligibilityApproved = hasApprovedTeachingSubject(profile);
   if (!subjectEligibilityApproved) {
     missing.push("subject_eligibility_approved");
     reasons.push("At least one teaching subject and level must be approved by an administrator.");
@@ -163,9 +140,7 @@ export async function evaluateTutorActivation(
 
   // 4. Mandatory documents verified
   const mandatoryDocumentsVerified = Boolean(
-    profile.cnicVerificationStatus === "approved" &&
-    profile.degreeVerificationStatus === "approved" &&
-    profile.demoVideoStatus === "approved" &&
+    hasCoreDocumentsApproved(profile) &&
     (!policeIsRequired(profile) || profile.policeVerificationStatus === "approved" || profile.policeVerificationStatus === "not_required")
   );
   if (!mandatoryDocumentsVerified) {
@@ -255,7 +230,13 @@ export async function evaluateTutorActivation(
     derivedStatus = "active";
   }
 
-  const isEligible = derivedStatus === "active";
+  // The status ladder above is stricter than the access rule (it also requires a
+  // complete profile, submitted documents and all agreement consents), so
+  // "active" is confirmed against the shared access evaluator rather than
+  // assumed from the ladder. This is the same function the TutorProfile save
+  // hook and the tracking read paths use.
+  const access = evaluateMarketplaceAccess(profile);
+  const isEligible = derivedStatus === "active" && access.eligible;
 
   return {
     isEligible,

@@ -90,6 +90,11 @@ const userSchema = new Schema<IUser>(
     resetPasswordExpire: Date,
     referralCode: { type: String, unique: true, sparse: true },
     referralCredit: { type: Number, default: 0 },
+    // Currency of this user's referral balance. Legacy balances predate the
+    // currency-aware referral program and were always issued in PKR; run
+    // `npm run migrate:referral-currency -- --apply` to stamp them honestly
+    // instead of letting this default relabel historic credits.
+    referralCreditCurrency: { type: String, uppercase: true, trim: true, default: "USD" },
     referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     googleId: { type: String, unique: true, sparse: true },
     authProvider: {
