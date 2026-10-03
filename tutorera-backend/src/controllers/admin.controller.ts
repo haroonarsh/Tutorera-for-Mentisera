@@ -1399,6 +1399,32 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   ]);
 
   // ── Derived calculations ──────────────────────────────────────
+  // Audit P1-01 follow-up: the report runs across all markets but
+  // booking.amount values are stored in each booking's own currency
+  // (USD under the global settlement policy, PKR/AED/GBP for legacy
+  // or in-flight records). Summing them without conversion into a
+  // single scalar is wrong. We produce a per-currency rollup here and
+  // the Excel / PDF Summary blocks below emit one row per currency.
+  interface RevenueRow { currency: string; revenue: number; platformFee: number; gst: number; tutorPayout: number; bookingCount: number; }
+  const revenueByCurrencyMap: Record<string, RevenueRow> = {};
+  for (const b of bookings) {
+    const currency = (b.currency || "UNSPECIFIED").toUpperCase();
+    const row = revenueByCurrencyMap[currency] ||
+      (revenueByCurrencyMap[currency] = { currency, revenue: 0, platformFee: 0, gst: 0, tutorPayout: 0, bookingCount: 0 });
+    const amount = b.amount || 0;
+    row.revenue += amount;
+    row.bookingCount += 1;
+  }
+  for (const row of Object.values(revenueByCurrencyMap)) {
+    row.platformFee = Math.round(row.revenue * (PLATFORM_FEE_PERCENT / 100));
+    row.gst = Math.round(row.platformFee * (GST_PERCENT / 100));
+    row.tutorPayout = row.revenue - row.platformFee;
+  }
+  const revenueByCurrency: RevenueRow[] = Object.values(revenueByCurrencyMap)
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Pre-conversion aggregated totals kept for the single-column fields
+  // (e.g. "Total Bookings") that remain currency-agnostic.
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
   const platformFeeTotal = Math.round(totalRevenue * (PLATFORM_FEE_PERCENT / 100));
   const gstTotal = Math.round(platformFeeTotal * (GST_PERCENT / 100));
@@ -1540,22 +1566,20 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
 
     ws1.addRow([]);
 
-    // Revenue summary
-    // Audit P1-01 / P2: totals here are summed across whatever currency
-    // each booking carries without FX conversion, so labelling a single
-    // "PKR" column was both wrong (not every row is PKR under the global
-    // USD settlement) and misleading (mixing currencies into one scalar).
-    // The columns are kept numeric; downstream readers should split by
-    // currency using the Bookings Detail sheet, which carries per-row
-    // currency context.
-    styleSection(ws1.addRow(["💰 REVENUE SUMMARY (per-row currency; see Bookings Detail)", ""]));
-    styleHeader(ws1.addRow(["Metric", "Amount"]));
-    [
-      ["Total Session Revenue", totalRevenue],
-      ["Platform Fee (20%)", platformFeeTotal],
-      ["GST on Platform Fee (15%)", gstTotal],
-      ["Total Tutor Payouts", tutorPayoutTotal],
-    ].forEach(([k, v]) => ws1.addRow([k, v]));
+    // Revenue summary — split by booking currency.
+    // Audit P1-01 follow-up: a single scalar sum across mixed-currency
+    // bookings is meaningless; one row per currency is emitted below so
+    // each row's figures are actually in that currency's units.
+    styleSection(ws1.addRow(["💰 REVENUE SUMMARY (per currency)", ""]));
+    if (revenueByCurrency.length === 0) {
+      styleHeader(ws1.addRow(["Metric", "Amount"]));
+      ws1.addRow(["No bookings in period", 0]);
+    } else {
+      styleHeader(ws1.addRow(["Currency", "Bookings", "Revenue", "Platform Fee (20%)", "GST on Fee (15%)", "Tutor Payouts"]));
+      for (const r of revenueByCurrency) {
+        ws1.addRow([r.currency, r.bookingCount, r.revenue, r.platformFee, r.gst, r.tutorPayout]);
+      }
+    }
 
     ws1.addRow([]);
 
@@ -1728,20 +1752,28 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       ["Total Requests Posted", requests.length],
     ].forEach(([k, v]) => drawTableRow([String(k), String(v)], bWidths));
 
-    // ── 2. Revenue ──
-    // Audit P1-01: see the Excel sibling above — these totals aggregate
-    // across whatever currency each booking carried, so a fixed "PKR"
-    // column misrepresents USD/AED/GBP settlements under the global
-    // settlement policy. Labels kept currency-neutral.
-    drawSectionTitle("💰  REVENUE & FEES (per-row currency; see Bookings Detail)");
-    const rWidths = [350, 145];
-    drawTableRow(["Metric", "Amount"], rWidths, true);
-    [
-      ["Total Session Revenue", totalRevenue.toLocaleString()],
-      ["Platform Fee (20%)", platformFeeTotal.toLocaleString()],
-      ["GST on Platform Fee (15%)", gstTotal.toLocaleString()],
-      ["Total Tutor Payouts", tutorPayoutTotal.toLocaleString()],
-    ].forEach(([k, v]) => drawTableRow([k, v], rWidths));
+    // ── 2. Revenue (per currency) ──
+    // Audit P1-01 follow-up: Excel sibling emits one row per currency;
+    // mirror that here. Summing booking amounts across currencies into
+    // one scalar is meaningless.
+    drawSectionTitle("💰  REVENUE & FEES (per currency)");
+    if (revenueByCurrency.length === 0) {
+      drawTableRow(["Metric", "Amount"], [350, 145], true);
+      drawTableRow(["No bookings in period", "0"], [350, 145]);
+    } else {
+      const rWidths = [60, 60, 95, 95, 80, 95];
+      drawTableRow(["Ccy", "Bookings", "Revenue", "Platform Fee", "GST", "Payouts"], rWidths, true);
+      for (const r of revenueByCurrency) {
+        drawTableRow([
+          r.currency,
+          String(r.bookingCount),
+          r.revenue.toLocaleString(),
+          r.platformFee.toLocaleString(),
+          r.gst.toLocaleString(),
+          r.tutorPayout.toLocaleString(),
+        ], rWidths);
+      }
+    }
 
     // ── 3. User Summary ──
     drawSectionTitle("👥  USER SUMMARY");
