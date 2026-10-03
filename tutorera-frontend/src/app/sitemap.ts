@@ -16,6 +16,7 @@ const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 const PK_STUDENT_INTENT_SLUGS = ["home-tuition", "online-tuition", "mathematics-tuition", "physics-tuition", "chemistry-tuition", "biology-tuition", "english-tuition", "o-level-tuition", "a-level-tuition", "mdcat-tutoring"] as const;
 const PK_CITY_TUITION_INTENTS = ["islamabad", "rawalpindi", "lahore", "karachi"] as const;
+const AE_CITY_TUITION_INTENTS = ["dubai", "abu-dhabi", "sharjah"] as const;
 
 // A single sitemap file supports up to 50,000 URLs (the sitemaps.org / Google limit).
 // Splitting the tutors sitemap into multiple generateSitemaps() ids beyond the original
@@ -113,6 +114,15 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       changeFrequency: "monthly" as const,
       priority: 0.8,
       })));
+    // UAE city intent tree (Dubai, Abu Dhabi, Sharjah × tuition /
+    // home-tuition / online-tuition) — spec §47 second-country parity.
+    const aeCityStudentIntent: MetadataRoute.Sitemap = AE_CITY_TUITION_INTENTS
+      .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
+      url: `${SITE_URL}/ae/${city}/${intent}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+      })));
 
     const [{ articles: blogPosts }, blogCategories] = await Promise.all([
       getEditorialArticles({ limit: 200 }),
@@ -141,6 +151,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       ...research,
       ...studentIntent,
       ...cityStudentIntent,
+      ...aeCityStudentIntent,
       ...blog,
     ];
   }

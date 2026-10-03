@@ -54,13 +54,14 @@ export async function resolveCountry(countryCode: string): Promise<CountryData |
 export async function liveCountryCodeParams(): Promise<{ countryCode: string }[]> {
   const live = await fetchLiveCountries();
   const codes = new Set<string>([...COUNTRIES.map((c) => c.code), ...live.map((c) => c.code)]);
-  // Pakistan has its own dedicated /pk landing (src/app/pk/page.tsx) that
-  // matches the same URL. Static routes beat dynamic ones in Next.js, but
-  // letting the dynamic catch-all also enumerate "pk" makes the build
-  // resolve the same URL twice, which can be brittle under OpenNext's
-  // route table generation. Excluding it here keeps /pk owned by exactly
-  // one handler.
+  // Countries that have their own dedicated landing hub (e.g.
+  // src/app/pk/page.tsx, src/app/ae/page.tsx) must be excluded from the
+  // (countries)/[countryCode] catch-all's static params so the same URL
+  // isn't resolved by two routes. Static wins over dynamic in Next.js,
+  // but letting both enumerate the slug is brittle under OpenNext's
+  // route table generation.
+  const EXPLICIT_HUBS = new Set(["pk", "ae"]);
   return Array.from(codes)
-    .filter((code) => code.toLowerCase() !== "pk")
+    .filter((code) => !EXPLICIT_HUBS.has(code.toLowerCase()))
     .map((code) => ({ countryCode: code.toLowerCase() }));
 }
