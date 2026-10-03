@@ -7,6 +7,7 @@ import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
 import { escapeHtml } from "../utils/escapeHtml";
 import { renderTransactionalEmail } from "../utils/emailBrand";
+import logger from "../config/logger";
 
 const REASON_LABELS: Record<string, string> = {
   tutor_cancelled: "Tutor Cancelled",
@@ -67,24 +68,35 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
 
   const reasonLabel = REASON_LABELS[reason] || reason;
 
-  await sendEmail({
-    to: process.env.EMAIL_USER as string,
-    subject: `Refund Request — ${escapeHtml(req.user?.name)} (${reasonLabel})`,
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-        <h2 style="color:#1a1a2e;">New Refund Request</h2>
-        <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f9fafb;border-radius:8px;overflow:hidden;margin:1rem 0;">
-          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Student</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(req.user?.name)} (${escapeHtml(req.user?.email)})</td></tr>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Tutor</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(tutor.name)}</td></tr>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Booking ID</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(bookingId)}</td></tr>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Amount</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(refundDisplayAmount)}</td></tr>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Reason</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(reasonLabel)}</td></tr>
-          <tr><td style="padding:12px 16px;"><strong>Details</strong></td><td style="padding:12px 16px;">${escapeHtml(details || "—")}</td></tr>
-        </table>
-        <p style="color:#6b7280;font-size:0.875rem;">Review in the admin panel and process the refund via the payment gateway if approved.</p>
-      </div>
-    `,
-  });
+  // The RefundRequest row is now committed to the database. Both the
+  // admin notification and the student receipt below are best-effort —
+  // an email-provider outage must not reverse-fail the refund the user
+  // just filed. Previously both calls were unguarded, so a Resend
+  // outage would 500 the response after the row was written, trigger
+  // the duplicate-guard on retry, and leave the user with no way to
+  // confirm their refund was received.
+  try {
+    await sendEmail({
+      to: process.env.EMAIL_USER as string,
+      subject: `Refund Request — ${escapeHtml(req.user?.name)} (${reasonLabel})`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+          <h2 style="color:#1a1a2e;">New Refund Request</h2>
+          <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f9fafb;border-radius:8px;overflow:hidden;margin:1rem 0;">
+            <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Student</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(req.user?.name)} (${escapeHtml(req.user?.email)})</td></tr>
+            <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Tutor</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(tutor.name)}</td></tr>
+            <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Booking ID</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(bookingId)}</td></tr>
+            <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Amount</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(refundDisplayAmount)}</td></tr>
+            <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;"><strong>Reason</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${escapeHtml(reasonLabel)}</td></tr>
+            <tr><td style="padding:12px 16px;"><strong>Details</strong></td><td style="padding:12px 16px;">${escapeHtml(details || "—")}</td></tr>
+          </table>
+          <p style="color:#6b7280;font-size:0.875rem;">Review in the admin panel and process the refund via the payment gateway if approved.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    logger.error({ err, refundRequestId: refundReq._id?.toString(), bookingId }, "Failed to send admin refund-request notification");
+  }
 
   const studentEmailHtml = renderTransactionalEmail({
     subject: "TUTORERA® — Refund Request Received",
@@ -106,11 +118,15 @@ export const submitRefundRequest = async (req: AuthRequest, res: Response): Prom
     deliverability: "This transactional notification was sent because you submitted a refund request on TUTORERA.",
   });
 
-  await sendEmail({
-    to: req.user?.email as string,
-    subject: "TUTORERA® — Refund Request Received",
-    html: studentEmailHtml,
-  });
+  try {
+    await sendEmail({
+      to: req.user?.email as string,
+      subject: "TUTORERA® — Refund Request Received",
+      html: studentEmailHtml,
+    });
+  } catch (err) {
+    logger.error({ err, refundRequestId: refundReq._id?.toString(), bookingId }, "Failed to send student refund-request receipt");
+  }
 
   res.status(201).json({ success: true, message: "Refund request submitted.", refundRequest: refundReq });
 };
