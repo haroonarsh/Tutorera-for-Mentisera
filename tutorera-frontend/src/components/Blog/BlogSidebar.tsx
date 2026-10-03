@@ -107,23 +107,26 @@ export default function BlogSidebar({ categories, activeCategory, featuredPosts,
         </div>
       </div>
 
-      {/* 3. Popular / Featured */}
+      {/* 3. Editor's Picks (featured-flagged articles, with a most-recent
+          fallback when fewer than 5 are flagged — see getBlogSidebarData
+          in lib/editorial-content.ts). The earlier "Popular Guides"
+          label falsely implied an analytics-driven popularity ranking;
+          spec §P3 and audit §16 both forbid presenting non-authoritative
+          lists as analytics. Rank numerals are kept as editorial order,
+          not view counts. */}
       {featuredPosts.length > 0 && (
         <div style={cardStyle}>
-          <p style={eyebrowStyle}>Popular Guides</p>
+          <p style={eyebrowStyle}>Editor&rsquo;s Picks</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {featuredPosts.map((post, index) => (
               <Link key={post.slug} href={`/blog/${post.slug}`} style={{ display: "flex", gap: 10, alignItems: "flex-start", textDecoration: "none" }}>
-                <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, background: "#021550", color: "white", fontSize: "0.68rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span aria-hidden="true" style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, background: "#021550", color: "white", fontSize: "0.68rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {index + 1}
                 </span>
                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#021550", lineHeight: 1.4 }}>{post.title}</span>
               </Link>
             ))}
           </div>
-          {/* TODO: switch to real analytics-driven popularity ranking once view
-              tracking exists on posts - this list is featured-flagged posts,
-              falling back to most recent. Never fabricate view counts in the UI. */}
         </div>
       )}
 
