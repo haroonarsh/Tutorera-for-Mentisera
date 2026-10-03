@@ -1,8 +1,8 @@
 import mongoose, { Types } from "mongoose";
 import { Response } from "express";
 import { Request as ExpressRequest } from "express"; 
-import { AuthRequest } from "../types";
-import IUser from "../models/User.model";
+import { AuthRequest, IUser } from "../types";
+
 import Request from "../models/Request.model";
 import { ITutorProfile } from "../models/TutorProfile.model";
 import Bid from "../models/Bid.model";
@@ -1076,7 +1076,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
 
       if (appliedPromoForRedemption) {
         const promo = appliedPromoForRedemption as { promoCodeId: string; code: string; discountAmount: number; originalAmount: number };
-        await finalizePromoRedemption(promo.promoCodeId, payload.requestStudent, responseBooking._id.toString(), promo.originalAmount, promo.discountAmount).catch(err =>
+        await finalizePromoRedemption(promo.promoCodeId, payload.requestStudent, (responseBooking as any)?._id?.toString() || "", promo.originalAmount, promo.discountAmount).catch(err =>
           console.error("Failed to record promo code redemption for booking:", err)
         );
       }
@@ -1501,7 +1501,7 @@ if (teachingMode && teachingMode !== "all") {
   const offersByRequest = new Map(offerTotals.map((row) => [row._id.toString(), row.count as number]));
    const sanitizedRequests = requests.map((r) => {
        const offersCount = offersByRequest.get(r._id.toString()) || 0;
-       const rawName = (r.student as IUser)?.name || "Student";
+       const rawName = (r.student as unknown as IUser)?.name || "Student";
        const nameParts = rawName.trim().split(" ");
        const sanitizedName = nameParts.length > 1
          ? `${nameParts[0]} ${nameParts[1].charAt(0)}.`
@@ -1515,9 +1515,9 @@ if (teachingMode && teachingMode !== "all") {
          pricingUnit: r.pricingUnit || "hour",
          currency: r.currency || "USD",
          teachingMode: r.teachingMode,
-         city: r.city || (r.student as IUser)?.city || "",
-         countryCode: r.countryCode || (r.student as IUser)?.countryCode || "PK",
-         countryName: r.countryName || (r.student as IUser)?.countryName || "Pakistan",
+         city: r.city || (r.student as unknown as IUser)?.city || "",
+         countryCode: r.countryCode || (r.student as unknown as IUser)?.countryCode || "PK",
+         countryName: r.countryName || (r.student as unknown as IUser)?.countryName || "Pakistan",
         schedule: r.schedule,
         description: "Learning goals will be shared after a tutor is selected.",
         status: r.status,

@@ -453,7 +453,7 @@ function policeIsRequired(profile: ITutorProfile): boolean {
 }
 
 function hasApprovedTeachingSubject(profile: ITutorProfile | Record<string, any>): boolean {
-  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: ITutorProfile['subjectEligibility'][number]) =>
+  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: NonNullable<ITutorProfile['subjectEligibility']>[number]) =>
     entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
   );
 }
