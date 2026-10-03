@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { EDUCATION_LEVELS, normalizeEducationLevels, normalizeEducationLevel } from "../config/educationLevels";
+import logger from "../config/logger";
 
 export type TutorStatus =
   | "registered"
@@ -495,11 +496,38 @@ tutorProfileSchema.pre("save", function () {
   // so existing verified tutors are never retroactively downgraded.
   // Core marketplace documents: CNIC, Degree, and Demo Video are the mandatory
   // credentials for marketplace approval. Police clearance only gates home tuition.
-  const coreApproved =
-    (p.cnicVerificationStatus === "approved" &&
-      p.degreeVerificationStatus === "approved" &&
-      p.demoVideoStatus === "approved") ||
-    (p.verificationStatus === "approved" && p.marketplaceEligible);
+  //
+  // Audit P1-03: the second branch below is the "grandfather bypass" the
+  // forensic audit flagged — a profile that was marked marketplaceEligible
+  // under an earlier (pre-current-document) policy keeps coreApproved
+  // without the current CNIC/degree/demo-video check. Removing it in one
+  // step would deactivate any legacy active tutor whose documents were
+  // never re-approved. This commit does NOT change behaviour; it just
+  // emits a WARN every time the bypass fires so operations can enumerate
+  // the affected profiles before an explicit grandfather policy /
+  // migration is deployed. Once the real count is known, replace this
+  // branch with `p.grandfathered === true` plus a one-shot backfill.
+  const coreDocsApproved =
+    p.cnicVerificationStatus === "approved" &&
+    p.degreeVerificationStatus === "approved" &&
+    p.demoVideoStatus === "approved";
+  const grandfatherBypassActive =
+    !coreDocsApproved &&
+    p.verificationStatus === "approved" &&
+    p.marketplaceEligible;
+  if (grandfatherBypassActive) {
+    logger.warn(
+      {
+        tutorProfileId: p._id?.toString?.(),
+        userId: p.user?.toString?.(),
+        cnic: p.cnicVerificationStatus,
+        degree: p.degreeVerificationStatus,
+        demo: p.demoVideoStatus,
+      },
+      "tutor-profile.grandfather-bypass: profile kept coreApproved only via legacy marketplaceEligible flag",
+    );
+  }
+  const coreApproved = coreDocsApproved || grandfatherBypassActive;
   const subjectApprovalSatisfied = hasApprovedTeachingSubject(p);
 
   if (coreApproved) {
