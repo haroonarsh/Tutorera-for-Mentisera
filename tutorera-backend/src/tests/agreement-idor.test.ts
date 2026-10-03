@@ -74,13 +74,28 @@ async function seedAgreementAndAcceptance(tutorUserId: Types.ObjectId) {
     electronicSignature: "Test Tutor",
     acceptedAt: new Date(),
     effectiveAt: new Date(),
-    consentsAccepted: {
+    consents: {
       consentAgreement: true,
       consentInformationAccuracy: true,
       consentSafeguarding: true,
       consentIndependentContractor: true,
-      consentFeesAndTaxes: true,
+      consentFeesTaxes: true,
       consentElectronicRecords: true,
+    },
+    feeDisclosureSnapshot: {
+      marketplaceFeePercent: 15,
+      taxRatePercent: 0,
+      currency: "PKR",
+      effectiveFrom: "2026-01-01",
+    },
+    contractSnapshot: {
+      title: "Tutor Agreement",
+      version: "1.0.0",
+      content: "The full tutor agreement content for the test fixture.",
+      companyLegalName: "Tutorera Ltd",
+      tradingName: "Tutorera",
+      registeredAddress: "Islamabad, PK",
+      contactEmail: "legal@tutorera.com",
     },
   });
   return { acceptance, agreement, profile };

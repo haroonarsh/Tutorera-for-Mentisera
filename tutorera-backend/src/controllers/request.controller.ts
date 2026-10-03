@@ -6,7 +6,7 @@ import IUser from "../models/User.model";
 import Request from "../models/Request.model";
 import { ITutorProfile } from "../models/TutorProfile.model";
 import Bid from "../models/Bid.model";
-import { IBooking } from "../models/Booking.model";
+import Booking, { IBooking } from "../models/Booking.model";
 import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
