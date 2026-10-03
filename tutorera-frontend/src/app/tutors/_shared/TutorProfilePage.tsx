@@ -635,13 +635,22 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <MapPin size={16} color="#0329B2" /> {locationDisplay}
                 </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Star size={16} color="#fbbf24" fill="#fbbf24" />
-                  <strong style={{ color: "#021550" }}>
-                    {tutor.averageRating?.toFixed(1) || "5.0"}
-                  </strong>{" "}
-                  ({tutor.totalReviews || 0} student reviews)
-                </span>
+                {tutor.averageRating && tutor.totalReviews ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    <Star size={16} color="#fbbf24" fill="#fbbf24" />
+                    <strong style={{ color: "#021550" }}>
+                      {tutor.averageRating.toFixed(1)}
+                    </strong>{" "}
+                    ({tutor.totalReviews} student {tutor.totalReviews === 1 ? "review" : "reviews"})
+                  </span>
+                ) : (
+                  // Spec §16: never fabricate ratings. A tutor with no
+                  // reviews yet is explicitly shown as new, not as 5.0.
+                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#64748b" }}>
+                    <Star size={16} color="#cbd5e1" />
+                    New tutor — no reviews yet
+                  </span>
+                )}
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <Clock size={16} color="#0329B2" /> {tutor.experience || 0} years experience
                 </span>
@@ -1141,10 +1150,13 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#021550", margin: 0 }}>
                 Student Reviews ({tutor.totalReviews || 0})
               </h2>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontWeight: 700, color: "#021550" }}>
-                <Star size={18} color="#fbbf24" fill="#fbbf24" />
-                <span>{tutor.averageRating?.toFixed(1) || "5.0"} / 5.0</span>
-              </div>
+              {/* Spec §16: only render the rating badge against real reviews. */}
+              {tutor.averageRating && tutor.totalReviews ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontWeight: 700, color: "#021550" }}>
+                  <Star size={18} color="#fbbf24" fill="#fbbf24" />
+                  <span>{tutor.averageRating.toFixed(1)} / 5.0</span>
+                </div>
+              ) : null}
             </div>
 
             {reviews.length ? (
