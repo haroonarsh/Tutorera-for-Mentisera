@@ -39,6 +39,23 @@ export const getAcademicFrameworkOverview = async (_req: AuthRequest, res: Respo
   } catch (error) { databaseError(res, error, "Failed to load academic framework overview"); }
 };
 
+/** A compact review queue. The individual application page remains the
+ * single place where approvals/rejections are performed and audited. */
+export const listTutorSubjectApprovals = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const statuses = String(req.query.status || "pending") === "all"
+      ? ["pending", "needs_evidence", "approved", "rejected", "suspended", "revoked"]
+      : String(req.query.status || "pending").split(",");
+    const profiles = await TutorProfile.find({ "subjectEligibility.status": { $in: statuses as any } })
+      .select("fullName subjectEligibility user verificationStatus updatedAt")
+      .populate("user", "name email").sort({ updatedAt: -1 }).limit(safeLimit(req.query.limit)).lean();
+    const approvals = profiles.flatMap((profile: any) => (profile.subjectEligibility || [])
+      .filter((entry: any) => statuses.includes(entry.status))
+      .map((entry: any) => ({ profileId: profile._id, tutorName: profile.fullName || profile.user?.name || "Tutor", tutorEmail: profile.user?.email || "", verificationStatus: profile.verificationStatus, subject: entry.subject, levels: entry.levels || [], status: entry.status, eligibilityType: entry.eligibilityType || (entry.matchesDiscipline ? "direct" : "unmapped"), evidenceRequired: Boolean(entry.evidenceRequired), requestedAt: entry.requestedAt, reviewedAt: entry.reviewedAt, reason: entry.reason || "" })));
+    res.json({ success: true, approvals });
+  } catch (error) { databaseError(res, error, "Failed to list tutor subject approvals"); }
+};
+
 export const listAcademicCategories = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const filter: Record<string, unknown> = {};

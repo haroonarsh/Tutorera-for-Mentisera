@@ -5,7 +5,7 @@ import multer from "multer";
 import {
   createAcademicCategory, createAcademicDiscipline, createAcademicSubject, createTeachingEligibilityRule,
   getAcademicFrameworkOverview, listAcademicCategories, listAcademicDisciplines, listAcademicSubjects,
-  listTeachingEligibilityRules, updateAcademicCategory, updateAcademicDiscipline, updateAcademicSubject,
+  listTeachingEligibilityRules, listTutorSubjectApprovals, updateAcademicCategory, updateAcademicDiscipline, updateAcademicSubject,
   updateTeachingEligibilityRule,
 } from "../../controllers/academicFramework.controller";
 import { commitAcademicImport, downloadAcademicTemplate, exportAcademicDataset, listAcademicImportHistory, previewAcademicImport } from "../../controllers/academicImportExport.controller";
@@ -15,6 +15,7 @@ const uploadCsv = multer({ storage: multer.memoryStorage(), limits: { fileSize: 
 router.use(protect, authorize("admin"), requirePermission("market.configure"));
 
 router.get("/overview", getAcademicFrameworkOverview);
+router.get("/tutor-approvals", listTutorSubjectApprovals);
 router.route("/categories").get(listAcademicCategories).post(createAcademicCategory);
 router.patch("/categories/:id", updateAcademicCategory);
 router.route("/disciplines").get(listAcademicDisciplines).post(createAcademicDiscipline);

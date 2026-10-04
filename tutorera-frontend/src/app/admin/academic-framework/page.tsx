@@ -11,7 +11,7 @@ const cards = [
   { key: "categories", label: "Subject categories", icon: Layers3, href: "/admin/curriculum", copy: "Organise the catalogue without changing historic records." },
   { key: "disciplines", label: "Academic disciplines", icon: GraduationCap, href: "/admin/discipline-subject-maps", copy: "Record verified education disciplines used in eligibility decisions." },
   { key: "subjects", label: "Active subjects", icon: BookOpen, href: "/admin/curriculum", copy: "Subjects tutors and students can discover in the marketplace." },
-  { key: "pendingReviews", label: "Eligibility reviews", icon: ShieldCheck, href: "/admin/applications", copy: "Subject requests awaiting review or supporting evidence." },
+  { key: "pendingReviews", label: "Eligibility reviews", icon: ShieldCheck, href: "/admin/academic-framework/tutor-approvals", copy: "Subject requests awaiting review or supporting evidence." },
 ] as const;
 
 export default function AcademicFrameworkPage() {
