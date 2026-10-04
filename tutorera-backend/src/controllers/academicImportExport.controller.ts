@@ -1,4 +1,5 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from "../types";
 import SubjectCategory, { AcademicRecordStatus } from "../models/SubjectCategory.model";
 import AcademicDiscipline from "../models/AcademicDiscipline.model";
@@ -6,6 +7,7 @@ import Subject from "../models/Subject.model";
 import TeachingEligibilityRule from "../models/TeachingEligibilityRule.model";
 import AcademicImportJob, { AcademicImportDataset } from "../models/AcademicImportJob.model";
 import { logAudit } from "../utils/logAudit";
+import logger from "../config/logger";
 
 const DATASETS: AcademicImportDataset[] = ["categories", "subjects", "disciplines", "eligibility-rules"];
 const STATUSES: AcademicRecordStatus[] = ["active", "inactive", "archived"];
@@ -56,19 +58,75 @@ async function validate(dataset: AcademicImportDataset, rows: Row[]): Promise<{ 
   return { errors, normalized };
 }
 
+// Audit P1: wrap the entire row loop in a single Mongo transaction so a
+// mid-import failure rolls everything back instead of leaving the
+// catalogue half-imported (e.g. 300 subjects landed, row 301 violated a
+// unique index, catalogue now diverges from the operator's intended
+// state). session.withTransaction retries on transient errors and
+// aborts cleanly on any thrown exception. All reads and writes inside
+// commit() must now pass through the session.
 async function commit(dataset: AcademicImportDataset, rows: Row[], actorId?: any): Promise<{ created: number; updated: number }> {
   let created = 0; let updated = 0;
-  for (const row of rows) { const recordStatus = (row.status || "active") as AcademicRecordStatus; const common = { status: recordStatus, archivedAt: recordStatus === "archived" ? new Date() : undefined, updatedBy: actorId };
-    if (dataset === "categories") { const existing = await SubjectCategory.findOne({ code: row.category_code }); const payload = { ...common, name: row.category_name, slug: slugify(row.category_name), description: row.description || "", displayOrder: Number(row.display_order) || 0 }; if (existing) { Object.assign(existing, payload); await existing.save(); updated += 1; } else { await SubjectCategory.create({ ...payload, code: row.category_code, createdBy: actorId }); created += 1; } }
-    if (dataset === "subjects") { const category = await SubjectCategory.findOne({ code: row.category_code }); if (!category) throw new Error(`Category ${row.category_code} disappeared during import`); const existing = await Subject.findOne({ code: row.subject_code }); const payload = { ...common, name: row.subject_name, slug: slugify(row.subject_name), category: category.name, categoryRef: category._id, description: row.description || "", displayOrder: Number(row.display_order) || 0, sortOrder: Number(row.display_order) || 0, isActive: recordStatus === "active" }; if (existing) { Object.assign(existing, payload); await existing.save(); updated += 1; } else { await Subject.create({ ...payload, code: row.subject_code, level: [], createdBy: actorId }); created += 1; } }
-    if (dataset === "disciplines") { const existing = await AcademicDiscipline.findOne({ code: row.discipline_code }); const payload = { ...common, name: row.discipline_name, slug: slugify(row.discipline_name), description: row.description || "" }; if (existing) { Object.assign(existing, payload); await existing.save(); updated += 1; } else { await AcademicDiscipline.create({ ...payload, code: row.discipline_code, createdBy: actorId }); created += 1; } }
-    if (dataset === "eligibility-rules") { const [discipline, subject] = await Promise.all([AcademicDiscipline.findOne({ code: row.discipline_code }), Subject.findOne({ code: row.subject_code })]); if (!discipline || !subject) throw new Error("Referenced record disappeared during import"); const existing = await TeachingEligibilityRule.findOne({ discipline: discipline._id, subject: subject._id }); const payload = { ...common, eligibilityType: row.eligibility_type as "direct" | "conditional", evidenceRequired: row.eligibility_type === "conditional" || row.evidence_required === "true", minimumDegreeLevel: row.minimum_degree_level || undefined, notes: row.notes || "" }; if (existing) { Object.assign(existing, payload); await existing.save(); updated += 1; } else { await TeachingEligibilityRule.create({ ...payload, discipline: discipline._id, subject: subject._id, createdBy: actorId }); created += 1; } }
+  const mongoSession = await mongoose.startSession();
+  try {
+    await mongoSession.withTransaction(async () => {
+      // Reset the running tallies at the start of each transaction attempt —
+      // withTransaction may retry the callback on transient errors, and we
+      // don't want double-counting across retries.
+      created = 0; updated = 0;
+      for (const row of rows) { const recordStatus = (row.status || "active") as AcademicRecordStatus; const common = { status: recordStatus, archivedAt: recordStatus === "archived" ? new Date() : undefined, updatedBy: actorId };
+        if (dataset === "categories") { const existing = await SubjectCategory.findOne({ code: row.category_code }).session(mongoSession); const payload = { ...common, name: row.category_name, slug: slugify(row.category_name), description: row.description || "", displayOrder: Number(row.display_order) || 0 }; if (existing) { Object.assign(existing, payload); await existing.save({ session: mongoSession }); updated += 1; } else { await SubjectCategory.create([{ ...payload, code: row.category_code, createdBy: actorId }], { session: mongoSession }); created += 1; } }
+        if (dataset === "subjects") { const category = await SubjectCategory.findOne({ code: row.category_code }).session(mongoSession); if (!category) throw new Error(`Category ${row.category_code} disappeared during import`); const existing = await Subject.findOne({ code: row.subject_code }).session(mongoSession); const payload = { ...common, name: row.subject_name, slug: slugify(row.subject_name), category: category.name, categoryRef: category._id, description: row.description || "", displayOrder: Number(row.display_order) || 0, sortOrder: Number(row.display_order) || 0, isActive: recordStatus === "active" }; if (existing) { Object.assign(existing, payload); await existing.save({ session: mongoSession }); updated += 1; } else { await Subject.create([{ ...payload, code: row.subject_code, level: [], createdBy: actorId }], { session: mongoSession }); created += 1; } }
+        if (dataset === "disciplines") { const existing = await AcademicDiscipline.findOne({ code: row.discipline_code }).session(mongoSession); const payload = { ...common, name: row.discipline_name, slug: slugify(row.discipline_name), description: row.description || "" }; if (existing) { Object.assign(existing, payload); await existing.save({ session: mongoSession }); updated += 1; } else { await AcademicDiscipline.create([{ ...payload, code: row.discipline_code, createdBy: actorId }], { session: mongoSession }); created += 1; } }
+        if (dataset === "eligibility-rules") { const [discipline, subject] = await Promise.all([AcademicDiscipline.findOne({ code: row.discipline_code }).session(mongoSession), Subject.findOne({ code: row.subject_code }).session(mongoSession)]); if (!discipline || !subject) throw new Error("Referenced record disappeared during import"); const existing = await TeachingEligibilityRule.findOne({ discipline: discipline._id, subject: subject._id }).session(mongoSession); const payload = { ...common, eligibilityType: row.eligibility_type as "direct" | "conditional", evidenceRequired: row.eligibility_type === "conditional" || row.evidence_required === "true", minimumDegreeLevel: row.minimum_degree_level || undefined, notes: row.notes || "" }; if (existing) { Object.assign(existing, payload); await existing.save({ session: mongoSession }); updated += 1; } else { await TeachingEligibilityRule.create([{ ...payload, discipline: discipline._id, subject: subject._id, createdBy: actorId }], { session: mongoSession }); created += 1; } }
+      }
+    });
+  } finally {
+    await mongoSession.endSession();
   }
   return { created, updated };
 }
 
 export const downloadAcademicTemplate = async (req: AuthRequest, res: Response): Promise<void> => { const dataset = String(req.params.dataset); if (!isDataset(dataset)) { res.status(404).json({ success: false, message: "Unknown academic dataset" }); return; } res.type("text/csv").attachment(`${dataset}.csv`).send(templates[dataset]); };
 export const previewAcademicImport = async (req: AuthRequest, res: Response): Promise<void> => { const dataset = String(req.params.dataset); const source = readUpload(req); if (!isDataset(dataset) || !source) { res.status(400).json({ success: false, message: "A supported dataset and CSV file are required" }); return; } const rows = parseCsv(source); const result = await validate(dataset, rows); const job = await AcademicImportJob.create({ dataset, status: result.errors.length ? "failed" : "dry_run", filename: req.file?.originalname, totalRows: rows.length, validRows: result.normalized.length, validationErrors: result.errors.slice(0, 100), createdBy: req.user?._id }); res.json({ success: true, dryRun: true, jobId: job._id, totalRows: rows.length, validRows: result.normalized.length, errors: result.errors.slice(0, 100), preview: result.normalized.slice(0, 25) }); };
-export const commitAcademicImport = async (req: AuthRequest, res: Response): Promise<void> => { const dataset = String(req.params.dataset); const source = readUpload(req); if (!isDataset(dataset) || !source) { res.status(400).json({ success: false, message: "A supported dataset and CSV file are required" }); return; } const rows = parseCsv(source); const result = await validate(dataset, rows); if (result.errors.length) { res.status(422).json({ success: false, message: "Import has validation errors. Correct the file and retry.", errors: result.errors.slice(0, 100) }); return; } try { const counts = await commit(dataset, result.normalized, req.user?._id); const job = await AcademicImportJob.create({ dataset, status: "committed", filename: req.file?.originalname, totalRows: rows.length, validRows: result.normalized.length, createdCount: counts.created, updatedCount: counts.updated, validationErrors: [], createdBy: req.user?._id, committedAt: new Date() }); await logAudit({ action: "academic_import_committed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "AcademicImportJob", targetId: job._id.toString(), targetName: dataset, metadata: counts }); res.json({ success: true, job, ...counts }); } catch (error) { console.error("Academic import failed", error); res.status(500).json({ success: false, message: "Import failed. No retry should be attempted until the error is reviewed." }); } };
+export const commitAcademicImport = async (req: AuthRequest, res: Response): Promise<void> => {
+  const dataset = String(req.params.dataset);
+  const source = readUpload(req);
+  if (!isDataset(dataset) || !source) { res.status(400).json({ success: false, message: "A supported dataset and CSV file are required" }); return; }
+  const rows = parseCsv(source);
+  const result = await validate(dataset, rows);
+  if (result.errors.length) { res.status(422).json({ success: false, message: "Import has validation errors. Correct the file and retry.", errors: result.errors.slice(0, 100) }); return; }
+  try {
+    const counts = await commit(dataset, result.normalized, req.user?._id);
+    const job = await AcademicImportJob.create({ dataset, status: "committed", filename: req.file?.originalname, totalRows: rows.length, validRows: result.normalized.length, createdCount: counts.created, updatedCount: counts.updated, validationErrors: [], createdBy: req.user?._id, committedAt: new Date() });
+    await logAudit({ action: "academic_import_committed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "AcademicImportJob", targetId: job._id.toString(), targetName: dataset, metadata: counts });
+    res.json({ success: true, job, ...counts });
+  } catch (error) {
+    // Audit P1: commit() is now atomic — on throw the transaction aborts
+    // and nothing lands in the catalogue. Record a failed-job row with
+    // the error message so operators can see WHAT failed without
+    // combing through server logs, and still get an audit trail of the
+    // attempted import.
+    logger.error({ err: error, dataset, totalRows: rows.length }, "Academic import failed");
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    try {
+      const failedJob = await AcademicImportJob.create({
+        dataset,
+        status: "failed",
+        filename: req.file?.originalname,
+        totalRows: rows.length,
+        validRows: result.normalized.length,
+        createdCount: 0,
+        updatedCount: 0,
+        validationErrors: [{ row: 0, message: `Transaction aborted: ${errorMessage}` }],
+        createdBy: req.user?._id,
+      });
+      await logAudit({ action: "academic_import_failed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "AcademicImportJob", targetId: failedJob._id.toString(), targetName: dataset, metadata: { error: errorMessage } });
+    } catch (ledgerErr) {
+      logger.error({ err: ledgerErr }, "Failed to record academic import failure job");
+    }
+    res.status(500).json({ success: false, message: "Import failed. No retry should be attempted until the error is reviewed.", error: errorMessage });
+  }
+};
 export const listAcademicImportHistory = async (req: AuthRequest, res: Response): Promise<void> => { const filter: Record<string, unknown> = {}; if (isDataset(String(req.query.dataset || ""))) filter.dataset = req.query.dataset; const jobs = await AcademicImportJob.find(filter).sort({ createdAt: -1 }).limit(100).populate("createdBy", "name email").lean(); res.json({ success: true, jobs }); };
 export const exportAcademicDataset = async (req: AuthRequest, res: Response): Promise<void> => { const dataset = String(req.params.dataset); if (!isDataset(dataset)) { res.status(404).json({ success: false, message: "Unknown academic dataset" }); return; } let lines: string[] = []; if (dataset === "categories") { const records = await SubjectCategory.find().sort({ code: 1 }).lean(); lines = ["category_code,category_name,description,status,display_order", ...records.map((r) => [r.code, r.name, r.description, r.status, r.displayOrder].map(csv).join(","))]; } if (dataset === "subjects") { const records = await Subject.find().populate("categoryRef", "code").sort({ code: 1 }).lean(); lines = ["subject_code,subject_name,category_code,description,status,display_order", ...records.map((r: any) => [r.code || "", r.name, r.categoryRef?.code || "", r.description, r.status || (r.isActive ? "active" : "inactive"), r.displayOrder || r.sortOrder].map(csv).join(","))]; } if (dataset === "disciplines") { const records = await AcademicDiscipline.find().sort({ code: 1 }).lean(); lines = ["discipline_code,discipline_name,description,status", ...records.map((r) => [r.code, r.name, r.description, r.status].map(csv).join(","))]; } if (dataset === "eligibility-rules") { const records = await TeachingEligibilityRule.find().populate("discipline", "code").populate("subject", "code").sort({ createdAt: 1 }).lean(); lines = ["discipline_code,subject_code,eligibility_type,evidence_required,minimum_degree_level,notes,status", ...records.map((r: any) => [r.discipline?.code || "", r.subject?.code || "", r.eligibilityType, r.evidenceRequired, r.minimumDegreeLevel || "", r.notes || "", r.status].map(csv).join(","))]; } res.type("text/csv").attachment(`${dataset}-export.csv`).send(lines.join("\n")); };
