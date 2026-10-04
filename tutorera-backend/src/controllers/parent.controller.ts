@@ -41,7 +41,7 @@ export const getMyParentProfile = async (req: AuthRequest, res: Response): Promi
     profile = await ParentProfile.create({ user: req.user._id, children: [] });
   }
 
-  const childUserIds = (profile as any).children.map((c: any) => c.studentUser);
+  const childUserIds = profile.children.map((c) => c.studentUser);
 
   const childBookings = childUserIds.length > 0
     ? await Booking.find({ student: { $in: childUserIds } })
@@ -64,18 +64,18 @@ export const getMyParentProfile = async (req: AuthRequest, res: Response): Promi
     success: true,
     profile: {
       ...profile,
-      children: (profile as any).children.map((c: any) => ({
+      children: profile.children.map((c) => ({
         ...c,
         studentProfile: childMap[c.studentUser?.toString()] || null,
       })),
     },
-    recentBookings: childBookings.map((b: any) => ({
+    recentBookings: childBookings.map((b) => ({
       _id: b._id,
-      studentName: (b.student as any)?.name || "Student",
-      tutorName: (b.tutor as any)?.name || "Tutor",
-      subject: (b.request as any)?.subject || "Tutoring",
+      studentName: (b.student as unknown as { name?: string })?.name || "Student",
+      tutorName: (b.tutor as unknown as { name?: string })?.name || "Tutor",
+      subject: (b.request as unknown as { subject?: string; currency?: string })?.subject || "Tutoring",
       amount: b.amount,
-      currency: b.currency || (b.request as any)?.currency || profile.currency || "USD",
+      currency: b.currency || (b.request as unknown as { currency?: string })?.currency || profile.currency || "USD",
       status: b.status,
       teachingMode: b.teachingMode,
       createdAt: b.createdAt,
@@ -85,9 +85,9 @@ export const getMyParentProfile = async (req: AuthRequest, res: Response): Promi
       status: "pending",
       expiresAt: { $gt: new Date() },
     }).select("student name relationship expiresAt createdAt").sort("-createdAt").lean(),
-    pendingApprovals: pendingApprovals.map((item: any) => ({
-      _id: item._id, subject: item.subject, studentName: item.student?.name || "Student", currency: item.currency,
-      offer: item.acceptedOffer ? { amount: item.acceptedOffer.amount, currency: item.acceptedOffer.currency, pricingUnit: item.acceptedOffer.pricingUnit } : null,
+    pendingApprovals: pendingApprovals.map((item) => ({
+      _id: item._id, subject: item.subject, studentName: (item.student as unknown as { name?: string })?.name || "Student", currency: item.currency,
+      offer: item.acceptedOffer ? { amount: (item.acceptedOffer as unknown as { amount?: number; currency?: string; pricingUnit?: string }).amount, currency: (item.acceptedOffer as unknown as { currency?: string }).currency, pricingUnit: (item.acceptedOffer as unknown as { pricingUnit?: string }).pricingUnit } : null,
       updatedAt: item.updatedAt,
     })),
   });
@@ -329,8 +329,9 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   if (!bid || (bid.expiresAt && bid.expiresAt <= new Date())) { res.status(410).json({ success: false, message: "The selected offer is no longer available." }); return; }
   try {
     await assertAcceptanceAvailable(request.countryCode);
-  } catch (marketError: any) {
-    res.status(marketError.statusCode || 409).json({ success: false, code: marketError.code || "MARKET_DISCOVERY_ONLY", message: marketError.message, market: request.countryCode });
+  } catch (marketError) {
+    const me = marketError as { statusCode?: number; code?: string; message?: string };
+    res.status(me.statusCode || 409).json({ success: false, code: me.code || "MARKET_DISCOVERY_ONLY", message: me.message, market: request.countryCode });
     return;
   }
   const expiry = new Date(Date.now() + PAYMENT_HOLD_MS);
@@ -341,8 +342,9 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
       if (!reserved) throw Object.assign(new Error("This approval was already processed."), { statusCode: 409 });
       await Bid.updateOne({ _id: bid._id }, { status: "payment_pending", paymentPendingExpiresAt: expiry }, { session });
     });
-  } catch (txError: any) {
-    if (txError.statusCode === 409) { res.status(409).json({ success: false, message: txError.message }); return; }
+  } catch (txError) {
+    const te = txError as { statusCode?: number; message?: string };
+    if (te.statusCode === 409) { res.status(409).json({ success: false, message: te.message }); return; }
     res.status(500).json({ success: false, message: "Unable to process approval. Please try again." }); return;
   } finally {
     await session.endSession();
@@ -429,8 +431,8 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
   let locationReferences: Record<string, unknown>;
   try {
     locationReferences = await resolveLocationReferences({ country, region, cityRef, locality, city }, market.countryCode);
-  } catch (error: any) {
-    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+  } catch (error) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error instanceof Error ? error.message : "Invalid location reference." });
     return;
   }
   const resolvedCity = (locationReferences.city as string | undefined) || city || req.user?.city || "";

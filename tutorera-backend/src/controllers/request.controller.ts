@@ -99,8 +99,8 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Tuition requests are not available in the selected market." });
     return;
   }
-  try { await assertMarketFeature(market.countryCode, "requests"); } catch (error: any) {
-    res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
+  try { await assertMarketFeature(market.countryCode, "requests"); } catch (error) { const e = error as { statusCode?: number; code?: string; message?: string };
+    res.status(e.statusCode || 422).json({ success: false, code: e.code, message: e.message }); return;
   }
   if (req.body.teachingMode === "online" && !market.onlineEnabled) {
     res.status(422).json({ success: false, code: "ONLINE_TUITION_UNAVAILABLE", message: "Online tuition is not available in the selected market." });
@@ -113,8 +113,8 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
   let locationReferences: Record<string, unknown>;
   try {
     locationReferences = await resolveLocationReferences(req.body, market.countryCode);
-  } catch (error: any) {
-    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+  } catch (error) { const e = error as { statusCode?: number; code?: string; message?: string };
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: e.message });
     return;
   }
 
@@ -483,8 +483,8 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     res.status(404).json({ success: false, message: "Request not found." });
     return;
   }
-  try { await assertMarketFeature(requested.countryCode, "offers"); } catch (error: any) {
-    res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
+  try { await assertMarketFeature(requested.countryCode, "offers"); } catch (error) { const e = error as { statusCode?: number; code?: string; message?: string };
+    res.status(e.statusCode || 422).json({ success: false, code: e.code, message: e.message }); return;
   }
 
   if (!isHomeTuitionEligible(tutorProfile) && requested.teachingMode === "in-person") {
@@ -743,8 +743,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   }
   try {
     await assertAcceptanceAvailable(request.countryCode);
-  } catch (marketError: any) {
-    res.status(marketError.statusCode || 409).json({ success: false, code: marketError.code, message: marketError.message, market: request.countryCode });
+  } catch (marketError) {
+    const me = marketError as { statusCode?: number; code?: string; message?: string };
+    res.status(me.statusCode || 409).json({ success: false, code: me.code, message: me.message, market: request.countryCode });
     return;
   }
 
@@ -840,9 +841,10 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
         { returnDocument: "after", session }
       );
     });
-  } catch (txError: any) {
-    if (txError.statusCode === 409) {
-      res.status(409).json({ success: false, message: txError.message });
+  } catch (txError) {
+    const te = txError as { statusCode?: number; message?: string };
+    if (te.statusCode === 409) {
+      res.status(409).json({ success: false, message: te.message });
       await session.endSession();
       return;
     }
@@ -904,7 +906,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
       checkoutUrl,
     });
-  } catch (err: any) {
+  } catch (err) {
     await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
     await Bid.updateOne(
       { _id: bid._id, status: "payment_pending" },
@@ -926,7 +928,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 // transactional booking-creation logic the old acceptBid used to run
 // synchronously — atomic accept guard, reject other bids, create the
 // booking (now with paymentStatus already "confirmed"), lock the slot.
-export async function finalizeBidAcceptance(bidId: string, io: any): Promise<void> {
+export async function finalizeBidAcceptance(bidId: string, io: import("socket.io").Server): Promise<void> {
   const session = await mongoose.startSession();
 
   try {
@@ -1197,8 +1199,8 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
     return;
   }
 
-  try { await assertMarketFeature(market.countryCode, "requests"); } catch (error: any) {
-    res.status(error.statusCode || 422).json({ success: false, code: error.code, message: error.message }); return;
+  try { await assertMarketFeature(market.countryCode, "requests"); } catch (error) { const e = error as { statusCode?: number; code?: string; message?: string };
+    res.status(e.statusCode || 422).json({ success: false, code: e.code, message: e.message }); return;
   }
   if (requestedMode === "online" && !market.onlineEnabled) {
     res.status(422).json({ success: false, code: "ONLINE_TUITION_UNAVAILABLE", message: "Online tuition is not available in the selected market." });
@@ -1234,8 +1236,8 @@ export const createDirectBookingRequest = async (req: AuthRequest, res: Response
   let locationReferences: Record<string, unknown>;
   try {
     locationReferences = await resolveLocationReferences(req.body, market.countryCode);
-  } catch (error: any) {
-    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+  } catch (error) { const e = error as { statusCode?: number; code?: string; message?: string };
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: e.message });
     return;
   }
   if (req.body.timezone && !isValidIanaTimezone(req.body.timezone)) {

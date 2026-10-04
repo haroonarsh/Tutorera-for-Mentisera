@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
-import TutorProfile from "../models/TutorProfile.model";
+import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import User from "../models/User.model";
 import TutorAvailability from "../models/TutorAvailability.model";
 import Bid from "../models/Bid.model";
@@ -250,8 +250,8 @@ const TUTOR_POPULATE_FIELDS = "name email avatar phone city countryCode countryN
 // as listings. Unactivated tutors, unapproved applications, and those with
 // unsigned agreements must NEVER appear publicly or be indexed by search
 // engines.
-async function respondWithPublicTutorProfile(res: Response, profile: any): Promise<void> {
-  const user = profile?.user as any;
+async function respondWithPublicTutorProfile(res: Response, profile: ITutorProfile | null): Promise<void> {
+  const user = profile?.user as unknown as { name?: string; email?: string; isActive?: boolean; isDeleted?: boolean; isTestAccount?: boolean } | undefined;
   const userLooksLikeTest = /\b(test|testing|demo|sample|placeholder|dummy)\b/i.test(
     `${user?.name || ""} ${user?.email || ""}`
   );
@@ -484,9 +484,9 @@ export const getAllTutors = async (
 
   const tutorsWithResponse = tutors.map((t) => {
     const obj = t.toObject() as any;
-    const approvedEntries = (obj.subjectEligibility || []).filter((entry: any) => entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0);
+    const approvedEntries = (obj.subjectEligibility || []).filter((entry: { status: string; levels?: unknown[] }) => entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0);
     obj.subjects = obj.approvedSubjects || [];
-    obj.levels = Array.from(new Set(approvedEntries.flatMap((entry: any) => entry.levels)));
+    obj.levels = Array.from(new Set(approvedEntries.flatMap((entry: { levels: unknown[] }) => entry.levels)));
     delete obj.subjectEligibility;
     obj.responseTimeFormatted = formatResponseTime(obj.averageResponseMinutes || 0);
     return obj;
@@ -497,7 +497,7 @@ export const getAllTutors = async (
     if (matchRequest) {
       const ranked = await MatchingService.rankTutors(matchRequest as any, tutorsWithResponse as any[]);
       const rankedMap = new Map(ranked.map((s) => [s.tutor._id.toString(), s]));
-      tutorsWithResponse.forEach((t: any) => {
+      tutorsWithResponse.forEach((t) => {
         const matchData = rankedMap.get(t._id.toString());
         if (matchData) {
           t.matchScore = matchData.matchScore;
@@ -594,8 +594,8 @@ export const saveOnboardingStep = async (
     let locationReferences: Record<string, unknown>;
     try {
       locationReferences = await resolveLocationReferences(parsedData, market.countryCode);
-    } catch (error: any) {
-      res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+    } catch (error) {
+      res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error instanceof Error ? error.message : "Invalid location reference." });
       return;
     }
 

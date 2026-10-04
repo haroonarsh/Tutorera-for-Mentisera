@@ -37,8 +37,8 @@ export const listTutorOnboarding = async (req: AuthRequest, res: Response): Prom
   const users = await User.find(userFilter).select("name email countryCode city accountStatus applicationId applicationSubmittedAt createdAt").lean();
   const profiles = await TutorProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
   const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
-  const rows = users.map((user: any) => {
-    const profile: any = byUser.get(user._id.toString());
+  const rows = users.map((user) => {
+    const profile = byUser.get(user._id.toString());
     const phase = profile ? computeCanonicalStatus(profile as any) : "APPLICATION_STARTED";
     return {
       userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
@@ -52,11 +52,11 @@ export const listTutorOnboarding = async (req: AuthRequest, res: Response): Prom
   });
   const phase = String(req.query.phase || "");
   const search = String(req.query.search || "").trim().toLowerCase();
-  const filteredRows = rows.filter((row: any) =>
+  const filteredRows = rows.filter((row) =>
     (!phase || row.phase === phase) &&
     (!search || [row.name, row.email, row.applicationId, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
-  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
-  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  ).sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
   const start = (page - 1) * limit;
   res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
 };
@@ -76,9 +76,9 @@ export const listStudentOnboarding = async (req: AuthRequest, res: Response): Pr
     { $group: { _id: "$student", count: { $sum: 1 }, lastRequestAt: { $max: "$createdAt" } } },
   ]);
   const requestsByUser = new Map(requestCounts.map((entry) => [entry._id.toString(), entry]));
-  const rows = users.map((user: any) => {
-    const profile: any = byUser.get(user._id.toString());
-    const requestInfo: any = requestsByUser.get(user._id.toString());
+  const rows = users.map((user) => {
+    const profile = byUser.get(user._id.toString());
+    const requestInfo = requestsByUser.get(user._id.toString());
     const phase = requestInfo?.count ? "ACTIVE_REQUESTER" : profile?.onboardingComplete ? "READY_TO_POST" : profile ? "PROFILE_STARTED" : "REGISTERED";
     return {
       userId: user._id, profileId: profile?._id || null, name: user.name, email: user.email,
@@ -90,11 +90,11 @@ export const listStudentOnboarding = async (req: AuthRequest, res: Response): Pr
   });
   const phase = String(req.query.phase || "");
   const search = String(req.query.search || "").trim().toLowerCase();
-  const filteredRows = rows.filter((row: any) =>
+  const filteredRows = rows.filter((row) =>
     (!phase || row.phase === phase) &&
     (!search || [row.name, row.email, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
-  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
-  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  ).sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
   const start = (page - 1) * limit;
   res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
 };
@@ -109,8 +109,8 @@ export const listParentOnboarding = async (req: AuthRequest, res: Response): Pro
   const users = await User.find(userFilter).select("name email countryCode city accountStatus createdAt").lean();
   const profiles = await ParentProfile.find({ user: { $in: users.map((user) => user._id) } }).lean();
   const byUser = new Map(profiles.map((profile) => [profile.user.toString(), profile]));
-  const rows = users.map((user: any) => {
-    const profile: any = byUser.get(user._id.toString());
+  const rows = users.map((user) => {
+    const profile = byUser.get(user._id.toString());
     const linkedLearners = profile?.children?.length || 0;
     const phase = !profile ? "REGISTERED" : linkedLearners > 0 ? "LEARNER_LINKED" : "PROFILE_STARTED";
     return {
@@ -122,11 +122,11 @@ export const listParentOnboarding = async (req: AuthRequest, res: Response): Pro
   });
   const phase = String(req.query.phase || "");
   const search = String(req.query.search || "").trim().toLowerCase();
-  const filteredRows = rows.filter((row: any) =>
+  const filteredRows = rows.filter((row) =>
     (!phase || row.phase === phase) &&
     (!search || [row.name, row.email, row.city, row.countryCode].filter(Boolean).join(" ").toLowerCase().includes(search))
-  ).sort((a: any, b: any) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
-  const summary = rows.reduce<Record<string, number>>((counts, row: any) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
+  ).sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+  const summary = rows.reduce<Record<string, number>>((counts, row) => { counts[row.phase] = (counts[row.phase] || 0) + 1; return counts; }, {});
   const start = (page - 1) * limit;
   res.json({ success: true, total: filteredRows.length, page, pages: Math.max(1, Math.ceil(filteredRows.length / limit)), summary, rows: filteredRows.slice(start, start + limit) });
 };
@@ -259,7 +259,7 @@ export const listAtRiskRequests = async (_req: AuthRequest, res: Response): Prom
     const io = _req.app.get("io");
     const items = await AtRiskRequestService.getAtRiskRequests(100, io);
     res.json({ success: true, count: items.length, items });
-  } catch (err: any) {
+  } catch (err) {
     logger.error({ err }, "Failed to load at-risk requests");
     res.status(500).json({ success: false, message: "Failed to evaluate at-risk requests" });
   }
@@ -658,7 +658,7 @@ export const updateFeeConfig = async (req: AuthRequest, res: Response): Promise<
   }
   const nextVersion = `2026.${Date.now().toString().slice(-4)}`;
   const session = await mongoose.startSession();
-  let created: any;
+  let created!: InstanceType<typeof FeeConfig>; // assigned inside transaction
   try {
     await session.withTransaction(async () => {
       await FeeConfig.updateMany({ isActive: true }, { isActive: false }, { session });

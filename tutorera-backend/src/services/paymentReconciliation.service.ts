@@ -88,7 +88,7 @@ export async function reconcileSwichCheckout(basketId: string, io?: SocketIOServ
     const request = await Request.findById(bid.request).select("student");
     if (!request) throw new Error("Tuition request not found for checkout reconciliation");
 
-    await finalizeBidAcceptance(bidId, io);
+    await finalizeBidAcceptance(bidId, io!);
     await recordPaymentLedger({
       providerTransactionId: basketId,
       eventType: "payment.succeeded",

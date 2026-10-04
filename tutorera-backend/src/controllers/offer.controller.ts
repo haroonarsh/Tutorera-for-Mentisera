@@ -77,11 +77,13 @@ export const getOfferHistory = async (req: AuthRequest, res: Response): Promise<
 };
 
 export const counterOffer = async (req: AuthRequest, res: Response): Promise<void> => {
-  const session = await mongoose.startSession(); let negotiation: any; let savedOffer: any; let recipient = ""; let role: "student" | "tutor" = "student"; let finalCounterOffer = false;
+  const session = await mongoose.startSession(); // eslint-disable-next-line prefer-const
+  let negotiation!: InstanceType<typeof OfferNegotiation>; // assigned inside transaction
+  let savedOffer!: InstanceType<typeof Bid>; let recipient = ""; let role: "student" | "tutor" = "student"; let finalCounterOffer = false;
   try { await session.withTransaction(async () => {
     const offer = await Bid.findById(req.params.id).session(session); if (!offer) throw { statusCode: 404, message: "Offer not found." };
     const request = await Request.findById(offer.request).session(session); if (!request) throw { statusCode: 404, message: "Request not found." };
-    try { await assertMarketFeature(request.countryCode, "negotiation"); } catch (error: any) { throw { statusCode: error.statusCode || 422, code: error.code, message: error.message }; }
+    try { await assertMarketFeature(request.countryCode, "negotiation"); } catch (error) { const e0 = error as { statusCode?: number; code?: string; message?: string }; throw { statusCode: e0.statusCode || 422, code: e0.code, message: e0.message }; }
     if (!(ACTIVE_REQUEST_STATES as readonly string[]).includes(request.status) || !(ACTIVE_OFFER_STATES as readonly string[]).includes(offer.status)) throw { statusCode: 409, message: "Negotiation is closed." };
     if (offer.expiresAt.getTime() <= Date.now()) { offer.status = "expired"; await offer.save({ session }); throw { statusCode: 410, message: "This offer has expired." }; }
     const userId = req.user?._id?.toString(); const isStudent = request.student.toString() === userId; const isTutor = offer.tutor.toString() === userId;
@@ -104,7 +106,7 @@ export const counterOffer = async (req: AuthRequest, res: Response): Promise<voi
     [negotiation] = await OfferNegotiation.create([{ offer: offer._id, senderUser: req.user?._id, senderRole: role, amount: req.body.amount, currency: offer.currency || "USD", amountUSD, message: req.body.message, sequenceNumber: (last?.sequenceNumber || 0) + 1, expiresAt, flaggedForModeration: reasons.length > 0 }], { session });
     offer.amount = req.body.amount; offer.status = "countered"; offer.expiresAt = expiresAt; if (reasons.length) { offer.flaggedForModeration = true; offer.moderationReasons = [...new Set([...(offer.moderationReasons || []), ...reasons])]; } await offer.save({ session });
     request.status = "negotiating"; await request.save({ session }); savedOffer = offer; recipient = isStudent ? offer.tutor.toString() : request.student.toString(); finalCounterOffer = roleCount === 2;
-  }); } catch (error: any) { if (error?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(error.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : error.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
+  }); } catch (error) { const e = error as { statusCode?: number; code?: number | string; message?: string }; if (e?.statusCode === 410) await Bid.updateOne({ _id: req.params.id, status: { $in: [...ACTIVE_OFFER_STATES] } }, { status: "expired" }); res.status(e.statusCode || (e?.code === 11000 ? 409 : 500)).json({ success: false, message: e?.code === 11000 ? "Another counter-offer was submitted first. Refresh and try again." : e.message || "Unable to send counter offer." }); return; } finally { await session.endSession(); }
   await sendNotification(req.app.get("io"), recipient, { title: "Counter Offer Received", message: `${role === "student" ? "The student" : "The tutor"} proposed ${savedOffer.currency} ${req.body.amount.toLocaleString()}/${savedOffer.pricingUnit}.`, type: "bid", link: "/offers" });
   await offerEmail(recipient, "Counter Offer Received", `${role === "student" ? "The student" : "The tutor"} proposed ${savedOffer.currency} ${req.body.amount.toLocaleString()} per ${savedOffer.pricingUnit}.`);
   await logAudit({ action: "offer_countered", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: savedOffer.id, metadata: { amount: req.body.amount, role, sequenceNumber: negotiation.sequenceNumber, flaggedForModeration: negotiation.flaggedForModeration } });
@@ -176,11 +178,11 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     try {
       await assertAcceptanceAvailable(request.countryCode);
-    } catch (marketError: any) {
-      res.status(marketError.statusCode || 409).json({
+    } catch (marketError) { const me = marketError as { statusCode?: number; code?: string; message?: string };
+      res.status(me.statusCode || 409).json({
         success: false,
-        code: marketError.code || "MARKET_DISCOVERY_ONLY",
-        message: marketError.message,
+        code: me.code || "MARKET_DISCOVERY_ONLY",
+        message: me.message,
         market: request.countryCode,
       });
       return;
@@ -317,7 +319,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         message: "Redirecting to payment. Your booking will be created once payment completes.",
         checkoutUrl,
       });
-    } catch (err: any) {
+    } catch (err) {
       // Checkout creation failed — roll back the reservation immediately.
       await Request.updateOne(
         { _id: request._id, status: "awaiting_payment" },
@@ -336,8 +338,9 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       console.error("Failed to create Swich checkout for offer acceptance:", err);
       res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
     }
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message || "Unable to accept offer." });
+  } catch (error) {
+    const e = error as { statusCode?: number; message?: string };
+    res.status(e.statusCode || 500).json({ success: false, message: e.message || "Unable to accept offer." });
   }
 };
 
@@ -355,11 +358,11 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
   try {
     await assertAcceptanceAvailable(request.countryCode);
-  } catch (marketError: any) {
-    res.status(marketError.statusCode || 409).json({
+  } catch (marketError) { const me = marketError as { statusCode?: number; code?: string; message?: string };
+    res.status(me.statusCode || 409).json({
       success: false,
-      code: marketError.code || "MARKET_DISCOVERY_ONLY",
-      message: marketError.message,
+      code: me.code || "MARKET_DISCOVERY_ONLY",
+      message: me.message,
       market: request.countryCode,
     });
     return;
@@ -421,7 +424,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     });
 
     res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to create Swich retry checkout:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
   }
