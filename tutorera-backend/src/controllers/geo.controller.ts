@@ -8,6 +8,15 @@ import MarketConfig from "../models/MarketConfig.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS, EDUCATION_LEVELS_BY_COUNTRY } from "../config/geo/location";
 import { ensureLaunchMarkets } from "../services/market.service";
+import Subject from "../models/Subject.model";
+
+// Returns the canonical active subject names from the Subject catalogue,
+// falling back to the static MASTER_SUBJECTS array until the DB is seeded.
+async function getActiveSubjectNames(): Promise<string[]> {
+  const rows = await Subject.find({ status: "active" }).select("name").sort({ displayOrder: 1, name: 1 }).lean();
+  if (rows.length > 0) return rows.map((r) => r.name);
+  return MASTER_SUBJECTS;
+}
 
 const pageSize = (value: unknown) => Math.min(Math.max(Number(value) || 25, 1), 100);
 const safeSearch = (value: unknown) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 80);
@@ -34,7 +43,8 @@ export const getCountries = async (_req: Request, res: Response): Promise<void> 
       levels: EDUCATION_LEVELS_BY_COUNTRY[market.countryCode] || MASTER_LEVELS,
     };
   });
-  res.json({ success: true, count: list.length, countries: list, subjects: MASTER_SUBJECTS, levels: MASTER_LEVELS, currencies: Object.values(SUPPORTED_CURRENCIES) });
+  const subjects = await getActiveSubjectNames();
+  res.json({ success: true, count: list.length, countries: list, subjects, levels: MASTER_LEVELS, currencies: Object.values(SUPPORTED_CURRENCIES) });
 };
 
 export const getRegions = async (req: Request, res: Response): Promise<void> => {
@@ -106,7 +116,8 @@ export const getGlobalSearch = async (req: Request, res: Response): Promise<void
     TutorProfile.distinct("languages.language", { verificationStatus: "approved", countryCode: { $in: countryCodes }, "languages.language": pattern }),
   ]);
 
-  const subjects = MASTER_SUBJECTS.filter((subject) => pattern.test(subject)).slice(0, limit);
+  const subjectNames = await getActiveSubjectNames();
+  const subjects = subjectNames.filter((subject) => pattern.test(subject)).slice(0, limit);
   res.json({
     success: true,
     query,
