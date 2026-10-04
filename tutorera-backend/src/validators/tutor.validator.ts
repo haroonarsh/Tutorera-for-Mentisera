@@ -19,10 +19,26 @@ export const tutorProfileSchema = z.object({
   levels: normalizedEducationLevelsSchema.optional(),
   hourlyRate: z.number().min(0, "Hourly rate cannot be negative").optional(),
   experience: z.number().min(0).optional(),
+  // Must mirror the TutorProfile.education sub-schema (see
+  // models/TutorProfile.model.ts around line 284) — the previous shape
+  // stopped at degree + institution + year, so a tutor saving any other
+  // profile field silently had their discipline, disciplineRef, and
+  // uploaded degree document URL stripped from every education entry
+  // the client echoed back. Audit P0-2: preserve the full validated
+  // qualification set so downstream eligibility checks that depend on
+  // the discipline linkage keep working.
   education: z.array(z.object({
     degree: z.string(),
     institution: z.string(),
     year: z.number(),
+    discipline: z.string().optional(),
+    // disciplineRef is a stable AcademicDiscipline reference; accepted
+    // as an ObjectId-shaped string here and persisted by Mongoose's
+    // own ref casting. Nullable allowed so the client can explicitly
+    // clear the linkage when a discipline is archived.
+    disciplineRef: z.string().optional().nullable(),
+    degreeDoc: z.string().optional(),
+    degreeDocPublicId: z.string().optional(),
   })).optional(),
   availability: z.array(z.object({
     day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]),
