@@ -174,11 +174,17 @@ export async function approveSubjectEligibility(
   }
   const entry = (profile.subjectEligibility || []).find((e) => normalize(e.subject) === normalize(subject));
   if (!entry) return { success: false, message: `No eligibility request found for subject "${subject}".` };
+  if (["approved", "revoked", "suspended"].includes(entry.status)) {
+    return { success: false, message: `This subject request is ${entry.status} and cannot be approved again.` };
+  }
   if (!entry.matchesDiscipline && !approvalReason.trim()) {
     return {
       success: false,
       message: "An off-discipline subject requires documented supporting evidence and an explicit approval rationale.",
     };
+  }
+  if (entry.evidenceRequired && !(entry.evidence || []).some((item) => Boolean(item.url))) {
+    return { success: false, message: "Supporting evidence must be uploaded before this conditional subject request can be approved." };
   }
 
   entry.status = "approved";
@@ -209,6 +215,9 @@ export async function rejectSubjectEligibility(
 ): Promise<{ success: true } | { success: false; message: string }> {
   const entry = (profile.subjectEligibility || []).find((e) => normalize(e.subject) === normalize(subject));
   if (!entry) return { success: false, message: `No eligibility request found for subject "${subject}".` };
+  if (["approved", "revoked", "suspended"].includes(entry.status)) {
+    return { success: false, message: `This subject request is ${entry.status} and cannot be rejected.` };
+  }
 
   entry.status = "rejected";
   entry.reviewedBy = reviewer.id ? new Types.ObjectId(reviewer.id) : undefined;

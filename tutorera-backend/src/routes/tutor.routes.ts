@@ -7,6 +7,7 @@ import {
   saveOnboardingStep,
   getOnboardingStatus,
   getOnboardingFinancialPreview,
+  uploadSubjectEligibilityEvidence,
   getTutorBySlug,
 } from "../controllers/tutor.controller";
 import {
@@ -17,7 +18,7 @@ import {
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, tutorProfileSchema } from "../validators/tutor.validator";
 import { validate as validateAvailability, saveAvailabilitySchema } from "../validators/availability.validator";
-import { uploadVerification } from "../middlewares/upload.middleware";
+import { uploadDocument, uploadVerification } from "../middlewares/upload.middleware";
 import { cachePublic } from "../middlewares/cacheControl.middleware";
 import { listActiveDisciplineSubjectMaps } from "../controllers/disciplineSubjectMap.controller";
 
@@ -42,6 +43,7 @@ router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 // Onboarding
 router.get("/onboarding/status", protect, authorize("tutor"), getOnboardingStatus);
 router.get("/onboarding/financial-preview", protect, authorize("tutor"), getOnboardingFinancialPreview);
+router.post("/subject-eligibility/:subject/evidence", protect, authorize("tutor"), uploadDocument.single("evidence"), uploadSubjectEligibilityEvidence);
 router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.fields([
   { name: "avatar", maxCount: 1 },
   { name: "degreeDoc", maxCount: 1 },

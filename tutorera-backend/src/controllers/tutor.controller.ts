@@ -23,6 +23,7 @@ import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 import { calculateMarketplaceFees } from "../services/pricing.service";
 import { requestSubjectEligibility, syncApprovedSubjects } from "../services/subjectEligibility.service";
 import { assignUniqueTutorSlug } from "../services/tutorSlug.service";
+import { logAudit } from "../utils/logAudit";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -44,6 +45,26 @@ export const getOnboardingFinancialPreview = async (req: AuthRequest, res: Respo
     teachingMode: (profile?.teachingMode || "online") as "online" | "in-person" | "both",
   });
   res.status(200).json({ success: true, fees });
+};
+
+/** Uploads supporting evidence for a conditional subject request. It does not
+ * approve the subject; an authorised reviewer must still decide it. */
+export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Response): Promise<void> => {
+  const subject = String(req.params.subject || "").trim();
+  if (!subject || !req.file) { res.status(400).json({ success: false, message: "A subject and supporting evidence file are required." }); return; }
+  if (!DOCUMENT_TYPES.includes(req.file.mimetype) || !(await verifyFileSignature(req.file.buffer, DOCUMENT_TYPES))) { res.status(400).json({ success: false, message: "Upload a valid PDF, JPEG, or PNG document." }); return; }
+  const profile = await TutorProfile.findOne({ user: req.user?._id });
+  const entry = profile?.subjectEligibility?.find((item) => item.subject.trim().toLowerCase() === subject.toLowerCase());
+  if (!profile || !entry) { res.status(404).json({ success: false, message: "Subject eligibility request not found." }); return; }
+  if (["approved", "revoked", "suspended"].includes(entry.status)) { res.status(409).json({ success: false, message: "This subject request cannot accept further evidence in its current status." }); return; }
+  try {
+    const uploaded = await safeUploadToCloudinary(req.file.buffer, "tutorera/verification/subject-evidence", "raw", true);
+    entry.evidence = [...(entry.evidence || []), { url: uploaded.secure_url, label: String(req.body.label || req.file.originalname).slice(0, 160), uploadedAt: new Date() }];
+    entry.status = "pending";
+    await profile.save();
+    await logAudit({ action: "subject_eligibility_evidence_uploaded", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: profile._id.toString(), targetName: profile.fullName, metadata: { subject, evidenceCount: entry.evidence.length } });
+    res.status(201).json({ success: true, message: "Supporting evidence submitted for admin review.", subjectEligibility: entry });
+  } catch (error) { console.error("[SubjectEligibility] Evidence upload failed", error); res.status(502).json({ success: false, message: "We couldn't upload your evidence right now. Please try again." }); }
 };
 
 // Cloudinary outages/misconfig used to bubble up as an uncaught rejection,

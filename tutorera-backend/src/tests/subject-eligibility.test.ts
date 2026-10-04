@@ -72,6 +72,7 @@ describe("subjectEligibility.service", () => {
   it("approveSubjectEligibility with levels grants eligibility and syncs approvedSubjects", async () => {
     const { profile } = await makeTutor();
     await requestSubjectEligibility(profile, "Computer Science");
+    profile.subjectEligibility![0].evidence = [{ url: "https://example.test/evidence.pdf", label: "Degree evidence", uploadedAt: new Date() }];
     const result = await approveSubjectEligibility(profile, "Computer Science", ["O-Level", "A-Level"], { name: "Admin" }, "Verified computer-science credential reviewed.");
     expect(result.success).toBe(true);
     expect(isSubjectLevelApproved(profile, "Computer Science", "O-Level")).toBe(true);
@@ -87,6 +88,8 @@ describe("subjectEligibility.service", () => {
     const withoutRationale = await approveSubjectEligibility(profile, "Pakistan Studies", ["Matric"], { name: "Admin" });
     expect(withoutRationale.success).toBe(false);
     expect(checkSubjectEligibility(profile, "Pakistan Studies", "Matric").eligible).toBe(false);
+
+    profile.subjectEligibility![0].evidence = [{ url: "https://example.test/teaching-certificate.pdf", label: "Teaching certificate", uploadedAt: new Date() }];
 
     const withEvidence = await approveSubjectEligibility(
       profile,
