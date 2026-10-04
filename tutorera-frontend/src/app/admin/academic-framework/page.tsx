@@ -8,9 +8,9 @@ import { showError } from "@/lib/toast";
 
 type Overview = { categories: number; disciplines: number; subjects: number; directRules: number; conditionalRules: number; pendingReviews: number };
 const cards = [
-  { key: "categories", label: "Subject categories", icon: Layers3, href: "/admin/curriculum", copy: "Organise the catalogue without changing historic records." },
+  { key: "categories", label: "Subject categories", icon: Layers3, href: "/admin/academic-framework/subjects", copy: "Organise the catalogue without changing historic records." },
   { key: "disciplines", label: "Academic disciplines", icon: GraduationCap, href: "/admin/discipline-subject-maps", copy: "Record verified education disciplines used in eligibility decisions." },
-  { key: "subjects", label: "Active subjects", icon: BookOpen, href: "/admin/curriculum", copy: "Subjects tutors and students can discover in the marketplace." },
+  { key: "subjects", label: "Active subjects", icon: BookOpen, href: "/admin/academic-framework/subjects", copy: "Subjects tutors and students can discover in the marketplace." },
   { key: "pendingReviews", label: "Eligibility reviews", icon: ShieldCheck, href: "/admin/academic-framework/tutor-approvals", copy: "Subject requests awaiting review or supporting evidence." },
 ] as const;
 

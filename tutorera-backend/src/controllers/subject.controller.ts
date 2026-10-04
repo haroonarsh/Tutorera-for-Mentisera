@@ -131,14 +131,22 @@ export const updateSubject = async (req: AuthRequest, res: Response): Promise<vo
 
 export const deleteSubject = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const subject = await Subject.findByIdAndDelete(req.params.id);
+    // Subjects are referenced by tutor applications, historical requests and
+    // audit records. The legacy DELETE endpoint is intentionally retained for
+    // compatibility, but now performs a non-destructive archive.
+    const subject = await Subject.findByIdAndUpdate(req.params.id, {
+      isActive: false,
+      status: "archived",
+      archivedAt: new Date(),
+      updatedBy: req.user?._id,
+    }, { new: true, runValidators: true });
     if (!subject) {
       res.status(404).json({ success: false, message: "Subject not found" });
       return;
     }
 
     await logAudit({
-      action: "subject_deleted",
+      action: "subject_archived",
       actor: req.user?.name,
       actorId: req.user?._id?.toString(),
       entity: "Subject",
@@ -146,7 +154,7 @@ export const deleteSubject = async (req: AuthRequest, res: Response): Promise<vo
       targetName: subject.name,
     });
 
-    res.json({ success: true, message: "Subject deleted successfully" });
+    res.json({ success: true, message: "Subject archived successfully" });
   } catch (error) {
     console.error("Error deleting subject:", error);
     res.status(500).json({ success: false, message: "Failed to delete subject" });

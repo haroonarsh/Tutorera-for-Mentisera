@@ -50,6 +50,7 @@ const ROUTE_PREFIX_PERMISSIONS: Record<string, string> = {
   "/admin/blogs": "content.manage",
   "/admin/feature-flags": "market.configure",
   "/admin/email-templates": "system.monitor",
+  "/admin/academic-framework": "market.configure",
 };
 
 function hasPermission(adminRole?: string, adminPermissions?: string[], required?: string): boolean {
