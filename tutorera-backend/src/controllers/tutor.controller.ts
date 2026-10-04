@@ -62,6 +62,7 @@ export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Re
     entry.evidence = [...(entry.evidence || []), { url: uploaded.secure_url, publicId: uploaded.public_id, label: String(req.body.label || req.file.originalname).slice(0, 160), uploadedAt: new Date() }];
     entry.status = "pending";
     await profile.save();
+    await recordStatusEvent({ tutorId: req.user!._id.toString(), tutorProfileId: profile._id.toString(), actor: { name: req.user?.name || profile.fullName, role: "tutor", id: req.user?._id.toString() }, event: "SUBJECT_EVIDENCE_SUBMITTED", message: `Supporting evidence submitted for ${subject}`, isPublic: true });
     await logAudit({ action: "subject_eligibility_evidence_uploaded", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: profile._id.toString(), targetName: profile.fullName, metadata: { subject, evidenceCount: entry.evidence.length } });
     await NotificationService.publishEvent("system_admin", "admin.subject_eligibility_evidence_submitted", {
       tutorName: profile.fullName, subject, title: "Subject evidence submitted", message: `${profile.fullName} submitted supporting evidence for ${subject}.`, type: "verification", link: "/admin/academic-framework/tutor-approvals",

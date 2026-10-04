@@ -1151,6 +1151,9 @@ export const reviewSubjectEligibility = async (req: AuthRequest, res: Response):
   await profile.save({ validateModifiedOnly: true });
   await syncMarketplaceAndHomeTuition(actor, user, profile);
 
+  const eligibilityEvent = action === "approve" ? "SUBJECT_ELIGIBILITY_APPROVED" : action === "reject" ? "SUBJECT_ELIGIBILITY_REJECTED" : "SUBJECT_ELIGIBILITY_REVOKED";
+  await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: eligibilityEvent, message: `${subject} subject eligibility ${action}${reason ? `: ${reason}` : ""}`, isPublic: true });
+
   const eventCopy: Record<string, { title: string; message: string }> = {
     approve: { title: "Subject approved ✅", message: `You're now approved to teach ${subject}.` },
     reject: { title: "Subject request declined", message: `Your request to teach ${subject} was not approved.${reason ? ` Reason: ${reason}` : ""}` },
