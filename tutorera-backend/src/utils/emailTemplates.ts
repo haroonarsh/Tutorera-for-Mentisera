@@ -29,7 +29,7 @@ export const studentWelcomeEmail = (name: string) => {
 
 1. Post a Tuition Request — Tell us your subject, level, learning mode (online or home), and budget in 2 minutes. It is completely free.
 2. Compare Verified Tutors — Receive custom offers from qualified tutors with transparent credentials, student reviews, and verified badges.
-3. Learn with Confidence — Book your session backed by's 100% Satisfaction First-Session Guarantee.`,
+3. Learn with Confidence — Book your session backed by TUTORERA's 100% Satisfaction First-Session Guarantee.`,
     cta: { label: "Browse Qualified Tutors", url: "https://tutorera.ac.pk/tutors" },
     additionalInformation: "Need help right away? You can also post a tuition requirement at https://tutorera.ac.pk/post-request.",
     includeSecurityNotice: true,
@@ -71,7 +71,7 @@ export const tutorWelcomeApplicationEmail = (name: string, applicationId: string
       rows: [
         { label: "Application ID", value: applicationId, highlight: true },
         { label: "Review Status", value: "Under Review", isStatus: true, statusVariant: "warning" },
-        { label: "Estimated Turnaround", value: "24–48 Hours" },
+        { label: "Estimated Turnaround", value: "24-48 Hours" },
       ],
     },
     cta: { label: "Track Application Status", url: trackingUrl || "https://tutorera.ac.pk/tutor/application-status" },
@@ -91,7 +91,7 @@ export const tutorPendingEmail = (name: string) => {
     emailHeading: "Thanks for applying, " + name + "!",
     emailSubheading: "Your tutor profile is currently pending verification.",
     firstName: name,
-    openingMessage: "Our team is reviewing your application and will notify you once approved — usually within 24–48 hours.",
+    openingMessage: "Our team is reviewing your application and will notify you once approved — usually within 24-48 hours.",
     mainMessage: "You'll be able to receive bookings once approved. In the meantime, you can log in to your dashboard to track your application status.",
     cta: { label: "Track Application", url: "https://tutorera.ac.pk/tutor/application-status" },
     includeSecurityNotice: true,
@@ -438,7 +438,7 @@ export const bookingConfirmedEmail = (studentName: string, tutorName: string, am
     emailSubheading: `Your session with ${tutorName} is confirmed.`,
     firstName: studentName,
     openingMessage: `Your booking with ${tutorName} has been confirmed on the calendar.`,
-    mainMessage: "Please ensure payment is completed through our secure gateway so your session slot is locked in. verifies payment server-side before treating a session as confirmed.",
+    mainMessage: "Please ensure payment is completed through our secure gateway so your session slot is locked in. TUTORERA verifies payment server-side before treating a session as confirmed.",
     detailsCard: {
       title: "Booking Summary",
       rows: [
@@ -539,7 +539,7 @@ export const bookingCancelledEmail = (name: string, otherPartyName: string, subj
     emailSubheading: subject ? `Session: ${subject}` : "Tutoring session cancelled.",
     firstName: name,
     openingMessage: `Your booking with ${otherPartyName}${subject ? ` for ${subject}` : ""} has been cancelled.`,
-    mainMessage: "If you have questions regarding cancellation policies or refunds, our support team is available 24/7. Where eligible, refunds are processed automatically back to your payment method within 3–5 business days.",
+    mainMessage: "If you have questions regarding cancellation policies or refunds, our support team is available 24/7. Where eligible, refunds are processed automatically back to your payment method within 3-5 business days.",
     cta: { label: "Contact Support", url: "mailto:hello@mentisera.pk" },
     includeSecurityNotice: true,
   });

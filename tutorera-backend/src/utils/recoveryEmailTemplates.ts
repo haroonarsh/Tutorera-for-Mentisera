@@ -44,17 +44,26 @@ export const tutorApplicationCompletionReminderEmail = (
   missingItems: Array<{ label: string; href: string }>
 ) => {
   const subject = "Complete your tutor application - TUTORERA";
-  const rows = missingItems.map(item => `<li style="margin:0 0 8px;"><a href="https://tutorera.ac.pk${item.href}" style="color:#0329B2;font-weight:700;text-decoration:none;">${item.label}</a></li>`).join("");
+  const baseUrl = process.env.CLIENT_URL || "https://tutorera.ac.pk";
+
   const html = renderTransactionalEmail({
     subject,
     emailCategory: "Tutor Application",
     emailHeading: "A few application items still need attention",
     emailSubheading: "Complete only the items listed below to move your application forward.",
     firstName: name,
-    openingMessage: "Your tutor application is not complete yet. We will stop these reminders as soon as every required profile detail and document is complete.",
-    mainMessage: `<ul style="padding-left:20px;margin:16px 0;color:#374151;">${rows}</ul>`,
-    cta: { label: "Continue Application", url: "https://tutorera.ac.pk/onboarding/tutor" },
-    additionalInformation: "Document review can take time. You only need to act where an item is listed above.",
+    openingMessage: "Your tutor application is not complete yet. We will pause these reminders as soon as every required profile detail and document is submitted.",
+    mainMessage: "Please review and complete the following pending requirements to activate your profile on the marketplace:",
+    actionList: {
+      title: "Pending Application Items",
+      items: missingItems.map(item => ({
+        label: item.label,
+        url: item.href.startsWith("http") ? item.href : `${baseUrl}${item.href}`,
+        badge: "Action Required",
+      })),
+    },
+    cta: { label: "Continue Application", url: `${baseUrl}/onboarding/tutor` },
+    additionalInformation: "Document reviews are processed continuously. You only need to take action on the specific items listed above.",
     includeSecurityNotice: false,
     deliverability: "This reminder was sent because your TUTORERA tutor application still has required items outstanding.",
   });
@@ -67,7 +76,7 @@ export const studentRequestAbandonedEmail = (name: string, stage: number, subjec
   const isSecond = stage === 2 || stage === 3;
 
   const subject = isFinal
-    ? "Your Tutor Search Is Waiting — Continue When Ready - TUTORERA"
+    ? "Your Tutor Search Is Waiting - Continue When Ready - TUTORERA"
     : isSecond
       ? `Still Looking for a ${subjectName || "Qualified"} Tutor?  - TUTORERA`
       : `Finish Your ${subjectName || "Tuition"} Request - TUTORERA`;

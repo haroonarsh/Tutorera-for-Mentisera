@@ -88,6 +88,18 @@ export interface BrandedEmailOptions {
   category?: string;
 }
 
+export interface ActionItem {
+  label: string;
+  url: string;
+  badge?: string;
+  description?: string;
+}
+
+export interface ActionListCard {
+  title?: string;
+  items: ActionItem[];
+}
+
 export interface TransactionalEmailFields {
   emailCategory: string;
   emailHeading: string;
@@ -112,6 +124,8 @@ export interface TransactionalEmailFields {
   preheader?: string;
   subject: string;
   deliverability?: string;
+  actionList?: ActionListCard;
+  customBodyHtml?: string;
 }
 
 function buildSecurityNotice(): string {
@@ -167,7 +181,7 @@ function buildHelpRow(): string {
 
 function buildFooter(): string {
   const links = FOOTER_LINKS.map((l, i) =>
-    `<a href="${l.href}" style="color:${COLORS.cyan};text-decoration:none;">${l.label}</a>${i < FOOTER_LINKS.length - 1 ? `<span style="color:#64748b;"> &nbsp;•&nbsp; </span>` : ""}`
+    `<a href="${l.href}" style="color:${COLORS.cyan};text-decoration:none;">${l.label}</a>${i < FOOTER_LINKS.length - 1 ? `<span style="color:#64748b;"> &nbsp;&bull;&nbsp; </span>` : ""}`
   ).join("");
 
   return `
@@ -322,6 +336,51 @@ function buildDetailsCard(card: DetailsCard): string {
     </table>`;
 }
 
+function buildActionListCard(card: ActionListCard): string {
+  if (!card.items || card.items.length === 0) return "";
+
+  const titleHtml = card.title
+    ? `<div style="margin-bottom:12px;color:${COLORS.deepNavy};font-size:12px;line-height:16px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">${escapeHtml(card.title)}</div>`
+    : "";
+
+  const itemsHtml = card.items.map((item, idx) => {
+    const isLast = idx === card.items.length - 1;
+    const borderBottom = isLast ? "" : `border-bottom:1px solid ${COLORS.cardDivider};`;
+    return `
+      <tr>
+        <td style="padding:12px 0;${borderBottom}vertical-align:middle;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="vertical-align:middle;">
+                <div style="font-size:14px;font-weight:700;color:${COLORS.deepNavy};line-height:20px;">
+                  ${escapeHtml(item.label)}
+                </div>
+                ${item.description ? `<div style="font-size:12px;color:${COLORS.muted};margin-top:2px;">${escapeHtml(item.description)}</div>` : ""}
+              </td>
+              <td align="right" style="vertical-align:middle;padding-left:14px;white-space:nowrap;">
+                <a href="${escapeHtml(item.url)}" target="_blank" style="display:inline-block;padding:7px 14px;background:${COLORS.royalBlue};color:#ffffff;font-size:12px;font-weight:700;text-decoration:none;border-radius:6px;">
+                  Complete &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin:16px 0 24px;background:${COLORS.card};border:1px solid ${COLORS.cardBorder};border-radius:14px;">
+      <tr>
+        <td style="padding:18px 22px;">
+          ${titleHtml}
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            ${itemsHtml}
+          </table>
+        </td>
+      </tr>
+    </table>`;
+}
+
 function buildHighlightCode(config: HighlightCodeConfig): string {
   return `
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin:18px 0 22px;">
@@ -366,13 +425,15 @@ export function renderTransactionalEmail(fields: TransactionalEmailFields): stri
   }
 
   const highlightCodeHtml = fields.highlightCode ? buildHighlightCode(fields.highlightCode) : "";
+  const actionListHtml = fields.actionList ? buildActionListCard(fields.actionList) : "";
+  const customBody = fields.customBodyHtml || "";
 
   const ctaBlock = fields.cta
     ? `
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
         <tr>
           <td align="center" style="padding:4px 0 24px;">
-            <a href="${escapeHtml(fields.cta.url)}" target="_blank" style="display:inline-block;padding:14px 30px;background:${COLORS.royalBlue};border-radius:8px;color:#ffffff;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;box-shadow:0 6px 16px ${COLORS.buttonShadow};">${escapeHtml(fields.cta.label)} →</a>
+            <a href="${escapeHtml(fields.cta.url)}" target="_blank" style="display:inline-block;padding:14px 30px;background:${COLORS.royalBlue};border-radius:8px;color:#ffffff;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;box-shadow:0 6px 16px ${COLORS.buttonShadow};">${escapeHtml(fields.cta.label)} &rarr;</a>
           </td>
         </tr>
       </table>`
@@ -390,8 +451,10 @@ export function renderTransactionalEmail(fields: TransactionalEmailFields): stri
         ${heading}
         ${subheading}
         ${greeting}
-        <p style="margin:0 0 16px;color:${COLORS.body};font-size:15px;line-height:24px;">${formatEmailText(fields.openingMessage)}</p>
-        <p style="margin:0 0 20px;color:${COLORS.body};font-size:15px;line-height:24px;">${formatEmailText(fields.mainMessage)}</p>
+        ${fields.openingMessage ? `<p style="margin:0 0 16px;color:${COLORS.body};font-size:15px;line-height:24px;">${formatEmailText(fields.openingMessage)}</p>` : ""}
+        ${fields.mainMessage ? `<p style="margin:0 0 20px;color:${COLORS.body};font-size:15px;line-height:24px;">${formatEmailText(fields.mainMessage)}</p>` : ""}
+        ${actionListHtml}
+        ${customBody}
         ${highlightCodeHtml}
         ${detailsCardHtml}
         ${ctaBlock}
