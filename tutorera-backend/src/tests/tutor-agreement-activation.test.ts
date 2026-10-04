@@ -1,6 +1,8 @@
 import request from "supertest";
 import app from "../app";
 import User from "../models/User.model";
+import AuditLog from "../models/AuditLog.model";
+import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
 import TutorProfile from "../models/TutorProfile.model";
 import LegalAgreement from "../models/LegalAgreement.model";
 import TutorAgreementAcceptance from "../models/TutorAgreementAcceptance.model";
@@ -322,12 +324,69 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
       tutorProfileId = profile._id.toString();
     });
 
+    it.each(["non-current agreement", "string consent", "missing subject approval", "stale content", "wrong market", "missing agreement ID"])("blocks signing with %s", async (scenario) => {
+      if (scenario === "missing subject approval") await TutorProfile.updateOne({ _id: tutorProfileId }, { $set: { subjectEligibility: [] } });
+      let suppliedId = scenario === "non-current agreement" ? "000000000000000000000001" : publishedAgreement._id.toString();
+      if (scenario === "missing agreement ID") suppliedId = "";
+      if (scenario === "wrong market") {
+        const other = await LegalAgreement.create({ documentType: "TUTOR_AGREEMENT", country: "AE", version: "AE-TEST",
+          title: "UAE Tutor Agreement", content: "UAE-specific terms", contentHash: computeAgreementHash("UAE-specific terms", ""),
+          status: "published", isCurrent: true, effectiveDate: new Date() });
+        suppliedId = other._id.toString();
+      }
+      const res = await request(app).post("/api/v1/tutor/agreements/accept")
+        .set("Authorization", `Bearer ${tutorToken}`).send({
+          agreementId: suppliedId,
+          agreementHash: scenario === "stale content" ? "outdated-hash" : publishedAgreement.contentHash,
+          electronicSignature: "Muhammad Haroon", confirmations: {
+            informationAccurate: true, agreementAccepted: scenario === "string consent" ? "false" : true,
+            safeguardingAccepted: true, independentProvider: true, feesTaxesUnderstood: true, electronicRecordsConsent: true,
+          } });
+      expect(res.status).toBe(["non-current agreement", "stale content", "wrong market"].includes(scenario) ? 409 : ["string consent", "missing agreement ID"].includes(scenario) ? 400 : 403);
+      expect(await TutorAgreementAcceptance.countDocuments({ tutor: tutorUserId })).toBe(0);
+      expect((await TutorProfile.findById(tutorProfileId))!.agreementAcceptedAt).toBeFalsy();
+    });
+
+    it("rolls back acceptance and activation when audit persistence fails", async () => {
+      const failure = jest.spyOn(AuditLog, "create").mockRejectedValueOnce(new Error("Audit unavailable") as never);
+      try {
+        const res = await request(app).post("/api/v1/tutor/agreements/accept")
+          .set("Authorization", `Bearer ${tutorToken}`).send({ agreementId: publishedAgreement._id, agreementHash: publishedAgreement.contentHash,
+            electronicSignature: "Muhammad Haroon", confirmations: {
+              informationAccurate: true, agreementAccepted: true, safeguardingAccepted: true,
+              independentProvider: true, feesTaxesUnderstood: true, electronicRecordsConsent: true,
+            } });
+        expect(res.status).toBeGreaterThanOrEqual(500);
+      } finally { failure.mockRestore(); }
+      expect(await TutorAgreementAcceptance.countDocuments({ tutor: tutorUserId })).toBe(0);
+      const profile = (await TutorProfile.findById(tutorProfileId))!;
+      expect(profile.agreementAcceptedAt).toBeFalsy();
+      expect(profile.marketplaceEligible).toBe(false);
+      expect(profile.tutorStatus).toBe("approved_pending_agreement");
+    });
+
+    it("records one acceptance for simultaneous signing requests", async () => {
+      const payload = { agreementId: publishedAgreement._id, agreementHash: publishedAgreement.contentHash,
+        electronicSignature: "Muhammad Haroon", confirmations: { informationAccurate: true,
+          agreementAccepted: true, safeguardingAccepted: true, independentProvider: true,
+          feesTaxesUnderstood: true, electronicRecordsConsent: true } };
+      const send = () => request(app).post("/api/v1/tutor/agreements/accept")
+        .set("Authorization", `Bearer ${tutorToken}`).send(payload);
+      const responses = await Promise.all([send(), send()]);
+      expect(responses.map(response => response.status)).toEqual([200, 200]);
+      expect(responses[0].body.acceptanceId).toBe(responses[1].body.acceptanceId);
+      expect(await TutorAgreementAcceptance.countDocuments({ tutor: tutorUserId, acceptanceStatus: "active" })).toBe(1);
+      expect(await AuditLog.countDocuments({ action: "tutor_agreement_accepted", actorId: tutorUserId })).toBe(1);
+      expect(await TutorApplicationStatusHistory.countDocuments({ tutor: tutorUserId, event: "TUTOR_AGREEMENT_ACCEPTED" })).toBe(1);
+    });
+
     it("rejects acceptance if signature does not match verified legal name", async () => {
       const res = await request(app)
         .post("/api/v1/tutor/agreements/accept")
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Wrong Name John Doe",
           confirmations: {
             informationAccurate: true,
@@ -349,6 +408,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Muhammad Haroon",
           confirmations: {
             informationAccurate: true,
@@ -370,6 +430,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Muhammad Haroon",
           confirmations: {
             informationAccurate: true,
@@ -407,6 +468,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Muhammad Haroon",
           confirmations: {
             informationAccurate: true,
@@ -424,6 +486,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Muhammad Haroon",
           confirmations: {
             informationAccurate: true,
@@ -453,6 +516,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Muhammad Haroon",
           confirmations: {
             informationAccurate: true,
@@ -482,6 +546,7 @@ describe("Tutor Agreement, Contract Acceptance & Activation System", () => {
         .set("Authorization", `Bearer ${tutorToken}`)
         .send({
           agreementId: publishedAgreement._id,
+          agreementHash: publishedAgreement.contentHash,
           electronicSignature: "Muhammad Haroon",
           confirmations: {
             informationAccurate: true,

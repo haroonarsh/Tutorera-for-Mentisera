@@ -1,6 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
+import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
+import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
@@ -17,6 +19,8 @@ import { creditReferrerOnFirstBooking } from "../controllers/referral.controller
 import { logAudit } from "../utils/logAudit";
 import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
+import EmailOutbox from "../models/EmailOutbox.model";
+import { deliverOutboxEmail } from "../services/emailOutbox.service";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
 import TutorAgreement from "../models/TutorAgreement.model";
@@ -528,24 +532,18 @@ export const uploadTutorDocsAdmin = async (
 
   // Degree
   if (files.degree?.[0]) {
+    const qualificationIndex = degreeUploadIndex(existingProfile, req.body?.qualificationIndex);
+    if (qualificationIndex === null) {
+      res.status(422).json({ success: false, message: "Choose an existing qualification for this degree upload." });
+      return;
+    }
     const { valid } = await verifyFileSignature(files.degree[0].buffer, DOCUMENT_TYPES);
     if (!valid) {
       res.status(400).json({ success: false, message: "Invalid degree file format" });
       return;
     }
     const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
-    const rawEducation = Array.isArray(existingProfile.education) ? existingProfile.education : [];
-    const education: Array<Record<string, unknown>> = rawEducation.map((entry) =>
-      typeof (entry as any).toObject === "function" ? (entry as any).toObject() : { ...entry }
-    );
-    if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
-    const previousPublicId = String(education[0].degreeDocPublicId || "");
-    education[0].degreeDoc = result.secure_url;
-    education[0].degreeDocPublicId = result.public_id;
-    updateData.education = education;
-    updateData.degreeVerificationStatus = "approved";
-    updateData.degreeRejectionReason = "";
-    if (previousPublicId) replacedAssets.push({ publicId: previousPublicId });
+    Object.assign(updateData, prepareDegreeReplacement(existingProfile, result.secure_url, result.public_id, qualificationIndex));
   }
 
   // Police Certificate
@@ -583,12 +581,18 @@ export const uploadTutorDocsAdmin = async (
     return;
   }
 
-  // Automatically approve the profile if admin uploads it
-  updateData.verificationStatus = "approved";
-  updateData.isVerified = true;
+  // Uploading replacement evidence must not approve the overall application.
+  updateData.verificationStatus = "pending";
+  updateData.isVerified = false;
+  updateData.marketplaceEligible = false;
+  updateData.homeTuitionEligible = false;
+  updateData.marketplaceEligibleAt = null;
+  updateData.homeTuitionEligibleAt = null;
   updateData.lastStatusChangeAt = new Date();
 
   const updated = await TutorProfile.findByIdAndUpdate(existingProfile._id, updateData, { new: true });
+  if (!updated) throw new Error("Tutor profile no longer exists.");
+  await flagPendingQualificationBookings(updated);
 
   await Promise.all(replacedAssets.map(({ publicId, resourceType }) =>
     deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
@@ -606,7 +610,7 @@ export const uploadTutorDocsAdmin = async (
 
     res.status(200).json({
       success: true,
-      message: "Documents forcibly uploaded and approved.",
+      message: "Documents uploaded. Application review is required before activation.",
       profile: updated,
     });
   } catch (error: any) {
@@ -1254,13 +1258,15 @@ export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<voi
     ]),
     EmailLog.distinct("eventType"),
   ]);
+  const outboxByLog = new Map((await EmailOutbox.find({ emailLog: { $in: logs.map(log => log._id) } }).select("emailLog status attempts maxAttempts nextAttemptAt lastError").lean())
+    .map(job => [job.emailLog.toString(), job]));
 
   res.status(200).json({
     success: true,
     total,
     page: pageNum,
     pages: Math.ceil(total / limitNum),
-    logs,
+    logs: logs.map(log => ({ ...log, outbox: outboxByLog.get(log._id.toString()) || null })),
     filters: {
       eventTypes: eventTypes.sort(),
       plannedEvents: EMAIL_EVENTS,
@@ -1270,6 +1276,21 @@ export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<voi
       }, {}),
     },
   });
+};
+
+// @desc Retry one persisted failed/queued transactional email. Never creates a new message.
+// @route POST /api/admin/email-logs/:id/retry
+export const retryEmailLog = async (req: AuthRequest, res: Response): Promise<void> => {
+  const log = await EmailLog.findById(req.params.id).lean();
+  if (!log) { res.status(404).json({ success: false, message: "Email log not found." }); return; }
+  if (!["failed", "queued"].includes(log.status)) { res.status(409).json({ success: false, message: "Only failed or queued deliveries can be retried." }); return; }
+  const job = await EmailOutbox.findOneAndUpdate({ emailLog: log._id, status: { $ne: "sent" } }, { $set: { status: "queued", attempts: 0, nextAttemptAt: new Date(), lastError: "" } }, { new: true });
+  if (!job) { res.status(409).json({ success: false, message: "The retained delivery payload has expired or was already sent." }); return; }
+  await logAudit({ action: "email_delivery_retried", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "EmailLog", targetId: log._id.toString(), targetName: log.recipientEmail, metadata: { eventType: log.eventType } });
+  try { await deliverOutboxEmail(job._id.toString()); }
+  catch { /* The job is retained for the scheduled worker; report accepted retry. */ }
+  const current = await EmailLog.findById(log._id).lean();
+  res.status(200).json({ success: true, message: current?.status === "sent" ? "Email resent." : "Retry queued for delivery.", log: current });
 };
 
 // @desc    Send a broadcast notification to a group of users
@@ -1852,7 +1873,12 @@ export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Prom
 
     let publicId: string | undefined;
     if (field === "degreeDoc") {
-      publicId = profile.education?.[0]?.degreeDocPublicId;
+      const qualificationIndex = req.query.qualificationIndex === undefined ? 0 : Number(req.query.qualificationIndex);
+      if (!Number.isInteger(qualificationIndex) || qualificationIndex < 0 || !profile.education?.[qualificationIndex]) {
+        res.status(400).json({ success: false, message: "Choose an existing qualification document." });
+        return;
+      }
+      publicId = profile.education[qualificationIndex].degreeDocPublicId;
     } else {
       publicId = (profile as any)[`${field}PublicId`];
     }

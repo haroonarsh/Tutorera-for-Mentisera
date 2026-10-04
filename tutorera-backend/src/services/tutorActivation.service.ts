@@ -1,7 +1,9 @@
-import { ClientSession, Types } from "mongoose";
+import mongoose, { ClientSession, Types } from "mongoose";
 import User from "../models/User.model";
 import TutorProfile, { ITutorProfile, TutorStatus } from "../models/TutorProfile.model";
 import TutorAgreementAcceptance from "../models/TutorAgreementAcceptance.model";
+import AuditLog from "../models/AuditLog.model";
+import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
 import { getApplicableAgreement } from "./legalAgreement.service";
 import { setAccountStatus } from "./accountLifecycle.service";
 import {
@@ -53,12 +55,11 @@ export function isProfileMarketplaceEligible(profile: ITutorProfile): boolean {
  * account_not_suspended AND account_not_terminated = ACTIVE.
  */
 export async function evaluateTutorActivation(
-  tutorUserId: string | Types.ObjectId
+  tutorUserId: string | Types.ObjectId,
+  opts: { session?: ClientSession } = {}
 ): Promise<ActivationEvaluationResult> {
-  const [user, profile] = await Promise.all([
-    User.findById(tutorUserId),
-    TutorProfile.findOne({ user: tutorUserId }),
-  ]);
+  const user = await User.findById(tutorUserId).session(opts.session || null);
+  const profile = await TutorProfile.findOne({ user: tutorUserId }).session(opts.session || null);
 
   if (!user || !profile) {
     return {
@@ -163,7 +164,7 @@ export async function evaluateTutorActivation(
   }
 
   // 7. Applicable Legal Agreement Acceptance & Consents
-  const applicableAgreement = await getApplicableAgreement("TUTOR_AGREEMENT", profile.countryCode || "PK");
+  const applicableAgreement = await getApplicableAgreement("TUTOR_AGREEMENT", profile.countryCode || "PK", "en", opts);
   let currentAgreementAccepted = false;
   let mandatoryConsentsAccepted = false;
   let acceptanceRecord = null;
@@ -173,7 +174,7 @@ export async function evaluateTutorActivation(
       tutor: user._id,
       legalAgreement: applicableAgreement._id,
       acceptanceStatus: "active",
-    }).sort({ acceptedAt: -1 });
+    }).session(opts.session || null).sort({ acceptedAt: -1 });
 
     if (acceptanceRecord) {
       currentAgreementAccepted = true;
@@ -272,7 +273,15 @@ export async function syncTutorActivation(
   tutorUserId: string | Types.ObjectId,
   opts: { session?: ClientSession } = {}
 ): Promise<{ profile: ITutorProfile; activated: boolean; status: TutorStatus }> {
-  const evalResult = await evaluateTutorActivation(tutorUserId);
+  if (!opts.session) {
+    const session = await mongoose.startSession();
+    try {
+      const result = await session.withTransaction(() => syncTutorActivation(tutorUserId, { session }));
+      if (!result) throw new Error("Activation transaction did not complete.");
+      return result;
+    } finally { await session.endSession(); }
+  }
+  const evalResult = await evaluateTutorActivation(tutorUserId, opts);
   const now = new Date();
 
   const query = TutorProfile.findOne({ user: tutorUserId });
@@ -284,6 +293,8 @@ export async function syncTutorActivation(
   }
 
   const previousStatus = profile.tutorStatus;
+  const previousMarketplace = Boolean(profile.marketplaceEligible);
+  const previousHome = Boolean(profile.homeTuitionEligible);
   profile.tutorStatus = evalResult.tutorStatus;
 
   if (evalResult.isEligible) {
@@ -296,7 +307,7 @@ export async function syncTutorActivation(
     } else {
       await profile.save({ validateBeforeSave: false });
     }
-    await setAccountStatus(tutorUserId.toString(), "verified");
+    await setAccountStatus(tutorUserId.toString(), "verified", opts);
   } else {
     profile.marketplaceEligible = false;
     profile.lastStatusChangeAt = now;
@@ -312,7 +323,7 @@ export async function syncTutorActivation(
       } else {
         await profile.save({ validateBeforeSave: false });
       }
-      await setAccountStatus(tutorUserId.toString(), "submitted");
+      await setAccountStatus(tutorUserId.toString(), "submitted", opts);
     } else if (evalResult.tutorStatus === "approved_pending_subject_approval") {
       profile.agreementAcceptanceRequired = false;
       if (opts.session) {
@@ -320,12 +331,44 @@ export async function syncTutorActivation(
       } else {
         await profile.save({ validateBeforeSave: false });
       }
-      await setAccountStatus(tutorUserId.toString(), "submitted");
+      await setAccountStatus(tutorUserId.toString(), "submitted", opts);
     } else if (evalResult.tutorStatus === "rejected") {
-      await setAccountStatus(tutorUserId.toString(), "rejected");
+      await setAccountStatus(tutorUserId.toString(), "rejected", opts);
     }
   }
 
+  const homeEligible = evalResult.isEligible && policeIsRequired(profile) && profile.policeVerificationStatus === "approved";
+  profile.marketplaceEligible = evalResult.isEligible;
+  profile.homeTuitionEligible = homeEligible;
+  profile.set("marketplaceEligibleAt", evalResult.isEligible ? profile.marketplaceEligibleAt || now : undefined);
+  profile.set("homeTuitionEligibleAt", homeEligible ? profile.homeTuitionEligibleAt || now : undefined);
+  // Explicit flags avoid legacy save-hook grandfathering and clear stale dates.
+  await TutorProfile.updateOne({ _id: profile._id }, { $set: {
+    marketplaceEligible: evalResult.isEligible, homeTuitionEligible: homeEligible,
+    ...(evalResult.isEligible ? { marketplaceEligibleAt: profile.marketplaceEligibleAt } : {}),
+    ...(homeEligible ? { homeTuitionEligibleAt: profile.homeTuitionEligibleAt } : {}),
+  }, ...(!evalResult.isEligible || !homeEligible ? { $unset: {
+    ...(!evalResult.isEligible ? { marketplaceEligibleAt: 1 } : {}), ...(!homeEligible ? { homeTuitionEligibleAt: 1 } : {}),
+  } } : {}) }, { session: opts.session });
+  if (!evalResult.isEligible) {
+    await User.updateOne({ _id: tutorUserId, accountStatus: "verified" }, { $set: { accountStatus: "submitted" } }, { session: opts.session });
+  }
+  for (const change of [
+    { before: previousMarketplace, after: evalResult.isEligible, event: evalResult.isEligible ? "MARKETPLACE_ACTIVATED" as const : "MARKETPLACE_DEACTIVATED" as const },
+    { before: previousHome, after: homeEligible, event: homeEligible ? "HOME_TUITION_ACTIVATED" as const : "HOME_TUITION_DEACTIVATED" as const },
+  ]) {
+    if (change.before === change.after) continue;
+    await TutorApplicationStatusHistory.create([{ tutor: tutorUserId, tutorProfile: profile._id, actor: "Activation service",
+      actorRole: "system", event: change.event, isPublic: false, statusBefore: change.before ? "active" : "inactive",
+      statusAfter: change.after ? "active" : "inactive", message: `${change.event.replace(/_/g, " ").toLowerCase()} after eligibility evaluation` }], { session: opts.session });
+  }
+  if (previousStatus !== profile.tutorStatus || previousMarketplace !== evalResult.isEligible || previousHome !== homeEligible) {
+    await AuditLog.create([{ action: "tutor_activation_synchronized", actor: "Activation service", entity: "TutorProfile",
+      targetId: profile._id.toString(), targetName: profile.fullName, metadata: {
+        previousStatus, status: profile.tutorStatus, previousMarketplace, marketplace: evalResult.isEligible,
+        previousHome, home: homeEligible, missingCriteria: evalResult.missingCriteria,
+      } }], { session: opts.session });
+  }
   return {
     profile,
     activated: evalResult.isEligible,

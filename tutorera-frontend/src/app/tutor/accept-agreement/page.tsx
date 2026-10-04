@@ -178,7 +178,8 @@ export default function AcceptTutorAgreementPage() {
     (c) => checkedConsents[c.key] === true
   );
 
-  const canSubmit = allConsentsChecked && signatureMatches && !submitting;
+  const canSubmit = Boolean(agreementInfo?.agreement?._id && agreementInfo?.agreement?.contentHash) &&
+    allConsentsChecked && signatureMatches && !submitting;
 
   const handleConsentToggle = (key: string) => {
     setCheckedConsents((prev) => ({
@@ -201,13 +202,14 @@ export default function AcceptTutorAgreementPage() {
     try {
       const payload = {
         agreementId: agreementInfo?.agreement?._id,
+        agreementHash: agreementInfo?.agreement?.contentHash,
         electronicSignature: signature.trim(),
         confirmations: checkedConsents,
       };
 
       const res = await api.post("/tutor/agreements/accept", payload);
 
-      showSuccess("Agreement executed successfully! Your tutor account is now active.");
+      showSuccess(res.data.activated ? "Agreement executed successfully. Your tutor account is active." : "Agreement recorded. Additional activation requirements remain.");
       setExecutedRecord({
         acceptanceId: res.data.acceptanceId,
         acceptedAt: res.data.acceptedAt || new Date().toISOString(),
@@ -216,6 +218,23 @@ export default function AcceptTutorAgreementPage() {
         electronicSignature: signature.trim(),
       });
     } catch (err: any) {
+      if (err?.response?.status === 409) {
+        // Never reuse a signature or consent against replacement terms.
+        setCheckedConsents({});
+        setSignature("");
+        setAgreementInfo(null);
+        setExecutedRecord(null);
+        try {
+          const current = await api.get("/tutor/agreements/current");
+          setAgreementInfo(current.data);
+          setLoadError("");
+          showError("The agreement or your application changed. Review the current terms and confirm every consent again before signing.");
+        } catch (refreshError: unknown) {
+          setLoadError("Unable to load the updated agreement. Reload this page before signing; your previous signature and consents have been cleared.");
+          showError(refreshError, "Unable to load the updated agreement.");
+        }
+        return;
+      }
       showError(err, "Failed to submit agreement acceptance. Please try again.");
     } finally {
       setSubmitting(false);

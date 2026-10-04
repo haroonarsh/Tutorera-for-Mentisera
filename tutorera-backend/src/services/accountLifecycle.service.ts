@@ -1,8 +1,9 @@
 import User from "../models/User.model";
+import { ClientSession } from "mongoose";
 import { AccountStatus } from "../types";
 
-export async function setAccountStatus(userId: string, status: AccountStatus): Promise<void> {
-  await User.findByIdAndUpdate(userId, { accountStatus: status });
+export async function setAccountStatus(userId: string, status: AccountStatus, opts: { session?: ClientSession } = {}): Promise<void> {
+  await User.findByIdAndUpdate(userId, { accountStatus: status }, { session: opts.session });
 }
 
 export async function advanceAccountStatus(userId: string, target: AccountStatus): Promise<void> {

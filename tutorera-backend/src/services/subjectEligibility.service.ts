@@ -11,7 +11,7 @@
 // the browse-requests listing) enforces it identically instead of each
 // re-implementing its own check.
 
-import { Types } from "mongoose";
+import { Types, ClientSession } from "mongoose";
 import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
@@ -20,6 +20,9 @@ import AcademicDiscipline from "../models/AcademicDiscipline.model";
 import Subject from "../models/Subject.model";
 import TeachingEligibilityRule, { TeachingEligibilityType } from "../models/TeachingEligibilityRule.model";
 import { logAudit } from "../utils/logAudit";
+import { EDUCATION_LEVELS, normalizeEducationLevel } from "../config/educationLevels";
+import { hasCurrentQualificationReview, meetsMinimumDegreeLevel } from "./qualificationReview.service";
+import { hasApprovedSubjectEvidence } from "./subjectEvidenceReview.service";
 
 export const NOT_ELIGIBLE_MESSAGE = "You are not approved to teach this subject or level. Submit a relevant qualification for admin review.";
 
@@ -92,21 +95,26 @@ export interface TeachingEligibilityResolution {
  * canonical discipline exists, keeping current production records readable
  * during the additive migration.
  */
-export async function resolveTeachingEligibility(discipline: string | undefined, subject: string): Promise<TeachingEligibilityResolution> {
+export async function resolveTeachingEligibility(discipline: string | undefined, subject: string, session?: ClientSession): Promise<TeachingEligibilityResolution> {
   if (!discipline || !subject) return { eligibilityType: "unmapped", evidenceRequired: true };
-  const [canonicalDiscipline, canonicalSubject] = await Promise.all([
-    AcademicDiscipline.findOne({ name: new RegExp(`^${discipline.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"), status: "active" }).lean(),
-    Subject.findOne({ name: new RegExp(`^${subject.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"), status: "active" }).lean(),
-  ]);
+  // MongoDB transaction sessions must not run concurrent operations.
+  const canonicalDiscipline = await AcademicDiscipline.findOne({ name: new RegExp(`^${discipline.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).session(session || null).lean();
+  const canonicalSubject = await Subject.findOne({ name: new RegExp(`^${subject.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).session(session || null).lean();
   if (canonicalDiscipline) {
-    if (!canonicalSubject) return { eligibilityType: "unmapped", evidenceRequired: true };
-    const rule = await TeachingEligibilityRule.findOne({ discipline: canonicalDiscipline._id, subject: canonicalSubject._id, status: "active" }).lean();
+    if (canonicalDiscipline.status !== "active" || !canonicalSubject || canonicalSubject.status !== "active" || !canonicalSubject.isActive) {
+      return { eligibilityType: "unmapped", evidenceRequired: true };
+    }
+    const rule = await TeachingEligibilityRule.findOne({ discipline: canonicalDiscipline._id, subject: canonicalSubject._id, status: "active" }).session(session || null).lean();
     return rule
       ? { eligibilityType: rule.eligibilityType, evidenceRequired: rule.evidenceRequired, subjectId: canonicalSubject._id, ruleId: rule._id }
       : { eligibilityType: "unmapped", evidenceRequired: true, subjectId: canonicalSubject._id };
   }
 
-  const mapping = await DisciplineSubjectMap.findOne({ discipline: new RegExp(`^${discipline.trim()}$`, "i"), isActive: true }).lean();
+  // A disabled canonical subject must not regain eligibility via legacy data.
+  if (canonicalSubject && (canonicalSubject.status !== "active" || !canonicalSubject.isActive)) {
+    return { eligibilityType: "unmapped", evidenceRequired: true };
+  }
+  const mapping = await DisciplineSubjectMap.findOne({ discipline: new RegExp(`^${discipline.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"), isActive: true }).session(session || null).lean();
   if (!mapping) return { eligibilityType: "unmapped", evidenceRequired: true, subjectId: canonicalSubject?._id };
   const target = normalize(subject);
   return mapping.eligibleSubjects.some((s) => normalize(s) === target)
@@ -167,15 +175,24 @@ export async function approveSubjectEligibility(
   subject: string,
   levels: string[],
   reviewer: ReviewActorInfo,
-  approvalReason = ""
+  approvalReason = "",
+  options: { session?: ClientSession; skipAudit?: boolean } = {}
 ): Promise<{ success: true } | { success: false; message: string }> {
   if (!levels || levels.length === 0) {
     return { success: false, message: "At least one teaching level must be selected to approve a subject." };
+  }
+  if (!Array.isArray(levels) || levels.some((level) => typeof level !== "string" || !(EDUCATION_LEVELS as readonly string[]).includes(normalizeEducationLevel(level)))) {
+    return { success: false, message: "Choose valid teaching levels before approving this subject." };
   }
   const entry = (profile.subjectEligibility || []).find((e) => normalize(e.subject) === normalize(subject));
   if (!entry) return { success: false, message: `No eligibility request found for subject "${subject}".` };
   if (["approved", "revoked", "suspended"].includes(entry.status)) {
     return { success: false, message: `This subject request is ${entry.status} and cannot be approved again.` };
+  }
+  if (profile.degreeVerificationStatus !== "approved" || !(profile.education || []).some((qualification) =>
+    qualification.degree?.trim() && qualification.institution?.trim() && qualification.degreeDoc?.trim()
+  )) {
+    return { success: false, message: "Complete education credentials and approved educational documents are required before subject approval." };
   }
   if (!entry.matchesDiscipline && !approvalReason.trim()) {
     return {
@@ -187,14 +204,52 @@ export async function approveSubjectEligibility(
     return { success: false, message: "Supporting evidence must be uploaded before this conditional subject request can be approved." };
   }
 
+  // Never trust the discipline hint saved when the subject was requested:
+  // qualifications and the administrator's rule set may have changed since.
+  const qualifications = profile.education || [];
+  let approvedQualification: { index: number; resolution: TeachingEligibilityResolution } | undefined;
+  for (const [index, qualification] of qualifications.entries()) {
+    if (!hasCurrentQualificationReview(qualification)) continue;
+    if (!qualification.degree?.trim() || !qualification.institution?.trim() || !qualification.degreeDoc?.trim()) continue;
+    const discipline = qualification.disciplineRef
+      ? await AcademicDiscipline.findById(qualification.disciplineRef).session(options.session || null).lean()
+      : undefined;
+    if (qualification.disciplineRef && (!discipline || discipline.status !== "active")) continue;
+    const resolution = await resolveTeachingEligibility(discipline?.name || qualification.discipline, subject, options.session);
+    if (resolution.eligibilityType === "unmapped") continue;
+    if (resolution.ruleId) {
+      const rule = await TeachingEligibilityRule.findById(resolution.ruleId).session(options.session || null).lean();
+      if (!rule || rule.status !== "active" || !meetsMinimumDegreeLevel(qualification, rule.minimumDegreeLevel)) continue;
+    }
+    if (!approvedQualification || resolution.eligibilityType === "direct") {
+      approvedQualification = { index, resolution };
+    }
+  }
+  if (!approvedQualification) {
+    return { success: false, message: "No documented qualification satisfies the active subject eligibility rule. Review the qualification and any minimum-degree requirement before approval." };
+  }
+  const currentResolution = approvedQualification.resolution;
+  if (currentResolution.eligibilityType === "conditional" && !approvalReason.trim()) {
+    return { success: false, message: "Conditional subject approval requires an explicit evidence-review rationale." };
+  }
+  if ((currentResolution.evidenceRequired || currentResolution.eligibilityType === "conditional") && !(entry.evidence || []).some(hasApprovedSubjectEvidence)) {
+    return { success: false, message: "Supporting evidence must receive an explicit admin approval before conditional subject approval." };
+  }
+
   entry.status = "approved";
+  entry.qualificationIndex = approvedQualification.index;
+  entry.subjectRef = currentResolution.subjectId;
+  entry.eligibilityRuleRef = currentResolution.ruleId;
+  entry.eligibilityType = currentResolution.eligibilityType;
+  entry.matchesDiscipline = currentResolution.eligibilityType === "direct";
+  entry.evidenceRequired = currentResolution.evidenceRequired;
   entry.levels = levels;
   entry.reviewedBy = reviewer.id ? new Types.ObjectId(reviewer.id) : undefined;
   entry.reviewedAt = new Date();
   entry.reason = approvalReason.trim();
   syncApprovedSubjects(profile);
 
-  await logAudit({
+  if (!options.skipAudit) await logAudit({
     action: "subject_eligibility_approved",
     actor: reviewer.name || "Admin",
     actorId: reviewer.id?.toString(),
@@ -211,8 +266,12 @@ export async function rejectSubjectEligibility(
   profile: ITutorProfile,
   subject: string,
   reason: string,
-  reviewer: ReviewActorInfo
+  reviewer: ReviewActorInfo,
+  options: { session?: ClientSession; skipAudit?: boolean } = {}
 ): Promise<{ success: true } | { success: false; message: string }> {
+  if (typeof reason !== "string" || !reason.trim()) {
+    return { success: false, message: "A subject-specific rejection reason is required." };
+  }
   const entry = (profile.subjectEligibility || []).find((e) => normalize(e.subject) === normalize(subject));
   if (!entry) return { success: false, message: `No eligibility request found for subject "${subject}".` };
   if (["approved", "revoked", "suspended"].includes(entry.status)) {
@@ -222,10 +281,10 @@ export async function rejectSubjectEligibility(
   entry.status = "rejected";
   entry.reviewedBy = reviewer.id ? new Types.ObjectId(reviewer.id) : undefined;
   entry.reviewedAt = new Date();
-  entry.reason = reason || "";
+  entry.reason = reason.trim();
   syncApprovedSubjects(profile);
 
-  await logAudit({
+  if (!options.skipAudit) await logAudit({
     action: "subject_eligibility_rejected",
     actor: reviewer.name || "Admin",
     actorId: reviewer.id?.toString(),
@@ -248,10 +307,13 @@ export async function revokeSubjectEligibility(
   profile: ITutorProfile,
   subject: string,
   reason: string,
-  reviewer: ReviewActorInfo
+  reviewer: ReviewActorInfo,
+  options: { session?: ClientSession; skipAudit?: boolean } = {}
 ): Promise<{ success: true; flaggedBookings: number } | { success: false; message: string }> {
   const entry = (profile.subjectEligibility || []).find((e) => normalize(e.subject) === normalize(subject));
   if (!entry) return { success: false, message: `No eligibility entry found for subject "${subject}".` };
+  if (entry.status !== "approved") return { success: false, message: "Only an approved subject can be revoked." };
+  if (!reason?.trim()) return { success: false, message: "A subject-specific revocation reason is required." };
 
   entry.status = "revoked";
   entry.reviewedBy = reviewer.id ? new Types.ObjectId(reviewer.id) : undefined;
@@ -259,14 +321,15 @@ export async function revokeSubjectEligibility(
   entry.reason = reason || "";
   syncApprovedSubjects(profile);
 
-  const affectedRequestIds = await Request.find({ subject: new RegExp(`^${subject.trim()}$`, "i") }).select("_id").lean();
+  const affectedRequestIds = await Request.find({ subject: new RegExp(`^${subject.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).session(options.session || null).select("_id").lean();
   const requestIds = affectedRequestIds.map((r) => r._id);
   const flagResult = await Booking.updateMany(
     { tutor: profile.user, request: { $in: requestIds }, status: { $in: ["upcoming", "ongoing"] } },
-    { $set: { flaggedForReview: true, flagReason: `Tutor's "${subject}" eligibility was revoked: ${reason || "no reason given"}`, flaggedAt: new Date() } }
+    { $set: { flaggedForReview: true, flagReason: `Tutor's "${subject}" eligibility was revoked: ${reason || "no reason given"}`, flaggedAt: new Date() } },
+    { session: options.session }
   );
 
-  await logAudit({
+  if (!options.skipAudit) await logAudit({
     action: "subject_eligibility_revoked",
     actor: reviewer.name || "Admin",
     actorId: reviewer.id?.toString(),

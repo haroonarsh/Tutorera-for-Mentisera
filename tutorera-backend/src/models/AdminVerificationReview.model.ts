@@ -7,7 +7,7 @@ export type VerificationComponent =
   | "demoVideo"
   | "police";
 
-export type ReviewDecision = "approved" | "rejected" | "escalated";
+export type ReviewDecision = "approved" | "rejected" | "escalated" | "pending";
 
 export interface IAdminVerificationReview extends Document {
   tutor: Types.ObjectId;
@@ -38,7 +38,7 @@ const adminVerificationReviewSchema = new Schema<IAdminVerificationReview>(
     },
     decision: {
       type: String,
-      enum: ["approved", "rejected", "escalated"],
+      enum: ["approved", "rejected", "escalated", "pending"],
       required: true,
     },
     previousStatus: { type: String },

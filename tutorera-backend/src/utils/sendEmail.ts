@@ -1,7 +1,5 @@
-import { Resend } from "resend";
-import { renderBrandedEmail } from "./emailBrand";
-import EmailLog from "../models/EmailLog.model";
 import { normalizeEmailEventName } from "./emailEvents";
+import { deliverOutboxEmail, enqueueEmail } from "../services/emailOutbox.service";
 
 interface EmailOptions {
   to: string;
@@ -14,61 +12,15 @@ interface EmailOptions {
   templateId?: string;
   relatedEntityType?: string;
   relatedEntityId?: string;
-  retryCount?: number;
 }
 
+/** Persist first; provider delivery is retried by the email-outbox worker. */
 const sendEmail = async (options: EmailOptions): Promise<void> => {
-  const resend = new Resend(process.env.RESEND_API_KEY);
   const eventType = normalizeEmailEventName(options.eventType || options.category || inferEventType(options.subject));
   const templateId = options.templateId || inferTemplateId(options.subject);
-  const log = await EmailLog.create({
-    user: options.userId,
-    eventType,
-    templateId,
-    recipientEmail: options.to,
-    subject: options.subject,
-    relatedEntityType: options.relatedEntityType,
-    relatedEntityId: options.relatedEntityId,
-    status: "queued",
-    queuedAt: new Date(),
-    retryCount: options.retryCount || 0,
-  });
-
-  try {
-    const result = await resend.emails.send({
-      from: "TUTORERA® <noreply@tutorera.ac.pk>",
-      to: options.to,
-      subject: options.subject,
-      html: renderBrandedEmail({
-        subject: options.subject,
-        html: options.html,
-        preheader: options.preheader,
-        category: options.category || eventType,
-      }),
-    });
-
-    if (result.error) {
-      await EmailLog.findByIdAndUpdate(log._id, {
-        status: "failed",
-        failedAt: new Date(),
-        bounceReason: result.error.message,
-      });
-      throw new Error(`Failed to send email: ${result.error.message}`);
-    }
-
-    await EmailLog.findByIdAndUpdate(log._id, {
-      status: "sent",
-      sentAt: new Date(),
-      providerMessageId: result.data?.id,
-    });
-  } catch (error: any) {
-    await EmailLog.findByIdAndUpdate(log._id, {
-      status: "failed",
-      failedAt: new Date(),
-      bounceReason: error?.message || "Unknown email provider error",
-    });
-    throw error;
-  }
+  const job = await enqueueEmail({ ...options, eventType, templateId });
+  // Preserve the existing caller contract while keeping failed work durable.
+  await deliverOutboxEmail(job._id.toString());
 };
 
 function inferEventType(subject: string): string {
@@ -91,12 +43,7 @@ function inferEventType(subject: string): string {
 }
 
 function inferTemplateId(subject: string): string {
-  return subject
-    .toLowerCase()
-    .replace(/tutorera®?/g, "tutorera")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 80) || "generic";
+  return subject.toLowerCase().replace(/tutorera®?/g, "tutorera").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "generic";
 }
 
 export default sendEmail;

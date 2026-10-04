@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export type StatusEvent =
+  | "TUTOR_AGREEMENT_ISSUED"
+  | "TUTOR_AGREEMENT_ACCEPTED"
+  | "SUBJECT_ELIGIBILITY_REVIEW_REQUIRED"
   | "APPLICATION_CREATED"
   | "PROFILE_INFORMATION_UPDATED"
   | "EDUCATIONAL_DOCUMENTS_SUBMITTED"
@@ -29,6 +32,7 @@ export type StatusEvent =
   | "POLICE_VERIFICATION_REJECTED"
   | "POLICE_VERIFICATION_PENDING"
   | "SUBJECT_EVIDENCE_SUBMITTED"
+  | "SUBJECT_EVIDENCE_REVIEWED"
   | "SUBJECT_ELIGIBILITY_APPROVED"
   | "SUBJECT_ELIGIBILITY_REJECTED"
   | "SUBJECT_ELIGIBILITY_REVOKED"
@@ -48,6 +52,7 @@ export interface ITutorApplicationStatusHistory extends Document {
   tutor: Types.ObjectId;
   tutorProfile?: Types.ObjectId;
   actor: string;
+  actorId?: Types.ObjectId;
   actorRole: "system" | "tutor" | "admin";
   event: StatusEvent;
   statusBefore?: string;
@@ -62,6 +67,7 @@ const tutorApplicationStatusHistorySchema = new Schema<ITutorApplicationStatusHi
     tutor: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     tutorProfile: { type: Schema.Types.ObjectId, ref: "TutorProfile", index: true },
     actor: { type: String, required: true, default: "System" },
+    actorId: { type: Schema.Types.ObjectId, ref: "User" },
     actorRole: { type: String, enum: ["system", "tutor", "admin"], default: "system" },
     event: { type: String, required: true, index: true },
     statusBefore: { type: String },

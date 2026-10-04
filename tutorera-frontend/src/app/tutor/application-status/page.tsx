@@ -11,6 +11,8 @@ import s from "@/components/Tracking/tracking.module.css";
 import { TrackingUrlBlock } from "@/components/Tracking/TrackingUrlBlock";
 import { VerificationChecklist } from "@/components/Tracking/VerificationChecklist";
 import { VerifiedBadgeCard } from "@/components/Tracking/VerifiedBadgeCard";
+import QualificationReviewCard, { ReviewedQualification } from "@/components/Tracking/QualificationReviewCard";
+import SubjectEvidenceReviewCard, { ReviewedSubjectEvidence } from "@/components/Tracking/SubjectEvidenceReviewCard";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { AuthenticatedTrackingPayload } from "@/types/tracking";
@@ -24,8 +26,10 @@ export default function TutorApplicationStatusPage() {
   const router = useRouter();
   const [payload, setPayload] = useState<AuthenticatedTrackingPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [subjectRequests, setSubjectRequests] = useState<{ subject: string; status: string; evidenceRequired?: boolean; evidence?: { url: string; label?: string }[] }[]>([]);
+  const [subjectRequests, setSubjectRequests] = useState<{ subject: string; status: string; reason?: string; levels?: string[]; evidenceRequired?: boolean; evidence?: ReviewedSubjectEvidence[] }[]>([]);
   const [evidenceBusy, setEvidenceBusy] = useState<string | null>(null);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [qualifications, setQualifications] = useState<ReviewedQualification[]>([]);
 
   useEffect(() => {
     if (loading) return;
@@ -38,13 +42,18 @@ export default function TutorApplicationStatusPage() {
       return;
     }
     let cancelled = false;
-    (async () => {
+    let refreshing = false;
+    const loadStatus = async () => {
+      if (refreshing || cancelled) return;
+      refreshing = true;
       try {
         const res = await api.get("/tracking/application-status");
         const profileRes = await api.get("/tutors/profile/me").catch(() => null);
         if (!cancelled) {
           setPayload(res.data.payload);
+          setError(null);
           setSubjectRequests(profileRes?.data?.profile?.subjectEligibility || []);
+          if (profileRes) setQualifications(profileRes.data?.profile?.education || []);
         }
       } catch (err: any) {
         if (err.response?.status === 404) {
@@ -52,9 +61,15 @@ export default function TutorApplicationStatusPage() {
           return;
         }
         if (!cancelled) setError(err?.response?.data?.message || "Unable to load your application status right now.");
+      } finally {
+        refreshing = false;
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    void loadStatus();
+    const refresh = () => { if (!document.hidden) void loadStatus(); };
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, [user, loading, router]);
 
   if (loading || !user) {
@@ -100,15 +115,18 @@ export default function TutorApplicationStatusPage() {
   const uploadEvidence = async (subject: string, file: File | undefined) => {
     if (!file) return;
     setEvidenceBusy(subject);
+    setEvidenceError(null);
     try {
       const data = new FormData(); data.append("evidence", file); data.append("label", file.name);
       await api.post(`/tutors/subject-eligibility/${encodeURIComponent(subject)}/evidence`, data);
       const profileRes = await api.get("/tutors/profile/me");
       setSubjectRequests(profileRes.data?.profile?.subjectEligibility || []);
     } catch (uploadError: any) {
-      setError(uploadError?.response?.data?.message || "Unable to upload supporting evidence right now.");
+      setEvidenceError(uploadError?.response?.data?.message || "Unable to upload supporting evidence right now.");
     } finally { setEvidenceBusy(null); }
   };
+  const evidenceUploadRequests = subjectRequests.filter((entry) => ["pending", "needs_evidence", "rejected"].includes(entry.status) &&
+    (entry.status === "needs_evidence" || (entry.evidenceRequired && !(entry.evidence || []).length)));
 
   return (
     <div className={s.trackingPage}>
@@ -129,6 +147,23 @@ export default function TutorApplicationStatusPage() {
           lastUpdatedAt={payload.lastUpdatedAt}
           submittedAt={payload.submittedAt}
         />
+
+        <section className={s.card} aria-labelledby="qualification-decisions">
+          <h2 id="qualification-decisions" className={s.cardTitle}>Your education review</h2>
+          <p>Each qualification is reviewed separately. A verified credential does not automatically approve its teaching subjects.</p>
+          {qualifications.length ? qualifications.map((qualification, index) => (
+            <QualificationReviewCard key={index} qualification={qualification} index={index} />
+          )) : <p>No education entries are available. <Link href="/onboarding/tutor?step=2">Complete your education and uploads</Link>.</p>}
+        </section>
+        {subjectRequests.length > 0 && <section className={s.card} aria-labelledby="subject-decisions">
+          <h2 id="subject-decisions" className={s.cardTitle}>Your subject and evidence reviews</h2>
+          {subjectRequests.map((entry) => <div key={entry.subject}>
+            <p><strong>{entry.subject}</strong> — {entry.status.replaceAll("_", " ")}</p>
+            {entry.reason && <p>Subject reviewer feedback: {entry.reason}</p>}
+            {entry.levels?.length ? <p>Approved teaching levels: {entry.levels.join(", ")}</p> : null}
+            {entry.evidence?.map((evidence, index) => <SubjectEvidenceReviewCard key={index} evidence={evidence} index={index} subject={entry.subject} />)}
+          </div>)}
+        </section>}
 
         {(payload.canonicalStatus === "APPROVED_PENDING_AGREEMENT" || payload.canonicalStatus === "AGREEMENT_PENDING" || payload.canonicalStatus === "AGREEMENT_REACCEPTANCE_REQUIRED") && (
           <div style={{
@@ -256,16 +291,17 @@ export default function TutorApplicationStatusPage() {
           <HomeTuitionStatusCard eligibility={payload.homeTuitionEligibility} required={payload.homeTuitionRequired} />
         </div>
 
-        {subjectRequests.some((entry) => entry.status === "needs_evidence" || (entry.evidenceRequired && !(entry.evidence || []).length && entry.status !== "approved")) && (
+        {evidenceUploadRequests.length > 0 && (
           <div className={s.card} style={{ marginBottom: 16 }}>
             <p className={s.cardTitle} style={{ marginBottom: 6 }}>Subject evidence required</p>
             <p style={{ margin: "0 0 12px", fontSize: 13, color: "#64748b" }}>A conditional teaching subject needs supporting academic or teaching evidence before our team can approve it. Upload a PDF, JPEG, or PNG; uploading does not itself approve the subject.</p>
-            {subjectRequests.filter((entry) => entry.status === "needs_evidence" || (entry.evidenceRequired && !(entry.evidence || []).length && entry.status !== "approved")).map((entry) => (
+            {evidenceError && <p role="alert" style={{ color: "#9f1239" }}>{evidenceError}</p>}
+            {evidenceUploadRequests.map((entry) => (
               <div key={entry.subject} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", borderTop: "1px solid #e2e8f0", paddingTop: 12, marginTop: 12 }}>
                 <div><strong>{entry.subject}</strong><p style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>Status: {entry.status.replace("_", " ")}</p></div>
-                <label style={{ display: "inline-flex", alignItems: "center", cursor: evidenceBusy === entry.subject ? "wait" : "pointer", padding: "9px 14px", borderRadius: 8, background: "#0329B2", color: "#fff", fontWeight: 700, fontSize: 13, opacity: evidenceBusy === entry.subject ? 0.6 : 1 }}>
-                  {evidenceBusy === entry.subject ? "Uploading…" : "Upload evidence"}
-                  <input type="file" accept="application/pdf,image/jpeg,image/png" disabled={evidenceBusy === entry.subject} style={{ display: "none" }} onChange={(event) => void uploadEvidence(entry.subject, event.target.files?.[0])} />
+                <label style={{ display: "grid", gap: 8, fontWeight: 600, fontSize: 14 }}>
+                  {evidenceBusy === entry.subject ? "Uploading…" : `Upload evidence for ${entry.subject}`}
+                  <input type="file" accept="application/pdf,image/jpeg,image/png" disabled={evidenceBusy !== null} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void uploadEvidence(entry.subject, file); }} />
                 </label>
               </div>
             ))}

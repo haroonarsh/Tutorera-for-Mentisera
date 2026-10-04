@@ -18,6 +18,7 @@ import {
   getGlobalAnalytics,
   getAuditLogs,
   getEmailLogs,
+  retryEmailLog,
   getBroadcasts,
   sendBroadcast,
   getTutorDocumentUrl,
@@ -143,6 +144,7 @@ router.get("/verifications", requirePermission("tutor.read"), getPendingVerifica
 router.get("/payouts", requirePermission("payout.read"), getPayouts);
 router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
 router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
+router.post("/email-logs/:id/retry", requirePermission("growth.manage"), retryEmailLog);
 router.post("/broadcasts", requirePermission("broadcast.send"), sendBroadcast);
 router.get("/broadcasts",  requirePermission("broadcast.send"), getBroadcasts);
 router.get("/tutors/:id/document/:field", requirePermission("tutor.read"), getTutorDocumentUrl);

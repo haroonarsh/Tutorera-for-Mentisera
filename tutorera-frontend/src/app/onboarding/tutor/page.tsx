@@ -43,6 +43,8 @@ interface ExistingDocsState {
   onboardingComplete?: boolean;
 }
 
+type Qualification = { degree?: string; institution?: string; year?: number; discipline?: string; degreeDoc?: string; verificationStatus?: string; reviewReason?: string };
+
 export default function TutorOnboardingPage() {
   const { user, loading } = useAuth();
   const geo = useGeoData();
@@ -90,6 +92,8 @@ export default function TutorOnboardingPage() {
   // Step 2
   const [step2, setStep2] = useState({ degree: "", institution: "", year: "", discipline: "" });
   const [degreeDoc, setDegreeDoc] = useState<File | null>(null);
+  const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  const [qualificationIndex, setQualificationIndex] = useState(0);
   // Discipline -> eligible subjects mapping, used to preview which subjects
   // a tutor's degree can unlock in step 3 - selecting a subject never grants
   // eligibility on its own, admin approval always required (see
@@ -159,6 +163,7 @@ export default function TutorOnboardingPage() {
             });
 
             if (p.education?.[0]) {
+              setQualifications(p.education);
               setStep2({
                 degree: p.education[0].degree || "",
                 institution: p.education[0].institution || "",
@@ -319,10 +324,11 @@ export default function TutorOnboardingPage() {
         if (!step2.degree || !step2.institution || !step2.year) {
           setError("Please fill all required fields."); setSaving(false); return;
         }
-        if (!degreeDoc && !existingDocs.degreeDoc) {
+        const selectedQualification = qualifications[qualificationIndex];
+        if (!degreeDoc && !selectedQualification?.degreeDoc) {
           setError("Your degree certificate or transcript is mandatory for marketplace visibility."); setSaving(false); return;
         }
-        formData.append("data", JSON.stringify(step2));
+        formData.append("data", JSON.stringify({ ...step2, qualificationIndex }));
         if (degreeDoc) formData.append("degreeDoc", degreeDoc);
       }
 
@@ -674,17 +680,29 @@ export default function TutorOnboardingPage() {
           {currentStep === 2 && (
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: C.primary, marginBottom: '0.4rem' }}>Educational Background</h2>
-              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1.75rem' }}>Review or correct your qualification and degree certificate.</p>
+              <p style={{ color: C.gray500, fontSize: '0.875rem', marginBottom: '1rem' }}>Add each relevant qualification separately. Each certificate is reviewed independently; changing one can require linked subjects to be reviewed again.</p>
+
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }} aria-label="Choose qualification to edit">
+                {qualifications.map((qualification, index) => (
+                  <button key={`${qualification.degree}-${index}`} type="button" onClick={() => {
+                    setQualificationIndex(index); setDegreeDoc(null);
+                    setStep2({ degree: qualification.degree || "", institution: qualification.institution || "", year: qualification.year ? String(qualification.year) : "", discipline: qualification.discipline || "" });
+                  }} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: qualificationIndex === index ? `2px solid ${C.accent}` : '1px solid #cbd5e1', background: qualificationIndex === index ? '#eff6ff' : '#fff', color: C.primary, fontWeight: 700, cursor: 'pointer' }}>
+                    Qualification {index + 1}{qualification.verificationStatus ? ` · ${qualification.verificationStatus}` : ''}
+                  </button>
+                ))}
+                <button type="button" onClick={() => { const next = qualifications.length; setQualifications([...qualifications, {}]); setQualificationIndex(next); setDegreeDoc(null); setStep2({ degree: '', institution: '', year: '', discipline: '' }); }} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: `1px solid ${C.accent}`, background: '#fff', color: C.accent, fontWeight: 700, cursor: 'pointer' }}>+ Add qualification</button>
+              </div>
 
               {/* Rejection Alert for Degree if rejected */}
-              {existingDocs.degreeVerificationStatus === "rejected" && (
+              {(qualifications[qualificationIndex]?.verificationStatus === "rejected" || (qualificationIndex === 0 && existingDocs.degreeVerificationStatus === "rejected")) && (
                 <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#b91c1c', fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.35rem' }}>
                     <AlertTriangle size={18} />
                     <span>Degree Document Rejected by Admin</span>
                   </div>
                   <p style={{ color: '#991b1b', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
-                    <strong>Admin feedback:</strong> {existingDocs.degreeRejectionReason || "Please upload a clear, legible copy of your degree or transcript."}
+                    <strong>Admin feedback:</strong> {qualifications[qualificationIndex]?.reviewReason || existingDocs.degreeRejectionReason || "Please upload a clear, legible copy of your degree or transcript."}
                   </p>
                 </div>
               )}
@@ -729,9 +747,9 @@ export default function TutorOnboardingPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: '600', color: C.primary }}>Upload Degree Certificate</label>
-                    {existingDocs.degreeDoc && (
+                    {(qualifications[qualificationIndex]?.degreeDoc || (qualificationIndex === 0 && existingDocs.degreeDoc)) && (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: existingDocs.degreeVerificationStatus === 'approved' ? '#16a34a' : '#d97706' }}>
-                        {existingDocs.degreeVerificationStatus === 'approved' ? '✓ Approved' : '📄 Current Doc On File'}
+                        {qualifications[qualificationIndex]?.verificationStatus === 'approved' ? '✓ Approved' : '📄 Current Doc On File'}
                       </span>
                     )}
                   </div>
@@ -741,7 +759,7 @@ export default function TutorOnboardingPage() {
                     onDragLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
                     {degreeDoc ? (
                       <p style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.875rem' }}>✅ Selected: {degreeDoc.name}</p>
-                    ) : existingDocs.degreeDoc ? (
+                    ) : (qualifications[qualificationIndex]?.degreeDoc || (qualificationIndex === 0 && existingDocs.degreeDoc)) ? (
                       <div>
                         <p style={{ color: '#0329b2', fontSize: '0.875rem', fontWeight: 600 }}>📄 Document already uploaded</p>
                         <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.2rem' }}>Click here if you wish to upload a new replacement document</p>

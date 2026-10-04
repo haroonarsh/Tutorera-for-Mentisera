@@ -1,4 +1,7 @@
 import { Response } from "express";
+import mongoose from "mongoose";
+import AuditLog from "../models/AuditLog.model";
+import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
 import { AuthRequest } from "../types";
 import LegalAgreement, { ILegalAgreement } from "../models/LegalAgreement.model";
 import TutorAgreementAcceptance from "../models/TutorAgreementAcceptance.model";
@@ -19,6 +22,7 @@ import { recordStatusEvent } from "../services/tracking.service";
 import { logAudit } from "../utils/logAudit";
 import { NotificationService } from "../services/notification.service";
 import { sendNotification } from "../utils/socket";
+import { hasCoreDocumentsApproved, hasApprovedTeachingSubject, isAccessBlocked } from "../services/eligibility.service";
 
 function maskIp(ip?: string): string {
   if (!ip) return "";
@@ -82,7 +86,7 @@ export const getCurrentTutorAgreement = async (req: AuthRequest, res: Response):
       countrySchedule: agreement.applicableSchedule,
       country: agreement.country,
       locale: agreement.locale,
-      contentHash: agreement.contentHash,
+      contentHash: computeAgreementHash(agreement.content, agreement.applicableSchedule || ""),
       effectiveDate: agreement.effectiveDate,
       companyDetails: agreement.companyDetails,
       feeScheduleSnapshot: {
@@ -141,6 +145,7 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
 
   const {
     agreementId,
+    agreementHash,
     electronicSignature,
     confirmations: submittedConfirmations,
     passwordConfirmation,
@@ -157,12 +162,12 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
 
   // 1. Mandatory Consents Validation
   if (
-    !confirmations?.informationAccurate ||
-    !confirmations?.agreementAccepted ||
-    !confirmations?.safeguardingAccepted ||
-    !confirmations?.independentProvider ||
-    !confirmations?.feesTaxesUnderstood ||
-    !confirmations?.electronicRecordsConsent
+    confirmations?.informationAccurate !== true ||
+    confirmations?.agreementAccepted !== true ||
+    confirmations?.safeguardingAccepted !== true ||
+    confirmations?.independentProvider !== true ||
+    confirmations?.feesTaxesUnderstood !== true ||
+    confirmations?.electronicRecordsConsent !== true
   ) {
     res.status(400).json({
       success: false,
@@ -236,12 +241,14 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
   }
 
   // 6. Find Applicable Published Agreement
-  let agreement: ILegalAgreement | null = null;
-  if (agreementId) {
-    agreement = await LegalAgreement.findById(agreementId);
+  if (typeof agreementId !== "string" || !agreementId.trim()) {
+    res.status(400).json({ success: false, code: "AGREEMENT_ID_REQUIRED", message: "Load and review the current agreement before signing." });
+    return;
   }
-  if (!agreement || agreement.status !== "published") {
-    agreement = await getApplicableAgreement("TUTOR_AGREEMENT", profile.countryCode || "PK");
+  const agreement = await getApplicableAgreement("TUTOR_AGREEMENT", profile.countryCode || "PK");
+  if (agreementId && (!agreement || String(agreementId) !== agreement._id.toString())) {
+    res.status(409).json({ success: false, code: "AGREEMENT_CHANGED", message: "Reload and review the current agreement for your market before signing." });
+    return;
   }
 
   if (!agreement) {
@@ -255,6 +262,10 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
 
   // 7. Prevent Stale Agreement / Check Hash
   const expectedHash = computeAgreementHash(agreement.content, agreement.applicableSchedule || "");
+  if (typeof agreementHash !== "string" || agreementHash !== expectedHash) {
+    res.status(409).json({ success: false, code: "AGREEMENT_CONTENT_CHANGED", message: "Reload and review the current agreement content before signing." });
+    return;
+  }
 
   // 8. Idempotency Check: Don't create duplicate active acceptance for same version
   const existingActive = await TutorAgreementAcceptance.findOne({
@@ -265,13 +276,14 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
 
   if (existingActive) {
     // Already accepted; run activation sync to ensure active state
-    await syncTutorActivation(req.user._id);
+    const currentActivation = await syncTutorActivation(req.user._id);
     res.status(200).json({
       success: true,
-      message: "Agreement already accepted. Your account is active.",
+      message: currentActivation.activated ? "Agreement already accepted. Your account is active." : "Agreement already accepted. Additional activation requirements remain.",
       acceptanceId: existingActive._id,
       agreementVersion: existingActive.agreementVersion,
-      tutorStatus: "active",
+      tutorStatus: currentActivation.status,
+      activated: currentActivation.activated,
     });
     return;
   }
@@ -284,16 +296,44 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
   });
 
   const now = new Date();
-
+  const session = await mongoose.startSession();
+  let acceptance: import("../models/TutorAgreementAcceptance.model").ITutorAgreementAcceptance;
+  let activationResult: Awaited<ReturnType<typeof syncTutorActivation>>;
+  try {
+  const committed = await session.withTransaction(async () => {
+  const currentProfile = await TutorProfile.findById(profile._id).session(session);
+  if (!currentProfile) throw new Error("Tutor application no longer exists.");
+  const currentUser = await User.findById(req.user!._id).session(session);
+  if (!currentUser || currentUser.isDeleted || currentUser.suspendedAt ||
+      ["suspended", "banned", "deleted"].includes(currentUser.moderationStatus || "") ||
+      isAccessBlocked(currentProfile) || !currentProfile.onboardingComplete || currentProfile.verificationStatus !== "approved" ||
+      !hasCoreDocumentsApproved(currentProfile) || !hasApprovedTeachingSubject(currentProfile)) {
+    throw Object.assign(new Error("Application approval, required documents, and teaching subject approval must be complete before signing."), { statusCode: 403 });
+  }
+  if (normalizeName(electronicSignature) !== normalizeName(currentProfile.fullName?.trim() || currentUser.name.trim()))
+    throw Object.assign(new Error("Your verified name changed. Reload before signing."), { statusCode: 409 });
+  const currentAgreement = await getApplicableAgreement("TUTOR_AGREEMENT", currentProfile.countryCode || "PK", "en", { session });
+  if (currentAgreement?._id.toString() !== agreement._id.toString())
+    throw Object.assign(new Error("Your applicable agreement changed. Reload before signing."), { statusCode: 409 });
+  if (!currentAgreement || currentAgreement.status !== "published" || computeAgreementHash(currentAgreement.content, currentAgreement.applicableSchedule || "") !== expectedHash)
+    throw Object.assign(new Error("Agreement changed. Reload before signing."), { statusCode: 409 });
+  const prior = await TutorAgreementAcceptance.findOne({ tutor: req.user!._id, legalAgreement: agreement!._id, acceptanceStatus: "active" }).session(session);
+  if (prior) return { acceptance: prior, activationResult: await syncTutorActivation(req.user!._id, { session }) };
+  // Serialize concurrent acceptance through the profile write before creating records.
+  currentProfile.agreementAcceptedAt = now;
+  currentProfile.agreementVersion = agreement!.version;
+  currentProfile.agreementAcceptanceRequired = false;
+  currentProfile.legacyAgreementStatus = "accepted";
+  await currentProfile.save({ session, validateBeforeSave: false });
   // 10. Supersede any older acceptances
   await TutorAgreementAcceptance.updateMany(
-    { tutor: req.user._id, acceptanceStatus: "active" },
-    { $set: { acceptanceStatus: "superseded", supersededAt: now } }
+    { tutor: req.user!._id, acceptanceStatus: "active" },
+    { $set: { acceptanceStatus: "superseded", supersededAt: now } }, { session }
   );
 
   // 11. Create Immutable Acceptance Record
-  const acceptance = await TutorAgreementAcceptance.create({
-    tutor: req.user._id,
+  const [acceptance] = await TutorAgreementAcceptance.create([{
+    tutor: req.user!._id,
     tutorProfile: profile._id,
     legalAgreement: agreement._id,
     agreementVersion: agreement.version,
@@ -331,52 +371,39 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
       contactEmail: agreement.companyDetails?.contactEmail || "hello@mentisera.pk",
     },
     acceptanceStatus: "active",
-  });
+  }], { session });
 
-  // 12. Also maintain backwards-compatible TutorAgreement entry
-  try {
+  // 12. Maintain the legacy contract in the same transaction.
     await TutorAgreement.findOneAndUpdate(
-      { tutor: req.user._id, tutorProfile: profile._id, status: "pending_acceptance" },
+      { tutor: req.user!._id, tutorProfile: profile._id, status: "pending_acceptance" },
       {
         status: "active",
         acceptedAt: now,
         acceptanceIp: maskIp(req.ip),
         acceptanceUserAgent: req.headers["user-agent"]?.toString().slice(0, 500),
       },
-      { sort: { createdAt: -1 } }
+      { sort: { createdAt: -1 }, session }
     );
-  } catch (err) {
-    // Non-blocking for legacy model
-  }
-
-  // 13. Update Profile Agreement Fields
-  profile.agreementAcceptedAt = now;
-  profile.agreementVersion = agreement.version;
-  profile.agreementAcceptanceRequired = false;
-  profile.legacyAgreementStatus = "accepted";
-  await profile.save({ validateBeforeSave: false });
-
   // 14. Authoritative Activation Evaluation & Synchronization
-  const activationResult = await syncTutorActivation(req.user._id);
+  const activationResult = await syncTutorActivation(req.user!._id, { session });
 
   // 15. Audit and History Logging
-  await recordStatusEvent({
-    tutorId: req.user._id.toString(),
-    tutorProfileId: profile._id.toString(),
-    actor: { name: req.user.name, role: "tutor", id: req.user._id.toString() },
-    event: "PROFILE_APPROVED",
+  await TutorApplicationStatusHistory.create([{
+    tutor: req.user!._id, tutorProfile: profile._id,
+    actor: req.user!.name, actorId: req.user!._id, actorRole: "tutor",
+    event: "TUTOR_AGREEMENT_ACCEPTED",
     message: `Tutor Agreement ${agreement.version} electronically accepted. Hash: ${expectedHash.slice(0, 16)}...`,
     isPublic: false,
     statusAfter: activationResult.status,
-  });
+  }], { session });
 
-  await logAudit({
+  await AuditLog.create([{
     action: "tutor_agreement_accepted",
-    actor: req.user.name,
-    actorId: req.user._id.toString(),
+    actor: req.user!.name,
+    actorId: req.user!._id.toString(),
     entity: "TutorAgreementAcceptance",
     targetId: acceptance._id.toString(),
-    targetName: req.user.name,
+    targetName: req.user!.name,
     metadata: {
       version: agreement.version,
       hash: expectedHash,
@@ -385,22 +412,27 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
       status: activationResult.status,
       confirmations,
     },
+  }], { session });
+  return { acceptance, activationResult };
   });
-
+  if (!committed) throw new Error("Agreement acceptance did not commit.");
+  acceptance = committed.acceptance;
+  activationResult = committed.activationResult;
+  } finally { await session.endSession(); }
   // 16. In-App Notifications & Real-Time Socket
   const io = req.app.get("io");
-  await sendNotification(io, req.user._id.toString(), {
-    title: "🎉 Agreement Confirmed & Profile Active!",
-    message: `You have successfully accepted Agreement ${agreement.version}. Your tutor account is now active on TUTORERA.`,
+  try { await sendNotification(io, req.user._id.toString(), {
+    title: activationResult.activated ? "Agreement Confirmed & Profile Active" : "Agreement Confirmed",
+    message: activationResult.activated ? `Agreement ${agreement.version} accepted. Your tutor account is active.` : `Agreement ${agreement.version} accepted. Additional activation requirements remain.`,
     type: "verification",
     link: "/dashboard",
-  });
+  }); } catch { console.error("[AgreementAcceptance] Post-commit notification failed"); }
 
   try {
     await NotificationService.publishEvent(req.user._id.toString(), "verification.approved", {
       document: "Agreement",
-      title: "Agreement Confirmed & Account Active",
-      message: `Your TUTORERA Tutor Agreement (${agreement.version}) has been recorded. Your marketplace access is live.`,
+      title: activationResult.activated ? "Agreement Confirmed & Account Active" : "Agreement Confirmed",
+      message: activationResult.activated ? `Agreement ${agreement.version} recorded. Marketplace access is live.` : `Agreement ${agreement.version} recorded. Additional activation requirements remain.`,
       ctaArgs: { applicationId: req.user.applicationId || "TUT-PENDING" },
     });
   } catch (emailErr) {
@@ -409,7 +441,7 @@ export const acceptTutorAgreement = async (req: AuthRequest, res: Response): Pro
 
   res.status(200).json({
     success: true,
-    message: "Agreement accepted successfully. Your TUTORERA tutor account is now active.",
+    message: activationResult.activated ? "Agreement accepted successfully. Your TUTORERA tutor account is now active." : "Agreement accepted successfully. Additional activation requirements remain.",
     acceptanceId: acceptance._id,
     agreementVersion: agreement.version,
     agreementHash: expectedHash,

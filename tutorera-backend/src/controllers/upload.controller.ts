@@ -3,6 +3,8 @@ import { AuthRequest } from "../types";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
+import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
+import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import { uploadToCloudinary, deleteFromCloudinary, getSignedViewUrl } from "../utils/uploadToCloudinary";
 import sendEmail from "../utils/sendEmail";
 import { documentResubmittedEmail } from "../utils/trackingEmails";
@@ -164,26 +166,20 @@ export const uploadVerificationDocs = async (
 
   // Degree / educational document (private)
   if (files.degree?.[0]) {
+    const qualificationIndex = degreeUploadIndex(existingProfile, req.body?.qualificationIndex);
+    if (qualificationIndex === null) {
+      res.status(422).json({ success: false, message: "Choose an existing qualification for this degree upload." });
+      return;
+    }
     const { valid, detectedType } = await verifyFileSignature(files.degree[0].buffer, DOCUMENT_TYPES);
     if (!valid) {
       res.status(400).json({ success: false, message: `Degree document is invalid (detected: ${detectedType || "unknown"})` });
       return;
     }
     const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
-    const rawEducation = Array.isArray(existingProfile.education) ? existingProfile.education : [];
-    const education: Array<Record<string, unknown>> = rawEducation.map((entry) =>
-      typeof (entry as any).toObject === "function" ? (entry as any).toObject() : { ...entry }
-    );
-    if (education.length === 0) education.push({ degree: "", institution: "", degreeDoc: "", degreeDocPublicId: "" });
-    const previousPublicId = String(education[0].degreeDocPublicId || "");
-    education[0].degreeDoc = result.secure_url;
-    education[0].degreeDocPublicId = result.public_id;
-    updateData.education = education;
-    updateData.degreeVerificationStatus = "pending";
-    updateData.degreeRejectionReason = "";
+    Object.assign(updateData, prepareDegreeReplacement(existingProfile, result.secure_url, result.public_id, qualificationIndex));
     updateData.degreeSubmittedAt = new Date();
     resubmittedDocs.push("Educational document");
-    if (previousPublicId) replacedAssets.push({ publicId: previousPublicId });
   }
 
   // ── Background and safety certificate (private) ──
@@ -257,6 +253,8 @@ export const uploadVerificationDocs = async (
   await Promise.all(replacedAssets.map(({ publicId, resourceType }) =>
     deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
   ));
+
+  await flagPendingQualificationBookings(updated);
 
   if (resubmittedDocs.length > 0) {
     const tutorUser = await User.findById(req.user?._id).select("name email applicationId");

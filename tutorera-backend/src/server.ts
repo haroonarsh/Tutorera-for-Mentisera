@@ -18,6 +18,7 @@ import { ensureLaunchMarkets } from "./services/market.service";
 import { assertSwichRuntimeConfiguration } from "./services/swichProvider.service";
 import { processPendingSwichCheckouts } from "./services/paymentReconciliation.service";
 import { runWithJobLease } from "./services/scheduledJobLease.service";
+import { processEmailOutbox } from "./services/emailOutbox.service";
 
 dotenv.config();
 
@@ -85,6 +86,7 @@ const remindMissingDocuments = () => runWithJobLease(
   23 * 60 * 60 * 1000,
   () => sendMissingDocumentsReminders(io),
 );
+const retryEmailDelivery = () => runWithJobLease("email-outbox-delivery", 4 * 60 * 1000, () => processEmailOutbox());
 const offerExpiryTimer = setInterval(() => processExpiringOffers().catch(err => logger.error({ err }, "Offer expiry processing failed")), 15 * 60 * 1000);
 offerExpiryTimer.unref();
 const abandonedJourneyTimer = setInterval(() => recoverAbandonedJourneys().catch(err => logger.error({ err }, "Abandoned journey recovery failed")), 60 * 60 * 1000);
@@ -117,6 +119,9 @@ setTimeout(() => remindAgreementSigners().catch(err => logger.error({ err }, "In
 
 const missingDocumentsReminderTimer = setInterval(() => remindMissingDocuments().catch(err => logger.error({ err }, "Missing documents reminder run failed")), 24 * 60 * 60 * 1000);
 missingDocumentsReminderTimer.unref();
+const emailOutboxTimer = setInterval(() => retryEmailDelivery().catch(err => logger.error({ err }, "Email outbox run failed")), 5 * 60 * 1000);
+emailOutboxTimer.unref();
+setTimeout(() => retryEmailDelivery().catch(err => logger.error({ err }, "Initial email outbox run failed")), 25_000).unref();
 setTimeout(() => remindMissingDocuments().catch(err => logger.error({ err }, "Initial missing documents reminder run failed")), 50_000).unref();
 
 // ---------------------------------------------------------------------------
@@ -138,6 +143,7 @@ async function gracefulShutdown(signal: string) {
   clearInterval(requestLifecycleTimer);
   clearInterval(payoutTimer);
   clearInterval(paymentReconciliationTimer);
+  clearInterval(emailOutboxTimer);
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 

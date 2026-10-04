@@ -197,7 +197,8 @@ export async function seedDefaultLegalAgreements(): Promise<ILegalAgreement> {
 export async function getApplicableAgreement(
   documentType: AgreementDocumentType = "TUTOR_AGREEMENT",
   country: string = "PK",
-  locale: string = "en"
+  locale: string = "en",
+  options: { session?: import("mongoose").ClientSession } = {}
 ): Promise<ILegalAgreement | null> {
   const normCountry = (country || "PK").toUpperCase();
 
@@ -207,7 +208,7 @@ export async function getApplicableAgreement(
     country: normCountry,
     status: "published",
     isCurrent: true,
-  });
+  }).session(options.session || null);
 
   // Fallback to GLOBAL or PK if country-specific is not yet published
   if (!agreement) {
@@ -216,11 +217,11 @@ export async function getApplicableAgreement(
       country: { $in: ["GLOBAL", "PK"] },
       status: "published",
       isCurrent: true,
-    }).sort({ country: normCountry === "PK" ? -1 : 1 });
+    }).session(options.session || null).sort({ country: normCountry === "PK" ? -1 : 1 });
   }
 
   // If still none, seed the default
-  if (!agreement && documentType === "TUTOR_AGREEMENT") {
+  if (!agreement && documentType === "TUTOR_AGREEMENT" && !options.session) {
     agreement = await seedDefaultLegalAgreements();
   }
 

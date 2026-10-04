@@ -9,6 +9,8 @@ import s from "@/components/Tracking/tracking.module.css";
 import { formatDateLong } from "@/lib/site";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 import TutorAgreementComplianceAdminCard from "@/components/admin/TutorAgreementComplianceAdminCard";
+import QualificationReviewCard, { QualificationDecision, ReviewedQualification } from "@/components/Tracking/QualificationReviewCard";
+import SubjectEvidenceReviewCard, { ReviewedSubjectEvidence } from "@/components/Tracking/SubjectEvidenceReviewCard";
 
 type Params = Promise<{ id: string }>;
 
@@ -62,14 +64,14 @@ interface ApplicationDetail {
     levels: string[];
     hourlyRate: number;
     teachingMode: string;
-    education: { degree: string; institution: string; year: number; discipline?: string; degreeDoc: string }[];
+    education: ReviewedQualification[];
     subjectEligibility?: {
       subject: string;
       levels: string[];
-      status: "pending" | "approved" | "rejected" | "revoked";
+      status: "pending" | "needs_evidence" | "approved" | "rejected" | "revoked" | "suspended";
       matchesDiscipline: boolean;
       evidenceRequired?: boolean;
-      evidence?: { label?: string }[];
+      evidence?: ReviewedSubjectEvidence[];
       reason?: string;
       requestedAt: string;
       reviewedAt?: string;
@@ -152,6 +154,31 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
 
   useEffect(() => { fetchDetail(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleQualificationReview = async (qualificationIndex: number, decision: QualificationDecision) => {
+    try {
+      await api.patch(`/tracking/admin/applications/${id}/degree`, { ...decision, qualificationIndex });
+      // Keep the card mounted so saving preserves focus and announces feedback.
+      const refreshed = await api.get(`/tracking/admin/applications/${id}`);
+      setData(refreshed.data.application);
+    } catch (failure: unknown) {
+      const response = failure as { response?: { data?: { message?: string } } };
+      throw new Error(response.response?.data?.message || "Unable to save this qualification review.");
+    }
+  };
+
+  const viewQualificationDocument = async (qualificationIndex: number) => {
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) throw new Error("Allow pop-ups to view the private qualification document.");
+    tab.opener = null;
+    try {
+      const response = await api.get(`/admin/tutors/${id}/document/degreeDoc`, { params: { qualificationIndex } });
+      tab.location.replace(response.data.url);
+    } catch {
+      tab.close();
+      throw new Error("Unable to open this qualification document. Check that a viewable copy is on file.");
+    }
+  };
+
   const handleAction = async (
     endpoint: string,
     status: string,
@@ -188,7 +215,7 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
     const pendingEndpoints: string[] = [];
     if (data.profile.avatarVerificationStatus === "pending") pendingEndpoints.push("avatar");
     if (data.profile.cnicVerificationStatus === "pending") pendingEndpoints.push("cnic");
-    if (data.profile.degreeVerificationStatus === "pending") pendingEndpoints.push("degree");
+    // Qualifications require individual credential and degree-level review.
     if (data.profile.demoVideoStatus === "pending") pendingEndpoints.push("demo-video");
     if (data.profile.policeVerificationStatus === "pending") pendingEndpoints.push("police");
     if (pendingEndpoints.length === 0) {
@@ -226,11 +253,25 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
   const [eligibilityLevels, setEligibilityLevels] = useState<Record<string, string>>({});
   const [eligibilityReasons, setEligibilityReasons] = useState<Record<string, string>>({});
 
+  const reviewEvidence = async (subject: string, index: number, status: "approved" | "rejected", reason: string) => {
+    try {
+      await api.patch(`/tracking/admin/applications/${id}/subject-eligibility/${encodeURIComponent(subject)}/evidence/${index}`, { status, reason });
+      const refreshed = await api.get(`/tracking/admin/applications/${id}`);
+      setData(refreshed.data.application);
+    } catch (failure: unknown) {
+      const response = failure as { response?: { data?: { message?: string } } };
+      throw new Error(response.response?.data?.message || "Unable to save the evidence review.");
+    }
+  };
+
   const viewSubjectEvidence = async (subject: string, index: number) => {
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) { showError("Allow pop-ups to view supporting evidence."); return; }
+    tab.opener = null;
     try {
       const response = await api.get(`/tracking/admin/applications/${id}/subject-eligibility/${encodeURIComponent(subject)}/evidence/${index}`);
-      window.open(response.data.url, "_blank", "noopener,noreferrer");
-    } catch (err) { showError(err, "Supporting evidence is unavailable"); }
+      tab.location.replace(response.data.url);
+    } catch (err) { tab.close(); showError(err, "Supporting evidence is unavailable"); }
   };
 
   const handleSubjectEligibility = async (subject: string, action: "approve" | "reject" | "revoke") => {
@@ -386,6 +427,7 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
     p.avatarVerificationStatus, p.cnicVerificationStatus, p.degreeVerificationStatus,
     p.demoVideoStatus, p.policeVerificationStatus,
   ].filter(st => st === "pending").length;
+  const bulkPendingCount = [p.avatarVerificationStatus, p.cnicVerificationStatus, p.demoVideoStatus, p.policeVerificationStatus].filter(status => status === "pending").length;
   const reviewHistory = data.reviewHistory || [];
   const wasResubmitted = (eventPrefix: string) => data.history.some(entry => entry.event === `${eventPrefix}_RESUBMITTED`);
   const documentReasonField = (endpoint: string, label: string) => (
@@ -437,14 +479,14 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button type="button" onClick={copyAdminCaseUrl} style={btnSecondaryStyle}>Copy case link</button>
-            {pendingCount > 0 && (
+            {bulkPendingCount > 0 && (
               <button
                 type="button"
                 disabled={busyKey === "approve-all"}
                 onClick={handleApproveAllPending}
                 style={{ ...btnSuccessStyle, padding: "8px 16px", fontSize: 13, opacity: busyKey === "approve-all" ? 0.7 : 1 }}
               >
-                {busyKey === "approve-all" ? "Approving..." : `✓ Approve all pending (${pendingCount})`}
+                {busyKey === "approve-all" ? "Approving..." : `Approve pending documents (${bulkPendingCount}), excluding qualifications`}
               </button>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 4, borderLeft: `1px solid ${UI_COLORS.border}`, paddingLeft: 10, marginLeft: 2 }}>
@@ -499,11 +541,10 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
 
         <section className={s.card} style={{ marginBottom: 16 }} aria-labelledby="education-summary">
           <p id="education-summary" className={s.cardTitle} style={{ marginBottom: 10 }}>Education submitted with this application</p>
+          <p style={{ lineHeight: 1.6 }}>Review each credential individually. Education is approved only when every submitted qualification is approved. Teaching subjects require a separate eligibility decision.</p>
           {p.education?.length ? p.education.map((education, index) => (
-            <p key={`${education.degree}-${index}`} style={{ margin: "0 0 6px", fontSize: 13, color: TEXT_COLORS.body }}>
-              <strong>{education.degree || "Qualification"}</strong>{education.institution ? ` — ${education.institution}` : ""}{education.year ? ` (${education.year})` : ""}
-            </p>
-          )) : <p className={s.empty}>No education entries have been submitted.</p>}
+            <QualificationReviewCard key={`${id}-${index}`} qualification={education} index={index} onReview={handleQualificationReview} onViewDocument={viewQualificationDocument} />
+          )) : <p className={s.empty}>No education entries have been submitted. Ask the tutor to complete the education step before approval.</p>}
           {p.education?.[0]?.discipline && (
             <p style={{ margin: "6px 0 0", fontSize: 13, color: TEXT_COLORS.muted }}><strong>Declared discipline:</strong> {p.education[0].discipline}</p>
           )}
@@ -534,7 +575,7 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                     {entry.levels?.length > 0 && <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>Approved levels: {entry.levels.join(", ")}</span>}
                   </div>
                   {entry.reason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "6px 0 0" }}>Reason: {entry.reason}</p>}
-                  {entry.evidence?.length ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}><span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>{entry.evidence.length} supporting document{entry.evidence.length === 1 ? "" : "s"} attached</span>{entry.evidence.map((evidence, index) => <button key={`${entry.subject}-evidence-${index}`} type="button" onClick={() => void viewSubjectEvidence(entry.subject, index)} style={btnSecondaryStyle}>View {evidence.label || `evidence ${index + 1}`}</button>)}</div> : entry.evidenceRequired ? <p style={{ fontSize: 12, color: STATUS_COLORS.warning.color, margin: "8px 0 0" }}>Supporting evidence has not been uploaded yet.</p> : null}
+                  {entry.evidence?.length ? entry.evidence.map((evidence, index) => <SubjectEvidenceReviewCard key={`${entry.subject}-evidence-${index}`} evidence={evidence} index={index} subject={entry.subject} onView={(evidenceIndex) => viewSubjectEvidence(entry.subject, evidenceIndex)} onReview={["approved", "revoked", "suspended"].includes(entry.status) ? undefined : (evidenceIndex, status, reason) => reviewEvidence(entry.subject, evidenceIndex, status, reason)} />) : entry.evidenceRequired ? <p style={{ fontSize: 14, color: STATUS_COLORS.warning.color, margin: "8px 0 0" }}>Supporting evidence has not been uploaded yet.</p> : null}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                     <input
                       type="text"
@@ -621,9 +662,7 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
               <button onClick={() => handleViewDocument("degreeDoc")} style={btnSecondaryStyle}>View document</button>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-              <button disabled={busyKey === "degree-approved"} onClick={() => handleAction("degree", "approved", "Degree")} style={btnSuccessStyle}>Approve</button>
-              <button disabled={busyKey === "degree-rejected"} onClick={() => handleAction("degree", "rejected", "Degree")} style={btnDangerStyle}>Reject</button>
-              <button disabled={busyKey === "degree-pending"} onClick={() => handleAction("degree", "pending", "Degree")} style={btnSecondaryStyle}>Mark pending</button>
+              <a href="#education-summary" style={btnSecondaryStyle}>Review individual qualifications</a>
             </div>
             {documentReasonField("degree", "educational documents")}
           </div>

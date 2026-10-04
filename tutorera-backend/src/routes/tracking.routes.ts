@@ -19,6 +19,7 @@ import {
   uploadApplicationDocumentOnBehalf,
   reviewSubjectEligibility,
   getSubjectEligibilityEvidenceUrl,
+  reviewSubjectEligibilityEvidence,
 } from "../controllers/tracking.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
@@ -56,6 +57,7 @@ router.patch("/admin/applications/:id/suspended", protect, authorize("admin"), r
 router.patch("/admin/applications/:id/reverification", protect, authorize("admin"), requirePermission("tutor.verify"), setReverification);
 router.patch("/admin/applications/:id/subject-eligibility", protect, authorize("admin"), requirePermission("tutor.verify"), reviewSubjectEligibility);
 router.get("/admin/applications/:id/subject-eligibility/:subject/evidence/:index", protect, authorize("admin"), requirePermission("tutor.verify"), getSubjectEligibilityEvidenceUrl);
+router.patch("/admin/applications/:id/subject-eligibility/:subject/evidence/:index", protect, authorize("admin"), requirePermission("tutor.verify"), reviewSubjectEligibilityEvidence);
 
 // Admin upload document on tutor's behalf
 router.post(

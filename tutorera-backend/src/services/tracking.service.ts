@@ -789,6 +789,7 @@ export async function recordStatusEvent(input: RecordStatusEventInput): Promise<
       tutor: new mongoose.Types.ObjectId(input.tutorId),
       tutorProfile: input.tutorProfileId ? new mongoose.Types.ObjectId(input.tutorProfileId) : undefined,
       actor: input.actor.name,
+      actorId: input.actor.id && mongoose.Types.ObjectId.isValid(input.actor.id) ? new mongoose.Types.ObjectId(input.actor.id) : undefined,
       actorRole: input.actor.role,
       event: input.event,
       message: input.message,

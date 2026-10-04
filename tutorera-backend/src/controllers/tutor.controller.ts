@@ -16,6 +16,10 @@ import { applicationSubmittedEmail, documentResubmittedEmail } from "../utils/tr
 import { sendNotification } from "../utils/socket";
 import { NotificationService } from "../services/notification.service";
 import { normalizeEducationLevels } from "../config/educationLevels";
+import { preserveQualificationReviews } from "../services/qualificationReview.service";
+import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
+import { reconcileQualificationSubjects } from "../services/qualificationSubjectReconciliation.service";
+import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import { resolveLocationReferences } from "../services/locationReference.service";
 import { resolveMarket } from "../services/market.service";
 import { syncReviewQueueForProfile } from "../services/verification.service";
@@ -24,6 +28,7 @@ import { calculateMarketplaceFees } from "../services/pricing.service";
 import { requestSubjectEligibility, syncApprovedSubjects } from "../services/subjectEligibility.service";
 import { assignUniqueTutorSlug } from "../services/tutorSlug.service";
 import { logAudit } from "../utils/logAudit";
+import { persistTutorEducationEdit } from "../services/educationEditPersistence.service";
 
 const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -61,7 +66,7 @@ export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Re
   if (["approved", "revoked", "suspended"].includes(entry.status)) { res.status(409).json({ success: false, message: "This subject request cannot accept further evidence in its current status." }); return; }
   try {
     const uploaded = await safeUploadToCloudinary(req.file.buffer, "tutorera/verification/subject-evidence", "raw", true);
-    entry.evidence = [...(entry.evidence || []), { url: uploaded.secure_url, publicId: uploaded.public_id, label: String(req.body.label || req.file.originalname).slice(0, 160), uploadedAt: new Date() }];
+    entry.evidence = [...(entry.evidence || []), { url: uploaded.secure_url, publicId: uploaded.public_id, label: String(req.body.label || req.file.originalname).slice(0, 160), uploadedAt: new Date(), status: "pending" }];
     entry.status = "pending";
     await profile.save();
     await recordStatusEvent({ tutorId: req.user!._id.toString(), tutorProfileId: profile._id.toString(), actor: { name: req.user?.name || profile.fullName, role: "tutor", id: req.user?._id.toString() }, event: "SUBJECT_EVIDENCE_SUBMITTED", message: `Supporting evidence submitted for ${subject}`, isPublic: true });
@@ -117,6 +122,15 @@ export const createOrUpdateProfile = async (
 
   if (profile) {
     const updateData = { ...req.body };
+    let resetTeachingSubjects: string[] = [];
+    if (Array.isArray(updateData.education)) {
+      updateData.education = preserveQualificationReviews(profile.education, updateData.education);
+      resetTeachingSubjects = reconcileQualificationSubjects(profile, updateData.education);
+      profile.education = updateData.education;
+      updateData.subjectEligibility = profile.subjectEligibility;
+      updateData.approvedSubjects = profile.approvedSubjects;
+      updateData.degreeVerificationStatus = updateData.education.length && updateData.education.every((qualification: { verificationStatus?: string }) => qualification.verificationStatus === "approved") ? "approved" : "pending";
+    }
     if (Array.isArray(updateData.levels)) {
       updateData.levels = normalizeEducationLevels(updateData.levels);
     }
@@ -164,13 +178,10 @@ export const createOrUpdateProfile = async (
     }
 
     // Update existing profile
-    profile = await TutorProfile.findOneAndUpdate(
-      { user: userId },
-      updateData,
-      { new: true, runValidators: true }
-    ).populate("user", "name email avatar phone city countryCode countryName timezone currency");
-
-    if (updateData.teachingMode && profile) {
+    profile = await persistTutorEducationEdit({ profileId: profile._id.toString(), update: updateData,
+      resetSubjects: resetTeachingSubjects, actor: { id: String(userId), name: req.user!.name } });
+    if (profile) profile = await profile.populate("user", "name email avatar phone city countryCode countryName timezone currency");
+    if ((updateData.teachingMode || Array.isArray(updateData.education)) && profile) {
       const tutorUser = await User.findById(userId);
       if (tutorUser) {
         await syncMarketplaceAndHomeTuition(
@@ -688,11 +699,6 @@ export const saveOnboardingStep = async (
         return;
       }
 
-      const oldPublicId = profile.education?.[0]?.degreeDocPublicId;
-      if (oldPublicId) {
-        await deleteFromCloudinary(oldPublicId).catch(() => {});
-      }
-
       const result = await safeUploadToCloudinary(
         files.degreeDoc[0].buffer,
         "tutorera/degrees",
@@ -702,27 +708,39 @@ export const saveOnboardingStep = async (
       degreeDocUrl = result.secure_url;
       degreeDocPublicId = result.public_id;
     }
-    if (!degreeDocUrl && !profile.education?.[0]?.degreeDoc) {
+    const qualificationIndex = degreeUploadIndex(profile, parsedData.qualificationIndex, true);
+    if (qualificationIndex === null) {
+      res.status(400).json({ success: false, message: "Choose a valid qualification to update." });
+      return;
+    }
+    if (!degreeDocUrl && !profile.education?.[qualificationIndex]?.degreeDoc) {
       res.status(400).json({ success: false, message: "A degree certificate or transcript is required for marketplace visibility." });
       return;
     }
 
-    const education = [{
-      degree: parsedData.degree,
-      institution: parsedData.institution,
-      year: parseInt(parsedData.year),
-      discipline: parsedData.discipline || profile.education?.[0]?.discipline || "",
-      degreeDoc: degreeDocUrl || profile.education?.[0]?.degreeDoc || "",
-      degreeDocPublicId: degreeDocPublicId || profile.education?.[0]?.degreeDocPublicId || "",
-    }];
+    const previous = profile.education?.[qualificationIndex];
+    const replacement = prepareDegreeReplacement(profile,
+      degreeDocUrl || previous?.degreeDoc || "", degreeDocPublicId || previous?.degreeDocPublicId || "", qualificationIndex, true);
+    const education = replacement.education;
+    education[qualificationIndex].degree = parsedData.degree;
+    education[qualificationIndex].institution = parsedData.institution;
+    education[qualificationIndex].year = parseInt(parsedData.year);
+    education[qualificationIndex].discipline = parsedData.discipline || previous?.discipline || "";
+    education[qualificationIndex].disciplineRef = !parsedData.discipline || parsedData.discipline === previous?.discipline ? previous?.disciplineRef : undefined;
+    const reconciled = preserveQualificationReviews(profile.education || [], education);
+    reconcileQualificationSubjects(profile, reconciled);
 
-    const wasSubmitted = !!(profile.education?.[0]?.degreeDoc);
+    const wasSubmitted = !!previous?.degreeDoc;
     const resubmitDegree = Boolean(degreeDocUrl) && (profile.degreeVerificationStatus === "rejected" || profile.degreeVerificationStatus === "approved");
     updateData = {
-      education,
+      education: reconciled,
+      subjectEligibility: profile.subjectEligibility,
+      approvedSubjects: profile.approvedSubjects,
+      degreeVerificationStatus: reconciled.some(item => item.verificationStatus === "rejected") ? "rejected"
+        : reconciled.every(item => item.verificationStatus === "approved") ? "approved" : "pending",
       onboardingStep: 3,
-      ...(degreeDocUrl && { degreeVerificationStatus: "pending" as const, degreeSubmittedAt: new Date() }),
-      ...(resubmitDegree && { degreeRejectionReason: "" }),
+      ...(degreeDocUrl && { degreeSubmittedAt: new Date() }),
+      degreeRejectionReason: reconciled.filter(item => item.verificationStatus === "rejected").map(item => item.reviewReason).filter(Boolean).join("; "),
     };
 
     if (resubmitDegree) {
@@ -1016,12 +1034,13 @@ export const saveOnboardingStep = async (
   }
 
   // The verificationResubmitted block above only catches transitions *to*
+  await flagPendingQualificationBookings(updated);
   // "pending" - switching teachingMode to "online" sets police status to
   // "not_required" instead, which that check misses entirely. Recompute
   // marketplace/home-tuition eligibility from the actual current state
   // (isMarketplaceEligible/isHomeTuitionEligible) rather than pattern-matching
   // on which field just changed, so every step keeps eligibility flags honest.
-  if (stepNum === 4 || stepNum === 5) {
+  if (stepNum === 2 || stepNum === 4 || stepNum === 5) {
     const tutorUserForSync = await User.findById(req.user?._id);
     if (tutorUserForSync) {
       await syncMarketplaceAndHomeTuition(
@@ -1033,7 +1052,7 @@ export const saveOnboardingStep = async (
   }
 
   // Sync verification review queue for any newly submitted documents
-  if (stepNum === 5) {
+  if (stepNum === 2 || stepNum === 5) {
     try {
       await syncReviewQueueForProfile(updated._id.toString());
     } catch (err) {

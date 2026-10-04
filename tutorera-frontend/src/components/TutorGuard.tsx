@@ -36,6 +36,7 @@ export default function TutorGuard({ children }: TutorGuardProps) {
 
     // Exclude application-status and resubmit-docs from verification requirement so tutors can fix their profile
     if (
+      pathname === "/tutor/accept-agreement" ||
       pathname.startsWith("/tutor/application-status") ||
       pathname.startsWith("/tutor/resubmit-docs") ||
       pathname.startsWith("/tutor/guidebook") ||

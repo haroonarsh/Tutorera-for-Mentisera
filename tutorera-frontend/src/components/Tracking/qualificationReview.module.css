@@ -1,0 +1,25 @@
+.card { border: 1px solid #dbe3f5; border-radius: 16px; padding: 20px; margin-block: 12px; background: #f8faff; color: #1f2937; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.heading h3 { font-size: 18px; line-height: 1.4; margin: 0; color: #021550; overflow-wrap: anywhere; }
+.status { font-size: 14px; font-weight: 700; padding: 4px 12px; border: 1px solid #dbe3f5; border-radius: 24px; text-transform: capitalize; }
+.status[data-status="approved"] { color: #166534; background: #f0fdf4; }
+.status[data-status="rejected"] { color: #9f1239; background: #fff1f2; }
+.status[data-status="pending"] { color: #854d0e; background: #fefce8; }
+.details { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-block: 20px; }
+.details dt { font-size: 14px; color: #475569; }
+.details dd { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 16px; }
+.controls { display: grid; gap: 10px; border: 0; padding: 0; min-inline-size: 0; }
+.controls legend { font-weight: 700; color: #021550; margin-block-end: 12px; }
+.controls label { font-size: 14px; font-weight: 600; }
+.controls select, .controls textarea { width: 100%; min-height: 44px; border: 1px solid #94a3b8; border-radius: 8px; padding: 10px; font: inherit; color: #1f2937; background: white; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions button { min-height: 44px; padding: 10px 16px; border: 1px solid #0329b2; border-radius: 8px; background: #0329b2; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+.actions .reject { border-color: #9f1239; background: #9f1239; }
+.actions .secondary { background: white; color: #021550; border-color: #94a3b8; }
+.actions button:disabled { opacity: .6; cursor: not-allowed; }
+.card :focus-visible { outline: 3px solid #016ef8; outline-offset: 3px; }
+.help { font-size: 14px; line-height: 1.6; color: #475569; margin: 0; }
+.reason { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.error { color: #9f1239; font-size: 14px; line-height: 1.6; }
+.link { color: #0329b2; display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.view { justify-self: start; min-height: 44px; padding: 10px 16px; background: white; color: #0329b2; border: 1px solid #0329b2; border-radius: 8px; font: inherit; cursor: pointer; }

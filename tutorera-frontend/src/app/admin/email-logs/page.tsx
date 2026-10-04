@@ -26,6 +26,7 @@ interface EmailLog {
   retryCount: number;
   createdAt: string;
   user?: { name?: string; role?: string };
+  outbox?: { status: string; attempts: number; maxAttempts: number; nextAttemptAt?: string; lastError?: string } | null;
 }
 
 interface PlannedEvent {
@@ -59,6 +60,8 @@ export default function AdminEmailLogsPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -82,7 +85,14 @@ export default function AdminEmailLogsPage() {
       })
       .catch((err) => showError(err, "Failed to load email logs"))
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [query, refresh]);
+
+  const retry = async (log: EmailLog) => {
+    setRetrying(log._id);
+    try { await api.post(`/admin/email-logs/${log._id}/retry`); setRefresh(value => value + 1); }
+    catch (err) { showError(err, "Unable to queue this email retry"); }
+    finally { setRetrying(null); }
+  };
 
   return (
     <div style={{ padding: "2rem", color: UI_COLORS.primary }}>
@@ -126,13 +136,14 @@ export default function AdminEmailLogsPage() {
                 <th style={th}>Provider ID</th>
                 <th style={th}>Queued</th>
                 <th style={th}>Sent/Failed</th>
+                <th style={th}>Delivery</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} style={td}>Loading email logs...</td></tr>
+                <tr><td colSpan={9} style={td}>Loading email logs...</td></tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan={8} style={td}>No email logs match these filters.</td></tr>
+                <tr><td colSpan={9} style={td}>No email logs match these filters.</td></tr>
               ) : logs.map((log) => (
                 <tr key={log._id} style={rowStyle}>
                   <td style={td}><StatusPill status={log.status} /></td>
@@ -143,6 +154,10 @@ export default function AdminEmailLogsPage() {
                   <td style={td}>{log.providerMessageId ? <code style={codeStyle}>{log.providerMessageId}</code> : "-"}</td>
                   <td style={td}>{formatDate(log.queuedAt || log.createdAt)}</td>
                   <td style={td}>{formatDate(log.failedAt || log.sentAt)}{log.bounceReason ? <div style={{ ...muted, color: STATUS_COLORS.danger.color }}>{log.bounceReason}</div> : null}</td>
+                  <td style={td}>
+                    {log.outbox ? <div style={muted}>Attempts {log.outbox.attempts}/{log.outbox.maxAttempts}<br />{log.outbox.status === "queued" && log.outbox.nextAttemptAt ? `Next: ${formatDate(log.outbox.nextAttemptAt)}` : log.outbox.status}</div> : <div style={muted}>No retained payload</div>}
+                    {(log.status === "failed" || log.status === "queued") && log.outbox ? <button type="button" onClick={() => retry(log)} disabled={retrying === log._id} style={retryButton}>{retrying === log._id ? "Retrying…" : "Retry delivery"}</button> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -211,7 +226,7 @@ function formatDate(value?: string) {
 const eyebrow: React.CSSProperties = { margin: "0 0 6px", color: UI_COLORS.accent, fontSize: 12, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase" };
 const filterBar: React.CSSProperties = { background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 18, padding: 16, marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap", boxShadow: UI_COLORS.shadowCard };
 const panel: React.CSSProperties = { background: UI_COLORS.surface, border: `1px solid ${UI_COLORS.border}`, borderRadius: 18, overflow: "hidden", boxShadow: UI_COLORS.shadowCard };
-const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse", minWidth: 1050 };
+const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse", minWidth: 1180 };
 const headRow: React.CSSProperties = { background: UI_COLORS.card, color: UI_COLORS.gray600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" };
 const fieldStyle: React.CSSProperties = { border: `1px solid ${UI_COLORS.border}`, borderRadius: 12, padding: "10px 12px", color: UI_COLORS.primary, background: UI_COLORS.surface, fontWeight: 700 };
 const th: React.CSSProperties = { padding: 14, textAlign: "left", whiteSpace: "nowrap" };
@@ -220,6 +235,7 @@ const rowStyle: React.CSSProperties = { borderTop: `1px solid ${UI_COLORS.border
 const muted: React.CSSProperties = { marginTop: 4, color: UI_COLORS.gray500, fontSize: 12 };
 const codeStyle: React.CSSProperties = { background: STATUS_COLORS.neutral.bg, borderRadius: 6, padding: "2px 5px", color: UI_COLORS.primary };
 const pagerStyle: React.CSSProperties = { border: `1px solid ${UI_COLORS.border}`, borderRadius: 10, background: UI_COLORS.surface, color: UI_COLORS.primary, padding: "8px 12px", fontWeight: 800, cursor: "pointer" };
+const retryButton: React.CSSProperties = { marginTop: 8, border: `1px solid ${UI_COLORS.accent}`, borderRadius: 8, background: UI_COLORS.surface, color: UI_COLORS.accent, padding: "6px 9px", fontWeight: 800, cursor: "pointer", transition: "transform 160ms ease-out, background 160ms ease" };
 const plannedPill: React.CSSProperties = { display: "inline-flex", border: `1px solid ${STATUS_COLORS.neutral.border}`, background: STATUS_COLORS.neutral.bg, color: UI_COLORS.gray600, borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 800 };
 const loggedPill: React.CSSProperties = { display: "inline-flex", border: `1px solid ${STATUS_COLORS.info.border}`, background: UI_COLORS.accentLight, color: UI_COLORS.accent, borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 800 };
 function statusCard(c: { bg: string; color: string; border: string }): React.CSSProperties {

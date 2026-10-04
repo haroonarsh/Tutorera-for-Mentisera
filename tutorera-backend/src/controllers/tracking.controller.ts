@@ -2,11 +2,18 @@ import { Response } from "express";
 import { AuthRequest } from "../types";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
+import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
+import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
 import AdminVerificationReview from "../models/AdminVerificationReview.model";
 import TutorAgreement from "../models/TutorAgreement.model";
 import { logAudit } from "../utils/logAudit";
-import { NotificationService } from "../services/notification.service";
+import { publishReviewNotification } from "../services/reviewNotification.service";
+import { loadReviewActivationSnapshot } from "../services/reviewActivationSnapshot.service";
+import { issueReviewedTutorAgreement } from "../services/reviewAgreementIssuance.service";
+import { synchronizeReviewVisibility } from "../services/reviewVisibility.service";
+// All notifications here are downstream of persisted application changes.
+const NotificationService = { publishEvent: publishReviewNotification };
 import {
   buildAuthenticatedTrackingPayload,
   buildPublicTrackingPayload,
@@ -38,13 +45,11 @@ import {
   trackingWelcomeEmail,
 } from "../utils/trackingEmails";
 import { getSignedViewUrl, uploadToCloudinary } from "../utils/uploadToCloudinary";
-import {
-  approveSubjectEligibility,
-  rejectSubjectEligibility,
-  revokeSubjectEligibility,
-} from "../services/subjectEligibility.service";
 import { verifyFileSignature } from "../middlewares/upload.middleware";
 import { syncReviewQueueComponent } from "../services/verification.service";
+import { commitQualificationDecision, qualificationReviewToken, QualificationDecisionError } from "../services/qualificationDecision.service";
+import { commitSubjectDecision, subjectDecisionToken, SubjectDecisionError } from "../services/subjectDecision.service";
+import { commitSubjectEvidenceDecision, EvidenceDecisionError } from "../services/subjectEvidenceDecision.service";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 const APPLICATION_STATUS_URL = `${TRACKING_BASE_URL}/tutor/application-status`;
@@ -571,35 +576,38 @@ export const updateDegree = async (req: AuthRequest, res: Response): Promise<voi
     res.status(400).json({ success: false, message: "A rejection reason is required so the tutor can correct the document." });
     return;
   }
-  const { user, profile } = data;
-  const previousDocumentStatus = profile.degreeVerificationStatus;
-  profile.degreeVerificationStatus = status;
-  profile.degreeRejectionReason = status === "rejected" ? (reason || "") : "";
-  profile.degreeReviewedAt = new Date();
-  profile.lastStatusChangeAt = new Date();
-  await profile.save({ validateModifiedOnly: true });
-
+  const { user } = data;
+  const qualificationIndex = req.body.qualificationIndex ?? 0;
+  if (!Number.isInteger(qualificationIndex) || qualificationIndex < 0 || !data.profile.education[qualificationIndex]) {
+    res.status(422).json({ success: false, message: "Choose an existing qualification to review." });
+    return;
+  }
   const actor = actorFromReq(req);
-  await recordDocumentDecision({ userId: user._id.toString(), profileId: profile._id.toString(), adminId: actor.id, component: "degree", previousStatus: previousDocumentStatus, status, reason });
-  await syncReviewQueueComponent(profile._id.toString(), "degree", status, reason);
+  let profile;
+  try {
+    profile = await commitQualificationDecision({ profileId: data.profile._id.toString(), index: qualificationIndex,
+      status, reason: String(reason || ""), degreeLevel: req.body.verifiedDegreeLevel,
+      expectedToken: qualificationReviewToken(data.profile.education[qualificationIndex]), actor: { id: req.user!._id.toString(), name: actor.name } });
+  } catch (error) {
+    res.status(error instanceof QualificationDecisionError ? error.statusCode : 503).json({ success: false,
+      message: error instanceof QualificationDecisionError ? error.message : "Review could not be committed. Reload before retrying." });
+    return;
+  }
+  if (!profile) { res.status(503).json({ success: false, message: "Reload the application before retrying." }); return; }
   if (status === "approved") {
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "EDUCATIONAL_DOCUMENTS_VERIFIED", message: "Educational documents verified", statusAfter: "approved" });
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
-      document: "Degree", ctaArgs: ctaArgs(user), title: "Educational documents verified ✅", message: "Your educational documents are verified.", link: "/tutor/application-status", type: "verification"
+      document: "Degree", ctaArgs: ctaArgs(user), title: "Qualification verified", message: `Qualification ${qualificationIndex + 1} has been verified. Overall educational review: ${profile.degreeVerificationStatus}.`, link: "/tutor/application-status", type: "verification"
     });
   } else if (status === "rejected") {
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "EDUCATIONAL_DOCUMENTS_REJECTED", message: `Educational documents rejected${reason ? `: ${reason}` : ""}`, statusAfter: "rejected" });
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
       document: "Degree", reason: reason || "", ctaArgs: ctaArgs(user), title: "Action required: Educational documents", message: reason || "Please re-upload your documents.", link: "/tutor/application-status", type: "verification"
     });
     await setAccountStatus(user._id.toString(), "submitted");
   } else if (status === "pending") {
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "EDUCATIONAL_DOCUMENTS_PENDING", message: `Educational documents marked as pending for review`, statusAfter: "pending" });
     await NotificationService.publishEvent(user._id.toString(), "verification.pending", { 
       title: "📄 Document Pending", message: "Your educational documents have been reset to pending review.", link: "/tutor/application-status", type: "verification"
     });
   }
-  await logAudit({ action: `degree_${status}`, actor: actor.name, actorId: actor.id, entity: "TutorProfile", targetId: profile._id.toString(), targetName: user.name, metadata: reason ? { reason } : undefined });
   await syncMarketplaceAndHomeTuition(actorFromReq(req), user, profile);
   res.status(200).json({ success: true, profile });
 };
@@ -842,11 +850,17 @@ export const getApplicationHistory = async (req: AuthRequest, res: Response): Pr
 };
 
 export async function syncMarketplaceAndHomeTuition(actor: { name: string; role: "system" | "tutor" | "admin"; id?: string }, user: any, profile: any) {
+  const responseProfile = profile;
+  const current = await loadReviewActivationSnapshot(profile._id.toString());
+  user = current.user;
+  profile = current.profile;
   const now = new Date();
+  const accountNotBlocked = !user.isDeleted && !user.suspendedAt &&
+    !["suspended", "banned", "deleted"].includes(user.moderationStatus);
   // Individual document decisions must be able to complete the application;
   // previously `isMarketplaceEligible()` required an already-approved profile,
   // making automatic completion impossible after the final document approval.
-  const coreDocumentsApproved = profile.onboardingComplete &&
+  const coreDocumentsApproved = accountNotBlocked && profile.onboardingComplete &&
     profile.cnicVerificationStatus === "approved" &&
     profile.degreeVerificationStatus === "approved" &&
     profile.demoVideoStatus === "approved" &&
@@ -874,61 +888,41 @@ export async function syncMarketplaceAndHomeTuition(actor: { name: string; role:
   // agreement at that later point as well, rather than requiring an admin to
   // re-save a document to unblock the tutor.
   if (coreDocumentsApproved && profile.verificationStatus === "approved" && hasApprovedTeachingSubject) {
-    const existingAgreement = await TutorAgreement.findOne({ tutor: user._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } });
-    if (!existingAgreement) {
-      profile.agreementAcceptanceRequired = true;
-      profile.agreementAcceptedAt = undefined as any;
-      profile.agreementVersion = "TTA-2026.1";
-      await profile.save({ validateModifiedOnly: true });
-      await TutorAgreement.create({ tutor: user._id, tutorProfile: profile._id, version: "TTA-2026.1", approvedHourlyRate: profile.hourlyRate, currency: profile.currency || "USD", approvedBy: actor.role === "admin" && actor.id ? actor.id : undefined, approvedAt: now });
+    const issuance = await issueReviewedTutorAgreement(profile._id.toString(), actor);
+    if (!issuance) throw new Error("Agreement issuance could not be completed.");
+    profile = issuance.profile;
+    if (issuance.issued) {
       await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
         document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency,
         ctaArgs: ctaArgs(user), title: "Tutor application approved", message: "Your Tutor Marketplace Agreement and approved rate are ready.", link: "/tutor/application-status", type: "verification",
       });
     }
   }
-  const mpEligible = isMarketplaceEligible(profile);
-  const htEligible = isHomeTuitionEligible(profile);
-  if (mpEligible && !profile.marketplaceEligible) {
-    profile.marketplaceEligible = true;
-    profile.marketplaceEligibleAt = now;
-    profile.lastStatusChangeAt = now;
-    await profile.save({ validateModifiedOnly: true });
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile auto-activated after verification requirements were met" });
-    await setAccountStatus(user._id.toString(), "verified");
+  const visibility = await synchronizeReviewVisibility(profile._id.toString(), actor);
+  if (!visibility) throw new Error("Visibility synchronization could not be completed.");
+  profile = visibility.profile;
+  const mpEligible = visibility.marketplace;
+  const htEligible = visibility.home;
+  if (mpEligible && visibility.marketplaceChanged) {
     await NotificationService.publishEvent(user._id.toString(), "verification.approved", {
       document: "Marketplace", ctaArgs: ctaArgs(user), title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", link: "/tutor/application-status", type: "verification"
     });
-  } else if (!mpEligible && profile.marketplaceEligible) {
-    profile.marketplaceEligible = false;
-    profile.marketplaceEligibleAt = undefined as any;
-    profile.lastStatusChangeAt = now;
-    await profile.save({ validateModifiedOnly: true });
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile auto-deactivated after a verification requirement lapsed" });
-    await setAccountStatus(user._id.toString(), "submitted");
+  } else if (!mpEligible && visibility.marketplaceChanged) {
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
       document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: ctaArgs(user), title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification"
     });
   }
-  if (htEligible && !profile.homeTuitionEligible) {
-    profile.homeTuitionEligible = true;
-    profile.homeTuitionEligibleAt = now;
-    profile.lastStatusChangeAt = now;
-    await profile.save({ validateModifiedOnly: true });
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility auto-activated" });
+  if (htEligible && visibility.homeChanged) {
     await NotificationService.publishEvent(user._id.toString(), "home_tuition.eligibility_granted", {
       ctaArgs: ctaArgs(user), title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", link: "/tutor/application-status", type: "verification"
     });
-  } else if (!htEligible && profile.homeTuitionEligible) {
-    profile.homeTuitionEligible = false;
-    profile.homeTuitionEligibleAt = undefined as any;
-    profile.lastStatusChangeAt = now;
-    await profile.save({ validateModifiedOnly: true });
-    await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility auto-deactivated after a verification requirement lapsed" });
+  } else if (!htEligible && visibility.homeChanged) {
     await NotificationService.publishEvent(user._id.toString(), "verification.rejected", {
       reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: ctaArgs(user), title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", link: "/tutor/application-status", type: "verification"
     });
   }
+  // Keep the caller's response in sync without writing the stale document back.
+  if (typeof responseProfile.set === "function") responseProfile.set(profile.toObject());
 }
 
 // ─── Admin document upload on tutor's behalf ──────────────────────────────────
@@ -939,7 +933,12 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
   const actor = actorFromReq(req);
 
   const documentType = String(req.body.documentType || "").trim();
-  const autoApprove = req.body.autoApprove === true || req.body.autoApprove === "true";
+  const qualificationIndex = documentType === "degree" ? degreeUploadIndex(profile, req.body.qualificationIndex) : 0;
+  if (qualificationIndex === null) {
+    res.status(422).json({ success: false, message: "Choose an existing qualification for this degree upload." });
+    return;
+  }
+  const autoApprove = documentType !== "degree" && (req.body.autoApprove === true || req.body.autoApprove === "true");
   const videoUrl = String(req.body.videoUrl || "").trim();
 
   const validTypes = ["cnicFront", "cnicBack", "degree", "policeCertificate", "videoIntro"];
@@ -1043,18 +1042,8 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
       profile.cnicRejectionReason = "";
       if (autoApprove) profile.cnicReviewedAt = now;
     } else if (documentType === "degree") {
-      const education = Array.isArray(profile.education) ? [...profile.education] : [];
-      if (education.length === 0) {
-        education.push({ degree: "Degree Document", institution: "", year: new Date().getFullYear(), degreeDoc: secureUrl, degreeDocPublicId: publicId });
-      } else {
-        education[0].degreeDoc = secureUrl;
-        education[0].degreeDocPublicId = publicId;
-      }
-      profile.education = education;
+      Object.assign(profile, prepareDegreeReplacement(profile, secureUrl, publicId, qualificationIndex));
       profile.degreeSubmittedAt = now;
-      profile.degreeVerificationStatus = autoApprove ? "approved" : "pending";
-      profile.degreeRejectionReason = "";
-      if (autoApprove) profile.degreeReviewedAt = now;
     } else if (documentType === "policeCertificate") {
       profile.policeCertificate = secureUrl;
       profile.policeCertificatePublicId = publicId;
@@ -1074,6 +1063,7 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
     await profile.save({ validateModifiedOnly: true });
 
     // Uploading with immediate approval is still a review decision. Persist it
+    await flagPendingQualificationBookings(profile);
     // in the same immutable decision stream as actions taken from the queue.
     if (autoApprove) {
       await recordDocumentDecision({
@@ -1157,25 +1147,18 @@ export const reviewSubjectEligibility = async (req: AuthRequest, res: Response):
   }
 
   const actor = actorFromReq(req);
-  let result: { success: boolean; message?: string; flaggedBookings?: number };
-  if (action === "approve") {
-    result = await approveSubjectEligibility(profile, subject, Array.isArray(levels) ? levels : [], { id: actor.id, name: actor.name }, reason || "");
-  } else if (action === "reject") {
-    result = await rejectSubjectEligibility(profile, subject, reason || "", { id: actor.id, name: actor.name });
-  } else {
-    result = await revokeSubjectEligibility(profile, subject, reason || "", { id: actor.id, name: actor.name });
-  }
-
-  if (!result.success) {
-    res.status(422).json({ success: false, message: result.message });
+  let result;
+  try {
+    result = await commitSubjectDecision({ profileId: profile._id.toString(), subject, action: action!,
+      levels: Array.isArray(levels) ? levels : [], reason: typeof reason === "string" ? reason : "",
+      expectedToken: subjectDecisionToken(profile, subject), actor: { id: req.user!._id.toString(), name: actor.name } });
+  } catch (error) {
+    res.status(error instanceof SubjectDecisionError ? error.statusCode : 503).json({ success: false,
+      message: error instanceof SubjectDecisionError ? error.message : "Review could not be committed. Reload before retrying." });
     return;
   }
-
-  await profile.save({ validateModifiedOnly: true });
-  await syncMarketplaceAndHomeTuition(actor, user, profile);
-
-  const eligibilityEvent = action === "approve" ? "SUBJECT_ELIGIBILITY_APPROVED" : action === "reject" ? "SUBJECT_ELIGIBILITY_REJECTED" : "SUBJECT_ELIGIBILITY_REVOKED";
-  await recordStatusEvent({ tutorId: user._id.toString(), tutorProfileId: profile._id.toString(), actor, event: eligibilityEvent, message: `${subject} subject eligibility ${action}${reason ? `: ${reason}` : ""}`, isPublic: true });
+  if (!result) { res.status(503).json({ success: false, message: "Reload before retrying." }); return; }
+  await syncMarketplaceAndHomeTuition(actor, user, result.profile);
 
   const eventCopy: Record<string, { title: string; message: string }> = {
     approve: { title: "Subject approved ✅", message: `You're now approved to teach ${subject}.` },
@@ -1190,11 +1173,37 @@ export const reviewSubjectEligibility = async (req: AuthRequest, res: Response):
     type: "verification",
   });
 
-  res.status(200).json({ success: true, message: copy.title, profile, flaggedBookings: result.flaggedBookings });
+  res.status(200).json({ success: true, message: copy.title, profile: result.profile, flaggedBookings: result.flaggedBookings });
 };
 
 /** Admin-only, short-lived viewing link for one private supporting-evidence
  * file. Evidence URLs are deliberately not returned in list responses. */
+export const reviewSubjectEligibilityEvidence = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const subject = String(req.params.subject || "");
+  const index = Number(req.params.index);
+  const { status, reason } = req.body;
+  if (!["approved", "rejected"].includes(status) || typeof reason !== "string" || !reason.trim()) {
+    res.status(400).json({ success: false, message: "Choose approved or rejected and provide an evidence-specific reason." }); return;
+  }
+  let entry;
+  try {
+    entry = await commitSubjectEvidenceDecision({ profileId: data.profile._id.toString(), subject, index, status, reason,
+      actor: { id: req.user!._id.toString(), name: req.user?.name || "Admin" } });
+  } catch (error) {
+    if (error instanceof EvidenceDecisionError) { res.status(error.statusCode).json({ success: false, message: error.message }); return; }
+    console.error("[SubjectEvidence] Transaction failed", error);
+    res.status(503).json({ success: false, message: "The evidence decision and audit could not be committed. Reload before retrying." }); return;
+  }
+  await NotificationService.publishEvent(data.user._id.toString(), status === "approved" ? "verification.approved" : "verification.rejected", {
+    document: `${subject} supporting evidence`, reason: reason.trim(), ctaArgs: ctaArgs(data.user),
+    title: `Subject evidence ${status}`, message: `${subject} evidence ${index + 1} ${status}: ${reason.trim()}. Subject and teaching-level approval remains a separate decision.`,
+    link: "/tutor/application-status", type: "verification",
+  }).catch((error) => console.error("[SubjectEvidence] Review notification failed", error));
+  res.json({ success: true, subjectEligibility: entry });
+};
+
 export const getSubjectEligibilityEvidenceUrl = async (req: AuthRequest, res: Response): Promise<void> => {
   const data = await loadProfileOr404(req, res);
   if (!data) return;
