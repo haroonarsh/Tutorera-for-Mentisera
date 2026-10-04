@@ -31,7 +31,8 @@ export interface ChecklistItem {
     | "profile"
     | "cnic"
     | "police"
-    | "demoVideo";
+    | "demoVideo"
+    | "subjectEligibility";
   label: string;
   status: "done" | "pending" | "rejected" | "not_required";
   required: boolean;
@@ -325,6 +326,18 @@ export function buildChecklist(profile: ITutorProfile): ChecklistItem[] {
       note: "Online tuition requires standard ID and degree verification. No police character check is required.",
     });
   }
+
+  const subjectEntries = profile.subjectEligibility || [];
+  const approvedSubject = subjectEntries.some((entry) => entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0);
+  const evidenceNeeded = subjectEntries.some((entry) => entry.status === "needs_evidence" || (entry.evidenceRequired && !(entry.evidence || []).length && entry.status !== "approved"));
+  const rejectedSubject = subjectEntries.some((entry) => entry.status === "rejected");
+  items.push({
+    key: "subjectEligibility",
+    label: "Teaching subject approval",
+    status: approvedSubject ? "done" : rejectedSubject ? "rejected" : "pending",
+    required: true,
+    note: approvedSubject ? "At least one subject and teaching level has been approved." : evidenceNeeded ? "Supporting evidence is required before your conditional subject request can be reviewed." : "Your selected teaching subjects are awaiting an administrator’s approval.",
+  });
 
   return items;
 }

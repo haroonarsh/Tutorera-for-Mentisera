@@ -63,6 +63,9 @@ export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Re
     entry.status = "pending";
     await profile.save();
     await logAudit({ action: "subject_eligibility_evidence_uploaded", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: profile._id.toString(), targetName: profile.fullName, metadata: { subject, evidenceCount: entry.evidence.length } });
+    await NotificationService.publishEvent("system_admin", "admin.subject_eligibility_evidence_submitted", {
+      tutorName: profile.fullName, subject, title: "Subject evidence submitted", message: `${profile.fullName} submitted supporting evidence for ${subject}.`, type: "verification", link: "/admin/academic-framework/tutor-approvals",
+    }).catch((error) => console.error("[SubjectEligibility] Admin evidence notification failed", error));
     res.status(201).json({ success: true, message: "Supporting evidence submitted for admin review.", subjectEligibility: entry });
   } catch (error) { console.error("[SubjectEligibility] Evidence upload failed", error); res.status(502).json({ success: false, message: "We couldn't upload your evidence right now. Please try again." }); }
 };
