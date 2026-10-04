@@ -45,6 +45,7 @@ export default function AcademicFrameworkPage() {
           <p className="mt-1 text-sm leading-6">Direct rules allow teaching within a verified discipline. Conditional rules require supporting evidence and an administrator’s decision. The older category and discipline-map screens remain available while their stored records are reconciled.</p>
         </div></div>
       </section>
+      <Link href="/admin/academic-framework/import-export" className="mt-6 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-[#0329B2] shadow-sm hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-blue-200">Manage code-based CSV imports and exports <ArrowRight className="h-4 w-4" aria-hidden /></Link>
     </>}
   </main>;
 }
