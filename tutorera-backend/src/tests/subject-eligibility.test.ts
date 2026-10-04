@@ -10,6 +10,9 @@ import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
+import Subject from "../models/Subject.model";
+import AcademicDiscipline from "../models/AcademicDiscipline.model";
+import TeachingEligibilityRule from "../models/TeachingEligibilityRule.model";
 import {
   checkSubjectEligibility,
   isSubjectLevelApproved,
@@ -20,6 +23,7 @@ import {
   grandfatherExistingSubjects,
   syncApprovedSubjects,
   NOT_ELIGIBLE_MESSAGE,
+  resolveTeachingEligibility,
 } from "../services/subjectEligibility.service";
 
 jest.mock("../utils/logAudit", () => ({ logAudit: jest.fn().mockResolvedValue(undefined) }));
@@ -177,5 +181,30 @@ describe("subjectEligibility.service", () => {
     ];
     syncApprovedSubjects(profile);
     expect(profile.approvedSubjects || []).not.toContain("Biology");
+  });
+
+  it("uses a canonical direct rule as the eligibility source", async () => {
+    const discipline = await AcademicDiscipline.create({ code: "DISC-TEST-CS", name: "Test Computer Science", slug: "test-computer-science" });
+    const subject = await Subject.create({ code: "SUB-TEST-CS", name: "Test Computer Science", slug: "test-computer-science-subject", category: "Computing", level: [] });
+    const rule = await TeachingEligibilityRule.create({ discipline: discipline._id, subject: subject._id, eligibilityType: "direct", evidenceRequired: false });
+    const result = await resolveTeachingEligibility(discipline.name, subject.name);
+    expect(result).toMatchObject({ eligibilityType: "direct", evidenceRequired: false, subjectId: subject._id, ruleId: rule._id });
+  });
+
+  it("marks canonical conditional rules as requiring evidence", async () => {
+    const discipline = await AcademicDiscipline.create({ code: "DISC-TEST-MATH", name: "Test Mathematics", slug: "test-mathematics" });
+    const subject = await Subject.create({ code: "SUB-TEST-PROG", name: "Test Programming", slug: "test-programming", category: "Computing", level: [] });
+    await TeachingEligibilityRule.create({ discipline: discipline._id, subject: subject._id, eligibilityType: "conditional", evidenceRequired: true });
+    const result = await resolveTeachingEligibility(discipline.name, subject.name);
+    expect(result.eligibilityType).toBe("conditional");
+    expect(result.evidenceRequired).toBe(true);
+  });
+
+  it("fails closed when a canonical discipline has no rule for a subject", async () => {
+    const discipline = await AcademicDiscipline.create({ code: "DISC-TEST-DENT", name: "Test Dentistry", slug: "test-dentistry" });
+    const subject = await Subject.create({ code: "SUB-TEST-PAK", name: "Test Pakistan Studies", slug: "test-pakistan-studies", category: "Social Sciences", level: [] });
+    const result = await resolveTeachingEligibility(discipline.name, subject.name);
+    expect(result.eligibilityType).toBe("unmapped");
+    expect(result.evidenceRequired).toBe(true);
   });
 });
