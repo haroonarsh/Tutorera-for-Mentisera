@@ -52,7 +52,9 @@ export const getOnboardingFinancialPreview = async (req: AuthRequest, res: Respo
 export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Response): Promise<void> => {
   const subject = String(req.params.subject || "").trim();
   if (!subject || !req.file) { res.status(400).json({ success: false, message: "A subject and supporting evidence file are required." }); return; }
-  if (!DOCUMENT_TYPES.includes(req.file.mimetype) || !(await verifyFileSignature(req.file.buffer, DOCUMENT_TYPES))) { res.status(400).json({ success: false, message: "Upload a valid PDF, JPEG, or PNG document." }); return; }
+  if (!DOCUMENT_TYPES.includes(req.file.mimetype)) { res.status(400).json({ success: false, message: "Upload a valid PDF, JPEG, or PNG document." }); return; }
+  const signature = await verifyFileSignature(req.file.buffer, DOCUMENT_TYPES);
+  if (!signature.valid) { res.status(400).json({ success: false, message: "Upload a valid PDF, JPEG, or PNG document." }); return; }
   const profile = await TutorProfile.findOne({ user: req.user?._id });
   const entry = profile?.subjectEligibility?.find((item) => item.subject.trim().toLowerCase() === subject.toLowerCase());
   if (!profile || !entry) { res.status(404).json({ success: false, message: "Subject eligibility request not found." }); return; }
