@@ -24,6 +24,8 @@ export default function TutorApplicationStatusPage() {
   const router = useRouter();
   const [payload, setPayload] = useState<AuthenticatedTrackingPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [subjectRequests, setSubjectRequests] = useState<{ subject: string; status: string; evidenceRequired?: boolean; evidence?: { url: string; label?: string }[] }[]>([]);
+  const [evidenceBusy, setEvidenceBusy] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -39,7 +41,11 @@ export default function TutorApplicationStatusPage() {
     (async () => {
       try {
         const res = await api.get("/tracking/application-status");
-        if (!cancelled) setPayload(res.data.payload);
+        const profileRes = await api.get("/tutors/profile/me").catch(() => null);
+        if (!cancelled) {
+          setPayload(res.data.payload);
+          setSubjectRequests(profileRes?.data?.profile?.subjectEligibility || []);
+        }
       } catch (err: any) {
         if (err.response?.status === 404) {
           router.replace("/onboarding/tutor");
@@ -91,6 +97,18 @@ export default function TutorApplicationStatusPage() {
     payload.canonicalStatus === "RE_VERIFICATION_REQUIRED" ||
     payload.canonicalStatus === "SUBJECT_ELIGIBILITY_REQUIRED"
   );
+  const uploadEvidence = async (subject: string, file: File | undefined) => {
+    if (!file) return;
+    setEvidenceBusy(subject);
+    try {
+      const data = new FormData(); data.append("evidence", file); data.append("label", file.name);
+      await api.post(`/tutors/subject-eligibility/${encodeURIComponent(subject)}/evidence`, data);
+      const profileRes = await api.get("/tutors/profile/me");
+      setSubjectRequests(profileRes.data?.profile?.subjectEligibility || []);
+    } catch (uploadError: any) {
+      setError(uploadError?.response?.data?.message || "Unable to upload supporting evidence right now.");
+    } finally { setEvidenceBusy(null); }
+  };
 
   return (
     <div className={s.trackingPage}>
@@ -237,6 +255,22 @@ export default function TutorApplicationStatusPage() {
           <MarketplaceStatusCard eligibility={payload.marketplaceEligibility} />
           <HomeTuitionStatusCard eligibility={payload.homeTuitionEligibility} required={payload.homeTuitionRequired} />
         </div>
+
+        {subjectRequests.some((entry) => entry.status === "needs_evidence" || (entry.evidenceRequired && !(entry.evidence || []).length && entry.status !== "approved")) && (
+          <div className={s.card} style={{ marginBottom: 16 }}>
+            <p className={s.cardTitle} style={{ marginBottom: 6 }}>Subject evidence required</p>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: "#64748b" }}>A conditional teaching subject needs supporting academic or teaching evidence before our team can approve it. Upload a PDF, JPEG, or PNG; uploading does not itself approve the subject.</p>
+            {subjectRequests.filter((entry) => entry.status === "needs_evidence" || (entry.evidenceRequired && !(entry.evidence || []).length && entry.status !== "approved")).map((entry) => (
+              <div key={entry.subject} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", borderTop: "1px solid #e2e8f0", paddingTop: 12, marginTop: 12 }}>
+                <div><strong>{entry.subject}</strong><p style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>Status: {entry.status.replace("_", " ")}</p></div>
+                <label style={{ display: "inline-flex", alignItems: "center", cursor: evidenceBusy === entry.subject ? "wait" : "pointer", padding: "9px 14px", borderRadius: 8, background: "#0329B2", color: "#fff", fontWeight: 700, fontSize: 13, opacity: evidenceBusy === entry.subject ? 0.6 : 1 }}>
+                  {evidenceBusy === entry.subject ? "Uploading…" : "Upload evidence"}
+                  <input type="file" accept="application/pdf,image/jpeg,image/png" disabled={evidenceBusy === entry.subject} style={{ display: "none" }} onChange={(event) => void uploadEvidence(entry.subject, event.target.files?.[0])} />
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className={`${s.grid} ${s.two}`} style={{ marginBottom: 16 }}>
           <div className={s.card}>
