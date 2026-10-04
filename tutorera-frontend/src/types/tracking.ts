@@ -18,7 +18,7 @@ export type ComponentStatus =
   | "rejected";
 
 export interface ChecklistItem {
-  key: "personal" | "education" | "experience" | "profile" | "cnic" | "police" | "demoVideo";
+  key: "personal" | "education" | "experience" | "profile" | "cnic" | "police" | "demoVideo" | "subjectEligibility";
   label: string;
   status: "done" | "pending" | "rejected" | "not_required";
   required: boolean;
