@@ -1,6 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import DisciplineSubjectMap from "../models/DisciplineSubjectMap.model";
+import AcademicDiscipline from "../models/AcademicDiscipline.model";
+import TeachingEligibilityRule from "../models/TeachingEligibilityRule.model";
 import { logAudit } from "../utils/logAudit";
 
 // Admin CRUD for the discipline -> eligible subjects/levels mapping used to
@@ -111,8 +113,40 @@ export const deleteDisciplineSubjectMap = async (req: AuthRequest, res: Response
 // the discipline dropdown and preview which subjects a discipline unlocks.
 export const listActiveDisciplineSubjectMaps = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // The onboarding contract deliberately retains the legacy `maps` shape
+    // while canonical Academic Framework records are present. This lets old
+    // clients receive the governed, direct-only options without exposing a
+    // second unrestricted subject list or requiring a flag-day migration.
+    const disciplines = await AcademicDiscipline.find({ status: "active" }).select("_id name code").sort({ name: 1 }).lean();
+    if (disciplines.length > 0) {
+      const rules = await TeachingEligibilityRule.find({
+        discipline: { $in: disciplines.map((discipline) => discipline._id) },
+        status: "active",
+        eligibilityType: "direct",
+      }).populate("subject", "name status isActive").lean();
+      const subjectsByDiscipline = new Map<string, string[]>();
+      for (const rule of rules) {
+        const subject = rule.subject as unknown as { name?: string; status?: string; isActive?: boolean };
+        if (!subject?.name || subject.status !== "active" || !subject.isActive) continue;
+        const key = rule.discipline.toString();
+        subjectsByDiscipline.set(key, [...(subjectsByDiscipline.get(key) || []), subject.name]);
+      }
+      res.json({
+        success: true,
+        source: "academic_framework",
+        maps: disciplines.map((discipline) => ({
+          discipline: discipline.name,
+          disciplineCode: discipline.code,
+          eligibleSubjects: subjectsByDiscipline.get(discipline._id.toString()) || [],
+          // Conditional subjects intentionally stay out of the standard
+          // onboarding selector. They require the separate evidence flow.
+          eligibleLevels: [],
+        })),
+      });
+      return;
+    }
     const maps = await DisciplineSubjectMap.find({ isActive: true }).sort({ discipline: 1 }).select("discipline eligibleSubjects eligibleLevels").lean();
-    res.json({ success: true, maps });
+    res.json({ success: true, source: "legacy_map", maps });
   } catch (error) {
     console.error("Error listing active discipline-subject maps:", error);
     res.status(500).json({ success: false, message: "Failed to list discipline-subject maps" });
