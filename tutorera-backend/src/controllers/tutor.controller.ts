@@ -845,7 +845,7 @@ export const saveOnboardingStep = async (
       await TutorAvailability.findOneAndUpdate(
         { tutor: req.user?._id },
         { tutor: req.user?._id, weeklySlots },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
       );
     }
   }
@@ -1026,7 +1026,7 @@ export const saveOnboardingStep = async (
   const updated = await TutorProfile.findOneAndUpdate(
     { user: req.user?._id },
     updateData,
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!updated) {
     res.status(404).json({ success: false, message: "Tutor profile no longer exists. Please refresh and try again." });

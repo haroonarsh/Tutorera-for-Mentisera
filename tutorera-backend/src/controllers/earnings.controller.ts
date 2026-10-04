@@ -280,7 +280,7 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
       payoutNote: "Payout requested by tutor",
       payoutRequestedAt: requestedAt,
     },
-  }, { new: true });
+  }, { returnDocument: "after" });
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Eligible booking not found for payout request." });

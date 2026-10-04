@@ -30,7 +30,7 @@ async function run() {
     let country = countries.get(countryCode);
     if (!country && apply) {
       const seed = LAUNCH_MARKETS[countryCode as keyof typeof LAUNCH_MARKETS];
-      country = await Country.findOneAndUpdate({ iso2: countryCode }, { $setOnInsert: { iso2: countryCode, name: seed.countryName, iso3: seed.iso3, dialCode: seed.dialCode, currencyCode: seed.currency, currencySymbol: seed.currencySymbol, timezones: seed.timezones, languages: ["en"], enabled: true } }, { upsert: true, new: true });
+      country = await Country.findOneAndUpdate({ iso2: countryCode }, { $setOnInsert: { iso2: countryCode, name: seed.countryName, iso3: seed.iso3, dialCode: seed.dialCode, currencyCode: seed.currency, currencySymbol: seed.currencySymbol, timezones: seed.timezones, languages: ["en"], enabled: true } }, { upsert: true, returnDocument: "after" });
       if (country) countries.set(countryCode, country);
     }
     if (!country) continue;

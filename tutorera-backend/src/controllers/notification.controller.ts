@@ -109,7 +109,7 @@ export const updateNotificationPreferences = async (
   const updatedUser = await User.findByIdAndUpdate(
     req.user?._id,
     { $set: { notificationPreferences: preferences } },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   ).select("notificationPreferences");
 
   res.status(200).json({

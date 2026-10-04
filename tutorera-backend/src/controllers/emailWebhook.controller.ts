@@ -87,7 +87,7 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
         webhookEventIds: { $ne: eventId },
       },
       update,
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!log) {
@@ -98,7 +98,7 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
           webhookEventIds: { $ne: eventId },
         },
         update,
-        { new: true, sort: { createdAt: -1 } }
+        { returnDocument: "after", sort: { createdAt: -1 } }
       );
 
       res.status(200).json({

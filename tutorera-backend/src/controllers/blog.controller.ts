@@ -140,7 +140,7 @@ export const updateBlog = async (req: AuthRequest, res: Response): Promise<void>
   const blog = await Blog.findByIdAndUpdate(
     req.params.id,
     { $set: changes },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
 
   if (!blog) {

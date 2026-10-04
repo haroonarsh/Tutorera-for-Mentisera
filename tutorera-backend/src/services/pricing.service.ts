@@ -174,7 +174,7 @@ export async function seedTaxConfigs(): Promise<void> {
     await TaxConfig.findOneAndUpdate(
       { countryCode: cfg.countryCode },
       { $setOnInsert: { ...cfg, isActive: true } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
   }
 

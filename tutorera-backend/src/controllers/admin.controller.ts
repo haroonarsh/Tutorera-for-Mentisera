@@ -590,7 +590,7 @@ export const uploadTutorDocsAdmin = async (
   updateData.homeTuitionEligibleAt = null;
   updateData.lastStatusChangeAt = new Date();
 
-  const updated = await TutorProfile.findByIdAndUpdate(existingProfile._id, updateData, { new: true });
+  const updated = await TutorProfile.findByIdAndUpdate(existingProfile._id, updateData, { returnDocument: "after" });
   if (!updated) throw new Error("Tutor profile no longer exists.");
   await flagPendingQualificationBookings(updated);
 
@@ -925,7 +925,7 @@ export const updateContactStatus = async (req: AuthRequest, res: Response): Prom
   const contact = await Contact.findByIdAndUpdate(
     req.params.id,
     { status, isRead: true },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!contact) {
     res.status(404).json({ success: false, message: "Contact not found" });
@@ -1284,7 +1284,7 @@ export const retryEmailLog = async (req: AuthRequest, res: Response): Promise<vo
   const log = await EmailLog.findById(req.params.id).lean();
   if (!log) { res.status(404).json({ success: false, message: "Email log not found." }); return; }
   if (!["failed", "queued"].includes(log.status)) { res.status(409).json({ success: false, message: "Only failed or queued deliveries can be retried." }); return; }
-  const job = await EmailOutbox.findOneAndUpdate({ emailLog: log._id, status: { $ne: "sent" } }, { $set: { status: "queued", attempts: 0, nextAttemptAt: new Date(), lastError: "" } }, { new: true });
+  const job = await EmailOutbox.findOneAndUpdate({ emailLog: log._id, status: { $ne: "sent" } }, { $set: { status: "queued", attempts: 0, nextAttemptAt: new Date(), lastError: "" } }, { returnDocument: "after" });
   if (!job) { res.status(409).json({ success: false, message: "The retained delivery payload has expired or was already sent." }); return; }
   await logAudit({ action: "email_delivery_retried", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "EmailLog", targetId: log._id.toString(), targetName: log.recipientEmail, metadata: { eventType: log.eventType } });
   try { await deliverOutboxEmail(job._id.toString()); }

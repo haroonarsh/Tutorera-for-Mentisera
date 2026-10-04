@@ -108,7 +108,7 @@ export async function reconcileSwichCheckout(basketId: string, io?: SocketIOServ
   const updated = await Booking.findOneAndUpdate(
     { _id: booking._id, paymentStatus: { $ne: "confirmed" } },
     { $set: { paymentStatus: "confirmed", paymentNote: "Confirmed via Switch payment-session reconciliation" } },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (updated) {
     const promo = await getAppliedPromoForBasket(basketId);

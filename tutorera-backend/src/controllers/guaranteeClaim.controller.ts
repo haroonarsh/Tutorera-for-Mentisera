@@ -158,7 +158,7 @@ export const updateClaimStatus = async (req: AuthRequest, res: Response): Promis
   const claim = await GuaranteeClaim.findByIdAndUpdate(
     req.params.id,
     { status, adminNote, resolvedAt: new Date() },
-    { new: true }
+    { returnDocument: "after" }
   ).populate("student", "name email");
 
   if (!claim) {

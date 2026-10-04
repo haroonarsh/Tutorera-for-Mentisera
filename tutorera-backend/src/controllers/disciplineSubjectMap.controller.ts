@@ -65,7 +65,7 @@ export const updateDisciplineSubjectMap = async (req: AuthRequest, res: Response
     const map = await DisciplineSubjectMap.findByIdAndUpdate(
       req.params.id,
       { eligibleSubjects, eligibleLevels, isActive, notes, updatedBy: req.user?._id },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
     if (!map) {
       res.status(404).json({ success: false, message: "Discipline-subject map not found" });

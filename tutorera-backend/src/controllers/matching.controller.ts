@@ -131,7 +131,7 @@ export const submitMatchFeedback = async (req: AuthRequest, res: Response): Prom
           feedbackTags: Array.isArray(feedbackTags) ? feedbackTags : [],
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     await logAudit({

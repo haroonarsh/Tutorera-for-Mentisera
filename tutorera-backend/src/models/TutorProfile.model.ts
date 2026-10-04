@@ -230,11 +230,11 @@ export interface ITutorProfile extends Document {
 
   // Eligibility & lifecycle
   marketplaceEligible: boolean;
-  marketplaceEligibleAt: Date;
+  marketplaceEligibleAt?: Date;
   homeTuitionEligible: boolean;
-  homeTuitionEligibleAt: Date;
+  homeTuitionEligibleAt?: Date;
   homeTuitionRequired: boolean;
-  suspendedAt: Date;
+  suspendedAt?: Date;
   suspendedReason: string;
   reVerificationRequired: boolean;
   reVerificationReason: string;

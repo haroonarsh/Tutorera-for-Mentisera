@@ -211,7 +211,7 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
       const profile = await ParentProfile.findOneAndUpdate(
         { user: req.user?._id, "children.studentUser": { $ne: linkRequest.student } },
         { $push: { children: { studentUser: linkRequest.student, name: linkRequest.name, level: linkRequest.level, subjects: linkRequest.subjects, relationship: linkRequest.relationship } } },
-        { new: true, upsert: true, session }
+        { returnDocument: "after", upsert: true, session }
       );
       if (!profile) throw Object.assign(new Error("This student account is already linked."), { statusCode: 409 });
       linkRequest.status = "confirmed";
@@ -273,7 +273,7 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
   const child = await User.findByIdAndUpdate(
     childEntry?.studentUser,
     { $set: { parentConsentVerified: false, parentGuardianEmail: "", parentGuardianName: "" } },
-    { new: true }
+    { returnDocument: "after" }
   );
   await User.findByIdAndUpdate(req.user._id, { $pull: { children: child?._id } });
   await logAudit({
@@ -304,7 +304,7 @@ export const cancelChildLinkRequest = async (req: AuthRequest, res: Response): P
   const linkRequest = await ParentLinkRequest.findOneAndUpdate(
     { _id: req.params.requestId, parent: req.user._id, status: "pending" },
     { $set: { status: "cancelled" } },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!linkRequest) {
     res.status(404).json({ success: false, message: "No pending consent request was found." });
@@ -337,7 +337,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { new: true, session });
+      const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { returnDocument: "after", session });
       if (!reserved) throw Object.assign(new Error("This approval was already processed."), { statusCode: 409 });
       await Bid.updateOne({ _id: bid._id }, { status: "payment_pending", paymentPendingExpiresAt: expiry }, { session });
     });
@@ -400,7 +400,7 @@ export const updateParentSettings = async (req: AuthRequest, res: Response): Pro
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
     },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   res.status(200).json({ success: true, profile });
@@ -466,7 +466,7 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
         ...locationReferences,
       },
     },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   await advanceAccountStatus(req.user._id.toString(), "profile_complete");

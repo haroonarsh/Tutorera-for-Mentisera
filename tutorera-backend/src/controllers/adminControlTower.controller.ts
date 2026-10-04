@@ -704,7 +704,7 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   // implemented Swich checkout adapter; every other market remains discovery
   // only until its compliant provider is implemented and configured.
   if (current.countryCode !== "PK") Object.assign(changes, { paymentsEnabled: false, payoutsEnabled: false, paymentProvider: "none", "featureFlags.acceptance": false });
-  const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { new: true, runValidators: true });
+  const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { returnDocument: "after", runValidators: true });
   if (updated) {
     // upsert:true - previously a plain updateOne, which silently no-oped if
     // no Country document existed yet for this code (e.g. not seeded by the

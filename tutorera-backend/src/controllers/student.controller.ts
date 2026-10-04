@@ -63,7 +63,7 @@ export const saveStudentOnboarding = async (
       location: (typeof req.body.lat === "number" && typeof req.body.lng === "number") ? { type: "Point", coordinates: [req.body.lng, req.body.lat] } : undefined,
       onboardingComplete: true,
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   );
 
   await advanceAccountStatus(req.user!._id.toString(), "profile_complete");

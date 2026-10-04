@@ -13,7 +13,7 @@ export async function enqueueEmail(input: OutboxEmail) {
 
 export async function deliverOutboxEmail(id: string): Promise<void> {
   const now = new Date();
-  const job = await EmailOutbox.findOneAndUpdate({ _id: id, status: "queued", nextAttemptAt: { $lte: now } }, { $set: { status: "processing" }, $inc: { attempts: 1 } }, { new: true });
+  const job = await EmailOutbox.findOneAndUpdate({ _id: id, status: "queued", nextAttemptAt: { $lte: now } }, { $set: { status: "processing" }, $inc: { attempts: 1 } }, { returnDocument: "after" });
   if (!job) return;
   try {
     const result = await new Resend(process.env.RESEND_API_KEY).emails.send({ from: "TUTORERA® <noreply@tutorera.ac.pk>", to: job.recipientEmail, subject: job.subject, html: renderBrandedEmail({ subject: job.subject, html: job.html, preheader: job.preheader, category: job.category || job.eventType }) });

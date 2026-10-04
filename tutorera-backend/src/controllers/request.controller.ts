@@ -242,7 +242,7 @@ export const saveRequestDraftProgress = async (req: AuthRequest, res: Response):
   const journey = await AbandonedJourney.findOneAndUpdate(
     { user: req.user?._id, type, completedAt: { $exists: false } },
     { $set: { data }, $setOnInsert: { user: req.user?._id, type, remindersSent: [] } },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   res.status(200).json({ success: true, tracked: true, journeyId: journey._id });
@@ -429,7 +429,7 @@ export const inviteTutorToRequest = async (req: AuthRequest, res: Response): Pro
   const updated = await Request.findOneAndUpdate(
     { _id: request._id, student: req.user?._id, invitedTutors: { $ne: new Types.ObjectId(tutorId) } },
     { $addToSet: { invitedTutors: new Types.ObjectId(tutorId) } },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!updated) { res.status(409).json({ success: false, message: "This tutor has already been invited." }); return; }
   await sendNotification(req.app.get("io"), tutorId, { title: "Invitation to a tuition requirement", message: `A student invited you to submit an offer for ${updated.subject}.`, type: "bid", link: "/browse-requests" });
@@ -788,7 +788,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   if (isOwner && !isDirectTutorAccept) {
     const approvalProfile = await ParentProfile.findOne({ "children.studentUser": request.student, approvalRequiredForBookings: true }).select("user").lean();
     if (approvalProfile) {
-      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) }, { new: true });
+      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) }, { returnDocument: "after" });
       if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
       await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
       await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString() } });
@@ -809,7 +809,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       const reserved = await Request.findOneAndUpdate(
         { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
         { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
       await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor booking before payment can begin.`, type: "booking", link: "/dashboard" });
@@ -826,7 +826,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       const reservedRequest = await Request.findOneAndUpdate(
         { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
         { status: "awaiting_payment" },
-        { new: true, session }
+        { returnDocument: "after", session }
       );
 
       if (!reservedRequest) {
@@ -837,7 +837,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       await Bid.findOneAndUpdate(
         { _id: bid._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } },
         { status: "payment_pending", paymentPendingExpiresAt },
-        { new: true, session }
+        { returnDocument: "after", session }
       );
     });
   } catch (txError: any) {
@@ -951,7 +951,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
       const bid = await Bid.findOneAndUpdate(
         { _id: new Types.ObjectId(bidId), status: "payment_pending" },
         { status: "accepted" },
-        { new: true, session }
+        { returnDocument: "after", session }
       );
 
       if (!bid) {

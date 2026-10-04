@@ -12,7 +12,7 @@ export const saveAvailability = async (req: AuthRequest, res: Response): Promise
   const availability = await TutorAvailability.findOneAndUpdate(
     { tutor: req.user?._id },
     { tutor: req.user?._id, weeklySlots, blockedDates: blockedDates || [] },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   );
 
   res.status(200).json({ success: true, availability });

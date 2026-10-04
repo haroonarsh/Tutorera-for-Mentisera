@@ -48,7 +48,7 @@ router.put("/:id", async (req: Request, res: Response) => {
   try {
     const { _id, __v, createdAt, updatedAt, ...update } = req.body;
     update.updatedBy = (req as any).user?._id;
-    const config = await TaxConfig.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
+    const config = await TaxConfig.findByIdAndUpdate(req.params.id, update, { returnDocument: "after", runValidators: true });
     if (!config) {
       res.status(404).json({ success: false, message: "Tax config not found." });
       return;

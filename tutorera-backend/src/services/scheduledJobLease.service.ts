@@ -60,7 +60,7 @@ export async function runWithJobLease<T>(
         $set: { holderId: PROCESS_HOLDER_ID, leaseExpiresAt, lastStartedAt: now, lastError: "" },
         $setOnInsert: { name },
       },
-      { new: true, upsert: true },
+      { returnDocument: "after", upsert: true },
     );
   } catch (error: any) {
     // A concurrent first upsert may lose the unique-index race. That is the

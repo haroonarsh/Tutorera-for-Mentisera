@@ -209,7 +209,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         const reserved = await Request.findOneAndUpdate(
           { _id: request._id, status: { $in: [...ACTIVE_REQUEST_STATES] } },
           { status: "awaiting_parent_approval", acceptedOffer: offer._id, finalAgreedRate: offer.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) },
-          { new: true }
+          { returnDocument: "after" }
         );
         if (!reserved) { res.status(409).json({ success: false, message: "This request has already been matched with another tutor." }); return; }
         await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });

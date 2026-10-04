@@ -1,7 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import User from "../models/User.model";
-import TutorProfile from "../models/TutorProfile.model";
+import { IUser } from "../types";
+import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
 import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import TutorApplicationStatusHistory from "../models/TutorApplicationStatusHistory.model";
@@ -25,6 +26,7 @@ import {
   policeIsRequired,
   computeCanonicalStatus,
 } from "../services/tracking.service";
+import { StatusEvent } from "../models/TutorApplicationStatusHistory.model";
 import { setAccountStatus } from "../services/accountLifecycle.service";
 import {
   applicationSubmittedEmail,
@@ -185,7 +187,7 @@ async function ensureAdmin(req: AuthRequest, res: Response): Promise<boolean> {
   return true;
 }
 
-async function loadProfileOr404(req: AuthRequest, res: Response): Promise<{ user: any; profile: any } | null> {
+async function loadProfileOr404(req: AuthRequest, res: Response): Promise<{ user: IUser; profile: ITutorProfile } | null> {
   if (!(await ensureAdmin(req, res))) return null;
   const profile = await TutorProfile.findById(req.params.id);
   if (!profile) {
@@ -290,7 +292,7 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
   const allProfiles = await TutorProfile.find({ user: { $in: userIds } }).lean();
   const summary: Record<string, number> = {};
   for (const p of allProfiles) {
-    const st = computeCanonicalStatus(p as any);
+    const st = computeCanonicalStatus(p);
     summary[st] = (summary[st] || 0) + 1;
   }
 
@@ -304,7 +306,7 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
   ]);
 
   const rows = profiles.map(p => {
-    const user = p.user as any;
+    const user = p.user as unknown as IUser;
     return {
       _id: p._id,
       applicationId: user?.applicationId,
@@ -313,44 +315,44 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
       tutorUserId: user?._id,
       profile: {
         _id: p._id,
-        cnicFront: (p as any).cnicFront,
-        cnicBack: (p as any).cnicBack,
-        videoIntro: (p as any).videoIntro,
-        policeCertificate: (p as any).policeCertificate,
+        cnicFront: p.cnicFront,
+        cnicBack: p.cnicBack,
+        videoIntro: p.videoIntro,
+        policeCertificate: p.policeCertificate,
         teachingMode: p.teachingMode,
       },
       verificationComponents: {
         cnic: {
-          status: ((p as any).cnicVerificationStatus as string) || "not_submitted",
-          rejectionReason: (p as any).cnicRejectionReason || null,
-          submittedAt: (p as any).cnicSubmittedAt?.toISOString() || null,
-          reviewedAt: (p as any).cnicReviewedAt?.toISOString() || null,
+          status: p.cnicVerificationStatus || "not_submitted",
+          rejectionReason: p.cnicRejectionReason || null,
+          submittedAt: p.cnicSubmittedAt?.toISOString() || null,
+          reviewedAt: p.cnicReviewedAt?.toISOString() || null,
         },
         degree: {
-          status: ((p as any).degreeVerificationStatus as string) || "not_submitted",
-          rejectionReason: (p as any).degreeRejectionReason || null,
-          submittedAt: (p as any).degreeSubmittedAt?.toISOString() || null,
-          reviewedAt: (p as any).degreeReviewedAt?.toISOString() || null,
+          status: p.degreeVerificationStatus || "not_submitted",
+          rejectionReason: p.degreeRejectionReason || null,
+          submittedAt: p.degreeSubmittedAt?.toISOString() || null,
+          reviewedAt: p.degreeReviewedAt?.toISOString() || null,
         },
         demoVideo: {
-          status: ((p as any).demoVideoStatus as string) || "not_submitted",
-          rejectionReason: (p as any).demoVideoRejectionReason || null,
-          submittedAt: (p as any).demoVideoSubmittedAt?.toISOString() || null,
-          reviewedAt: (p as any).demoVideoReviewedAt?.toISOString() || null,
+          status: p.demoVideoStatus || "not_submitted",
+          rejectionReason: p.demoVideoRejectionReason || null,
+          submittedAt: p.demoVideoSubmittedAt?.toISOString() || null,
+          reviewedAt: p.demoVideoReviewedAt?.toISOString() || null,
         },
         police: {
-          status: ((p as any).policeVerificationStatus as string) || "not_required",
-          rejectionReason: (p as any).policeRejectionReason || null,
-          submittedAt: (p as any).policeSubmittedAt?.toISOString() || null,
-          reviewedAt: (p as any).policeReviewedAt?.toISOString() || null,
+          status: p.policeVerificationStatus || "not_required",
+          rejectionReason: p.policeRejectionReason || null,
+          submittedAt: p.policeSubmittedAt?.toISOString() || null,
+          reviewedAt: p.policeReviewedAt?.toISOString() || null,
         },
       },
-      canonicalStatus: computeCanonicalStatus(p as any),
+      canonicalStatus: computeCanonicalStatus(p),
       submittedAt: p.createdAt,
       lastUpdated: p.updatedAt,
       progress: computeSimpleProgress(p),
-      marketplaceEligible: isMarketplaceEligible(p as any),
-      homeTuitionEligible: isHomeTuitionEligible(p as any),
+      marketplaceEligible: isMarketplaceEligible(p),
+      homeTuitionEligible: isHomeTuitionEligible(p),
       teachingMode: p.teachingMode,
     };
   });
@@ -365,7 +367,7 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
   });
 };
 
-function computeSimpleProgress(profile: any): number {
+function computeSimpleProgress(profile: ITutorProfile): number {
   // Once a profile has cleared marketplace approval, every document below
   // has necessarily already passed review - report 100% rather than
   // letting raw field-presence checks keep the admin list showing a
@@ -407,11 +409,11 @@ export const getApplicationDetail = async (req: AuthRequest, res: Response): Pro
         actor: h.actor,
         actorRole: h.actorRole,
       })),
-      reviewHistory: reviewHistory.map((review: any) => ({
+      reviewHistory: reviewHistory.map((review) => ({
         id: review._id.toString(), component: review.component, decision: review.decision,
         previousStatus: review.previousStatus || null, newStatus: review.newStatus,
         rejectionReason: review.rejectionReason || null, internalNotes: review.internalNotes || null,
-        reviewedAt: review.createdAt, reviewedBy: review.admin?.name || "System",
+        reviewedAt: review.createdAt, reviewedBy: (review.admin as unknown as { name?: string })?.name || "System",
       })),
     },
   });
@@ -720,7 +722,7 @@ export const setMarketplaceEligibility = async (req: AuthRequest, res: Response)
   if (eligible) {
     profile.marketplaceEligibleAt = profile.marketplaceEligibleAt || new Date();
   } else {
-    profile.marketplaceEligibleAt = undefined as any;
+    profile.marketplaceEligibleAt = undefined;
   }
   profile.lastStatusChangeAt = new Date();
   await profile.save({ validateModifiedOnly: true });
@@ -756,7 +758,7 @@ export const setHomeTuitionEligibility = async (req: AuthRequest, res: Response)
   if (eligible) {
     profile.homeTuitionEligibleAt = profile.homeTuitionEligibleAt || new Date();
   } else {
-    profile.homeTuitionEligibleAt = undefined as any;
+    profile.homeTuitionEligibleAt = undefined;
   }
   profile.lastStatusChangeAt = new Date();
   await profile.save({ validateModifiedOnly: true });
@@ -794,7 +796,7 @@ export const setSuspended = async (req: AuthRequest, res: Response): Promise<voi
     profile.marketplaceEligible = false;
     profile.homeTuitionEligible = false;
   } else {
-    profile.suspendedAt = undefined as any;
+    profile.suspendedAt = undefined;
     profile.suspendedReason = "";
   }
   profile.lastStatusChangeAt = new Date();
@@ -849,14 +851,14 @@ export const getApplicationHistory = async (req: AuthRequest, res: Response): Pr
   res.status(200).json({ success: true, history });
 };
 
-export async function syncMarketplaceAndHomeTuition(actor: { name: string; role: "system" | "tutor" | "admin"; id?: string }, user: any, profile: any) {
+export async function syncMarketplaceAndHomeTuition(actor: { name: string; role: "system" | "tutor" | "admin"; id?: string }, user: IUser, profile: ITutorProfile) {
   const responseProfile = profile;
   const current = await loadReviewActivationSnapshot(profile._id.toString());
   user = current.user;
   profile = current.profile;
   const now = new Date();
   const accountNotBlocked = !user.isDeleted && !user.suspendedAt &&
-    !["suspended", "banned", "deleted"].includes(user.moderationStatus);
+    !["suspended", "banned", "deleted"].includes(user.moderationStatus ?? "");
   // Individual document decisions must be able to complete the application;
   // previously `isMarketplaceEligible()` required an already-approved profile,
   // making automatic completion impossible after the final document approval.
@@ -865,7 +867,7 @@ export async function syncMarketplaceAndHomeTuition(actor: { name: string; role:
     profile.degreeVerificationStatus === "approved" &&
     profile.demoVideoStatus === "approved" &&
     !profile.suspendedAt && !profile.reVerificationRequired;
-  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: any) =>
+  const hasApprovedTeachingSubject = Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry) =>
     entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
   );
   if (coreDocumentsApproved && profile.verificationStatus !== "approved") {
@@ -1077,7 +1079,7 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
     }
     await syncReviewQueueComponent(profile._id.toString(), componentForDocument, autoApprove ? "approved" : "pending");
 
-    const eventName: any =
+    const eventName: StatusEvent =
       documentType === "cnicFront" || documentType === "cnicBack"
         ? (autoApprove ? "CNIC_VERIFIED" : "CNIC_SUBMITTED")
         : documentType === "degree"
@@ -1119,9 +1121,10 @@ export const uploadApplicationDocumentOnBehalf = async (req: AuthRequest, res: R
       profile,
       document: { type: documentType, url: secureUrl },
     });
-  } catch (err: any) {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to upload document.";
     console.error("[Tracking] uploadApplicationDocumentOnBehalf error:", err);
-    res.status(500).json({ success: false, message: err.message || "Failed to upload document." });
+    res.status(500).json({ success: false, message });
   }
 };
 
@@ -1209,7 +1212,7 @@ export const getSubjectEligibilityEvidenceUrl = async (req: AuthRequest, res: Re
   if (!data) return;
   const subject = String(req.params.subject || "").trim().toLowerCase();
   const index = Number(req.params.index);
-  const entry = data.profile.subjectEligibility?.find((item: any) => item.subject.trim().toLowerCase() === subject);
+  const entry = data.profile.subjectEligibility?.find((item) => item.subject.trim().toLowerCase() === subject);
   const evidence = Number.isInteger(index) && index >= 0 ? entry?.evidence?.[index] : undefined;
   if (!evidence?.publicId) { res.status(404).json({ success: false, message: "Supporting evidence is not available." }); return; }
   await logAudit({ action: "subject_eligibility_evidence_viewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: data.profile._id.toString(), targetName: data.profile.fullName, metadata: { subject, index } });

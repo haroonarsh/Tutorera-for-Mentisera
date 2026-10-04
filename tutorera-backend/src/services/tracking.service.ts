@@ -123,7 +123,7 @@ export async function allocateApplicationId(): Promise<string> {
   const updated = await ApplicationCounter.findOneAndUpdate(
     { year },
     { $inc: { seq: 1 } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
   const seq = (updated?.seq ?? 0).toString().padStart(6, "0");
   return `TUT-${year}-${seq}`;

@@ -242,7 +242,7 @@ export const uploadVerificationDocs = async (
   const updated = await TutorProfile.findOneAndUpdate(
     { user: req.user?._id },
     updateData,
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!updated) {

@@ -173,6 +173,6 @@ export async function recordPaymentLedger(args: {
   return PaymentLedger.findOneAndUpdate(
     filter,
     { $setOnInsert: doc },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   );
 }

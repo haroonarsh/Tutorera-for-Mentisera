@@ -107,7 +107,7 @@ export const updateEmailTemplate = async (req: AuthRequest, res: Response): Prom
         variables,
         updatedBy: req.user?._id,
       },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!template) {

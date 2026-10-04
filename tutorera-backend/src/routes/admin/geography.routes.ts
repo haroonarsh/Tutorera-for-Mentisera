@@ -24,7 +24,7 @@ router.get("/", requirePermission("market.read"), async (req: AuthRequest, res: 
 router.patch("/countries/:id", requirePermission("market.configure"), async (req: AuthRequest, res: Response) => {
   const allowed = ["enabled", "defaultLanguage", "supportedLanguages", "rtlSupported", "curricula"];
   const changes = Object.fromEntries(allowed.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
-  const country = await Country.findOneAndUpdate({ _id: req.params.id, ...(req.countryScopeCode ? { iso2: req.countryScopeCode } : {}) }, { $set: changes }, { new: true, runValidators: true });
+  const country = await Country.findOneAndUpdate({ _id: req.params.id, ...(req.countryScopeCode ? { iso2: req.countryScopeCode } : {}) }, { $set: changes }, { returnDocument: "after", runValidators: true });
   if (!country) { res.status(404).json({ success: false, message: "Country not found." }); return; }
   // Enabling a GeoNames country creates a discovery-only market, never a
   // payment-enabled one. Administrators can configure it in Market Rules;
@@ -45,7 +45,7 @@ router.patch("/countries/:id", requirePermission("market.configure"), async (req
           },
           $set: { isActive: true },
         },
-        { upsert: true, new: true, runValidators: true },
+        { upsert: true, returnDocument: "after", runValidators: true },
       );
       await Country.updateOne({ _id: country._id }, { $set: { launchStatus: "beta" } });
     } else {

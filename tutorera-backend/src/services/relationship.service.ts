@@ -52,6 +52,6 @@ export async function syncStudentTutorRelationship(
         ...(booking.status === "completed" ? { lastSessionAt: timestamped.updatedAt || new Date() } : {}),
       },
     },
-    { new: true, upsert: true, session }
+    { returnDocument: "after", upsert: true, session }
   );
 }

@@ -428,7 +428,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     { $set: updates },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
 
   if (!user) {
@@ -753,7 +753,7 @@ export const updateConsent = async (req: AuthRequest, res: Response): Promise<vo
       };
     }
 
-    const user = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true });
+    const user = await User.findByIdAndUpdate(userId, { $set: updates }, { returnDocument: "after" });
 
     res.status(200).json({
       success: true,

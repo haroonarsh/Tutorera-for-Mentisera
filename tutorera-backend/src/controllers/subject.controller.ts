@@ -104,7 +104,7 @@ export const updateSubject = async (req: AuthRequest, res: Response): Promise<vo
         metadata,
         updatedBy: req.user?._id,
       },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!subject) {
@@ -139,7 +139,7 @@ export const deleteSubject = async (req: AuthRequest, res: Response): Promise<vo
       status: "archived",
       archivedAt: new Date(),
       updatedBy: req.user?._id,
-    }, { new: true, runValidators: true });
+    }, { returnDocument: "after", runValidators: true });
     if (!subject) {
       res.status(404).json({ success: false, message: "Subject not found" });
       return;

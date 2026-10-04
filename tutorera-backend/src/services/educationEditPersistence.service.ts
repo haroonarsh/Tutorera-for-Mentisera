@@ -19,7 +19,7 @@ export async function persistTutorEducationEdit(input: {
   try {
     return await session.withTransaction(async () => {
       const profile = await TutorProfile.findByIdAndUpdate(input.profileId, input.update,
-        { new: true, runValidators: true, session });
+        { returnDocument: "after", runValidators: true, session });
       if (!profile) return null;
       const resetSubjects = [...new Set(input.resetSubjects.filter(Boolean))];
       if (resetSubjects.length) {
