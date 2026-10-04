@@ -68,11 +68,31 @@ describe("subjectEligibility.service", () => {
   it("approveSubjectEligibility with levels grants eligibility and syncs approvedSubjects", async () => {
     const { profile } = await makeTutor();
     await requestSubjectEligibility(profile, "Computer Science");
-    const result = await approveSubjectEligibility(profile, "Computer Science", ["O-Level", "A-Level"], { name: "Admin" });
+    const result = await approveSubjectEligibility(profile, "Computer Science", ["O-Level", "A-Level"], { name: "Admin" }, "Verified computer-science credential reviewed.");
     expect(result.success).toBe(true);
     expect(isSubjectLevelApproved(profile, "Computer Science", "O-Level")).toBe(true);
     expect(isSubjectLevelApproved(profile, "Computer Science", "University")).toBe(false);
     expect(profile.approvedSubjects).toContain("Computer Science");
+  });
+
+  it("does not allow an off-discipline subject to be approved without documented evidence", async () => {
+    const { profile } = await makeTutor();
+    await requestSubjectEligibility(profile, "Pakistan Studies", { discipline: "Dentistry" });
+    expect(profile.subjectEligibility?.[0].matchesDiscipline).toBe(false);
+
+    const withoutRationale = await approveSubjectEligibility(profile, "Pakistan Studies", ["Matric"], { name: "Admin" });
+    expect(withoutRationale.success).toBe(false);
+    expect(checkSubjectEligibility(profile, "Pakistan Studies", "Matric").eligible).toBe(false);
+
+    const withEvidence = await approveSubjectEligibility(
+      profile,
+      "Pakistan Studies",
+      ["Matric"],
+      { name: "Admin" },
+      "Verified teaching certificate and subject-specific assessment were reviewed."
+    );
+    expect(withEvidence.success).toBe(true);
+    expect(checkSubjectEligibility(profile, "Pakistan Studies", "Matric").eligible).toBe(true);
   });
 
   it("rejectSubjectEligibility keeps the subject out of approvedSubjects", async () => {
@@ -101,7 +121,8 @@ describe("subjectEligibility.service", () => {
       Object.assign(profile, { subjectEligibility: [{ subject: "Physics", levels: [], status: "pending", matchesDiscipline: false, requestedAt: new Date() }] }),
       "Physics",
       ["A-Level"],
-      { name: "Admin" }
+      { name: "Admin" },
+      "Verified subject-specific credential reviewed."
     );
     grandfatherExistingSubjects(profile);
     expect(profile.subjectEligibility?.filter((e) => e.subject === "Physics").length).toBe(1);

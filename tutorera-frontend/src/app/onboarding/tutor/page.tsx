@@ -98,6 +98,7 @@ export default function TutorOnboardingPage() {
   useEffect(() => {
     api.get("/tutors/disciplines").then(res => setDisciplineMaps(res.data.maps || [])).catch(() => setDisciplineMaps([]));
   }, []);
+  const selectedDisciplineMap = disciplineMaps.find((map) => map.discipline.trim().toLowerCase() === step2.discipline.trim().toLowerCase());
 
   // Step 3
   const [step3, setStep3] = useState({ experience: "", previousInstitutions: "" });
@@ -785,12 +786,13 @@ export default function TutorOnboardingPage() {
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {subjects.map(s => {
-                      const matchingMap = disciplineMaps.find(m => m.discipline === step2.discipline);
-                      const matchesDiscipline = matchingMap?.eligibleSubjects.some(es => es.toLowerCase() === s.toLowerCase());
+                      const matchesDiscipline = Boolean(selectedDisciplineMap?.eligibleSubjects.some(es => es.toLowerCase() === s.toLowerCase()));
+                      const selected = selectedSubjects.includes(s);
                       return (
-                        <button key={s} type="button" onClick={() => toggleItem(selectedSubjects, s, setSelectedSubjects)}
-                          title={matchesDiscipline ? "Matches your selected discipline" : undefined}
-                          style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${selectedSubjects.includes(s) ? C.accent : '#e5e7eb'}`, backgroundColor: selectedSubjects.includes(s) ? C.accentLight : 'white', color: selectedSubjects.includes(s) ? C.accent : C.gray500, fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <button key={s} type="button" disabled={!matchesDiscipline && !selected} onClick={() => toggleItem(selectedSubjects, s, setSelectedSubjects)}
+                          title={matchesDiscipline ? "Within your declared qualification scope; still pending admin approval." : "Not within your declared qualification scope. Supporting evidence and a separate admin review are required."}
+                          aria-pressed={selected}
+                          style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${selected ? C.accent : '#e5e7eb'}`, backgroundColor: selected ? C.accentLight : 'white', color: selected ? C.accent : matchesDiscipline ? C.gray500 : '#9ca3af', fontWeight: '500', fontSize: '0.8rem', cursor: matchesDiscipline || selected ? 'pointer' : 'not-allowed', opacity: matchesDiscipline || selected ? 1 : 0.55 }}>
                           {s}{matchesDiscipline ? " ✓" : ""}
                         </button>
                       );

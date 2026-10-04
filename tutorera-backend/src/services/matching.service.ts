@@ -21,6 +21,7 @@ import {
 } from "../config/matchingConfig";
 import { convertCurrencyRate } from "../config/countries";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "./tracking.service";
+import { checkSubjectEligibility } from "./subjectEligibility.service";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 
@@ -276,6 +277,17 @@ export class MatchingService {
     config?: MatchingConfigData
   ): Promise<MatchScoreResult | null> {
     const cfg = config || (await this.getActiveConfig());
+    const subjectEligibility = checkSubjectEligibility(tutor, request.subject, request.level);
+    if (!subjectEligibility.eligible) {
+      return {
+        score: 0,
+        tier: "fair",
+        scoreBreakdown: { subject: 0 },
+        reasons: [subjectEligibility.message || "Tutor is not approved for this subject and level."],
+        algorithmVersion: cfg.algorithmVersion,
+        isColdStartExploration: false,
+      };
+    }
     const isOnline = request.teachingMode === "online" || (request.teachingMode === "both" && tutor.teachingMode === "online");
     const weights = isOnline ? cfg.onlineWeights : cfg.homeWeights;
 
@@ -299,7 +311,7 @@ export class MatchingService {
     // ── 1. Subject Match ──
     const maxSub = weights.subject;
     const reqSubLower = (request.subject || "").trim().toLowerCase();
-    const tutorSubsLower = (tutor.subjects || []).map((s) => (s || "").trim().toLowerCase());
+    const tutorSubsLower = (tutor.approvedSubjects || []).map((s) => (s || "").trim().toLowerCase());
 
     const isExactSub = tutorSubsLower.includes(reqSubLower);
     const alias = SUBJECT_ALIASES[reqSubLower];

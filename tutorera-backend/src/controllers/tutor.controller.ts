@@ -117,6 +117,18 @@ export const createOrUpdateProfile = async (
       );
     }
 
+    if (Array.isArray(updateData.subjects)) {
+      const selectedSubjects = Array.from(new Set(updateData.subjects.map((subject: unknown) => String(subject || "").trim()).filter(Boolean))) as string[];
+      const disciplines = (profile.education || []).map((education) => education.discipline).filter(Boolean) as string[];
+      for (const subject of selectedSubjects) {
+        await requestSubjectEligibility(profile, subject, { disciplines });
+      }
+      syncApprovedSubjects(profile);
+      updateData.subjects = selectedSubjects;
+      updateData.subjectEligibility = profile.subjectEligibility;
+      updateData.approvedSubjects = profile.approvedSubjects;
+    }
+
     if (updateData.fullName || updateData.subjects || updateData.countryCode || updateData.nationalityCountryCode) {
       Object.assign(profile, updateData);
       await assignUniqueTutorSlug(profile);
@@ -326,7 +338,6 @@ export const getAllTutors = async (
     $or: [
       { agreementAcceptedAt: { $exists: true, $ne: null } },
       { legacyAgreementStatus: "accepted" },
-      { marketplaceEligible: true },
     ],
   };
 
@@ -351,7 +362,7 @@ export const getAllTutors = async (
     andClauses.push({
       $or: [
         { fullName: pattern },
-        { subjects: pattern },
+        { approvedSubjects: pattern },
         { bio: pattern },
         { city: pattern },
         { countryName: pattern },
@@ -361,11 +372,11 @@ export const getAllTutors = async (
   }
 
   if (subject) {
-    filter.subjects = { $in: [new RegExp(subject as string, "i")] };
+    filter.approvedSubjects = { $in: [new RegExp(`^${escapeRegex(String(subject))}$`, "i")] };
   }
 
   if (level) {
-    filter.levels = { $in: [level] };
+    filter.subjectEligibility = { $elemMatch: { status: "approved", levels: String(level) } };
   }
 
   const selectedCountry = countryCode || country;
@@ -427,7 +438,7 @@ export const getAllTutors = async (
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
-    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus bio experience videoIntro degreeVerificationStatus policeVerificationStatus")
+    .select("user fullName city countryName countryCode approvedSubjects subjectEligibility hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus bio experience videoIntro degreeVerificationStatus policeVerificationStatus")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
     .sort(safeSort)
     .skip(skip)
@@ -435,6 +446,10 @@ export const getAllTutors = async (
 
   const tutorsWithResponse = tutors.map((t) => {
     const obj = t.toObject() as any;
+    const approvedEntries = (obj.subjectEligibility || []).filter((entry: any) => entry.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0);
+    obj.subjects = obj.approvedSubjects || [];
+    obj.levels = Array.from(new Set(approvedEntries.flatMap((entry: any) => entry.levels)));
+    delete obj.subjectEligibility;
     obj.responseTimeFormatted = formatResponseTime(obj.averageResponseMinutes || 0);
     return obj;
   });
@@ -713,9 +728,9 @@ export const saveOnboardingStep = async (
     // privilege on its own; an admin still has to approve it (see
     // services/subjectEligibility.service.ts).
     const selectedSubjects: string[] = parsedData.subjects || [];
-    const discipline = profile.education?.[0]?.discipline;
+    const disciplines = (profile.education || []).map((education) => education.discipline).filter(Boolean) as string[];
     for (const subject of selectedSubjects) {
-      await requestSubjectEligibility(profile, subject, { discipline, qualificationIndex: 0 });
+      await requestSubjectEligibility(profile, subject, { disciplines });
     }
     syncApprovedSubjects(profile);
     // The primary subject feeds the public profile slug (e.g.

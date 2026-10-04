@@ -1136,7 +1136,7 @@ export const reviewSubjectEligibility = async (req: AuthRequest, res: Response):
   const actor = actorFromReq(req);
   let result: { success: boolean; message?: string; flaggedBookings?: number };
   if (action === "approve") {
-    result = await approveSubjectEligibility(profile, subject, Array.isArray(levels) ? levels : [], { id: actor.id, name: actor.name });
+    result = await approveSubjectEligibility(profile, subject, Array.isArray(levels) ? levels : [], { id: actor.id, name: actor.name }, reason || "");
   } else if (action === "reject") {
     result = await rejectSubjectEligibility(profile, subject, reason || "", { id: actor.id, name: actor.name });
   } else {

@@ -86,20 +86,26 @@ export async function subjectMatchesDiscipline(discipline: string | undefined, s
 export async function requestSubjectEligibility(
   profile: ITutorProfile,
   subject: string,
-  opts: { discipline?: string; qualificationIndex?: number } = {}
+  opts: { discipline?: string; disciplines?: string[]; qualificationIndex?: number } = {}
 ): Promise<void> {
   profile.subjectEligibility = profile.subjectEligibility || [];
   const target = normalize(subject);
   const exists = profile.subjectEligibility.some((e) => normalize(e.subject) === target);
   if (exists) return;
 
-  const matchesDiscipline = await subjectMatchesDiscipline(opts.discipline, subject);
+  const disciplines = Array.from(new Set([opts.discipline, ...(opts.disciplines || [])]
+    .filter((discipline): discipline is string => Boolean(discipline?.trim()))));
+  const matchingDisciplineIndex = disciplines.length
+    ? await Promise.all(disciplines.map((discipline) => subjectMatchesDiscipline(discipline, subject)))
+    : [];
+  const matchedQualificationIndex = matchingDisciplineIndex.findIndex(Boolean);
+  const matchesDiscipline = matchedQualificationIndex >= 0;
   profile.subjectEligibility.push({
     subject,
     levels: [],
     status: "pending",
     matchesDiscipline,
-    qualificationIndex: opts.qualificationIndex,
+    qualificationIndex: opts.qualificationIndex ?? (matchedQualificationIndex >= 0 ? matchedQualificationIndex : undefined),
     requestedAt: new Date(),
   } as ITutorProfile["subjectEligibility"] extends (infer T)[] | undefined ? T : never);
 }
@@ -117,19 +123,26 @@ export async function approveSubjectEligibility(
   profile: ITutorProfile,
   subject: string,
   levels: string[],
-  reviewer: ReviewActorInfo
+  reviewer: ReviewActorInfo,
+  approvalReason = ""
 ): Promise<{ success: true } | { success: false; message: string }> {
   if (!levels || levels.length === 0) {
     return { success: false, message: "At least one teaching level must be selected to approve a subject." };
   }
   const entry = (profile.subjectEligibility || []).find((e) => normalize(e.subject) === normalize(subject));
   if (!entry) return { success: false, message: `No eligibility request found for subject "${subject}".` };
+  if (!entry.matchesDiscipline && !approvalReason.trim()) {
+    return {
+      success: false,
+      message: "An off-discipline subject requires documented supporting evidence and an explicit approval rationale.",
+    };
+  }
 
   entry.status = "approved";
   entry.levels = levels;
   entry.reviewedBy = reviewer.id ? new Types.ObjectId(reviewer.id) : undefined;
   entry.reviewedAt = new Date();
-  entry.reason = "";
+  entry.reason = approvalReason.trim();
   syncApprovedSubjects(profile);
 
   await logAudit({
@@ -139,7 +152,7 @@ export async function approveSubjectEligibility(
     entity: "TutorProfile",
     targetId: profile._id.toString(),
     targetName: profile.fullName,
-    metadata: { subject, levels },
+    metadata: { subject, levels, matchesDiscipline: entry.matchesDiscipline, approvalReason: approvalReason.trim() || undefined },
   });
 
   return { success: true };

@@ -233,8 +233,10 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
       return;
     }
     const reason = eligibilityReasons[subject] || "";
-    if ((action === "reject" || action === "revoke") && !reason.trim()) {
-      showError(`A reason is required to ${action} this subject.`);
+    const entry = data?.profile?.subjectEligibility?.find((candidate) => candidate.subject === subject);
+    const requiresEvidenceRationale = action === "approve" && entry?.matchesDiscipline === false;
+    if ((action === "reject" || action === "revoke" || requiresEvidenceRationale) && !reason.trim()) {
+      showError(requiresEvidenceRationale ? "Document the supporting evidence and approval rationale for this off-discipline subject." : `A reason is required to ${action} this subject.`);
       return;
     }
     setBusyKey(key);
@@ -533,7 +535,7 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                     />
                     <input
                       type="text"
-                      placeholder="Reason (required to reject/revoke)"
+                      placeholder={entry.matchesDiscipline ? "Reason (required to reject/revoke)" : "Supporting evidence & rationale (required to approve)"}
                       value={eligibilityReasons[entry.subject] || ""}
                       onChange={e => setEligibilityReasons(current => ({ ...current, [entry.subject]: e.target.value }))}
                       style={{ flex: "1 1 220px", padding: "6px 10px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 12 }}
