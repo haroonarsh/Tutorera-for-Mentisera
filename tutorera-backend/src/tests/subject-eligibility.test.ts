@@ -102,6 +102,26 @@ describe("subjectEligibility.service", () => {
     expect(checkSubjectEligibility(profile, "Pakistan Studies", "Matric").eligible).toBe(true);
   });
 
+  it("does not accept an admin rationale as a substitute for required evidence", async () => {
+    const { profile } = await makeTutor();
+    await requestSubjectEligibility(profile, "Pakistan Studies", { discipline: "Dentistry" });
+    const result = await approveSubjectEligibility(profile, "Pakistan Studies", ["Matric"], { name: "Admin" }, "The tutor says they have prior experience.");
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.message).toMatch(/evidence/i);
+  });
+
+  it("does not allow an already approved subject request to be approved or rejected again", async () => {
+    const { profile } = await makeTutor();
+    await requestSubjectEligibility(profile, "Computer Science");
+    profile.subjectEligibility![0].evidence = [{ url: "https://example.test/evidence.pdf", label: "Degree evidence", uploadedAt: new Date() }];
+    expect((await approveSubjectEligibility(profile, "Computer Science", ["O-Level"], { name: "Admin" }, "Evidence reviewed.")).success).toBe(true);
+    const duplicateApproval = await approveSubjectEligibility(profile, "Computer Science", ["A-Level"], { name: "Admin" }, "Second review.");
+    const rejection = await rejectSubjectEligibility(profile, "Computer Science", "Changed mind", { name: "Admin" });
+    expect(duplicateApproval.success).toBe(false);
+    expect(rejection.success).toBe(false);
+    expect(profile.subjectEligibility![0].levels).toEqual(["O-Level"]);
+  });
+
   it("rejectSubjectEligibility keeps the subject out of approvedSubjects", async () => {
     const { profile } = await makeTutor();
     await requestSubjectEligibility(profile, "Mathematics");
