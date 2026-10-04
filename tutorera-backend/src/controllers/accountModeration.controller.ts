@@ -10,7 +10,7 @@ import { logAudit } from "../utils/logAudit";
 type EnforcementAction = "suspend" | "ban" | "reinstate" | "delete";
 const permissionFor: Record<EnforcementAction, Permission> = { suspend: "users.suspend", ban: "users.ban", reinstate: "users.reinstate", delete: "users.delete" };
 
-function canManageTarget(req: AuthRequest, target: any, permission: Permission): string | null {
+function canManageTarget(req: AuthRequest, target: { _id: { toString(): string }; role?: string; adminRole?: string }, permission: Permission): string | null {
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, permission)) return "You do not have permission for this enforcement action.";
   if (target._id.toString() === req.user?._id?.toString()) return "You cannot moderate your own account.";
   if (target.role === "admin" && req.user?.adminRole !== "super_admin") return "Only a super administrator may moderate an administrator.";
@@ -31,10 +31,10 @@ export const enforceAccountAction = async (req: AuthRequest, res: Response): Pro
   const denied = canManageTarget(req, target, permissionFor[action]);
   if (denied) { res.status(403).json({ success: false, message: denied }); return; }
   if (req.countryScopeCode && target.countryCode !== req.countryScopeCode) { res.status(404).json({ success: false, message: "User not found." }); return; }
-  let safetyCase: any;
+  let safetyCase: InstanceType<typeof SafetyCase> | undefined;
   if (safetyCaseId) {
     if (!mongoose.isValidObjectId(safetyCaseId)) { res.status(422).json({ success: false, message: "Invalid safety case." }); return; }
-    safetyCase = await SafetyCase.findOne({ _id: safetyCaseId, reportedUser: target._id });
+    safetyCase = (await SafetyCase.findOne({ _id: safetyCaseId, reportedUser: target._id })) ?? undefined;
     if (!safetyCase) { res.status(422).json({ success: false, message: "The safety case must belong to this user." }); return; }
   }
   if ((action === "ban" || action === "delete") && !safetyCaseId) { res.status(422).json({ success: false, message: "A safety case is required for a ban or administrative deletion." }); return; }

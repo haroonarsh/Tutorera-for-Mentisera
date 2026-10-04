@@ -12,7 +12,7 @@ const extractVariables = (text: string): string[] => {
 export const listEmailTemplates = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { category, isActive } = req.query;
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (category) filter.category = category;
     if (typeof isActive !== "undefined") filter.isActive = isActive === "true";
 

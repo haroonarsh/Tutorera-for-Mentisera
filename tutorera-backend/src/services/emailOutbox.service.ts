@@ -19,8 +19,8 @@ export async function deliverOutboxEmail(id: string): Promise<void> {
     const result = await new Resend(process.env.RESEND_API_KEY).emails.send({ from: "TUTORERA® <noreply@tutorera.ac.pk>", to: job.recipientEmail, subject: job.subject, html: renderBrandedEmail({ subject: job.subject, html: job.html, preheader: job.preheader, category: job.category || job.eventType }) });
     if (result.error) throw new Error(result.error.message);
     await Promise.all([EmailOutbox.updateOne({ _id: job._id }, { $set: { status: "sent", sentAt: new Date() } }), EmailLog.updateOne({ _id: job.emailLog }, { $set: { status: "sent", sentAt: new Date(), providerMessageId: result.data?.id } })]);
-  } catch (error: any) {
-    const message = error?.message || "Unknown email provider error";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown email provider error";
     const retry = job.attempts < job.maxAttempts;
     await Promise.all([EmailOutbox.updateOne({ _id: job._id }, { $set: { status: retry ? "queued" : "failed", lastError: message, nextAttemptAt: new Date(Date.now() + retryDelayMs(job.attempts)) } }), EmailLog.updateOne({ _id: job.emailLog }, { $set: { status: "failed", failedAt: new Date(), bounceReason: message, retryCount: job.attempts } })]);
     throw error;

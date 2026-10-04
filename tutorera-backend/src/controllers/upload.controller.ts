@@ -9,6 +9,7 @@ import { uploadToCloudinary, deleteFromCloudinary, getSignedViewUrl } from "../u
 import sendEmail from "../utils/sendEmail";
 import { documentResubmittedEmail } from "../utils/trackingEmails";
 import { recordStatusEvent } from "../services/tracking.service";
+import { StatusEvent } from "../models/TutorApplicationStatusHistory.model";
 import { logAudit } from "../utils/logAudit";
 import { sendNotification } from "../utils/socket";
 import { setAccountStatus } from "../services/accountLifecycle.service";
@@ -81,8 +82,8 @@ export const uploadBlogCoverImage = async (
   try {
     const result = await uploadToCloudinary(req.file.buffer, "tutorera/blog-covers");
     res.status(200).json({ success: true, message: "Cover image uploaded successfully", url: result.secure_url });
-  } catch (err: any) {
-    if (err.message?.includes("content policy")) {
+  } catch (err) {
+    if (err instanceof Error && err.message?.includes("content policy")) {
       res.status(400).json({ success: false, message: "Image contains prohibited content and could not be uploaded." });
       return;
     }
@@ -131,8 +132,8 @@ export const uploadVerificationDocs = async (
       updateData.cnicRejectionReason = "";
       resubmittedDocs.push("Identity document");
       if (existingProfile.cnicFrontPublicId) replacedAssets.push({ publicId: existingProfile.cnicFrontPublicId });
-    } catch (err: any) {
-      if (err.message?.includes("content policy")) {
+    } catch (err) {
+      if (err instanceof Error && err.message?.includes("content policy")) {
         res.status(400).json({ success: false, message: "Identity document front image contains prohibited content and could not be uploaded." });
         return;
       }
@@ -155,8 +156,8 @@ export const uploadVerificationDocs = async (
       updateData.cnicRejectionReason = "";
       if (!resubmittedDocs.includes("Identity document")) resubmittedDocs.push("Identity document");
       if (existingProfile.cnicBackPublicId) replacedAssets.push({ publicId: existingProfile.cnicBackPublicId });
-    } catch (err: any) {
-      if (err.message?.includes("content policy")) {
+    } catch (err) {
+      if (err instanceof Error && err.message?.includes("content policy")) {
         res.status(400).json({ success: false, message: "Identity document back image contains prohibited content and could not be uploaded." });
         return;
       }
@@ -198,8 +199,8 @@ export const uploadVerificationDocs = async (
       updateData.policeRejectionReason = "";
       resubmittedDocs.push("Background and safety certificate");
       if (existingProfile.policeCertificatePublicId) replacedAssets.push({ publicId: existingProfile.policeCertificatePublicId });
-    } catch (err: any) {
-      if (err.message?.includes("content policy")) {
+    } catch (err) {
+      if (err instanceof Error && err.message?.includes("content policy")) {
         res.status(400).json({ success: false, message: "Background and safety certificate contains prohibited content and could not be uploaded." });
         return;
       }
@@ -275,7 +276,7 @@ export const uploadVerificationDocs = async (
           "Demo video": existingProfile.demoVideoStatus || "not_submitted",
           "Background and safety certificate": existingProfile.policeVerificationStatus || "not_submitted",
         };
-        const eventFor: Record<string, { submitted: any; resubmitted: any }> = {
+        const eventFor: Record<string, { submitted: StatusEvent; resubmitted: StatusEvent }> = {
           "Identity document": { submitted: "CNIC_SUBMITTED", resubmitted: "CNIC_RESUBMITTED" },
           "Educational document": { submitted: "EDUCATIONAL_DOCUMENTS_SUBMITTED", resubmitted: "EDUCATIONAL_DOCUMENTS_RESUBMITTED" },
           "Demo video": { submitted: "DEMO_VIDEO_SUBMITTED", resubmitted: "DEMO_VIDEO_RESUBMITTED" },
@@ -329,12 +330,13 @@ export const uploadVerificationDocs = async (
       message: "Documents uploaded successfully. Pending admin review.",
       uploadedFields: Object.keys(updateData),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Document upload error:", error);
+    const errMsg = error instanceof Error ? error.message : "Failed to upload documents. Please try again.";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to upload documents. Please try again.",
-      error: process.env.NODE_ENV === "development" ? error.toString() : undefined,
+      message: errMsg,
+      error: process.env.NODE_ENV === "development" ? String(error) : undefined,
     });
   }
 };

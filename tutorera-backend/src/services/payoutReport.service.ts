@@ -1,4 +1,4 @@
-import Booking from "../models/Booking.model";
+import Booking, { IBooking } from "../models/Booking.model";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import logger from "../config/logger";
@@ -177,7 +177,7 @@ export async function generateTutorPayoutReport(
   }
 }
 
-export async function calculatePayoutData(bookings: any[]) {
+export async function calculatePayoutData(bookings: IBooking[]) {
   const grossAmount = bookings.reduce((sum, booking) => sum + (booking.subtotal ?? booking.amount ?? 0), 0);
   const platformFee = bookings.reduce((sum, booking) => sum + (booking.tutorFee ?? 0), 0);
   const taxOnFee = bookings.reduce((sum, booking) => sum + (booking.tax ?? 0), 0);
@@ -265,7 +265,7 @@ export async function generateReportPDF(data: PayoutReportData): Promise<Buffer>
   });
 }
 
-function addReportHeader(doc: any): void {
+function addReportHeader(doc: InstanceType<typeof PDFDocument>): void {
   const pageWidth = doc.page.width;
 
   doc
@@ -287,7 +287,7 @@ function addReportHeader(doc: any): void {
   doc.y = 88;
 }
 
-function addTutorInfoSection(doc: any, data: PayoutReportData): void {
+function addTutorInfoSection(doc: InstanceType<typeof PDFDocument>, data: PayoutReportData): void {
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
@@ -318,7 +318,7 @@ function addTutorInfoSection(doc: any, data: PayoutReportData): void {
   doc.y += 30;
 }
 
-function addPayoutSummary(doc: any, data: PayoutReportData): void {
+function addPayoutSummary(doc: InstanceType<typeof PDFDocument>, data: PayoutReportData): void {
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
@@ -364,7 +364,7 @@ function addPayoutSummary(doc: any, data: PayoutReportData): void {
   doc.y = currentY + 185;
 }
 
-function addTaxBreakdownSection(doc: any, data: PayoutReportData): void {
+function addTaxBreakdownSection(doc: InstanceType<typeof PDFDocument>, data: PayoutReportData): void {
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
@@ -396,7 +396,7 @@ function addTaxBreakdownSection(doc: any, data: PayoutReportData): void {
   doc.y = y + 10;
 }
 
-function addLineItemsSection(doc: any, data: PayoutReportData): void {
+function addLineItemsSection(doc: InstanceType<typeof PDFDocument>, data: PayoutReportData): void {
   doc.addPage();
   doc.font("Helvetica-Bold").fontSize(14).fillColor(COLORS.deepNavy).text("Paid Payout Line Items").moveDown(0.6);
   if (data.transactions.length === 0) {
@@ -414,7 +414,7 @@ function addLineItemsSection(doc: any, data: PayoutReportData): void {
   });
 }
 
-function addVerificationSection(doc: any, data: PayoutReportData, qrCodeDataUrl: string): void {
+function addVerificationSection(doc: InstanceType<typeof PDFDocument>, data: PayoutReportData, qrCodeDataUrl: string): void {
   doc.addPage();
 
   doc
@@ -469,7 +469,7 @@ function addVerificationSection(doc: any, data: PayoutReportData, qrCodeDataUrl:
   });
 }
 
-function addFooter(doc: any, data: PayoutReportData, pageNumber: number, pageCount: number): void {
+function addFooter(doc: InstanceType<typeof PDFDocument>, data: PayoutReportData, pageNumber: number, pageCount: number): void {
   const footerY = doc.page.height - 60;
 
   doc

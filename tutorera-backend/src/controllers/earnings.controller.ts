@@ -247,9 +247,10 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Length", pdfBuffer.length.toString());
     res.send(pdfBuffer);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to generate payout report:", error);
-    res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
+    const statusCode = (error instanceof Error && "statusCode" in error) ? (error as Error & { statusCode: number }).statusCode : undefined;
+    res.status(statusCode || 500).json({ success: false, message: statusCode && error instanceof Error ? error.message : "Failed to generate payout report." });
   }
 };
 

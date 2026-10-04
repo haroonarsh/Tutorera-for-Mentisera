@@ -94,7 +94,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const payload: any = { role: user.role };
+    const payload: Record<string, unknown> = { role: user.role };
     if (user.role === "tutor") {
       const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
       payload.applicationId = user.applicationId;
@@ -247,7 +247,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     }
 
     try {
-      const payload: any = { role: user.role };
+      const payload: Record<string, unknown> = { role: user.role };
       if (user.role === "tutor") {
         const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
         payload.applicationId = user.applicationId;
@@ -355,7 +355,7 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
   }
 
   try {
-    const payload: any = { role: user.role };
+    const payload: Record<string, unknown> = { role: user.role };
     if (user.role === "tutor") {
       const trackingUrl = (user.applicationId && trackingToken) ? `${TRACKING_BASE_URL}/track/tutor/${trackingToken}` : `${TRACKING_BASE_URL}/tutor/application-status`;
       payload.applicationId = user.applicationId;
@@ -403,7 +403,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 // @access  Private
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   const { name, phone, city, address, countryCode, countryName, preferredLanguage, postalCode, lat, lng } = req.body;
-  const updates: any = {};
+  const updates: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries({ name, phone, city, address, countryCode, countryName, postalCode })) {
     if (typeof value === "string") updates[key] = value.trim();
@@ -437,7 +437,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   // Sync spatial and location fields to TutorProfile and StudentProfile
-  const profileUpdates: any = {};
+  const profileUpdates: Record<string, unknown> = {};
   if (updates.city) profileUpdates.city = updates.city;
   if (updates.countryCode) profileUpdates.countryCode = updates.countryCode;
   if (updates.countryName) profileUpdates.countryName = updates.countryName;

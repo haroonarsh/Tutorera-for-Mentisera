@@ -102,6 +102,7 @@ export class NotificationService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static getEmailBuilder(templateId: string): any {
     // This maps the templateId string from NOTIFICATION_EVENT_REGISTRY to the actual functions.
     // We will expand this as we audit the templates.

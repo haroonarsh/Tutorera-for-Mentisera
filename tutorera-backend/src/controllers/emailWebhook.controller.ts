@@ -111,9 +111,10 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
     }
 
     res.status(200).json({ success: true, matched: true, status });
-  } catch (error: any) {
-    const statusCode = typeof error?.statusCode === "number" ? error.statusCode : 400;
-    res.status(statusCode).json({ success: false, message: error?.message || "Invalid Resend webhook" });
+  } catch (error) {
+    const e = error as { statusCode?: number; message?: string };
+    const statusCode = typeof e.statusCode === "number" ? e.statusCode : 400;
+    res.status(statusCode).json({ success: false, message: e.message || "Invalid Resend webhook" });
   }
 };
 
@@ -144,7 +145,7 @@ function verifyResendPayload(req: Request, payloadText: string): ResendWebhookPa
       headers: { id, timestamp, signature },
       webhookSecret,
     }) as ResendWebhookPayload;
-  } catch (verifyErr: any) {
+  } catch (verifyErr) {
     const error = new Error("Invalid Resend webhook signature") as Error & { statusCode?: number };
     error.statusCode = 401;
     throw error;

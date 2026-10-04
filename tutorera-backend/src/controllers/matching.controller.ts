@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
-import Request from "../models/Request.model";
+import Request, { IRequest } from "../models/Request.model";
 import TutorProfile from "../models/TutorProfile.model";
 import Bid from "../models/Bid.model";
 import MatchLog from "../models/MatchLog.model";
@@ -221,7 +221,7 @@ export const getMatchingAnalytics = async (req: AuthRequest, res: Response): Pro
       good: 0,
       fair: 0,
     };
-    tierCounts.forEach((tc: any) => {
+    tierCounts.forEach((tc: { _id?: string; count: number }) => {
       const key = (tc._id || "").toLowerCase();
       if (key === "excellent") tierDistribution.excellent += tc.count;
       else if (key === "great" || key === "strong") tierDistribution.great += tc.count;
@@ -307,7 +307,7 @@ export const updateMatchingConfig = async (req: AuthRequest, res: Response): Pro
     }
 
     const { changeReason, expectedUpdatedAt, ...configData } = parsed.data;
-    let updated: any = null;
+    let updated: InstanceType<typeof MatchingConfig> | null = null;
     await session.withTransaction(async () => {
       const existing = await MatchingConfig.findOne().sort({ updatedAt: -1 }).session(session);
       if (expectedUpdatedAt && existing && existing.updatedAt.toISOString() !== expectedUpdatedAt) {
@@ -368,7 +368,7 @@ export const rollbackMatchingConfig = async (req: AuthRequest, res: Response): P
   }
   const session = await mongoose.startSession();
   try {
-    let updated: any = null;
+    let updated: InstanceType<typeof MatchingConfig> | null = null;
     let sourceRevision = 0;
     await session.withTransaction(async () => {
       const history = await MatchingConfigHistory.findById(req.params.id).session(session).lean();
@@ -411,7 +411,7 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
   try {
     const { requestId, customRequest, limit = 20 } = req.body;
 
-    let targetRequest: any = null;
+    let targetRequest: unknown = null;
     if (requestId) {
       targetRequest = await Request.findById(requestId).populate("student", "name city countryCode");
       if (!targetRequest) {
@@ -448,8 +448,8 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const eligibleTutors = await MatchingService.getEligibleTutors(targetRequest, { limit: 100 });
-    const rankedMatches = await MatchingService.rankTutors(targetRequest, eligibleTutors);
+    const eligibleTutors = await MatchingService.getEligibleTutors(targetRequest as unknown as IRequest, { limit: 100 });
+    const rankedMatches = await MatchingService.rankTutors(targetRequest as unknown as IRequest, eligibleTutors);
 
     const tierSummary = {
       excellent: rankedMatches.filter((m) => m.tier === "excellent").length,
@@ -458,19 +458,20 @@ export const simulateMatching = async (req: AuthRequest, res: Response): Promise
       fair: rankedMatches.filter((m) => m.tier === "fair" || (m.tier as any) === "other").length,
     };
 
+    const tr = targetRequest as IRequest & { schedule?: string };
     const requestSummary = {
-      _id: targetRequest._id,
-      subject: targetRequest.subject,
-      level: targetRequest.level,
-      curriculum: targetRequest.curriculum,
-      teachingMode: targetRequest.teachingMode,
-      city: targetRequest.city,
-      countryCode: targetRequest.countryCode,
-      budget: targetRequest.budget,
-      pricingUnit: targetRequest.pricingUnit,
-      currency: targetRequest.currency,
-      schedule: targetRequest.schedule,
-      student: targetRequest.student ? { name: targetRequest.student.name || "Student" } : undefined,
+      _id: tr._id,
+      subject: tr.subject,
+      level: tr.level,
+      curriculum: tr.curriculum,
+      teachingMode: tr.teachingMode,
+      city: tr.city,
+      countryCode: tr.countryCode,
+      budget: tr.budget,
+      pricingUnit: tr.pricingUnit,
+      currency: tr.currency,
+      schedule: tr.schedule,
+      student: tr.student ? { name: (tr.student as unknown as { name?: string }).name || "Student" } : undefined,
     };
 
     res.json({

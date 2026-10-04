@@ -195,12 +195,13 @@ async function getAccessToken(): Promise<string> {
 
         cachedToken = { accessToken, expiresAt: now + (expiresIn - 30) * 1000 };
         return accessToken;
-    } catch (error: any) {
-        const status = error?.response?.status;
+    } catch (error) {
+        const axErr = error as { response?: { status?: number }; message?: string };
+        const status = axErr?.response?.status;
         const wrapped = new Error(
         status === 401
             ? "Swich rejected the client credentials — check SWICH_CLIENT_ID/SWICH_CLIENT_SECRET"
-            : `Swich token request failed${error?.message ? `: ${error.message}` : ""}`
+            : `Swich token request failed${axErr?.message ? `: ${axErr.message}` : ""}`
         ) as Error & { statusCode?: number; code?: string };
         wrapped.statusCode = 502;
         wrapped.code = "SWICH_TOKEN_FAILED";
@@ -303,13 +304,14 @@ export const swichProvider = {
         }
 
         return { checkoutUrl, paymentSessionGuid };
-        } catch (error: any) {
-        if (error?.statusCode) throw error;
+        } catch (error) {
+        const axErr2 = error as { statusCode?: number; response?: { status?: number; data?: { message?: string } }; message?: string };
+        if (axErr2?.statusCode) throw error;
 
-        const status = error?.response?.status;
-        const gatewayMessage = error?.response?.data?.message;
+        const status = axErr2?.response?.status;
+        const gatewayMessage = axErr2?.response?.data?.message;
         const wrapped = new Error(
-            gatewayMessage ? `Swich checkout failed: ${gatewayMessage}` : `Swich checkout failed${error?.message ? `: ${error.message}` : ""}`
+            gatewayMessage ? `Swich checkout failed: ${gatewayMessage}` : `Swich checkout failed${axErr2?.message ? `: ${axErr2.message}` : ""}`
         ) as Error & { statusCode?: number; code?: string };
         wrapped.statusCode = status && status >= 400 && status < 500 ? status : 502;
         wrapped.code = "SWICH_CHECKOUT_FAILED";
@@ -335,9 +337,10 @@ export const swichProvider = {
         });
 
         return response.data as SwichSessionStatus;
-        } catch (error: any) {
-        const status = error?.response?.status;
-        const wrapped = new Error(`Swich session status check failed${error?.message ? `: ${error.message}` : ""}`) as Error & { statusCode?: number; code?: string };
+        } catch (error) {
+        const axErr3 = error as { response?: { status?: number }; message?: string };
+        const status = axErr3?.response?.status;
+        const wrapped = new Error(`Swich session status check failed${axErr3?.message ? `: ${axErr3.message}` : ""}`) as Error & { statusCode?: number; code?: string };
         wrapped.statusCode = status && status >= 400 && status < 500 ? status : 502;
         wrapped.code = "SWICH_STATUS_CHECK_FAILED";
         throw wrapped;

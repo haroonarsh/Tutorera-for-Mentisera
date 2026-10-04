@@ -8,7 +8,7 @@ import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 
 export interface AtRiskRequestItem {
-  request: any;
+  request: IRequest;
   riskReasons: string[];
   urgencyLevel: "critical" | "high" | "medium";
   urgencyScore: number;
@@ -22,7 +22,7 @@ export class AtRiskRequestService {
   /**
    * Scans all active requests and returns those requiring operational attention.
    */
-  public static async getAtRiskRequests(limit = 100, io?: any): Promise<AtRiskRequestItem[]> {
+  public static async getAtRiskRequests(limit = 100, io?: import("socket.io").Server): Promise<AtRiskRequestItem[]> {
     const now = new Date();
     const activeRequests = await Request.find({
       status: { $in: ["open", "published", "receiving_offers", "negotiating"] },
@@ -150,7 +150,7 @@ export class AtRiskRequestService {
    */
   public static async autoExpandMatchingForZeroOffer(
     requestId: string,
-    io?: any
+    io?: import("socket.io").Server
   ): Promise<{ success: boolean; message: string }> {
     const reqDoc = await Request.findById(requestId).populate("student", "name email");
     if (!reqDoc) {
@@ -179,7 +179,7 @@ export class AtRiskRequestService {
     requestId: string,
     action: "rematch" | "extend" | "suggest_online" | "escalate",
     adminUserId: string,
-    io?: any
+    io?: import("socket.io").Server
   ): Promise<{ success: boolean; message: string }> {
     const reqDoc = await Request.findById(requestId).populate("student", "name email");
     if (!reqDoc) {

@@ -67,9 +67,9 @@ export const listTutorSubjectApprovals = async (req: AuthRequest, res: Response)
     const profiles = await TutorProfile.find({ "subjectEligibility.status": { $in: statuses as any } })
       .select("fullName subjectEligibility user verificationStatus updatedAt")
       .populate("user", "name email").sort({ updatedAt: -1 }).limit(safeLimit(req.query.limit)).lean();
-    const approvals = profiles.flatMap((profile: any) => (profile.subjectEligibility || [])
-      .filter((entry: any) => statuses.includes(entry.status))
-      .map((entry: any) => ({ profileId: profile._id, tutorName: profile.fullName || profile.user?.name || "Tutor", tutorEmail: profile.user?.email || "", verificationStatus: profile.verificationStatus, subject: entry.subject, levels: entry.levels || [], status: entry.status, eligibilityType: entry.eligibilityType || (entry.matchesDiscipline ? "direct" : "unmapped"), evidenceRequired: Boolean(entry.evidenceRequired), requestedAt: entry.requestedAt, reviewedAt: entry.reviewedAt, reason: entry.reason || "" })));
+    const approvals = profiles.flatMap((profile) => (profile.subjectEligibility || [])
+      .filter((entry: { status: string; levels?: string[]; eligibilityType?: string; evidenceRequired?: boolean; matchesDiscipline?: boolean; subject?: string; requestedAt?: Date; reviewedAt?: Date; reason?: string }) => statuses.includes(entry.status))
+      .map((entry: { status: string; levels?: string[]; eligibilityType?: string; evidenceRequired?: boolean; matchesDiscipline?: boolean; subject?: string; requestedAt?: Date; reviewedAt?: Date; reason?: string }) => ({ profileId: profile._id, tutorName: profile.fullName || (profile.user as unknown as { name?: string })?.name || "Tutor", tutorEmail: (profile.user as unknown as { email?: string })?.email || "", verificationStatus: profile.verificationStatus, subject: entry.subject, levels: entry.levels || [], status: entry.status, eligibilityType: entry.eligibilityType || (entry.matchesDiscipline ? "direct" : "unmapped"), evidenceRequired: Boolean(entry.evidenceRequired), requestedAt: entry.requestedAt, reviewedAt: entry.reviewedAt, reason: entry.reason || "" })));
     res.json({ success: true, approvals });
   } catch (error) { databaseError(res, error, "Failed to list tutor subject approvals"); }
 };

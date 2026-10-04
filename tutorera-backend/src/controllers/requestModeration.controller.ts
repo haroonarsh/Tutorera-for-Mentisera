@@ -21,10 +21,10 @@ export const moderateRequest = async (req: AuthRequest, res: Response): Promise<
   const request = await Request.findById(req.params.id);
   if (!request || (req.countryScopeCode && request.countryCode !== req.countryScopeCode)) { res.status(404).json({ success: false, message: "Tuition request not found." }); return; }
   if (TERMINAL.includes(request.status) && action !== "resolve_dispute") { res.status(409).json({ success: false, message: "This request cannot be moderated in its current lifecycle state." }); return; }
-  let safetyCase: any;
+  let safetyCase: InstanceType<typeof SafetyCase> | undefined;
   if (safetyCaseId) {
     if (!mongoose.isValidObjectId(safetyCaseId)) { res.status(422).json({ success: false, message: "Invalid safety case." }); return; }
-    safetyCase = await SafetyCase.findOne({ _id: safetyCaseId, request: request._id });
+    safetyCase = (await SafetyCase.findOne({ _id: safetyCaseId, request: request._id })) ?? undefined;
     if (!safetyCase) { res.status(422).json({ success: false, message: "The safety case must be linked to this request." }); return; }
   }
   if (["reject", "cancel", "resolve_dispute"].includes(action) && !safetyCase) { res.status(422).json({ success: false, message: "A linked safety case is required for this action." }); return; }
@@ -35,7 +35,7 @@ export const moderateRequest = async (req: AuthRequest, res: Response): Promise<
   if (action === "resolve_dispute" && request.status !== "disputed") { res.status(409).json({ success: false, message: "Only a disputed request can be resolved here." }); return; }
 
   let nextStatus = prior;
-  let moderationStatus: any = request.moderationStatus || "none";
+  let moderationStatus: "none" | "held" | "approved" | "rejected" | "cancelled" = (request.moderationStatus as "none" | "held" | "approved" | "rejected" | "cancelled") || "none";
   if (action === "approve") moderationStatus = "approved";
   if (action === "hold") { request.moderationPreviousStatus = prior; nextStatus = "closed"; moderationStatus = "held"; }
   if (action === "restore") { nextStatus = request.moderationPreviousStatus && ACTIVE.includes(request.moderationPreviousStatus) ? request.moderationPreviousStatus as any : "open"; request.moderationPreviousStatus = undefined; moderationStatus = "approved"; }

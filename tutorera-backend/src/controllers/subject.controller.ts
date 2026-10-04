@@ -14,7 +14,7 @@ const generateSlug = (name: string): string =>
 export const listSubjects = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { category, isActive, level } = req.query;
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (category) filter.category = category;
     if (typeof isActive !== "undefined") filter.isActive = isActive === "true";
     if (level) filter.level = level;

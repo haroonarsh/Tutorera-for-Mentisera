@@ -62,10 +62,10 @@ export async function runWithJobLease<T>(
       },
       { returnDocument: "after", upsert: true },
     );
-  } catch (error: any) {
+  } catch (error) {
     // A concurrent first upsert may lose the unique-index race. That is the
     // expected signal that another process owns the lease, not a job error.
-    if (error?.code === 11000) return { acquired: false };
+    if ((error as { code?: number })?.code === 11000) return { acquired: false };
     throw error;
   }
 
@@ -83,9 +83,9 @@ export async function runWithJobLease<T>(
     );
     await recordRun(name, now, "succeeded", durationMs);
     return { acquired: true, value };
-  } catch (error: any) {
+  } catch (error) {
     const durationMs = Date.now() - now.getTime();
-    const message = String(error?.message || "Scheduled job failed");
+    const message = error instanceof Error ? error.message : "Scheduled job failed";
     await ScheduledJobLease.updateOne(
       { name, holderId: PROCESS_HOLDER_ID },
       {

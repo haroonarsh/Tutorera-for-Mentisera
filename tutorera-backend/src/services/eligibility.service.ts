@@ -30,7 +30,7 @@ type ProfileLike = Pick<
 
 /** At least one (subject, level) pair an administrator has explicitly approved. */
 export function hasApprovedTeachingSubject(profile: ProfileLike | Record<string, any>): boolean {
-  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: any) =>
+  return Array.isArray(profile.subjectEligibility) && profile.subjectEligibility.some((entry: { status?: string; levels?: string[] }) =>
     entry?.status === "approved" && Array.isArray(entry.levels) && entry.levels.length > 0
   );
 }

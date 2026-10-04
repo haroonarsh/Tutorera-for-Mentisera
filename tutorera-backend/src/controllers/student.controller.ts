@@ -30,8 +30,8 @@ export const saveStudentOnboarding = async (
   let locationReferences: Record<string, unknown>;
   try {
     locationReferences = await resolveLocationReferences({ country, region, cityRef, locality, city }, market.countryCode);
-  } catch (error: any) {
-    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error.message });
+  } catch (error) {
+    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error instanceof Error ? error.message : "Invalid location reference." });
     return;
   }
   const resolvedCity = (locationReferences.city as string | undefined) || city;

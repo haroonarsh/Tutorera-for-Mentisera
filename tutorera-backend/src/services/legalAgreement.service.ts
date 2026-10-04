@@ -203,7 +203,7 @@ export async function getApplicableAgreement(
   const normCountry = (country || "PK").toUpperCase();
 
   // Try country-specific current published agreement
-  let agreement: any = await LegalAgreement.findOne({
+  let agreement = await LegalAgreement.findOne({
     documentType,
     country: normCountry,
     status: "published",
@@ -222,7 +222,7 @@ export async function getApplicableAgreement(
 
   // If still none, seed the default
   if (!agreement && documentType === "TUTOR_AGREEMENT" && !options.session) {
-    agreement = await seedDefaultLegalAgreements();
+    agreement = await seedDefaultLegalAgreements() as unknown as typeof agreement;
   }
 
   return agreement as ILegalAgreement | null;

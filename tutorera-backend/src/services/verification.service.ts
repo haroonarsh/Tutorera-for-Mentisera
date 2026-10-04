@@ -113,7 +113,7 @@ export async function getReviewQueue(filters: {
   page: number;
   limit: number;
   search?: string;
-}): Promise<{ items: any[]; total: number; page: number; pages: number }> {
+}): Promise<{ items: unknown[]; total: number; page: number; pages: number }> {
   const page = Math.max(1, filters.page);
   const limit = Math.min(100, Math.max(1, filters.limit));
   const skip = (page - 1) * limit;
@@ -188,7 +188,7 @@ export async function assignReviewItem(
 export async function approveComponent(
   reviewId: string,
   actor: ReviewActor,
-  io?: any
+  io?: import("socket.io").Server
 ): Promise<any> {
   const item = await TutorDocumentReview.findById(reviewId);
   if (!item) {
@@ -262,7 +262,7 @@ export async function rejectComponent(
   reviewId: string,
   rejectionReason: string,
   actor: ReviewActor,
-  io?: any
+  io?: import("socket.io").Server
 ): Promise<any> {
   if (!rejectionReason || !rejectionReason.trim()) {
     throw new Error("Rejection reason is required");

@@ -30,8 +30,8 @@ export async function processPendingPayouts(): Promise<PayoutRunResult> {
       result.errors.push(message);
       logger.warn({ eligiblePayouts: pendingBookings.length }, message);
     }
-  } catch (err: any) {
-    result.errors.push(`Scan error: ${err?.message || "unknown error"}`);
+  } catch (err) {
+    result.errors.push(`Scan error: ${err instanceof Error ? err.message : "unknown error"}`);
     logger.error({ err }, "Failed to scan pending payouts");
   }
 

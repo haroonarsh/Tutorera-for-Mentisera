@@ -47,8 +47,8 @@ export interface MatchScoreResult {
 }
 
 export interface RankedTutorMatch {
-  tutor: any;
-  tutorProfile: any;
+  tutor: Record<string, unknown>;
+  tutorProfile: ITutorProfile;
   score: number;
   matchScore: number;
   tier: "excellent" | "great" | "good" | "fair" | "strong" | "other";
@@ -58,7 +58,7 @@ export interface RankedTutorMatch {
 }
 
 export interface RankedRequestMatch {
-  request: any;
+  request: IRequest;
   score: number;
   matchScore: number;
   tier: "excellent" | "great" | "good" | "fair" | "strong" | "other";
@@ -68,7 +68,7 @@ export interface RankedRequestMatch {
 }
 
 export interface RankedOffersResult {
-  offers: any[];
+  offers: IBid[];
   totalCount: number;
   cappedCount: number;
   isCapped: boolean;
@@ -214,7 +214,7 @@ export class MatchingService {
       }
     } else {
       // "both" mode: show online-capable tutors everywhere, and in-person tutors only where police + location match
-      const homeSubQuery: any = {
+      const homeSubQuery: Record<string, unknown> = {
         teachingMode: { $in: ["in-person", "both"] },
         policeVerificationStatus: "approved",
       };
@@ -697,10 +697,11 @@ export class MatchingService {
 
     const scoredPromises = candidateRequests.map(async (reqDoc) => {
       const match = await this.calculateMatchScore(reqDoc as any, tutor, config);
-      const isInvited = Boolean(options.tutorUserId && (reqDoc as any).invitedTutors?.some((id: any) => id.toString() === options.tutorUserId));
+      const isInvited = Boolean(options.tutorUserId && (reqDoc as unknown as { invitedTutors?: { toString(): string }[] }).invitedTutors?.some((id) => id.toString() === options.tutorUserId));
       if (!match || (!isInvited && match.score < config.thresholds.notificationMinimum)) return null;
       return {
         request: reqDoc,
+        score: match.score,
         matchScore: match.score,
         tier: match.tier,
         scoreBreakdown: match.scoreBreakdown,
@@ -782,7 +783,7 @@ export class MatchingService {
    */
   public static async dispatchProgressiveNotifications(
     request: IRequest,
-    io?: any
+    io?: import("socket.io").Server
   ): Promise<{ notifiedCount: number; tier1Count: number }> {
     try {
       const eligibleTutors = await this.getEligibleTutors(request, { limit: 80 });

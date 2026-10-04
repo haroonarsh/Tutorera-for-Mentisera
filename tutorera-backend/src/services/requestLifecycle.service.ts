@@ -41,7 +41,7 @@ export interface LifecycleRunResult {
  * 1. Process 24-Hour Expiry Warnings
  * Notifies students when their active request is 24 hours away from expiry.
  */
-export async function sendExpiryWarnings(io?: any): Promise<number> {
+export async function sendExpiryWarnings(io?: import("socket.io").Server): Promise<number> {
   const now = new Date();
   const warningThreshold = new Date(now.getTime() + EXPIRY_WARNING_HOURS * 60 * 60 * 1000);
 
@@ -86,7 +86,7 @@ export async function sendExpiryWarnings(io?: any): Promise<number> {
       reqDoc.expiryWarningSentAt = now;
       await reqDoc.save();
       sent++;
-    } catch (err: any) {
+    } catch (err) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to send request expiry warning");
     }
   }
@@ -98,7 +98,7 @@ export async function sendExpiryWarnings(io?: any): Promise<number> {
  * 2. Process Day-5 Supply Escalation
  * If a request reaches 48h before expiry with 0 offers, expand tutor reach and inform student.
  */
-export async function processDay5Escalations(io?: any): Promise<number> {
+export async function processDay5Escalations(io?: import("socket.io").Server): Promise<number> {
   const now = new Date();
   const escalationThreshold = new Date(now.getTime() + DAY_5_INTERVENTION_HOURS * 60 * 60 * 1000);
 
@@ -127,7 +127,7 @@ export async function processDay5Escalations(io?: any): Promise<number> {
         await reqDoc.save();
         escalated++;
       }
-    } catch (err: any) {
+    } catch (err) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to process day-5 escalation");
     }
   }
@@ -141,7 +141,7 @@ export async function processDay5Escalations(io?: any): Promise<number> {
  * marks unselected offers as closed, preserves active negotiations under grace,
  * and notifies the student.
  */
-export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: number; offersClosedCount: number }> {
+export async function expireEligibleRequests(io?: import("socket.io").Server): Promise<{ expiredCount: number; offersClosedCount: number }> {
   const now = new Date();
   let expiredCount = 0;
   let offersClosedCount = 0;
@@ -264,7 +264,7 @@ export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: 
           extensionCount: reqDoc.extensionCount,
         },
       });
-    } catch (err: any) {
+    } catch (err) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to expire request document");
     }
   }
@@ -311,7 +311,7 @@ export async function processRequestArchival(): Promise<number> {
         entity: "Request",
         targetId: reqDoc._id.toString(),
       });
-    } catch (err: any) {
+    } catch (err) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to archive request document");
     }
   }
@@ -355,8 +355,8 @@ export async function cleanupStalePaymentHolds(): Promise<{ cleaned: number; err
       );
 
       result.cleaned++;
-    } catch (err: any) {
-      result.errors.push(`Failed to cleanup payment hold for request ${reqDoc._id}: ${err?.message}`);
+    } catch (err) {
+      result.errors.push(`Failed to cleanup payment hold for request ${reqDoc._id}: ${err instanceof Error ? err.message : String(err)}`);
       logger.error({ err, requestId: reqDoc._id }, "Failed to cleanup stale payment hold");
     }
   }
@@ -373,7 +373,7 @@ export async function cleanupStalePaymentHolds(): Promise<{ cleaned: number; err
  * Identifies bookings completed >1 hour ago without a review, sends a
  * review request email to the student.
  */
-export async function sendReviewRequests(io?: any): Promise<number> {
+export async function sendReviewRequests(io?: import("socket.io").Server): Promise<number> {
   const now = new Date();
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
@@ -418,7 +418,7 @@ export async function sendReviewRequests(io?: any): Promise<number> {
       }
 
       sent++;
-    } catch (err: any) {
+    } catch (err) {
       logger.error({ err, bookingId: booking._id }, "Failed to send review request");
     }
   }
@@ -426,7 +426,7 @@ export async function sendReviewRequests(io?: any): Promise<number> {
   return sent;
 }
 
-export async function processRequestLifecycle(io?: any): Promise<LifecycleRunResult> {
+export async function processRequestLifecycle(io?: import("socket.io").Server): Promise<LifecycleRunResult> {
   const result: LifecycleRunResult = {
     scanned: 0,
     warningsSent: 0,
@@ -445,15 +445,15 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
 
   try {
     result.warningsSent = await sendExpiryWarnings(io);
-  } catch (err: any) {
-    result.errors.push(`Warnings error: ${err?.message}`);
+  } catch (err) {
+    result.errors.push(`Warnings error: ${err instanceof Error ? err.message : String(err)}`);
     logger.error({ err }, "Request lifecycle: warnings error");
   }
 
   try {
     result.day5EscalationsSent = await processDay5Escalations(io);
-  } catch (err: any) {
-    result.errors.push(`Escalations error: ${err?.message}`);
+  } catch (err) {
+    result.errors.push(`Escalations error: ${err instanceof Error ? err.message : String(err)}`);
     logger.error({ err }, "Request lifecycle: escalations error");
   }
 
@@ -461,15 +461,15 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
     const { expiredCount, offersClosedCount } = await expireEligibleRequests(io);
     result.expiredCount = expiredCount;
     result.offersClosedCount = offersClosedCount;
-  } catch (err: any) {
-    result.errors.push(`Expiry error: ${err?.message}`);
+  } catch (err) {
+    result.errors.push(`Expiry error: ${err instanceof Error ? err.message : String(err)}`);
     logger.error({ err }, "Request lifecycle: expiry error");
   }
 
   try {
     result.archivedCount = await processRequestArchival();
-  } catch (err: any) {
-    result.errors.push(`Archival error: ${err?.message}`);
+  } catch (err) {
+    result.errors.push(`Archival error: ${err instanceof Error ? err.message : String(err)}`);
     logger.error({ err }, "Request lifecycle: archival error");
   }
 
@@ -477,15 +477,15 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
     const paymentCleanup = await cleanupStalePaymentHolds();
     result.paymentHoldsCleaned = paymentCleanup.cleaned;
     paymentCleanup.errors.forEach((e) => result.errors.push(e));
-  } catch (err: any) {
-    result.errors.push(`Payment hold cleanup error: ${err?.message}`);
+  } catch (err) {
+    result.errors.push(`Payment hold cleanup error: ${err instanceof Error ? err.message : String(err)}`);
     logger.error({ err }, "Request lifecycle: payment hold cleanup error");
   }
 
   try {
     result.reviewRequestsSent = await sendReviewRequests();
-  } catch (err: any) {
-    result.errors.push(`Review request error: ${err?.message}`);
+  } catch (err) {
+    result.errors.push(`Review request error: ${err instanceof Error ? err.message : String(err)}`);
     logger.error({ err }, "Request lifecycle: review request error");
   }
 
