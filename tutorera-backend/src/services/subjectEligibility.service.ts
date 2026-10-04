@@ -16,6 +16,9 @@ import TutorProfile, { ITutorProfile } from "../models/TutorProfile.model";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import DisciplineSubjectMap from "../models/DisciplineSubjectMap.model";
+import AcademicDiscipline from "../models/AcademicDiscipline.model";
+import Subject from "../models/Subject.model";
+import TeachingEligibilityRule, { TeachingEligibilityType } from "../models/TeachingEligibilityRule.model";
 import { logAudit } from "../utils/logAudit";
 
 export const NOT_ELIGIBLE_MESSAGE = "You are not approved to teach this subject or level. Submit a relevant qualification for admin review.";
@@ -71,11 +74,44 @@ export function syncApprovedSubjects(profile: ITutorProfile): void {
  * entry for the given discipline - a hint surfaced to the reviewing admin,
  * never used to auto-approve (see module doc comment). */
 export async function subjectMatchesDiscipline(discipline: string | undefined, subject: string): Promise<boolean> {
-  if (!discipline) return false;
+  const rule = await resolveTeachingEligibility(discipline, subject);
+  return rule.eligibilityType === "direct";
+}
+
+export interface TeachingEligibilityResolution {
+  eligibilityType: TeachingEligibilityType | "unmapped";
+  evidenceRequired: boolean;
+  subjectId?: Types.ObjectId;
+  ruleId?: Types.ObjectId;
+}
+
+/**
+ * Canonical eligibility resolver. Once a discipline has migrated to the
+ * Academic Framework, its active rule set is authoritative: no matching rule
+ * means unmapped. The legacy string-array map is consulted only while no
+ * canonical discipline exists, keeping current production records readable
+ * during the additive migration.
+ */
+export async function resolveTeachingEligibility(discipline: string | undefined, subject: string): Promise<TeachingEligibilityResolution> {
+  if (!discipline || !subject) return { eligibilityType: "unmapped", evidenceRequired: true };
+  const [canonicalDiscipline, canonicalSubject] = await Promise.all([
+    AcademicDiscipline.findOne({ name: new RegExp(`^${discipline.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"), status: "active" }).lean(),
+    Subject.findOne({ name: new RegExp(`^${subject.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"), status: "active" }).lean(),
+  ]);
+  if (canonicalDiscipline) {
+    if (!canonicalSubject) return { eligibilityType: "unmapped", evidenceRequired: true };
+    const rule = await TeachingEligibilityRule.findOne({ discipline: canonicalDiscipline._id, subject: canonicalSubject._id, status: "active" }).lean();
+    return rule
+      ? { eligibilityType: rule.eligibilityType, evidenceRequired: rule.evidenceRequired, subjectId: canonicalSubject._id, ruleId: rule._id }
+      : { eligibilityType: "unmapped", evidenceRequired: true, subjectId: canonicalSubject._id };
+  }
+
   const mapping = await DisciplineSubjectMap.findOne({ discipline: new RegExp(`^${discipline.trim()}$`, "i"), isActive: true }).lean();
-  if (!mapping) return false;
+  if (!mapping) return { eligibilityType: "unmapped", evidenceRequired: true, subjectId: canonicalSubject?._id };
   const target = normalize(subject);
-  return mapping.eligibleSubjects.some((s) => normalize(s) === target);
+  return mapping.eligibleSubjects.some((s) => normalize(s) === target)
+    ? { eligibilityType: "direct", evidenceRequired: false, subjectId: canonicalSubject?._id }
+    : { eligibilityType: "unmapped", evidenceRequired: true, subjectId: canonicalSubject?._id };
 }
 
 /** Creates (or leaves alone, if one already exists) a "pending"
@@ -95,17 +131,24 @@ export async function requestSubjectEligibility(
 
   const disciplines = Array.from(new Set([opts.discipline, ...(opts.disciplines || [])]
     .filter((discipline): discipline is string => Boolean(discipline?.trim()))));
-  const matchingDisciplineIndex = disciplines.length
-    ? await Promise.all(disciplines.map((discipline) => subjectMatchesDiscipline(discipline, subject)))
+  const resolutions = disciplines.length
+    ? await Promise.all(disciplines.map((discipline) => resolveTeachingEligibility(discipline, subject)))
     : [];
-  const matchedQualificationIndex = matchingDisciplineIndex.findIndex(Boolean);
-  const matchesDiscipline = matchedQualificationIndex >= 0;
+  const directQualificationIndex = resolutions.findIndex((result) => result.eligibilityType === "direct");
+  const conditionalQualificationIndex = resolutions.findIndex((result) => result.eligibilityType === "conditional");
+  const matchedQualificationIndex = directQualificationIndex >= 0 ? directQualificationIndex : conditionalQualificationIndex;
+  const resolution = matchedQualificationIndex >= 0 ? resolutions[matchedQualificationIndex] : resolutions[0];
+  const matchesDiscipline = resolution?.eligibilityType === "direct";
   profile.subjectEligibility.push({
     subject,
     levels: [],
-    status: "pending",
+    status: resolution?.eligibilityType === "conditional" && resolution.evidenceRequired ? "needs_evidence" : "pending",
     matchesDiscipline,
     qualificationIndex: opts.qualificationIndex ?? (matchedQualificationIndex >= 0 ? matchedQualificationIndex : undefined),
+    subjectRef: resolution?.subjectId,
+    eligibilityRuleRef: resolution?.ruleId,
+    eligibilityType: resolution?.eligibilityType || "unmapped",
+    evidenceRequired: resolution?.evidenceRequired ?? true,
     requestedAt: new Date(),
   } as ITutorProfile["subjectEligibility"] extends (infer T)[] | undefined ? T : never);
 }

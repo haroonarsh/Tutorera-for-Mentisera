@@ -67,6 +67,8 @@ export interface ITutorProfile extends Document {
     // tutor's actual qualification. Optional: older profiles predate this
     // field and won't have it.
     discipline?: string;
+    /** Canonical AcademicDiscipline reference; legacy discipline text is retained as a snapshot. */
+    disciplineRef?: Types.ObjectId;
   }[];
 
   // Step 3 — Experience
@@ -88,7 +90,13 @@ export interface ITutorProfile extends Document {
   subjectEligibility?: {
     subject: string;
     levels: string[]; // approved teaching levels for this subject; empty = not yet scoped
-    status: "pending" | "approved" | "rejected" | "revoked";
+    status: "pending" | "needs_evidence" | "approved" | "rejected" | "suspended" | "revoked";
+    /** Additive canonical references. `subject` remains a historical display snapshot. */
+    subjectRef?: Types.ObjectId;
+    eligibilityRuleRef?: Types.ObjectId;
+    eligibilityType?: "direct" | "conditional" | "unmapped";
+    evidenceRequired?: boolean;
+    evidence?: { url: string; label?: string; uploadedAt?: Date }[];
     // Whether this subject appears in a DisciplineSubjectMap entry matching
     // the tutor's declared discipline at the time it was requested - shown
     // to the admin as a hint, never used to auto-approve (tutor selections
@@ -280,6 +288,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       degreeDoc: { type: String, default: "" },
       degreeDocPublicId: { type: String, default: "" },
       discipline: { type: String, trim: true },
+      disciplineRef: { type: Schema.Types.ObjectId, ref: "AcademicDiscipline" },
     }],
 
     // Step 3
@@ -293,7 +302,12 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     subjectEligibility: [{
       subject: { type: String, trim: true, required: true },
       levels: [{ type: String, trim: true }],
-      status: { type: String, enum: ["pending", "approved", "rejected", "revoked"], default: "pending" },
+      status: { type: String, enum: ["pending", "needs_evidence", "approved", "rejected", "suspended", "revoked"], default: "pending" },
+      subjectRef: { type: Schema.Types.ObjectId, ref: "Subject" },
+      eligibilityRuleRef: { type: Schema.Types.ObjectId, ref: "TeachingEligibilityRule" },
+      eligibilityType: { type: String, enum: ["direct", "conditional", "unmapped"] },
+      evidenceRequired: { type: Boolean, default: false },
+      evidence: [{ url: { type: String, required: true }, label: { type: String }, uploadedAt: { type: Date, default: Date.now } }],
       matchesDiscipline: { type: Boolean, default: false },
       qualificationIndex: { type: Number },
       requestedAt: { type: Date, default: Date.now },
