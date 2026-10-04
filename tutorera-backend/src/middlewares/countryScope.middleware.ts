@@ -23,7 +23,16 @@ export const enforceCountryScope = (req: AuthRequest, res: Response, next: NextF
   // Do not allow a country administrator through a route that has not been
   // made country-aware yet. This is intentionally restrictive: a partial
   // filter must never become a cross-country data disclosure.
-  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography", "/onboarding", "/users", "/safety/cases"].some((prefix) => req.path.startsWith(prefix));
+  //
+  // The check runs against req.originalUrl rather than req.path because
+  // Express strips the matching prefix from req.path when the middleware
+  // is attached via router.use("/sub-path", ...). Using originalUrl gives
+  // the full URL (e.g. /api/v1/tracking/admin/applications/...) and lets
+  // one supported-prefix list cover both /admin/* routes and sub-router
+  // routes without caring where the middleware was mounted. Audit P0-3:
+  // /admin/applications is the tutor application-review surface served
+  // by routes/tracking.routes.ts (mounted at /api/v1/tracking).
+  const supported = ["/marketplace/requests", "/marketplace/offers", "/markets", "/geography", "/onboarding", "/users", "/safety/cases", "/admin/applications"].some((prefix) => req.originalUrl.includes(prefix));
   if (!supported) {
     res.status(403).json({ success: false, code: "COUNTRY_SCOPE_ROUTE_UNSUPPORTED", message: "This administrative resource is not yet available in country-scoped mode." });
     return;

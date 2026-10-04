@@ -22,6 +22,7 @@ import {
 } from "../controllers/tracking.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
+import { enforceCountryScope } from "../middlewares/countryScope.middleware";
 import { trackingLimiter, tutorRotateLimiter } from "../middlewares/rateLimiters";
 import { uploadVerification } from "../middlewares/upload.middleware";
 
@@ -33,6 +34,14 @@ router.post("/application-status/rotate-token", protect, authorize("tutor"), tut
 router.post("/application-status/accept-agreement", protect, authorize("tutor"), acceptTutorAgreement);
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
+// Audit P0-3: country-scope enforcement on every tutor application review
+// route. enforceCountryScope is a no-op for super_admin and lets a
+// single-country admin's requests through without an explicit country
+// filter (it defaults to their one allowed country). A multi-country
+// admin must pass ?countryCode= on reads and the handlers below guard
+// mutations against profile.countryCode mismatch.
+router.use("/admin/applications", protect, authorize("admin"), enforceCountryScope);
+
 router.get("/admin/applications", protect, authorize("admin"), requirePermission("tutor.read"), listApplications);
 router.get("/admin/applications/:id", protect, authorize("admin"), requirePermission("tutor.read"), getApplicationDetail);
 router.get("/admin/applications/:id/history", protect, authorize("admin"), requirePermission("audit.read"), getApplicationHistory);

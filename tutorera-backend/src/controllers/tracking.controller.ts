@@ -192,6 +192,21 @@ async function loadProfileOr404(req: AuthRequest, res: Response): Promise<{ user
     res.status(404).json({ success: false, message: "Tutor user not found" });
     return null;
   }
+  // Audit P0-3: country-scope guard. enforceCountryScope has already
+  // validated that req.countryScopeCode is one of the acting admin's
+  // allowedCountryCodes, so if it's set it defines the ceiling for the
+  // profiles this request may touch. A profile whose own country
+  // doesn't match that scope must look like a 404 (same convention as
+  // other IDOR surfaces — do not reveal existence to a wrong-country
+  // operator). super_admin requests pass through with req.countryScopeCode
+  // left unset by the middleware.
+  if (req.countryScopeCode) {
+    const profileCountry = (profile.countryCode || user.countryCode || "").toUpperCase();
+    if (profileCountry !== req.countryScopeCode) {
+      res.status(404).json({ success: false, message: "Tutor profile not found" });
+      return null;
+    }
+  }
   return { user, profile };
 }
 
@@ -243,6 +258,14 @@ export const listApplications = async (req: AuthRequest, res: Response): Promise
 
   if (from) Object.assign(profileFilter, { createdAt: { ...((profileFilter.createdAt as object) || {}), $gte: new Date(String(from)) } });
   if (to) Object.assign(profileFilter, { createdAt: { ...((profileFilter.createdAt as object) || {}), $lte: new Date(String(to)) } });
+
+  // Audit P0-3: for a country-scoped admin, every row in the result
+  // must belong to their country. enforceCountryScope has already set
+  // req.countryScopeCode to the UPPERCASE allowed country code; a
+  // super_admin leaves it unset and gets the global list.
+  if (req.countryScopeCode) {
+    Object.assign(profileFilter, { countryCode: req.countryScopeCode });
+  }
 
   const pageNum = Math.max(1, parseInt(String(page)) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(String(limit)) || 20));
