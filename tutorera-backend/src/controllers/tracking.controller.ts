@@ -37,7 +37,7 @@ import {
   reVerificationRequiredEmail,
   trackingWelcomeEmail,
 } from "../utils/trackingEmails";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+import { getSignedViewUrl, uploadToCloudinary } from "../utils/uploadToCloudinary";
 import {
   approveSubjectEligibility,
   rejectSubjectEligibility,
@@ -1165,4 +1165,18 @@ export const reviewSubjectEligibility = async (req: AuthRequest, res: Response):
   });
 
   res.status(200).json({ success: true, message: copy.title, profile, flaggedBookings: result.flaggedBookings });
+};
+
+/** Admin-only, short-lived viewing link for one private supporting-evidence
+ * file. Evidence URLs are deliberately not returned in list responses. */
+export const getSubjectEligibilityEvidenceUrl = async (req: AuthRequest, res: Response): Promise<void> => {
+  const data = await loadProfileOr404(req, res);
+  if (!data) return;
+  const subject = String(req.params.subject || "").trim().toLowerCase();
+  const index = Number(req.params.index);
+  const entry = data.profile.subjectEligibility?.find((item: any) => item.subject.trim().toLowerCase() === subject);
+  const evidence = Number.isInteger(index) && index >= 0 ? entry?.evidence?.[index] : undefined;
+  if (!evidence?.publicId) { res.status(404).json({ success: false, message: "Supporting evidence is not available." }); return; }
+  await logAudit({ action: "subject_eligibility_evidence_viewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: data.profile._id.toString(), targetName: data.profile.fullName, metadata: { subject, index } });
+  res.json({ success: true, url: getSignedViewUrl(evidence.publicId, "raw"), label: evidence.label || "Supporting evidence" });
 };

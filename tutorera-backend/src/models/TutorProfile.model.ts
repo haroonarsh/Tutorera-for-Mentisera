@@ -96,7 +96,7 @@ export interface ITutorProfile extends Document {
     eligibilityRuleRef?: Types.ObjectId;
     eligibilityType?: "direct" | "conditional" | "unmapped";
     evidenceRequired?: boolean;
-    evidence?: { url: string; label?: string; uploadedAt?: Date }[];
+    evidence?: { url: string; publicId?: string; label?: string; uploadedAt?: Date }[];
     // Whether this subject appears in a DisciplineSubjectMap entry matching
     // the tutor's declared discipline at the time it was requested - shown
     // to the admin as a hint, never used to auto-approve (tutor selections
@@ -307,7 +307,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
       eligibilityRuleRef: { type: Schema.Types.ObjectId, ref: "TeachingEligibilityRule" },
       eligibilityType: { type: String, enum: ["direct", "conditional", "unmapped"] },
       evidenceRequired: { type: Boolean, default: false },
-      evidence: [{ url: { type: String, required: true }, label: { type: String }, uploadedAt: { type: Date, default: Date.now } }],
+      evidence: [{ url: { type: String, required: true }, publicId: { type: String }, label: { type: String }, uploadedAt: { type: Date, default: Date.now } }],
       matchesDiscipline: { type: Boolean, default: false },
       qualificationIndex: { type: Number },
       requestedAt: { type: Date, default: Date.now },

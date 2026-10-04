@@ -68,6 +68,8 @@ interface ApplicationDetail {
       levels: string[];
       status: "pending" | "approved" | "rejected" | "revoked";
       matchesDiscipline: boolean;
+      evidenceRequired?: boolean;
+      evidence?: { label?: string }[];
       reason?: string;
       requestedAt: string;
       reviewedAt?: string;
@@ -223,6 +225,13 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
 
   const [eligibilityLevels, setEligibilityLevels] = useState<Record<string, string>>({});
   const [eligibilityReasons, setEligibilityReasons] = useState<Record<string, string>>({});
+
+  const viewSubjectEvidence = async (subject: string, index: number) => {
+    try {
+      const response = await api.get(`/tracking/admin/applications/${id}/subject-eligibility/${encodeURIComponent(subject)}/evidence/${index}`);
+      window.open(response.data.url, "_blank", "noopener,noreferrer");
+    } catch (err) { showError(err, "Supporting evidence is unavailable"); }
+  };
 
   const handleSubjectEligibility = async (subject: string, action: "approve" | "reject" | "revoke") => {
     const key = `subject-eligibility-${subject}-${action}`;
@@ -525,6 +534,7 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                     {entry.levels?.length > 0 && <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>Approved levels: {entry.levels.join(", ")}</span>}
                   </div>
                   {entry.reason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "6px 0 0" }}>Reason: {entry.reason}</p>}
+                  {entry.evidence?.length ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}><span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>{entry.evidence.length} supporting document{entry.evidence.length === 1 ? "" : "s"} attached</span>{entry.evidence.map((evidence, index) => <button key={`${entry.subject}-evidence-${index}`} type="button" onClick={() => void viewSubjectEvidence(entry.subject, index)} style={btnSecondaryStyle}>View {evidence.label || `evidence ${index + 1}`}</button>)}</div> : entry.evidenceRequired ? <p style={{ fontSize: 12, color: STATUS_COLORS.warning.color, margin: "8px 0 0" }}>Supporting evidence has not been uploaded yet.</p> : null}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                     <input
                       type="text"

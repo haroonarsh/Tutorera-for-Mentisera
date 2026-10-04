@@ -59,7 +59,7 @@ export const uploadSubjectEligibilityEvidence = async (req: AuthRequest, res: Re
   if (["approved", "revoked", "suspended"].includes(entry.status)) { res.status(409).json({ success: false, message: "This subject request cannot accept further evidence in its current status." }); return; }
   try {
     const uploaded = await safeUploadToCloudinary(req.file.buffer, "tutorera/verification/subject-evidence", "raw", true);
-    entry.evidence = [...(entry.evidence || []), { url: uploaded.secure_url, label: String(req.body.label || req.file.originalname).slice(0, 160), uploadedAt: new Date() }];
+    entry.evidence = [...(entry.evidence || []), { url: uploaded.secure_url, publicId: uploaded.public_id, label: String(req.body.label || req.file.originalname).slice(0, 160), uploadedAt: new Date() }];
     entry.status = "pending";
     await profile.save();
     await logAudit({ action: "subject_eligibility_evidence_uploaded", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "TutorProfile", targetId: profile._id.toString(), targetName: profile.fullName, metadata: { subject, evidenceCount: entry.evidence.length } });
