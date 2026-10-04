@@ -16,7 +16,8 @@
     "migrate:launch-markets": "tsx src/scripts/reconcileGlobalLaunchMarkets.ts",
     "migrate:referral-currency": "tsx src/scripts/migrateReferralCurrency.ts",
     "contracts:generate": "tsx src/scripts/generateFrontendContracts.ts",
-    "audit:grandfathered-tutors": "tsx src/scripts/auditGrandfatheredTutors.ts"
+    "audit:grandfathered-tutors": "tsx src/scripts/auditGrandfatheredTutors.ts",
+    "academic:reconcile": "tsx src/scripts/reconcileAcademicFramework.ts"
   },
   "keywords": [],
   "author": "",
