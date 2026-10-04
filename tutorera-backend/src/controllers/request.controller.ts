@@ -1124,6 +1124,14 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
 // @route   POST /api/requests/direct
 // @access  Private (student)
 export const createDirectBookingRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (process.env.ENABLE_DIRECT_BOOKING === "false") {
+    res.status(403).json({
+      success: false,
+      code: "DIRECT_BOOKING_DISABLED",
+      message: "Direct booking is currently disabled. Please post a tuition requirement to receive offers from this tutor.",
+    });
+    return;
+  }
   const { tutorId, subject, level, description, teachingMode, city, schedule, selectedDate, selectedStartTime, selectedEndTime } = req.body;
 
   if (!tutorId || !subject || !level || !description || !schedule) {

@@ -31,6 +31,7 @@ export default function StickyTutorProfileCTA({
 }: StickyTutorProfileCTAProps) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const hasRate = typeof hourlyRate === "number" && hourlyRate > 0;
+  const directBookingEnabled = process.env.NEXT_PUBLIC_ENABLE_DIRECT_BOOKING !== "false";
   const requestHref = `/post-tuition-request?subject=${encodeURIComponent(subjects[0] || "")}&city=${encodeURIComponent(city || "")}`;
 
   return (
@@ -87,7 +88,7 @@ export default function StickyTutorProfileCTA({
             <PlusCircle size={14} /> Create requirement
           </Link>
 
-          {hasRate ? (
+          {hasRate && directBookingEnabled ? (
             <button
               type="button"
               onClick={() => setBookingOpen(true)}
@@ -140,7 +141,7 @@ export default function StickyTutorProfileCTA({
         `}</style>
       </div>
 
-      {bookingOpen && hasRate && (
+      {bookingOpen && hasRate && directBookingEnabled && (
         <DirectBookingModal
           tutorId={tutorUserId}
           tutorUserId={tutorUserId}

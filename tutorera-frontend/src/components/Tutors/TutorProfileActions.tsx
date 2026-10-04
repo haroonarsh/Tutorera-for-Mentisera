@@ -25,6 +25,7 @@ export default function TutorProfileActions(props: Props) {
   const [invitingRequestId, setInvitingRequestId] = useState<string | null>(null);
   const { isFavourited, toggleFavourite, isStudent, loaded } = useFavourites();
   const { user } = useAuth();
+  const directBookingEnabled = process.env.NEXT_PUBLIC_ENABLE_DIRECT_BOOKING !== "false";
   const saved = isFavourited(props.profileId);
   const canPostRequirement = user?.role === "student" || user?.role === "parent";
 

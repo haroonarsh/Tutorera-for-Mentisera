@@ -190,4 +190,31 @@ describe("direct-booking IDOR + authorization boundaries", () => {
 
     expect(res.status).toBe(403);
   });
+
+  it("rejects direct booking request with 403 when ENABLE_DIRECT_BOOKING is false (Phase 5 feature flag)", async () => {
+    const origFlag = process.env.ENABLE_DIRECT_BOOKING;
+    process.env.ENABLE_DIRECT_BOOKING = "false";
+
+    try {
+      const student = await makeUser("student", "flag-disabled");
+      const tutor = await makeMarketplaceEligibleTutor("flag-tutor");
+
+      const res = await request(app)
+        .post("/api/v1/requests/direct")
+        .set("Authorization", `Bearer ${student.token}`)
+        .send({
+          tutorId: tutor.user.id,
+          subject: "Mathematics",
+          level: "O-Level (Cambridge / Edexcel)",
+          description: "Need direct help",
+          teachingMode: "online",
+          schedule: "Mon 18:00",
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("DIRECT_BOOKING_DISABLED");
+    } finally {
+      process.env.ENABLE_DIRECT_BOOKING = origFlag;
+    }
+  });
 });
