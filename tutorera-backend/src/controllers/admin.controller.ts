@@ -162,10 +162,11 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   const now = new Date();
   let agreementCreated = false;
 
+  const setField = (key: keyof typeof profile, value: unknown) => { (profile as unknown as Record<string, unknown>)[key as string] = value; };
   const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
-    (profile as any)[`${kind}VerificationStatus`] = status;
-    (profile as any)[`${kind}RejectionReason`] = status === "rejected" ? (reason || "") : "";
-    (profile as any)[`${kind}ReviewedAt`] = now;
+    setField(`${kind}VerificationStatus` as keyof typeof profile, status);
+    setField(`${kind}RejectionReason` as keyof typeof profile, status === "rejected" ? (reason || "") : "");
+    setField(`${kind}ReviewedAt` as keyof typeof profile, now);
   };
   component("cnic");
   component("degree");
@@ -189,7 +190,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     const activeAgreement = await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } });
     if (!activeAgreement) {
       profile.agreementAcceptanceRequired = true;
-      profile.agreementAcceptedAt = undefined as any;
+      profile.agreementAcceptedAt = undefined;
       profile.agreementVersion = "TTA-2026.1";
       await profile.save({ validateBeforeSave: false });
       await TutorAgreement.create({
@@ -263,7 +264,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/dashboard" });
   } else if (!activation.activated && profile.marketplaceEligible) {
     profile.marketplaceEligible = false;
-    profile.marketplaceEligibleAt = undefined as any;
+    profile.marketplaceEligibleAt = undefined;
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
     try {
@@ -282,7 +283,7 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
   } else if (!htEligible && profile.homeTuitionEligible) {
     profile.homeTuitionEligible = false;
-    profile.homeTuitionEligibleAt = undefined as any;
+    profile.homeTuitionEligibleAt = undefined;
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
     try {
@@ -340,10 +341,11 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         continue;
       }
 
+      const setF = (key: string, value: unknown) => { (profile as unknown as Record<string, unknown>)[key] = value; };
       const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
-        (profile as any)[`${kind}VerificationStatus`] = status;
-        (profile as any)[`${kind}RejectionReason`] = status === "rejected" ? (reason || "") : "";
-        (profile as any)[`${kind}ReviewedAt`] = now;
+        setF(`${kind}VerificationStatus`, status);
+        setF(`${kind}RejectionReason`, status === "rejected" ? (reason || "") : "");
+        setF(`${kind}ReviewedAt`, now);
       };
       component("cnic");
       component("degree");
@@ -416,7 +418,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/dashboard" });
       } else if (!activation.activated && profile.marketplaceEligible) {
         profile.marketplaceEligible = false;
-        profile.marketplaceEligibleAt = undefined as any;
+        profile.marketplaceEligibleAt = undefined;
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
         try {
@@ -435,7 +437,7 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
       } else if (!htEligible && profile.homeTuitionEligible) {
         profile.homeTuitionEligible = false;
-        profile.homeTuitionEligibleAt = undefined as any;
+        profile.homeTuitionEligibleAt = undefined;
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
         try {
@@ -449,9 +451,9 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       } else {
         results.rejected++;
       }
-    } catch (err: any) {
+    } catch (err) {
       results.failed++;
-      results.errors.push(`Failed to process ${tutorId}: ${err?.message || "unknown error"}`);
+      results.errors.push(`Failed to process ${tutorId}: ${err instanceof Error ? err.message : "unknown error"}`);
       console.error(`Bulk verify error for ${tutorId}:`, err);
     }
   }
@@ -497,7 +499,7 @@ export const uploadTutorDocsAdmin = async (
   const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
   const VIDEO_TYPES = ["video/mp4"];
 
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, unknown> = {};
   const replacedAssets: { publicId: string; resourceType?: "video" }[] = [];
 
   // CNIC Front
@@ -613,12 +615,13 @@ export const uploadTutorDocsAdmin = async (
       message: "Documents uploaded. Application review is required before activation.",
       profile: updated,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Admin document upload error:", error);
+    const errMsg = error instanceof Error ? error.message : "Failed to upload documents. Please try again.";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to upload documents. Please try again.",
-      error: process.env.NODE_ENV === "development" ? error.toString() : undefined,
+      message: errMsg,
+      error: process.env.NODE_ENV === "development" ? String(error) : undefined,
     });
   }
 };
@@ -773,7 +776,7 @@ export const updatePaymentStatus = async (
       actorId: req.user?._id?.toString(),
       entity: "Booking",
       targetId: booking._id.toString(),
-      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
       metadata: { amount: booking.amount },
     });
 
@@ -781,7 +784,7 @@ export const updatePaymentStatus = async (
       const studentUser = await User.findById(booking.student).select("email");
       if (studentUser) {
         await NotificationService.publishEvent(studentUser._id.toString(), "payment_receipt", {
-          tutorName: (booking.tutor as any)?.name || "Tutor",
+          tutorName: ((booking.tutor as unknown as { name?: string }))?.name || "Tutor",
           amount: booking.amount,
           bookingId: booking._id.toString()
         });
@@ -850,7 +853,7 @@ export const updatePaymentStatus = async (
       actorId: req.user?._id?.toString(),
       entity: "Booking",
       targetId: booking._id.toString(),
-      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
       metadata: { tutorPayout: booking.tutorPayout },
     });
   } else if (payoutStatus !== undefined) {
@@ -860,7 +863,7 @@ export const updatePaymentStatus = async (
       actorId: req.user?._id?.toString(),
       entity: "Booking",
       targetId: booking._id.toString(),
-      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+      targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
       metadata: { tutorPayout: booking.tutorPayout, payoutNote: booking.payoutNote || "" },
     });
   }
@@ -967,7 +970,7 @@ export const updateBookingStatus = async (
     actorId: req.user?._id?.toString(),
     entity: "Booking",
     targetId: booking._id.toString(),
-    targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
+    targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
     metadata: { previousStatus },
   });
 
@@ -981,7 +984,7 @@ export const updateBookingStatus = async (
      try {
        const studentUser = await User.findById(booking.student).select("name email");
        const tutorUser = await User.findById(booking.tutor).select("name email");
-       const requestSubject = (booking.request as any)?.subject || "your session";
+       const requestSubject = ((booking.request as unknown as { subject?: string }))?.subject || "your session";
        if (studentUser && tutorUser) {
          await NotificationService.publishEvent(studentUser._id.toString(), "review.requested", {
            tutorName: tutorUser.name,
@@ -1880,7 +1883,7 @@ export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Prom
       }
       publicId = profile.education[qualificationIndex].degreeDocPublicId;
     } else {
-      publicId = (profile as any)[`${field}PublicId`];
+      publicId = (profile as unknown as Record<string, unknown>)[`${field}PublicId`] as string | undefined;
     }
 
     if (!publicId) {
@@ -1890,9 +1893,9 @@ export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Prom
 
     const signedUrl = getSignedViewUrl(publicId, "image", 300);
     res.status(200).json({ success: true, url: signedUrl });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to generate tutor document view URL:", error);
-    res.status(500).json({ success: false, message: error?.message || "Failed to generate document URL." });
+    res.status(500).json({ success: false, message: error instanceof Error ? error.message : "Failed to generate document URL." });
   }
 };
 
@@ -1914,8 +1917,9 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Length", pdfBuffer.length.toString());
     res.send(pdfBuffer);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to generate tutor payout report:", error);
-    res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
+    const statusCode = (error instanceof Error && "statusCode" in error) ? (error as Error & { statusCode: number }).statusCode : undefined;
+    res.status(statusCode || 500).json({ success: false, message: statusCode && error instanceof Error ? error.message : "Failed to generate payout report." });
   }
 };
