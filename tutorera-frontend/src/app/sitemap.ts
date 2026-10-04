@@ -12,11 +12,15 @@ const routes = [
   "content-review-policy", "research-methodology", "tutor-screening-policy", "governance",
 ];
 
-const TARGET_COUNTRIES = ["pk", "ae", "gb"] as const;
+const TARGET_COUNTRIES = ["pk", "ae", "gb", "in", "us", "sa"] as const;
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 const PK_STUDENT_INTENT_SLUGS = ["home-tuition", "online-tuition", "mathematics-tuition", "physics-tuition", "chemistry-tuition", "biology-tuition", "english-tuition", "o-level-tuition", "a-level-tuition", "mdcat-tutoring"] as const;
 const PK_CITY_TUITION_INTENTS = ["islamabad", "rawalpindi", "lahore", "karachi"] as const;
 const AE_CITY_TUITION_INTENTS = ["dubai", "abu-dhabi", "sharjah"] as const;
+const GB_CITY_TUITION_INTENTS = ["london", "manchester", "birmingham", "leeds", "edinburgh"] as const;
+const IN_CITY_TUITION_INTENTS = ["delhi", "mumbai", "bangalore", "chennai", "hyderabad", "kolkata"] as const;
+const US_CITY_TUITION_INTENTS = ["new-york", "los-angeles", "chicago", "houston", "miami"] as const;
+const SA_CITY_TUITION_INTENTS = ["riyadh", "jeddah", "dammam"] as const;
 
 // A single sitemap file supports up to 50,000 URLs (the sitemaps.org / Google limit).
 // Splitting the tutors sitemap into multiple generateSitemaps() ids beyond the original
@@ -123,6 +127,34 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       changeFrequency: "monthly" as const,
       priority: 0.8,
       })));
+    const gbCityStudentIntent: MetadataRoute.Sitemap = GB_CITY_TUITION_INTENTS
+      .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
+      url: `${SITE_URL}/gb/${city}/${intent}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+      })));
+    const inCityStudentIntent: MetadataRoute.Sitemap = IN_CITY_TUITION_INTENTS
+      .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
+      url: `${SITE_URL}/in/${city}/${intent}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+      })));
+    const usCityStudentIntent: MetadataRoute.Sitemap = US_CITY_TUITION_INTENTS
+      .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
+      url: `${SITE_URL}/us/${city}/${intent}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+      })));
+    const saCityStudentIntent: MetadataRoute.Sitemap = SA_CITY_TUITION_INTENTS
+      .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
+      url: `${SITE_URL}/sa/${city}/${intent}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+      })));
 
     const [{ articles: blogPosts }, blogCategories] = await Promise.all([
       getEditorialArticles({ limit: 200 }),
@@ -152,6 +184,10 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       ...studentIntent,
       ...cityStudentIntent,
       ...aeCityStudentIntent,
+      ...gbCityStudentIntent,
+      ...inCityStudentIntent,
+      ...usCityStudentIntent,
+      ...saCityStudentIntent,
       ...blog,
     ];
   }

@@ -3,37 +3,38 @@ import Link from "next/link";
 import { ArrowRight, GraduationCap, Home, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
 
-const GB_URL = `${SITE_URL}/gb`;
+const IN_URL = `${SITE_URL}/in`;
 
 const learningModes = [
-  { href: "/gb/london/home-tuition",   label: "Home Tuition",   desc: "Verified tutors teaching at your home in London, Manchester, Birmingham, Leeds or Edinburgh.", icon: Home,   post: "/post-home-tuition-request?country=GB" },
-  { href: "/gb/london/online-tuition", label: "Online Tuition", desc: "One-to-one live online tuition for GCSE, A-Level, 11+, Common Entrance and university entry across the UK.", icon: Laptop, post: "/post-online-tuition-request?country=GB" },
+  { href: "/in/delhi/home-tuition",   label: "Home Tuition",   desc: "Verified tutors teaching at your home address in Delhi, Mumbai, Bangalore, Chennai, Hyderabad or Kolkata.", icon: Home,   post: "/post-home-tuition-request?country=IN" },
+  { href: "/in/delhi/online-tuition", label: "Online Tuition", desc: "One-to-one live online tuition across Indian time zones and all major boards.", icon: Laptop, post: "/post-online-tuition-request?country=IN" },
 ];
 
 const cityIntents = [
-  { slug: "london",     label: "London" },
-  { slug: "manchester", label: "Manchester" },
-  { slug: "birmingham", label: "Birmingham" },
-  { slug: "leeds",      label: "Leeds" },
-  { slug: "edinburgh",  label: "Edinburgh" },
+  { slug: "delhi",     label: "Delhi" },
+  { slug: "mumbai",    label: "Mumbai" },
+  { slug: "bangalore", label: "Bangalore" },
+  { slug: "chennai",   label: "Chennai" },
+  { slug: "hyderabad", label: "Hyderabad" },
+  { slug: "kolkata",   label: "Kolkata" },
 ];
 
 const faq = [
   {
-    q: "How does TUTORERA work in the United Kingdom?",
-    a: "Students or parents post a tuition requirement — subject, qualification (GCSE, A-Level, 11+, IB, Common Entrance), teaching mode, city, schedule and preferred budget in GBP. Eligible tutors can submit offers, so the student or parent can compare options before choosing a tutor. Exact addresses and private contact details are not shown before a confirmed booking.",
+    q: "How does TUTORERA work in India?",
+    a: "Students or parents post a tuition requirement — subject, board (CBSE, ICSE, IB, State Board), teaching mode, city, schedule and preferred budget in INR. Eligible tutors can submit offers, so the student or parent can compare options before choosing a tutor. Exact addresses and private contact details are not shown before a confirmed booking.",
   },
   {
-    q: "Can I find a home tutor in London, Manchester or other UK cities?",
-    a: "Yes. Post a home-tuition requirement for your city and postcode area. Eligible home-tuition tutors matching your subject, qualification level and schedule can send offers you can compare before choosing.",
+    q: "Can I find a home tutor in Delhi, Mumbai or other Indian cities?",
+    a: "Yes. Post a home-tuition requirement for your city and locality. Eligible home-tuition tutors matching your subject, board and schedule can send offers you can compare before choosing.",
   },
   {
-    q: "Does TUTORERA support GCSE, A-Level, 11+ and IB tuition?",
-    a: "Yes. Online and home tuition matching considers subject, qualification (GCSE, A-Level, 11+, IB, Common Entrance), language and budget compatibility. Select your qualification when posting a requirement.",
+    q: "Does TUTORERA support all Indian school boards?",
+    a: "Yes. Online and home tuition matching considers subject, board (CBSE, ICSE, IB, State Board), language and budget compatibility. Select your board when posting a requirement.",
   },
   {
     q: "Who sets the tuition budget?",
-    a: "The student or parent sets the initial preferred budget in GBP when posting the requirement. Tutors can accept the budget or, where the request permits it, submit a counter-offer.",
+    a: "The student or parent sets the initial preferred budget in INR when posting the requirement. Tutors can accept the budget or, where the request permits it, submit a counter-offer.",
   },
   {
     q: "Who chooses the tutor?",
@@ -46,38 +47,38 @@ const faq = [
 ];
 
 export const metadata: Metadata = {
-  title: { absolute: "Tuition in UK — Home & Online Tutors | TUTORERA" },
+  title: { absolute: "Tuition in India — Home & Online Tutors | TUTORERA" },
   description:
-    "Post a tuition requirement in the UK for home or online tuition, set your preferred budget in GBP, and compare offers from eligible tutors. London, Manchester, Birmingham and nationwide.",
-  alternates: { canonical: "/gb" },
+    "Post a tuition requirement in India for home or online tuition, set your preferred budget in INR, and compare offers from eligible tutors. Delhi, Mumbai, Bangalore and nationwide.",
+  alternates: { canonical: "/in" },
   openGraph: {
-    title: "Tuition in UK — Home & Online Tutors | TUTORERA",
-    description: "Student-first tuition matching for the UK. Post a requirement, receive tutor offers, compare, and choose.",
-    url: GB_URL,
+    title: "Tuition in India — Home & Online Tutors | TUTORERA",
+    description: "Student-first tuition matching for India. Post a requirement, receive tutor offers, compare, and choose.",
+    url: IN_URL,
   },
 };
 
-export default function GBLandingPage() {
+export default function IndiaLandingPage() {
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebPage",
-        "@id": `${GB_URL}#webpage`,
-        name: "Tuition in United Kingdom",
-        description: "Post a tuition requirement in the UK for home or online tuition and compare eligible tutor offers.",
-        url: GB_URL,
+        "@id": `${IN_URL}#webpage`,
+        name: "Tuition in India",
+        description: "Post a tuition requirement in India for home or online tuition and compare eligible tutor offers.",
+        url: IN_URL,
         isPartOf: { "@id": `${SITE_URL}/#website` },
-        breadcrumb: { "@id": `${GB_URL}#breadcrumb` },
+        breadcrumb: { "@id": `${IN_URL}#breadcrumb` },
         about: { "@id": `${SITE_URL}/#organization` },
-        inLanguage: "en-GB",
+        inLanguage: "en-IN",
       },
       {
         "@type": "BreadcrumbList",
-        "@id": `${GB_URL}#breadcrumb`,
+        "@id": `${IN_URL}#breadcrumb`,
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
-          { "@type": "ListItem", position: 2, name: "United Kingdom", item: GB_URL },
+          { "@type": "ListItem", position: 2, name: "India", item: IN_URL },
         ],
       },
       {
@@ -96,27 +97,27 @@ export default function GBLandingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       <nav aria-label="Breadcrumb" style={{ fontSize: "0.9rem", marginBottom: "1.5rem", color: "#475569" }}>
-        <Link href="/" style={{ color: "#0329b2" }}>Home</Link>{" / "}<span>United Kingdom</span>
+        <Link href="/" style={{ color: "#0329b2" }}>Home</Link>{" / "}<span>India</span>
       </nav>
 
       <header style={{ maxWidth: 780 }}>
         <p style={{ color: "#016EF8", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-          Student-First Tutoring Marketplace · United Kingdom
+          Student-First Tutoring Marketplace · India
         </p>
         <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", lineHeight: 1.1, color: "#021550", margin: "0 0 1rem" }}>
-          Tuition in UK — Home &amp; Online Tutors
+          Tuition in India — Home &amp; Online Tutors
         </h1>
         <p style={{ fontSize: "1.1rem", lineHeight: 1.7, color: "#475569", marginBottom: "1.5rem" }}>
-          Post your tuition requirement with a preferred budget in GBP for home or online tuition. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
+          Post your tuition requirement with a preferred budget in INR for home or online tuition. Eligible tutors can submit offers. Compare options and choose the tutor that fits your learning needs.
         </p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <Link href="/post-tuition-request?country=GB" style={ctaPrimary}>Post Tuition Requirement <ArrowRight size={18} /></Link>
-          <Link href="/tutors?countryCode=GB" style={ctaSecondary}>Find Tutors</Link>
+          <Link href="/post-tuition-request?country=IN" style={ctaPrimary}>Post Tuition Requirement <ArrowRight size={18} /></Link>
+          <Link href="/tutors?countryCode=IN" style={ctaSecondary}>Find Tutors</Link>
         </div>
       </header>
 
       <section style={{ marginTop: "3rem", padding: "1.5rem 1.75rem", background: "#F5F7FF", borderRadius: "0.875rem" }}>
-        <h2 style={{ color: "#021550", marginTop: 0 }}>How does TUTORERA work in the UK?</h2>
+        <h2 style={{ color: "#021550", marginTop: 0 }}>How does TUTORERA work in India?</h2>
         <p style={{ color: "#374151", lineHeight: 1.7, margin: 0 }}>{faq[0].a}</p>
       </section>
 
@@ -150,9 +151,9 @@ export default function GBLandingPage() {
                 <MapPin size={16} /><strong>{c.label}</strong>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.9rem" }}>
-                <Link href={`/gb/${c.slug}/tuition`} style={linkStyle}>{c.label} tuition</Link>
-                <Link href={`/gb/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>
-                <Link href={`/gb/${c.slug}/online-tuition`} style={linkStyle}>{c.label} online tuition</Link>
+                <Link href={`/in/${c.slug}/tuition`} style={linkStyle}>{c.label} tuition</Link>
+                <Link href={`/in/${c.slug}/home-tuition`} style={linkStyle}>{c.label} home tuition</Link>
+                <Link href={`/in/${c.slug}/online-tuition`} style={linkStyle}>{c.label} online tuition</Link>
               </div>
             </div>
           ))}
@@ -189,7 +190,7 @@ export default function GBLandingPage() {
       <section style={{ marginTop: "3rem", padding: "2rem", background: "#021550", color: "white", borderRadius: "0.875rem", textAlign: "center" }}>
         <h2 style={{ color: "white", margin: "0 0 0.5rem" }}>Ready to find your tutor?</h2>
         <p style={{ color: "#94a3b8", margin: "0 0 1.25rem" }}>Post your tuition requirement in a few minutes and receive offers from eligible tutors.</p>
-        <Link href="/post-tuition-request?country=GB" style={{ ...ctaPrimary, background: "#016ef8" }}>Post Tuition Requirement <ArrowRight size={18} /></Link>
+        <Link href="/post-tuition-request?country=IN" style={{ ...ctaPrimary, background: "#016ef8" }}>Post Tuition Requirement <ArrowRight size={18} /></Link>
       </section>
     </main>
   );

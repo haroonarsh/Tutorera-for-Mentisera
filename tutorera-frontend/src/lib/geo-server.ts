@@ -60,7 +60,7 @@ export async function liveCountryCodeParams(): Promise<{ countryCode: string }[]
   // isn't resolved by two routes. Static wins over dynamic in Next.js,
   // but letting both enumerate the slug is brittle under OpenNext's
   // route table generation.
-  const EXPLICIT_HUBS = new Set(["pk", "ae"]);
+  const EXPLICIT_HUBS = new Set(["pk", "ae", "gb", "in", "us", "sa"]);
   return Array.from(codes)
     .filter((code) => !EXPLICIT_HUBS.has(code.toLowerCase()))
     .map((code) => ({ countryCode: code.toLowerCase() }));
