@@ -88,8 +88,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/matching", label: "Smart Matching", icon: <Sparkles size={17} />, permission: "matching.read" },
       { href: "/admin/bookings", label: "Bookings", icon: <CheckCircle size={17} />, permission: "bookings.read" },
-      { href: "/admin/curriculum", label: "Curriculum & Subjects", icon: <BookOpen size={17} />, permission: "market.configure" },
-      { href: "/admin/discipline-subject-maps", label: "Discipline Eligibility Map", icon: <BookOpen size={17} />, permission: "market.configure" },
+      { href: "/admin/academic-framework", label: "Academic Framework", icon: <BookOpen size={17} />, permission: "market.configure" },
     ],
   },
   {

@@ -69,6 +69,7 @@ import geographyAdminRoutes from "./admin/geography.routes";
 import verificationRoutes from "./admin/verification.routes";
 import subjectRoutes from "./admin/subject.routes";
 import disciplineSubjectMapRoutes from "./admin/disciplineSubjectMap.routes";
+import academicFrameworkRoutes from "./admin/academicFramework.routes";
 import emailTemplateRoutes from "./admin/emailTemplate.routes";
 import promoCodeRoutes from "./admin/promoCode.routes";
 import { enforceAccountAction, getAccountEnforcementHistory } from "../controllers/accountModeration.controller";
@@ -110,6 +111,9 @@ router.use("/geography", geographyAdminRoutes);
 router.use("/verification", verificationRoutes);
 router.use("/subjects", subjectRoutes);
 router.use("/discipline-subject-maps", disciplineSubjectMapRoutes);
+// Canonical, normalized academic administration. Legacy subject and map routes
+// above remain available until every existing client is migrated.
+router.use("/academic-framework", academicFrameworkRoutes);
 router.use("/email-templates", emailTemplateRoutes);
 router.use("/promo-codes", promoCodeRoutes);
 
