@@ -9,17 +9,26 @@ import Booking from "../models/Booking.model";
 import Review from "../models/Review.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { finalizeBidAcceptance } from "../controllers/request.controller";
+import { paymentProvider } from "../services/paymentProvider.service";
 
 jest.mock("../utils/socket", () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
+jest.mock("../services/paymentProvider.service", () => ({
+  paymentProvider: {
+    confirmCheckout: jest.fn(),
+    createCheckout: jest.fn(),
+  },
+  recordPaymentLedger: jest.fn().mockResolvedValue(undefined),
+  getAppliedPromoForBasket: jest.fn().mockResolvedValue(null),
+}));
 
 function tokenFor(userId: string): string {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
 }
 
-describe("Marketplace Lifecycle End-to-End Suite (Phase 4 / Audit §30)", () => {
+describe("Marketplace Lifecycle End-to-End Suite (Phase 4 / Audit ï¿½30)", () => {
   it("completes full student online requirement: matching -> offer -> paid acceptance -> booking -> session -> review", async () => {
     // 1. Create Student and Tutor accounts
     const student = await User.create({
@@ -237,5 +246,170 @@ describe("Marketplace Lifecycle End-to-End Suite (Phase 4 / Audit §30)", () => {
     expect(homeBookings[0].teachingMode).toBe("in-person");
     expect(homeBookings[0].countryCode).toBe("PK");
     expect(homeBookings[0].paymentStatus).toBe("confirmed");
+  });
+});
+
+describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () => {
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  async function seedBidScenario(emailPrefix: string, amount = 100, currency = "USD") {
+    const student = await User.create({
+      name: "Student Confirm",
+      email: `${emailPrefix}-student@confirm-e2e.test`,
+      password: "password123",
+      role: "student",
+      isActive: true,
+      countryCode: "PK",
+    });
+    const tutor = await User.create({
+      name: "Tutor Confirm",
+      email: `${emailPrefix}-tutor@confirm-e2e.test`,
+      password: "password123",
+      role: "tutor",
+      isActive: true,
+      countryCode: "PK",
+    });
+    await TutorProfile.create({
+      user: tutor._id,
+      bio: "Confirm-path tutor.",
+      subjects: ["English"],
+      levels: ["O-Level (Cambridge / Edexcel)"],
+      teachingMode: "online",
+      hourlyRate: amount,
+      verificationStatus: "approved",
+      onboardingComplete: true,
+    });
+    const tuitionRequest = await Request.create({
+      student: student._id,
+      subject: "English",
+      level: "O-Level (Cambridge / Edexcel)",
+      budget: amount,
+      currency,
+      pricingUnit: "hour",
+      teachingMode: "online",
+      description: "Confirm-path test",
+      schedule: "Fri 15:00",
+      status: "awaiting_payment",
+    });
+    const bid = await Bid.create({
+      request: tuitionRequest._id,
+      tutor: tutor._id,
+      amount,
+      currency,
+      originalAmount: amount,
+      originalCurrency: currency,
+      convertedRequestAmount: amount,
+      exchangeRate: 1,
+      pricingUnit: "hour",
+      initialStudentRate: amount,
+      expiresAt: new Date(Date.now() + 86400000),
+      message: "I can help.",
+      status: "payment_pending",
+    });
+    return { student, tutor, bid };
+  }
+
+  it("confirms a BID- basket: creates booking and returns confirmed:true", async () => {
+    const { student, bid } = await seedBidScenario("confirm-success");
+    const basketId = `BID-${bid._id}`;
+    const studentToken = tokenFor(student.id);
+
+    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
+      confirmed: true,
+      amount: 100,
+      currency: "USD",
+      sessionStatus: "Success",
+      raw: {},
+    });
+
+    const res = await request(app)
+      .post("/api/v1/payments/swich/confirm")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ basketId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.confirmed).toBe(true);
+
+    const booking = await Booking.findOne({ bid: bid._id });
+    expect(booking).not.toBeNull();
+    expect(booking?.paymentStatus).toBe("confirmed");
+  });
+
+  it("returns confirmed:false when Swich session is still Pending", async () => {
+    const { student, bid } = await seedBidScenario("confirm-pending");
+    const basketId = `BID-${bid._id}`;
+    const studentToken = tokenFor(student.id);
+
+    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
+      confirmed: false,
+      amount: 100,
+      currency: "USD",
+      sessionStatus: "Pending",
+      raw: {},
+    });
+
+    const res = await request(app)
+      .post("/api/v1/payments/swich/confirm")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ basketId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.confirmed).toBe(false);
+    expect(res.body.sessionStatus).toBe("Pending");
+    expect(await Booking.countDocuments({ bid: bid._id })).toBe(0);
+  });
+
+  it("rejects a different student trying to confirm another student's payment (IDOR)", async () => {
+    const { bid } = await seedBidScenario("confirm-idor");
+    const basketId = `BID-${bid._id}`;
+
+    const intruder = await User.create({
+      name: "Intruder",
+      email: "intruder@confirm-e2e.test",
+      password: "password123",
+      role: "student",
+      isActive: true,
+    });
+    const intruderToken = tokenFor(intruder.id);
+
+    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
+      confirmed: true,
+      amount: 100,
+      currency: "USD",
+      sessionStatus: "Success",
+      raw: {},
+    });
+
+    const res = await request(app)
+      .post("/api/v1/payments/swich/confirm")
+      .set("Authorization", `Bearer ${intruderToken}`)
+      .send({ basketId });
+
+    expect(res.status).toBe(403);
+    expect(await Booking.countDocuments({ bid: bid._id })).toBe(0);
+  });
+
+  it("rejects a confirmed payment whose amount does not match the offer (tamper guard)", async () => {
+    const { student, bid } = await seedBidScenario("confirm-mismatch");
+    const basketId = `BID-${bid._id}`;
+    const studentToken = tokenFor(student.id);
+
+    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
+      confirmed: true,
+      amount: 9999,
+      currency: "USD",
+      sessionStatus: "Success",
+      raw: {},
+    });
+
+    const res = await request(app)
+      .post("/api/v1/payments/swich/confirm")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ basketId });
+
+    expect(res.status).toBe(422);
+    expect(await Booking.countDocuments({ bid: bid._id })).toBe(0);
   });
 });
