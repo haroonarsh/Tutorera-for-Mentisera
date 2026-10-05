@@ -8,20 +8,26 @@ import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import Review from "../models/Review.model";
 import TutorProfile from "../models/TutorProfile.model";
+import PaymentLedger from "../models/PaymentLedger.model";
 import { finalizeBidAcceptance } from "../controllers/request.controller";
-import { paymentProvider } from "../services/paymentProvider.service";
+import { swichProvider } from "../services/swichProvider.service";
+import { recordPaymentLedger } from "../services/paymentProvider.service";
 
 jest.mock("../utils/socket", () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
-jest.mock("../services/paymentProvider.service", () => ({
-  paymentProvider: {
-    confirmCheckout: jest.fn(),
+// Stub only the outbound HTTP call to Swich's API — all paymentProvider and
+// ledger logic above it runs against the real in-memory test database.
+jest.mock("../services/swichProvider.service", () => ({
+  swichProvider: {
+    getPaymentSessionStatus: jest.fn(),
     createCheckout: jest.fn(),
   },
-  recordPaymentLedger: jest.fn().mockResolvedValue(undefined),
-  getAppliedPromoForBasket: jest.fn().mockResolvedValue(null),
+  assertSwichRuntimeConfiguration: jest.fn(),
+  assertSwichCheckoutCapability: jest.fn(),
+  getSwichCapabilities: jest.fn().mockReturnValue({ markets: new Set(["PK"]), currencies: new Set(["USD"]) }),
+  verifySwichConnectivity: jest.fn(),
 }));
 
 function tokenFor(userId: string): string {
@@ -250,6 +256,8 @@ describe("Marketplace Lifecycle End-to-End Suite (Phase 4 / Audit �30)", () =>
 });
 
 describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () => {
+  // Only swichProvider.getPaymentSessionStatus is stubbed — all paymentProvider
+  // logic (ledger lookup, GUID resolution, amount integrity check) runs real.
   afterEach(() => {
     jest.resetAllMocks();
   });
@@ -308,20 +316,41 @@ describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () =>
       message: "I can help.",
       status: "payment_pending",
     });
-    return { student, tutor, bid };
+
+    // Seed the checkout.created ledger row that paymentProvider.confirmCheckout
+    // expects to find — mirrors what createCheckout writes in the real flow.
+    const basketId = `BID-${bid._id}`;
+    const fakeGuid = `fake-swich-guid-${bid._id.toHexString()}`;
+    await recordPaymentLedger({
+      providerTransactionId: basketId,
+      eventType: "checkout.created",
+      status: "pending",
+      amount,
+      currency,
+      bidId: bid._id.toString(),
+      studentId: student._id.toString(),
+      tutorId: tutor._id.toString(),
+      metadata: { paymentSessionGuid: fakeGuid },
+    });
+
+    return { student, tutor, bid, basketId, fakeGuid };
   }
 
-  it("confirms a BID- basket: creates booking and returns confirmed:true", async () => {
-    const { student, bid } = await seedBidScenario("confirm-success");
-    const basketId = `BID-${bid._id}`;
+  it("confirms a BID- basket: real ledger lookup → Swich Success → creates booking", async () => {
+    const { student, bid, basketId, fakeGuid } = await seedBidScenario("confirm-success");
     const studentToken = tokenFor(student.id);
 
-    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
-      confirmed: true,
+    (swichProvider.getPaymentSessionStatus as jest.Mock).mockResolvedValue({
+      status: "SUCCESS",
+      paymentSessionGuid: fakeGuid,
       amount: 100,
       currency: "USD",
+      billReferenceNo: basketId,
       sessionStatus: "Success",
-      raw: {},
+      remainingAttempts: 0,
+      remainingSeconds: 0,
+      createdAt: new Date().toISOString(),
+      expiryAt: new Date().toISOString(),
     });
 
     const res = await request(app)
@@ -331,23 +360,34 @@ describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () =>
 
     expect(res.status).toBe(200);
     expect(res.body.confirmed).toBe(true);
-
+    // Real booking written to test DB by finalizeBidAcceptance
     const booking = await Booking.findOne({ bid: bid._id });
     expect(booking).not.toBeNull();
     expect(booking?.paymentStatus).toBe("confirmed");
+    // Verify ledger entry was written by real recordPaymentLedger
+    const successLedger = await PaymentLedger.findOne({
+      providerTransactionId: basketId,
+      eventType: "payment.succeeded",
+    });
+    expect(successLedger).not.toBeNull();
+    expect(successLedger?.status).toBe("succeeded");
   });
 
-  it("returns confirmed:false when Swich session is still Pending", async () => {
-    const { student, bid } = await seedBidScenario("confirm-pending");
-    const basketId = `BID-${bid._id}`;
+  it("returns confirmed:false when Swich session is still Pending (no booking written)", async () => {
+    const { student, bid, basketId, fakeGuid } = await seedBidScenario("confirm-pending");
     const studentToken = tokenFor(student.id);
 
-    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
-      confirmed: false,
+    (swichProvider.getPaymentSessionStatus as jest.Mock).mockResolvedValue({
+      status: "SUCCESS",
+      paymentSessionGuid: fakeGuid,
       amount: 100,
       currency: "USD",
+      billReferenceNo: basketId,
       sessionStatus: "Pending",
-      raw: {},
+      remainingAttempts: 3,
+      remainingSeconds: 1200,
+      createdAt: new Date().toISOString(),
+      expiryAt: new Date().toISOString(),
     });
 
     const res = await request(app)
@@ -362,8 +402,7 @@ describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () =>
   });
 
   it("rejects a different student trying to confirm another student's payment (IDOR)", async () => {
-    const { bid } = await seedBidScenario("confirm-idor");
-    const basketId = `BID-${bid._id}`;
+    const { bid, basketId, fakeGuid } = await seedBidScenario("confirm-idor");
 
     const intruder = await User.create({
       name: "Intruder",
@@ -374,12 +413,17 @@ describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () =>
     });
     const intruderToken = tokenFor(intruder.id);
 
-    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
-      confirmed: true,
+    (swichProvider.getPaymentSessionStatus as jest.Mock).mockResolvedValue({
+      status: "SUCCESS",
+      paymentSessionGuid: fakeGuid,
       amount: 100,
       currency: "USD",
+      billReferenceNo: basketId,
       sessionStatus: "Success",
-      raw: {},
+      remainingAttempts: 0,
+      remainingSeconds: 0,
+      createdAt: new Date().toISOString(),
+      expiryAt: new Date().toISOString(),
     });
 
     const res = await request(app)
@@ -392,16 +436,20 @@ describe("Swich HTTP confirm route (POST /api/v1/payments/swich/confirm)", () =>
   });
 
   it("rejects a confirmed payment whose amount does not match the offer (tamper guard)", async () => {
-    const { student, bid } = await seedBidScenario("confirm-mismatch");
-    const basketId = `BID-${bid._id}`;
+    const { student, bid, basketId, fakeGuid } = await seedBidScenario("confirm-mismatch");
     const studentToken = tokenFor(student.id);
 
-    (paymentProvider.confirmCheckout as jest.Mock).mockResolvedValue({
-      confirmed: true,
-      amount: 9999,
+    (swichProvider.getPaymentSessionStatus as jest.Mock).mockResolvedValue({
+      status: "SUCCESS",
+      paymentSessionGuid: fakeGuid,
+      amount: 9999,      // Swich reports a different amount than the bid
       currency: "USD",
+      billReferenceNo: basketId,
       sessionStatus: "Success",
-      raw: {},
+      remainingAttempts: 0,
+      remainingSeconds: 0,
+      createdAt: new Date().toISOString(),
+      expiryAt: new Date().toISOString(),
     });
 
     const res = await request(app)

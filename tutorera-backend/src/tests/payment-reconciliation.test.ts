@@ -79,7 +79,7 @@ describe("Payment reconciliation service (P0-03 browser abandonment & idempotenc
           currency: "USD",
         }),
       }),
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
   });
 
@@ -167,7 +167,7 @@ describe("Payment reconciliation service (P0-03 browser abandonment & idempotenc
           status: "failed",
         }),
       }),
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
   });
 });

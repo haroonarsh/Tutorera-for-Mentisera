@@ -57,7 +57,16 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
   { timestamps: true }
 );
 
-paymentLedgerSchema.index({ provider: 1, providerEventId: 1 }, { unique: true, sparse: true });
+// Partial filter so the unique constraint only applies to rows that actually
+// carry a providerEventId (Swich event webhooks). Rows without one (checkout
+// creation, poll-based confirmation) must be allowed to coexist for the same
+// basket. A sparse index is not sufficient here — MongoDB's sparse index still
+// indexes documents where the field is explicitly null, and Mongoose sets
+// absent String paths to null in $setOnInsert, causing false dup-key errors.
+paymentLedgerSchema.index(
+  { provider: 1, providerEventId: 1 },
+  { unique: true, partialFilterExpression: { providerEventId: { $exists: true, $type: "string" } } }
+);
 paymentLedgerSchema.index({ providerTransactionId: 1, eventType: 1, createdAt: -1 });
 paymentLedgerSchema.index({ provider: 1, eventType: 1, status: 1, updatedAt: 1 });
 
