@@ -23,7 +23,10 @@ async function run() {
   await mongoose.connect(uri);
 
   try {
-    const usersWithoutCurrency = await User.countDocuments({ referralCredit: { $gt: 0 } });
+    // Count the same records that the write targets. Restricting this to
+    // positive balances made the historic report claim a negative number of
+    // "already stamped" users even though the migration itself was correct.
+    const usersWithoutCurrency = await User.countDocuments({ referralCreditCurrency: { $exists: false } });
     const referralsWithoutCurrency = await Referral.countDocuments({ creditCurrency: { $exists: false } });
     const configsWithoutCurrency = await ReferralConfig.countDocuments({ currency: { $exists: false } });
 

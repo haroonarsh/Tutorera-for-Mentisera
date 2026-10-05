@@ -15,6 +15,7 @@
     "migrate:levels": "tsx src/scripts/normalizeTutorProfileLevels.ts",
     "migrate:launch-markets": "tsx src/scripts/reconcileGlobalLaunchMarkets.ts",
     "migrate:referral-currency": "tsx src/scripts/migrateReferralCurrency.ts",
+    "migrate:switch-only-payments": "tsx src/scripts/migrateSwitchOnlyPayments.ts",
     "contracts:generate": "tsx src/scripts/generateFrontendContracts.ts",
     "audit:grandfathered-tutors": "tsx src/scripts/auditGrandfatheredTutors.ts",
     "academic:reconcile": "tsx src/scripts/reconcileAcademicFramework.ts",

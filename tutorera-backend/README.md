@@ -33,12 +33,20 @@ Set the required application variables, including the Switch server-side credent
 ```bash
 SWICH_CLIENT_ID=<Switch merchant client id>
 SWICH_CLIENT_SECRET=<Switch merchant client secret>
-SWICH_ENVIRONMENT=sandbox
-SWICH_SUPPORTED_MARKETS=PK
-SWICH_SUPPORTED_CURRENCIES=PKR
+SWICH_MODE=live
+SWICH_AUTH_BASE_URL=<merchant-provided live OAuth base URL>
+SWICH_API_BASE_URL=<merchant-provided live PayIN API base URL>
+SWICH_CALLBACK_URL=https://tutorera-backend.onrender.com/api/v1/payments/swich/callback
+SWICH_CALLBACK_SECRET=<merchant-provided PayIN callback signing secret>
+SWICH_PWA_BASE_URL=https://payin-pwa.swichnow.com
+SWICH_SUPPORTED_MARKETS=PK,AE,GB,US,SA,IN
+SWICH_SUPPORTED_CURRENCIES=USD
 ```
 
 Switch credentials must stay on the backend. They must never be exposed through `NEXT_PUBLIC_*`, browser JavaScript, or the frontend repository. Do not add a market or currency to `SWICH_SUPPORTED_*` until Switch has confirmed merchant onboarding, settlement, payout and compliance support for that market.
+
+Register `SWICH_CALLBACK_URL` in the Swich merchant portal. TUTORERA verifies
+PayIN callbacks with `HMAC-SHA256("SWCallback:CustomerTransactionId:OrderId:Amount:Status", SWICH_CALLBACK_SECRET)` before a booking or offer is settled. The callback signing secret is separate from the OAuth client secret.
 
 ### 4. Run development server
 ```bash

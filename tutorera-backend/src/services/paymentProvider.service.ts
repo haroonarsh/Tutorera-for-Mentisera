@@ -43,7 +43,7 @@ export const paymentProvider = {
   name: "swich" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
-    const { checkoutUrl, paymentSessionGuid } = await swichProvider.createCheckout({
+    const { checkoutUrl, paymentSessionGuid, mode } = await swichProvider.createCheckout({
       amount: params.amount,
       currency: params.currency,
       marketCountryCode: params.marketCountryCode,
@@ -78,7 +78,7 @@ export const paymentProvider = {
       studentId: params.studentId,
       tutorId: params.tutorId,
       feeSnapshot: params.feeSnapshot,
-      metadata: { checkoutUrl, paymentSessionGuid, ...(params.metadata || {}) },
+      metadata: { checkoutUrl, paymentSessionGuid, checkoutMode: mode, ...(params.metadata || {}) },
     });
 
     return checkoutUrl;
@@ -93,6 +93,12 @@ export const paymentProvider = {
   async confirmCheckout(basketId: string): Promise<{ confirmed: boolean; sessionStatus: string; amount: number; currency: string }> {
     const ledgerEntry = await PaymentLedger.findOne({ providerTransactionId: basketId, eventType: "checkout.created" }).sort("-createdAt");
     const paymentSessionGuid = readLedgerString(ledgerEntry?.metadata, "paymentSessionGuid");
+    const mode = readLedgerString(ledgerEntry?.metadata, "checkoutMode");
+    if (mode === "pwa" && !paymentSessionGuid) {
+      // PWA settlement is callback-driven. The browser return only indicates
+      // that the customer left the hosted page; it is never payment proof.
+      return { confirmed: false, sessionStatus: "CallbackPending", amount: ledgerEntry?.grossAmount || 0, currency: ledgerEntry?.currency || "USD" };
+    }
     if (!paymentSessionGuid) {
       throw httpError("No payment session found for this transaction", 404, "PAYMENT_SESSION_MISSING");
     }

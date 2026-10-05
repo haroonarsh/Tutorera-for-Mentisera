@@ -1,4 +1,5 @@
 import axios from "axios";
+import crypto from "crypto";
 import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { swichProvider } from "../services/swichProvider.service";
@@ -9,6 +10,7 @@ describe("Swich Payment Session integration", () => {
     process.env.SWICH_CLIENT_SECRET = "swich_test_client_secret_123456";
     process.env.SWICH_SUPPORTED_MARKETS = "PK,AE,GB,US,SA,IN";
     process.env.SWICH_SUPPORTED_CURRENCIES = "USD";
+    process.env.SWICH_CHECKOUT_MODE = "session";
   });
 
   afterEach(() => {
@@ -17,6 +19,9 @@ describe("Swich Payment Session integration", () => {
     delete process.env.SWICH_CLIENT_SECRET;
     delete process.env.SWICH_SUPPORTED_MARKETS;
     delete process.env.SWICH_SUPPORTED_CURRENCIES;
+    delete process.env.SWICH_CHECKOUT_MODE;
+    delete process.env.SWICH_PWA_BASE_URL;
+    delete process.env.SWICH_CALLBACK_SECRET;
   });
 
   it("fetches a token then creates a payment session with the confirmed field shape", async () => {
@@ -64,16 +69,16 @@ describe("Swich Payment Session integration", () => {
 
     expect(checkoutUrl).toBe("https://paymentsession.swichnow.com/PaymentSession?Id=test-session-guid-123");
 
-    // Confirmed real contract: token request is JSON (not form-urlencoded),
-    // hits the separate sandbox-auth host, not the main api host.
+    // Swich's documented OAuth contract is form-urlencoded and uses the
+    // separate auth host rather than the main API host.
     expect(post).toHaveBeenCalledWith(
       "https://sandbox-auth.swichnow.com/connect/token",
+      expect.stringContaining("client_id=swich_test_client_id"),
       expect.objectContaining({
-        client_id: "swich_test_client_id",
-        client_secret: "swich_test_client_secret_123456",
-        grant_type: "client_credentials",
+        headers: expect.objectContaining({
+          "Content-Type": "application/x-www-form-urlencoded",
+        }),
       }),
-      expect.anything()
     );
 
     // Confirmed real contract: payment session creation body shape.
@@ -117,6 +122,35 @@ describe("Swich Payment Session integration", () => {
       })
     ).rejects.toMatchObject({ code: "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED", statusCode: 409 });
 
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("builds a signed hosted PWA checkout URL without requesting an OAuth token", async () => {
+    process.env.SWICH_CHECKOUT_MODE = "pwa";
+    process.env.SWICH_PWA_BASE_URL = "https://payin-pwa.swichnow.com";
+    process.env.SWICH_CALLBACK_SECRET = "PWA_SECRET_KEY";
+    const post = jest.spyOn(axios, "post");
+
+    const result = await swichProvider.createCheckout({
+      amount: 125,
+      currency: "USD",
+      reference: "BID-pwa-1001",
+      metadata: {
+        studentMobileNo: "03001234567",
+        studentEmail: "student@example.test",
+        successUrl: "https://example.test/success",
+        description: "TUTORERA tutoring session",
+      },
+    });
+
+    const url = new URL(result.checkoutUrl);
+    const item = "TUTORERA tutoring session";
+    const expectedChecksum = crypto.createHmac("sha256", "PWA_SECRET_KEY").update(`Swich:BID-pwa-1001:${item}:125.00`, "utf8").digest("hex");
+    expect(result).toMatchObject({ paymentSessionGuid: "", mode: "pwa" });
+    expect(url.origin).toBe("https://payin-pwa.swichnow.com");
+    expect(url.searchParams.get("customerTransactionId")).toBe("BID-pwa-1001");
+    expect(url.searchParams.get("currency")).toBe("USD");
+    expect(url.searchParams.get("checksum")).toBe(expectedChecksum);
     expect(post).not.toHaveBeenCalled();
   });
 

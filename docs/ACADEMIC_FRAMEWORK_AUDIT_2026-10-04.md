@@ -310,3 +310,10 @@ Academic owners must approve the initial discipline-to-subject rules. For exampl
 - Ambiguous and unmatched entries are reported and deliberately left unchanged. The migration does not approve, revoke, alter levels, or change marketplace access.
 - Writes require both `--commit` and `--confirm=LINK_LEGACY_SUBJECT_APPROVALS`; this production data migration has not been run.
 - Backend TypeScript build passed. Remaining: review the dry-run report with academic administrators, separately resolve its exceptions, webhook/outbox reconciliation, wider controller transaction coverage, integration tests, and production smoke verification. No commit, push, migration or deployment performed.
+
+## Provider webhook and outbox convergence — 5 October 2026
+
+- Resend webhook state changes now synchronize to the durable EmailOutbox. Sent, delivered and opened events close delivery as sent; bounced and failed events make the outbox terminal so the retry worker cannot resend a provider-rejected address.
+- Webhook signature protections remain unchanged. Targeted webhook-security and outbox tests passed, and the backend TypeScript build passed.
+- The legacy subject-approval reconciliation completed against Atlas on 5 October 2026. It scanned zero eligible profiles and made no changes; no legacy approved-subject rows required linking.
+- Remaining: broader controller transaction coverage, authenticated admin API retry integration coverage, real browser/API journey tests, and production smoke verification.

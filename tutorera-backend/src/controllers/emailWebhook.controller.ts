@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Resend } from "resend";
 import EmailLog, { EmailLogStatus } from "../models/EmailLog.model";
+import EmailOutbox from "../models/EmailOutbox.model";
 
 type ResendWebhookPayload = {
   type: string;
@@ -101,6 +102,8 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
         { returnDocument: "after", sort: { createdAt: -1 } }
       );
 
+      if (fallback) await synchronizeOutboxWebhookState(fallback._id.toString(), status, bounceReason);
+
       res.status(200).json({
         success: true,
         matched: Boolean(fallback),
@@ -110,6 +113,8 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
       return;
     }
 
+    await synchronizeOutboxWebhookState(log._id.toString(), status, bounceReason);
+
     res.status(200).json({ success: true, matched: true, status });
   } catch (error) {
     const e = error as { statusCode?: number; message?: string };
@@ -117,6 +122,18 @@ export const handleResendWebhook = async (req: Request, res: Response): Promise<
     res.status(statusCode).json({ success: false, message: e.message || "Invalid Resend webhook" });
   }
 };
+
+/** A provider terminal event must stop local retry, while delivery/open events
+ * retain a sent record for audit without exposing the stored payload. */
+async function synchronizeOutboxWebhookState(emailLogId: string, status: EmailLogStatus, reason?: string) {
+  if (["bounced", "failed"].includes(status)) {
+    await EmailOutbox.updateOne({ emailLog: emailLogId }, { $set: { status: "failed", lastError: reason || `Provider reported ${status}`, nextAttemptAt: new Date(8640000000000000) } });
+    return;
+  }
+  if (["sent", "delivered", "opened"].includes(status)) {
+    await EmailOutbox.updateOne({ emailLog: emailLogId }, { $set: { status: "sent", sentAt: new Date() } });
+  }
+}
 
 function verifyResendPayload(req: Request, payloadText: string): ResendWebhookPayload {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET?.trim();

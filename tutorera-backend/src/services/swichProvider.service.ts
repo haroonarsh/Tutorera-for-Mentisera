@@ -1,4 +1,5 @@
 import axios from "axios";
+import crypto from "crypto";
 
 // Swich Payment Session integration. Confirmed against Swich's own API docs
 // (api-docs.swichnow.com) on 2026-09-26, plus real request/response pairs
@@ -36,12 +37,64 @@ export interface SwichSessionStatus {
     expiryAt: string;
 }
 
+export type SwichCheckoutMode = "session" | "pwa";
+
+export interface SwichCheckoutResult {
+    checkoutUrl: string;
+    paymentSessionGuid: string;
+    mode: SwichCheckoutMode;
+}
+
 const SANDBOX_AUTH_BASE_URL = "https://sandbox-auth.swichnow.com";
 const SANDBOX_API_BASE_URL = "https://sandbox-api.swichnow.com";
 const DEFAULT_CATEGORIES = ["ewallet", "visamastercardpayment", "bankaccount", "rtpnowpayment"];
 
 function isProduction(): boolean {
     return process.env.NODE_ENV === "production";
+}
+
+function checkoutMode(): SwichCheckoutMode {
+    const configured = (process.env.SWICH_CHECKOUT_MODE || "session").trim().toLowerCase();
+    if (configured === "pwa" || configured === "session") return configured;
+    const error = new Error("SWICH_CHECKOUT_MODE must be either session or pwa") as Error & { statusCode?: number; code?: string };
+    error.statusCode = 503;
+    error.code = "SWICH_CHECKOUT_MODE_INVALID";
+    throw error;
+}
+
+function pwaBaseUrl(): string {
+    const value = process.env.SWICH_PWA_BASE_URL?.trim();
+    if (!value) {
+        const error = new Error("SWICH_PWA_BASE_URL is not configured") as Error & { statusCode?: number; code?: string };
+        error.statusCode = 503;
+        error.code = "SWICH_PWA_URL_MISSING";
+        throw error;
+    }
+    let url: URL;
+    try { url = new URL(value); } catch {
+        const error = new Error("SWICH_PWA_BASE_URL must be a valid HTTPS URL") as Error & { statusCode?: number; code?: string };
+        error.statusCode = 503;
+        error.code = "SWICH_PWA_URL_INVALID";
+        throw error;
+    }
+    if (url.protocol !== "https:") {
+        const error = new Error("SWICH_PWA_BASE_URL must use HTTPS") as Error & { statusCode?: number; code?: string };
+        error.statusCode = 503;
+        error.code = "SWICH_PWA_URL_INVALID";
+        throw error;
+    }
+    return url.origin;
+}
+
+function pwaSecret(): string {
+    const value = process.env.SWICH_CALLBACK_SECRET?.trim();
+    if (!value) {
+        const error = new Error("SWICH_CALLBACK_SECRET is required for PWA checkout") as Error & { statusCode?: number; code?: string };
+        error.statusCode = 503;
+        error.code = "SWICH_PWA_SECRET_MISSING";
+        throw error;
+    }
+    return value;
 }
 
 function configuredBaseUrl(name: "SWICH_AUTH_BASE_URL" | "SWICH_API_BASE_URL", sandboxFallback: string): string {
@@ -77,7 +130,7 @@ function configuredBaseUrl(name: "SWICH_AUTH_BASE_URL" | "SWICH_API_BASE_URL", s
 /** Fails closed before any production checkout can reach a sandbox host. */
 export function assertSwichRuntimeConfiguration(): void {
     if (isProduction()) {
-        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || "live").trim().toLowerCase();
+        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || process.env.SWICH_ENVIRONMENT || "live").trim().toLowerCase();
         if (swichMode === "sandbox") {
             const error = new Error("SWICH_MODE cannot be set to sandbox in production environment") as Error & { statusCode?: number; code?: string };
             error.statusCode = 503;
@@ -87,6 +140,10 @@ export function assertSwichRuntimeConfiguration(): void {
     }
     configuredBaseUrl("SWICH_AUTH_BASE_URL", SANDBOX_AUTH_BASE_URL);
     configuredBaseUrl("SWICH_API_BASE_URL", SANDBOX_API_BASE_URL);
+    if (checkoutMode() === "pwa") {
+        pwaBaseUrl();
+        pwaSecret();
+    }
     if (isProduction()) {
         requireEnv("SWICH_CLIENT_ID");
         requireEnv("SWICH_CLIENT_SECRET");
@@ -102,7 +159,7 @@ export async function verifySwichConnectivity(): Promise<{ connected: boolean; m
     const token = await getAccessToken();
     return {
         connected: Boolean(token),
-        mode: isProduction() ? "live" : (process.env.SWICH_MODE || process.env.SWICH_ENV || "sandbox").toLowerCase(),
+        mode: isProduction() ? "live" : (process.env.SWICH_MODE || process.env.SWICH_ENV || process.env.SWICH_ENVIRONMENT || "sandbox").toLowerCase(),
         authUrl: swichAuthBaseUrl(),
         apiUrl: swichApiBaseUrl(),
     };
@@ -176,13 +233,15 @@ async function getAccessToken(): Promise<string> {
     try {
         const response = await axios.post(
         `${swichAuthBaseUrl()}/connect/token`,
-        {
+        new URLSearchParams({
             client_id: clientId,
             client_secret: clientSecret,
             grant_type: "client_credentials",
-        },
+        }).toString(),
         {
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            // Swich's OAuth endpoint requires application/x-www-form-urlencoded.
+            // Do not send merchant credentials in a JSON body.
+            headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
             timeout: 15_000,
         }
         );
@@ -218,14 +277,12 @@ export const swichProvider = {
      * matching the docs' own guidance: "For one-off payments, still provide
      * this object with null/empty values."
      */
-    async createCheckout(params: SwichCheckoutParams): Promise<{ checkoutUrl: string; paymentSessionGuid: string }> {
+    async createCheckout(params: SwichCheckoutParams): Promise<SwichCheckoutResult> {
         // Settlement currency is owned by the market configuration. A caller
         // that omitted it is a server-side defect, not a reason to resurrect
         // the retired Pakistan-only PKR fallback.
         const currency = (params.currency || "USD").toUpperCase();
         assertSwichCheckoutCapability(params.marketCountryCode, currency);
-        const accessToken = await getAccessToken();
-
         if (!Number.isFinite(params.amount) || params.amount <= 0) {
         const error = new Error("Payment amount must be a positive number") as Error & { statusCode?: number; code?: string };
         error.statusCode = 400;
@@ -240,6 +297,45 @@ export const swichProvider = {
         const successURL = String(metadata.successUrl || "").trim();
         const failedURL = String(metadata.failureUrl || successURL).trim();
         const item = String(metadata.description || "TUTORERA tutoring session").slice(0, 999);
+
+        if (checkoutMode() === "pwa") {
+            const reference = String(params.reference || "").trim();
+            if (!reference || reference.length > 50) {
+                const error = new Error("Swich PWA transaction reference is required and must be 50 characters or fewer") as Error & { statusCode?: number; code?: string };
+                error.statusCode = 400;
+                error.code = "SWICH_PWA_REFERENCE_INVALID";
+                throw error;
+            }
+            if (!customerEmail || !customerMobile) {
+                const error = new Error("A payer email address and mobile number are required for Swich PWA checkout") as Error & { statusCode?: number; code?: string };
+                error.statusCode = 400;
+                error.code = "SWICH_PWA_CUSTOMER_DETAILS_MISSING";
+                throw error;
+            }
+            const pwaItem = item.replace(/[^a-zA-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 500) || "TUTORERA tutoring session";
+            const amount = params.amount.toFixed(2);
+            const checksum = crypto.createHmac("sha256", pwaSecret()).update(`Swich:${reference}:${pwaItem}:${amount}`, "utf8").digest("hex");
+            const url = new URL(pwaBaseUrl());
+            const query = new URLSearchParams({
+                clientId: requireEnv("SWICH_CLIENT_ID"),
+                customerTransactionId: reference,
+                item: pwaItem,
+                amount,
+                channel: "0",
+                billReferenceNo: reference,
+                description: pwaItem,
+                PayeeName: customerName.slice(0, 100),
+                Email: customerEmail,
+                MSISDN: customerMobile,
+                currency,
+                checksum,
+                successRedirectUrl: successURL,
+            });
+            url.search = query.toString();
+            return { checkoutUrl: url.toString(), paymentSessionGuid: "", mode: "pwa" };
+        }
+
+        const accessToken = await getAccessToken();
 
         if (!successURL) {
         const error = new Error("Swich success URL is missing") as Error & { statusCode?: number; code?: string };
@@ -303,7 +399,7 @@ export const swichProvider = {
             console.error("Swich checkout succeeded but no Id query param found on returned url:", checkoutUrl);
         }
 
-        return { checkoutUrl, paymentSessionGuid };
+        return { checkoutUrl, paymentSessionGuid, mode: "session" };
         } catch (error) {
         const axErr2 = error as { statusCode?: number; response?: { status?: number; data?: { message?: string } }; message?: string };
         if (axErr2?.statusCode) throw error;

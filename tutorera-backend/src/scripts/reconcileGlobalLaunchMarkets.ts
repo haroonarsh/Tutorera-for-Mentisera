@@ -36,6 +36,7 @@ async function main() {
       Country.updateMany(
         { iso2: { $in: launchCodes } },
         [{ $set: { enabled: true, launchStatus: { $cond: [{ $in: ["$iso2", ["PK", "US", "AE", "SA", "IN"]] }, "live", "beta"] } } }],
+        { updatePipeline: true },
       ),
     ]);
   }

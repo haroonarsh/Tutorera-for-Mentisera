@@ -56,6 +56,18 @@ app.use(
     pinoHttp({
         logger,
         genReqId: (req) => (req as any).id,
+        // Callback signatures, password-reset tokens, and other credentials
+        // can be supplied as query parameters. Never serialize a raw query
+        // string into application logs.
+        serializers: {
+            req: (req) => ({
+                id: (req as any).id,
+                method: req.method,
+                url: (req.originalUrl || req.url || "").split("?")[0],
+                remoteAddress: req.socket?.remoteAddress,
+                remotePort: req.socket?.remotePort,
+            }),
+        },
         customLogLevel: (req, res, err) => {
         if (err || res.statusCode >= 500) return "error";
         if (res.statusCode >= 400) return "warn";

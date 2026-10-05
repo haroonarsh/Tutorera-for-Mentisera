@@ -44,12 +44,18 @@ services:
         sync: false
       - key: SWICH_CLIENT_SECRET
         sync: false
-      - key: SWICH_ENVIRONMENT
-        value: sandbox
+      - key: SWICH_MODE
+        value: live
       - key: SWICH_AUTH_BASE_URL
-        sync: false
+        value: https://auth.swichnow.com
       - key: SWICH_API_BASE_URL
+        value: https://api.swichnow.com
+      - key: SWICH_CALLBACK_URL
+        value: https://tutorera-backend.onrender.com/api/v1/payments/swich/callback
+      - key: SWICH_CALLBACK_SECRET
         sync: false
+      - key: SWICH_PWA_BASE_URL
+        value: https://payin-pwa.swichnow.com
       - key: SWICH_SUPPORTED_MARKETS
         value: PK,AE,GB,US,SA,IN
       - key: SWICH_SUPPORTED_CURRENCIES

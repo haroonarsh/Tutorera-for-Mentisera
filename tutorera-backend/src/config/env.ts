@@ -59,16 +59,19 @@ export function validateEnv(): void {
     // non-production sandbox defaults deliberately remain available for the
     // isolated provider tests, but production must never silently use them.
     if (process.env.NODE_ENV === "production") {
-        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "RESEND_WEBHOOK_SECRET"]) {
+        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "SWICH_CALLBACK_URL", "SWICH_CALLBACK_SECRET", "RESEND_WEBHOOK_SECRET"]) {
             if (!process.env[key]?.trim()) errors.push(`  - ${key} is required in production`);
         }
-        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL"]) {
+        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "SWICH_CALLBACK_URL"]) {
             const value = process.env[key]?.trim();
             if (value && (!value.startsWith("https://") || /sandbox/i.test(value))) {
                 errors.push(`  - ${key} must be a non-sandbox HTTPS endpoint in production`);
             }
         }
-        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || "live").trim().toLowerCase();
+        const checkoutMode = (process.env.SWICH_CHECKOUT_MODE || "session").trim().toLowerCase();
+        if (!["session", "pwa"].includes(checkoutMode)) errors.push("  - SWICH_CHECKOUT_MODE must be session or pwa");
+        if (checkoutMode === "pwa" && !process.env.SWICH_PWA_BASE_URL?.trim()) errors.push("  - SWICH_PWA_BASE_URL is required for PWA checkout");
+        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || process.env.SWICH_ENVIRONMENT || "live").trim().toLowerCase();
         if (swichMode === "sandbox") {
             errors.push("  - SWICH_MODE cannot be set to sandbox in production");
         }
