@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
+import logger from "../config/logger";
 import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import StudentProfile from "../models/StudentProfile.model";
@@ -371,7 +372,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
         fees.studentTotal = fees.subtotal + fees.studentFee;
         recomputeGatewayFee(fees);
       } catch (promoErr) {
-        console.warn(`Pending promo code ${request.pendingPromoCode} no longer valid on parent approval for request ${request._id}:`, promoErr);
+        logger.warn({ requestId: request._id, promoCode: request.pendingPromoCode, err: promoErr }, "Pending promo code no longer valid on parent approval — proceeding at full price");
       }
     }
 

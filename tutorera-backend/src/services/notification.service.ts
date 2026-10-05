@@ -3,15 +3,17 @@ import { EMAIL_EVENTS } from "../utils/emailEvents";
 import sendEmail from "../utils/sendEmail";
 import { sendNotification, ioInstance } from "../utils/socket";
 import User from "../models/User.model";
-// Import all specific email builders, assuming there's a mapper or we handle it based on templateId.
 import * as templates from "../utils/emailTemplates";
 import * as trackingTemplates from "../utils/trackingEmails";
 import * as recoveryTemplates from "../utils/recoveryEmailTemplates";
 
+type EmailResult = { subject: string; html: string };
+type BuilderFn = (name: string, payload: Record<string, unknown>) => EmailResult;
+
 export class NotificationService {
-  static async publishEvent(userId: string, eventName: string, payload: any = {}): Promise<void> {
+  static async publishEvent(userId: string, eventName: string, payload: Record<string, unknown> = {}): Promise<void> {
     const registryEntry = NOTIFICATION_EVENT_REGISTRY[eventName];
-    
+
     if (!registryEntry) {
       console.warn(`[NotificationService] Event ${eventName} not found in registry.`);
       return;
@@ -39,23 +41,18 @@ export class NotificationService {
       for (const user of recipients) {
         // 1. IN-APP CHANNEL
         if (channels.inApp) {
-          // We map the payload directly to a notification
-          // For standard events, payload should have { title, message, link, type }
           const notificationPayload = {
-            title: payload.title || "Notification",
-            message: payload.message || registryEntry.description,
-            type: payload.type || "general",
-            link: payload.link,
+            title: (payload.title as string | undefined) || "Notification",
+            message: (payload.message as string | undefined) || registryEntry.description,
+            type: (payload.type as string | undefined) || "general",
+            link: payload.link as string | undefined,
           };
-          await sendNotification(ioInstance, user._id.toString(), notificationPayload as any);
+          await sendNotification(ioInstance, user._id.toString(), notificationPayload as Parameters<typeof sendNotification>[2]);
         }
 
         // 2. EMAIL CHANNEL
         if (channels.email) {
           if (registryEntry.templateId) {
-            // Find template function from templates files based on templateId mapping.
-            // Since the legacy functions are scattered across 3 files, we'll map them manually or generically.
-            // For now, let's map commonly used events.
             const emailBuilder = this.getEmailBuilder(registryEntry.templateId);
             if (emailBuilder) {
                const { subject, html } = emailBuilder(user.name, payload);
@@ -66,23 +63,23 @@ export class NotificationService {
                  userId: user._id.toString(),
                  eventType: eventName,
                  templateId: registryEntry.templateId,
-                 relatedEntityType: payload.relatedEntityType,
-                 relatedEntityId: payload.relatedEntityId,
+                 relatedEntityType: payload.relatedEntityType as string | undefined,
+                 relatedEntityId: payload.relatedEntityId as string | undefined,
                });
             } else {
                console.warn(`[NotificationService] No email template mapped for ${registryEntry.templateId}`);
             }
           } else {
-            // Direct fallback if no explicit templateId but email is true
+            // Direct fallback when no explicit templateId but email channel is enabled
             if (payload.subject && payload.html) {
                await sendEmail({
                  to: user.email,
-                 subject: payload.subject,
-                 html: payload.html,
+                 subject: payload.subject as string,
+                 html: payload.html as string,
                  userId: user._id.toString(),
                  eventType: eventName,
-                 relatedEntityType: payload.relatedEntityType,
-                 relatedEntityId: payload.relatedEntityId,
+                 relatedEntityType: payload.relatedEntityType as string | undefined,
+                 relatedEntityId: payload.relatedEntityId as string | undefined,
                });
             }
           }
@@ -102,66 +99,78 @@ export class NotificationService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private static getEmailBuilder(templateId: string): any {
-    // This maps the templateId string from NOTIFICATION_EVENT_REGISTRY to the actual functions.
-    // We will expand this as we audit the templates.
-    const map: Record<string, Function> = {
-      "auth_welcome": (name: string, payload: any) => {
-        if (payload.role === "tutor") return templates.tutorWelcomeApplicationEmail(name, payload.applicationId || "TUT-PENDING", payload.trackingUrl);
-        if (payload.role === "parent") return templates.parentWelcomeEmail(name);
+  private static getEmailBuilder(templateId: string): BuilderFn | undefined {
+    const map: Record<string, BuilderFn> = {
+      "auth_welcome": (name, p) => {
+        const { role, applicationId, trackingUrl } = p as { role?: string; applicationId?: string; trackingUrl?: string };
+        if (role === "tutor") return templates.tutorWelcomeApplicationEmail(name, applicationId || "TUT-PENDING", trackingUrl);
+        if (role === "parent") return templates.parentWelcomeEmail(name);
         return templates.studentWelcomeEmail(name);
       },
-      "auth_verify_email": () => { return {subject: "Verify", html: "..."} }, // Placeholder, logic is in auth controller
-      "auth_otp_code": () => { return {subject: "OTP", html: "..."} }, // Placeholder
-      "password_reset_code": (name: string, payload: any) => templates.passwordResetOtpEmail(name, payload.otp),
-      "admin_new_user": (name: string, payload: any) => templates.adminNewUserSignupEmail(payload),
-      "admin_tutor_application_submitted": (name: string, payload: any) => templates.adminTutorApplicationSubmittedEmail(payload),
-      "admin_tutor_document_resubmitted": (name: string, payload: any) => templates.adminTutorDocumentResubmittedEmail(payload),
-      // Mappings for tracking
-      "tutor_approved": (name: string, payload: any) => {
-          if (payload.document === "CNIC") return trackingTemplates.cnicVerifiedEmail(name, payload.ctaArgs);
-          if (payload.document === "Degree") return trackingTemplates.educationalDocumentsVerifiedEmail(name, payload.ctaArgs);
-          if (payload.document === "DemoVideo") return trackingTemplates.demoVideoApprovedEmail(name, payload.ctaArgs);
-          if (payload.document === "Police") return trackingTemplates.policeVerifiedEmail(name, payload.ctaArgs);
-          if (payload.document === "Marketplace") return trackingTemplates.marketplaceActivatedEmail(name, payload.ctaArgs);
-          if (payload.document === "All") return trackingTemplates.tutorMarketplaceAgreementEmail(name, { ...payload.ctaArgs, hourlyRate: payload.hourlyRate, currency: payload.currency });
-          return trackingTemplates.educationalDocumentsVerifiedEmail(name, payload.ctaArgs); // fallback
+      "auth_verify_email": () => ({ subject: "Verify", html: "..." }), // logic is in auth controller
+      "auth_otp_code": () => ({ subject: "OTP", html: "..." }),        // logic is in auth controller
+      "password_reset_code": (name, p) => {
+        const { otp } = p as { otp: string };
+        return templates.passwordResetOtpEmail(name, otp);
       },
-      "verification_rejected": (name: string, payload: any) => {
-          if (payload.document === "CNIC") return trackingTemplates.cnicRejectedEmail(name, payload.reason, payload.ctaArgs);
-          if (payload.document === "Degree") return trackingTemplates.educationalDocumentsRejectedEmail(name, payload.reason, payload.ctaArgs);
-          if (payload.document === "DemoVideo") return trackingTemplates.demoVideoRejectedEmail(name, payload.reason, payload.ctaArgs);
-          if (payload.document === "Police") return trackingTemplates.policeRejectedEmail(name, payload.reason, payload.ctaArgs);
-          if (payload.document === "Marketplace") return trackingTemplates.marketplaceDeactivatedEmail(name, payload.reason, payload.ctaArgs);
-          return trackingTemplates.educationalDocumentsRejectedEmail(name, payload.reason, payload.ctaArgs); // fallback
+      "admin_new_user": (_name, p) => templates.adminNewUserSignupEmail(p as Parameters<typeof templates.adminNewUserSignupEmail>[0]),
+      "admin_tutor_application_submitted": (_name, p) => templates.adminTutorApplicationSubmittedEmail(p as Parameters<typeof templates.adminTutorApplicationSubmittedEmail>[0]),
+      "admin_tutor_document_resubmitted": (_name, p) => templates.adminTutorDocumentResubmittedEmail(p as Parameters<typeof templates.adminTutorDocumentResubmittedEmail>[0]),
+      "tutor_approved": (name, p) => {
+        // Callers must supply ctaArgs — cast as required since the event payload contract owns this
+        const { document, ctaArgs, hourlyRate, currency } = p as { document?: string; ctaArgs: Parameters<typeof trackingTemplates.cnicVerifiedEmail>[1]; hourlyRate?: number; currency?: string };
+        if (document === "CNIC") return trackingTemplates.cnicVerifiedEmail(name, ctaArgs);
+        if (document === "Degree") return trackingTemplates.educationalDocumentsVerifiedEmail(name, ctaArgs);
+        if (document === "DemoVideo") return trackingTemplates.demoVideoApprovedEmail(name, ctaArgs);
+        if (document === "Police") return trackingTemplates.policeVerifiedEmail(name, ctaArgs);
+        if (document === "Marketplace") return trackingTemplates.marketplaceActivatedEmail(name, ctaArgs);
+        if (document === "All") return trackingTemplates.tutorMarketplaceAgreementEmail(name, { ...ctaArgs, hourlyRate, currency });
+        return trackingTemplates.educationalDocumentsVerifiedEmail(name, ctaArgs);
       },
-      "home_tuition_approved": (name: string, payload: any) => trackingTemplates.homeTuitionActivatedEmail(name, payload.ctaArgs),
-      "payment_receipt": (name: string, payload: any) => templates.paymentConfirmedEmail(name, payload.tutorName || "your tutor", payload.amount, payload),
-      "payment_failed": (name: string, payload: any) => templates.paymentFailedEmail(name, payload.tutorName || "your tutor", payload.amount, payload),
-      // Tutor side payment failed notification
-      "payment_failed_tutor": (name: string, payload: any) => templates.paymentFailedNotifyTutorEmail(name, payload.studentName || "the student", payload.amount, payload),
-      
-      // Abandoned journey recovery templates
-      "tutor_app_abandoned_24h": (name: string, payload: any) => recoveryTemplates.tutorApplicationAbandonedEmail(name, 1, payload.onboardingStep),
-      "tutor_app_abandoned_72h": (name: string, payload: any) => recoveryTemplates.tutorApplicationAbandonedEmail(name, 3, payload.onboardingStep),
-      "tutor_app_abandoned_168h": (name: string, payload: any) => recoveryTemplates.tutorApplicationAbandonedEmail(name, 7, payload.onboardingStep),
-      
-      "request_abandoned_6h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 0.25, payload.subjectName),
-      "request_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 1, payload.subjectName),
-      "request_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 3, payload.subjectName),
-      "request_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentRequestAbandonedEmail(name, 7, payload.subjectName),
-      "direct_booking_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 1, payload.tutorName, payload.subjectName),
-      "direct_booking_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 3, payload.tutorName, payload.subjectName),
-      "direct_booking_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentDirectBookingAbandonedEmail(name, 7, payload.tutorName, payload.subjectName),
-      
-      "payment_abandoned_1h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1/24, payload.tutorName, payload.amount, payload.currency),
-      "payment_abandoned_24h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 1, payload.tutorName, payload.amount, payload.currency),
-      "payment_abandoned_48h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 2, payload.tutorName, payload.amount, payload.currency),
-      "payment_abandoned_72h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 3, payload.tutorName, payload.amount, payload.currency),
-      "payment_abandoned_168h": (name: string, payload: any) => recoveryTemplates.studentPaymentAbandonedEmail(name, 7, payload.tutorName, payload.amount, payload.currency),
-
-      "review_requested": (name: string, payload: any) => templates.reviewRequestEmail(name, payload.tutorName, payload.subject, payload.bookingId),
+      "verification_rejected": (name, p) => {
+        const { document, reason, ctaArgs } = p as { document?: string; reason: string; ctaArgs: Parameters<typeof trackingTemplates.cnicRejectedEmail>[2] };
+        if (document === "CNIC") return trackingTemplates.cnicRejectedEmail(name, reason, ctaArgs);
+        if (document === "Degree") return trackingTemplates.educationalDocumentsRejectedEmail(name, reason, ctaArgs);
+        if (document === "DemoVideo") return trackingTemplates.demoVideoRejectedEmail(name, reason, ctaArgs);
+        if (document === "Police") return trackingTemplates.policeRejectedEmail(name, reason, ctaArgs);
+        if (document === "Marketplace") return trackingTemplates.marketplaceDeactivatedEmail(name, reason, ctaArgs);
+        return trackingTemplates.educationalDocumentsRejectedEmail(name, reason, ctaArgs);
+      },
+      "home_tuition_approved": (name, p) => {
+        const { ctaArgs } = p as { ctaArgs: Parameters<typeof trackingTemplates.homeTuitionActivatedEmail>[1] };
+        return trackingTemplates.homeTuitionActivatedEmail(name, ctaArgs);
+      },
+      "payment_receipt": (name, p) => {
+        const { tutorName, amount } = p as { tutorName?: string; amount: number };
+        return templates.paymentConfirmedEmail(name, tutorName || "your tutor", amount, p as unknown as Parameters<typeof templates.paymentConfirmedEmail>[3]);
+      },
+      "payment_failed": (name, p) => {
+        const { tutorName, amount } = p as { tutorName?: string; amount: number };
+        return templates.paymentFailedEmail(name, tutorName || "your tutor", amount, p as unknown as Parameters<typeof templates.paymentFailedEmail>[3]);
+      },
+      "payment_failed_tutor": (name, p) => {
+        const { studentName, amount } = p as { studentName?: string; amount: number };
+        return templates.paymentFailedNotifyTutorEmail(name, studentName || "the student", amount, p as unknown as Parameters<typeof templates.paymentFailedNotifyTutorEmail>[3]);
+      },
+      "tutor_app_abandoned_24h": (name) => recoveryTemplates.tutorApplicationAbandonedEmail(name, 1),
+      "tutor_app_abandoned_72h": (name) => recoveryTemplates.tutorApplicationAbandonedEmail(name, 3),
+      "tutor_app_abandoned_168h": (name) => recoveryTemplates.tutorApplicationAbandonedEmail(name, 7),
+      "request_abandoned_6h": (name, p) => recoveryTemplates.studentRequestAbandonedEmail(name, 0.25, (p as { subjectName?: string }).subjectName),
+      "request_abandoned_24h": (name, p) => recoveryTemplates.studentRequestAbandonedEmail(name, 1, (p as { subjectName?: string }).subjectName),
+      "request_abandoned_72h": (name, p) => recoveryTemplates.studentRequestAbandonedEmail(name, 3, (p as { subjectName?: string }).subjectName),
+      "request_abandoned_168h": (name, p) => recoveryTemplates.studentRequestAbandonedEmail(name, 7, (p as { subjectName?: string }).subjectName),
+      "direct_booking_abandoned_24h": (name, p) => { const { tutorName, subjectName } = p as { tutorName?: string; subjectName?: string }; return recoveryTemplates.studentDirectBookingAbandonedEmail(name, 1, tutorName, subjectName); },
+      "direct_booking_abandoned_72h": (name, p) => { const { tutorName, subjectName } = p as { tutorName?: string; subjectName?: string }; return recoveryTemplates.studentDirectBookingAbandonedEmail(name, 3, tutorName, subjectName); },
+      "direct_booking_abandoned_168h": (name, p) => { const { tutorName, subjectName } = p as { tutorName?: string; subjectName?: string }; return recoveryTemplates.studentDirectBookingAbandonedEmail(name, 7, tutorName, subjectName); },
+      "payment_abandoned_1h": (name, p) => { const { tutorName, amount, currency } = p as { tutorName?: string; amount?: number; currency?: string }; return recoveryTemplates.studentPaymentAbandonedEmail(name, 1/24, tutorName, amount, currency); },
+      "payment_abandoned_24h": (name, p) => { const { tutorName, amount, currency } = p as { tutorName?: string; amount?: number; currency?: string }; return recoveryTemplates.studentPaymentAbandonedEmail(name, 1, tutorName, amount, currency); },
+      "payment_abandoned_48h": (name, p) => { const { tutorName, amount, currency } = p as { tutorName?: string; amount?: number; currency?: string }; return recoveryTemplates.studentPaymentAbandonedEmail(name, 2, tutorName, amount, currency); },
+      "payment_abandoned_72h": (name, p) => { const { tutorName, amount, currency } = p as { tutorName?: string; amount?: number; currency?: string }; return recoveryTemplates.studentPaymentAbandonedEmail(name, 3, tutorName, amount, currency); },
+      "payment_abandoned_168h": (name, p) => { const { tutorName, amount, currency } = p as { tutorName?: string; amount?: number; currency?: string }; return recoveryTemplates.studentPaymentAbandonedEmail(name, 7, tutorName, amount, currency); },
+      "review_requested": (name, p) => {
+        const { tutorName, subject, bookingId } = p as { tutorName: string; subject: string; bookingId: string };
+        return templates.reviewRequestEmail(name, tutorName, subject, bookingId);
+      },
     };
     return map[templateId];
   }

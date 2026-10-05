@@ -1,6 +1,7 @@
 import mongoose, { Types } from "mongoose";
 import { Response } from "express";
 import { AuthRequest } from "../types";
+import logger from "../config/logger";
 import Bid from "../models/Bid.model";
 import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
@@ -401,7 +402,7 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
         fees.studentTotal = fees.subtotal + fees.studentFee;
         recomputeGatewayFee(fees);
       } catch (promoErr) {
-        console.warn(`Promo code ${previousPromo.code} no longer valid on retry for offer ${offer._id}:`, promoErr);
+        logger.warn({ offerId: offer._id, promoCode: previousPromo.code, err: promoErr }, "Promo code no longer valid on offer checkout retry — proceeding at full price");
       }
     }
 

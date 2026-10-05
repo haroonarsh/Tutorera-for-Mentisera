@@ -496,7 +496,7 @@ export const getAllTutors = async (
     const matchRequest = await Request.findById(matchRequestId).lean();
     if (matchRequest) {
       const ranked = await MatchingService.rankTutors(matchRequest as any, tutorsWithResponse as any[]);
-      const rankedMap = new Map(ranked.map((s) => [s.tutor._id.toString(), s]));
+      const rankedMap = new Map(ranked.map((s) => [(s.tutor as { _id?: unknown })._id?.toString() ?? "", s]));
       tutorsWithResponse.forEach((t) => {
         const matchData = rankedMap.get(t._id.toString());
         if (matchData) {
