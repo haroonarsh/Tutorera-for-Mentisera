@@ -92,7 +92,7 @@ export const getPublicTutors = async (req: AuthRequest, res: Response): Promise<
 
   const total = await TutorProfile.countDocuments(filter);
   const tutors = await TutorProfile.find(filter)
-    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt isVerified verificationStatus marketplaceEligible")
+    .select("user fullName city countryName countryCode subjects levels hourlyRate currency teachingMode averageRating totalReviews averageResponseMinutes lastActiveAt updatedAt isVerified verificationStatus marketplaceEligible")
     .populate("user", "name email avatar city countryCode countryName timezone currency")
     .sort(sort as string)
     .skip(skip)
