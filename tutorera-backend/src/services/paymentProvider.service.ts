@@ -36,8 +36,14 @@ export const paymentProvider = {
   name: "rapid_gateway" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
+    const currency = (params.currency || "").toUpperCase();
+    if (!currency) {
+      throw { statusCode: 422, code: "PAYMENT_CURRENCY_REQUIRED", message: "Checkout currency is required." };
+    }
+
     const checkoutUrl = await createTransaction({
       amount: params.amount,
+      currency,
       customerMobileNo: params.customerMobileNo,
       customerEmail: params.customerEmail,
       basketId: params.basketId,
@@ -52,7 +58,7 @@ export const paymentProvider = {
       eventType: "checkout.created",
       status: "pending",
       amount: params.amount,
-      currency: params.currency || "PKR",
+      currency,
       bookingId: params.bookingId,
       bidId: params.bidId,
       studentId: params.studentId,
