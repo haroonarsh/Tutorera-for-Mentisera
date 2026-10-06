@@ -50,7 +50,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
   try {
     const checkoutUrl = await paymentProvider.createCheckout({
       amount: booking.amount,
-      currency: "PKR",
+      currency: booking.currency || "",
       customerMobileNo: payer?.phone || "03000000000",
       customerEmail: payer?.email || student.email,
       basketId,

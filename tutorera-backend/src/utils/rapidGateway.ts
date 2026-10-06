@@ -56,6 +56,7 @@ async function getAccessToken(): Promise<string> {
 
 interface CreateTransactionParams {
   amount: number;
+  currency: string;
   customerMobileNo: string;
   customerEmail: string;
   basketId: string; // our own unique reference — MUST equal what we reconcile webhooks against
@@ -71,13 +72,18 @@ interface CreateTransactionParams {
 // Location header, exactly like their documented PHP example
 // (CURLOPT_FOLLOWLOCATION => false + CURLINFO_REDIRECT_URL).
 export async function createTransaction(params: CreateTransactionParams): Promise<string> {
+  const currency = params.currency.toUpperCase();
+  if (currency !== "PKR") {
+    throw { statusCode: 409, code: "UNSUPPORTED_PAYMENT_CURRENCY", message: "Rapid Gateway checkout is configured for PKR only." };
+  }
+
   const token = await getAccessToken();
 
   const body = new URLSearchParams({
     MERCHANT_ID, // always the REAL merchant id, even in sandbox
     MERCHANT_NAME,
     TXNAMT: params.amount.toString(),
-    CURRENCY_CODE: "PKR",
+    CURRENCY_CODE: currency,
     CUSTOMER_MOBILE_NO: params.customerMobileNo,
     CUSTOMER_EMAIL_ADDRESS: params.customerEmail,
     BASKET_ID: params.basketId,
