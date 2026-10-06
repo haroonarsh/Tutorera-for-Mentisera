@@ -13,7 +13,7 @@ on:
       - ".github/workflows/backend-ci.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: backend-ci-${{ github.workflow }}-${{ github.ref }}
@@ -37,20 +37,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: tutorera-backend/package-lock.json
-
-      - name: Refresh lockfile for patched Mongoose pin
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix-mongoose-test-regression-20261006'
-        run: |
-          git fetch origin "${{ github.head_ref }}"
-          git checkout -B "${{ github.head_ref }}" "origin/${{ github.head_ref }}"
-          npm install --package-lock-only --ignore-scripts
-          if ! git diff --quiet -- package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "chore: refresh backend lockfile"
-            git push origin HEAD:"${{ github.head_ref }}"
-          fi
 
       - name: Install dependencies
         run: npm ci
