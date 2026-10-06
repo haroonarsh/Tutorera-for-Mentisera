@@ -42,11 +42,8 @@ function hasFacet<T extends { _id: unknown }>(items: T[], predicate: (item: T) =
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const lastModified = new Date();
-
   const staticPages: MetadataRoute.Sitemap = routes.map((route) => ({
     url: `${SITE_URL}/${route}`,
-    lastModified,
     changeFrequency: route === "" || route === "tutors" || route === "online-tutors" ? "daily" : "monthly",
     priority: route === "" ? 1 : route === "tutors" || route === "online-tutors" ? 0.9 : 0.7,
   }));
@@ -55,26 +52,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((market) => market.status === "LIVE")
     .map((market) => ({
       url: `${SITE_URL}/${market.route}`,
-      lastModified,
-      changeFrequency: "daily",
+        changeFrequency: "daily",
       priority: 0.9,
       alternates: { languages: { [market.locale]: `${SITE_URL}/${market.route}`, "x-default": SITE_URL } },
     }));
 
   // One cached inventory facet request replaces dozens of live API queries during
   // sitemap generation. Individual tutor profile retrieval remains capped at 500.
-  const [facets, demandFacets, tutorDirectory] = await Promise.all([
+  const [facets, demandFacets, tutorDirectory, pakistanPkrDirectory] = await Promise.all([
     fetchTutorSeoFacets(),
     fetchRequestSeoFacets(),
     fetchTutors({}, 500),
+    fetchTutors({ countryCode: "PK", currency: "PKR" }, 1),
   ]);
 
   const subjectDirectoryResults = Object.entries(SUBJECTS).map(([slug, subject]) => {
     const live = Boolean(facets && hasFacet(facets.subjects, (item) => item._id.subject.toLowerCase() === subject.toLowerCase()));
     return live ? {
       url: `${SITE_URL}/tutors/subject/${slug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.8,
     } : null;
   });
@@ -83,8 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const live = Boolean(facets && hasFacet(facets.cities, (item) => item._id.city.toLowerCase() === city.toLowerCase()));
     return live ? {
       url: `${SITE_URL}/tutors/city/${slug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.8,
     } : null;
   });
@@ -93,8 +88,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const live = Boolean(facets && hasFacet(facets.levels, (item) => item._id.level.toLowerCase() === level.toLowerCase()));
     return live ? {
       url: `${SITE_URL}/tutors/level/${slug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.8,
     } : null;
   });
@@ -102,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const indexableTutors = tutorDirectory.tutors.filter((tutor) => assessTutorSeoQuality(tutor).indexable);
   const profiles: MetadataRoute.Sitemap = indexableTutors.map((tutor) => ({
     url: `${SITE_URL}/tutors/${tutorProfileSlug(tutor)}`,
-    lastModified: tutor.updatedAt ? new Date(tutor.updatedAt) : lastModified,
+    ...(tutor.updatedAt ? { lastModified: new Date(tutor.updatedAt) } : {}),
     changeFrequency: "weekly",
     priority: tutor.totalReviews > 0 ? 0.75 : 0.7,
   }));
@@ -120,8 +114,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ));
       return live ? {
         url: `${SITE_URL}/tutors/city/${citySlug}/${subjectSlug}`,
-        lastModified,
-        changeFrequency: "daily" as const,
+            changeFrequency: "daily" as const,
         priority: 0.85,
       } : null;
     })
@@ -132,8 +125,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const live = Boolean(facets && facets.countries.some((item) => item._id === market.isoCountryCode));
     return live ? {
       url: `${SITE_URL}/${market.route}/tutors`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.85,
       alternates: { languages: { [market.locale]: `${SITE_URL}/${market.route}/tutors`, "x-default": `${SITE_URL}/tutors` } },
     } : null;
@@ -143,7 +135,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const city = CITIES[citySlug];
     const { total } = await fetchTutors({ countryCode: "PK", city, teachingMode: "in-person" }, 1);
     return total > 0
-      ? { url: `${SITE_URL}/pk/home-tutors/${citySlug}`, lastModified, changeFrequency: "daily" as const, priority: 0.9 }
+      ? { url: `${SITE_URL}/pk/home-tutors/${citySlug}`, changeFrequency: "daily" as const, priority: 0.9 }
       : null;
   }));
 
@@ -155,8 +147,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ));
     return live ? {
       url: `${SITE_URL}/pk/tutors/level/${levelSlug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.88,
     } : null;
   });
@@ -169,8 +160,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ));
     return live ? {
       url: `${SITE_URL}/pk/tutors/exam/${examSlug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.88,
     } : null;
   });
@@ -191,8 +181,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ));
         return live ? {
           url: `${SITE_URL}/pk/tutors/city/${citySlug}/${levelSlug}/${subjectSlug}`,
-          lastModified,
-          changeFrequency: "daily" as const,
+                changeFrequency: "daily" as const,
           priority: 0.9,
         } : null;
       })
@@ -208,8 +197,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ));
     return live ? {
       url: `${SITE_URL}/tuition-requests/pk/${citySlug}`,
-      lastModified,
-      changeFrequency: "daily" as const,
+        changeFrequency: "daily" as const,
       priority: 0.8,
     } : null;
   });
@@ -226,17 +214,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ));
       return live ? {
         url: `${SITE_URL}/tuition-requests/pk/${citySlug}/${subjectSlug}`,
-        lastModified,
-        changeFrequency: "daily" as const,
+            changeFrequency: "daily" as const,
         priority: 0.8,
       } : null;
     })
   );
 
-  const research: MetadataRoute.Sitemap = tutorDirectory.total >= 10 ? [
-    { url: `${SITE_URL}/research/pakistan-tutoring-rates`, lastModified, changeFrequency: "weekly", priority: 0.75 },
-    { url: `${SITE_URL}/research/tutoring-index`, lastModified, changeFrequency: "weekly", priority: 0.75 },
-  ] : [];
+  const research: MetadataRoute.Sitemap = [
+    ...(pakistanPkrDirectory.total >= 10
+      ? [{ url: `${SITE_URL}/research/pakistan-tutoring-rates`, changeFrequency: "weekly" as const, priority: 0.75 }]
+      : []),
+    ...(tutorDirectory.total >= 10
+      ? [{ url: `${SITE_URL}/research/tutoring-index`, changeFrequency: "weekly" as const, priority: 0.75 }]
+      : []),
+  ];
 
   const entries: SitemapEntry[] = [
     ...staticPages,
