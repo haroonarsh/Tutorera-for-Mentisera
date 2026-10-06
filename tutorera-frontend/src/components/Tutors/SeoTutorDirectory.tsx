@@ -7,14 +7,30 @@ interface Props { kind: DirectoryKind; value: string; filters?: TutorSearchFilte
 
 export default async function SeoTutorDirectory({ kind, value, filters, title, description, canonicalPath, currency }: Props) {
   const result = await fetchTutors(filters ?? { [kind]: value });
-  const rates = result.tutors.map((tutor) => tutor.hourlyRate).filter(Boolean);
-  const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
-  const displayCurrency = currency || result.tutors.find((t) => t.currency)?.currency || "PKR";
+  const rateTutors = result.tutors.filter(
+    (tutor) => Number.isFinite(tutor.hourlyRate) && tutor.hourlyRate > 0 && Boolean(tutor.currency),
+  );
+  const currencies = [...new Set(rateTutors.map((tutor) => tutor.currency as string))];
+  const displayCurrency = currency || (currencies.length === 1 ? currencies[0] : undefined);
+  const comparableRates = displayCurrency
+    ? rateTutors.filter((tutor) => tutor.currency === displayCurrency).map((tutor) => tutor.hourlyRate)
+    : [];
+  const averageRate = comparableRates.length
+    ? Math.round(comparableRates.reduce((sum, rate) => sum + rate, 0) / comparableRates.length)
+    : 0;
+  const hasMixedCurrencies = currencies.length > 1;
   const context = filters?.city && filters?.subject ? `${filters.subject} tutoring in ${filters.city}` : `${value} tutoring`;
   const faq = [
     { q: `How do I choose a ${value} tutor?`, a: `Compare tutor profiles by relevant subjects, teaching levels, experience, lesson mode, availability, completed-booking reviews, verification status, and hourly rate. Discuss learning goals before confirming a booking.` },
     { q: `Can I book ${context} online?`, a: `Yes. Use the teaching-mode information on each profile to find tutors offering online lessons, in-person lessons, or both.` },
-    { q: `How much does ${context} cost?`, a: averageRate ? `The currently displayed matching tutors average approximately ${displayCurrency} ${averageRate.toLocaleString()} per hour. Individual rates vary by experience, subject, level, and lesson mode.` : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.` },
+    {
+      q: `How much does ${context} cost?`,
+      a: averageRate && displayCurrency
+        ? `The currently displayed matching tutors priced in ${displayCurrency} average approximately ${displayCurrency} ${averageRate.toLocaleString()} per hour. Individual rates vary by experience, subject, level, and lesson mode.`
+        : hasMixedCurrencies
+          ? `Matching tutors currently publish rates in multiple currencies, so TUTORERA does not combine them into a single average. Compare each tutor's displayed rate and currency directly.`
+          : `Rates vary by experience, subject, academic level, location, and lesson mode. Each available tutor publishes an hourly rate on their profile.`,
+    },
   ];
   const breadcrumb = {
     "@type": "BreadcrumbList",
