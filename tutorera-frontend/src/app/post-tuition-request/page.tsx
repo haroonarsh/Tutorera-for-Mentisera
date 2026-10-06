@@ -4,7 +4,7 @@ import RequestWizard from "@/components/marketplace/RequestWizard";
 import { getMarketByRoute } from "@/lib/markets";
 import { PostRequestPayload } from "@/types/dashboard";
 import { useSearchParams } from "next/navigation";
-import { useEffect,useMemo,useState } from "react";
+import { Suspense,useEffect,useMemo,useState } from "react";
 
 const MARKET_DEFAULT_BUDGETS: Record<string, string> = {
   PKR: "2000",
@@ -13,7 +13,7 @@ const MARKET_DEFAULT_BUDGETS: Record<string, string> = {
   USD: "30",
 };
 
-export default function PostTuitionRequestPage() {
+function PostTuitionRequestContent() {
   const searchParams = useSearchParams();
   const [storedPrefill, setStoredPrefill] = useState<Partial<PostRequestPayload>>({});
 
@@ -48,5 +48,13 @@ export default function PostTuitionRequestPage() {
         <RequestWizard prefill={prefill} />
       </div>
     </main>
+  );
+}
+
+export default function PostTuitionRequestPage() {
+  return (
+    <Suspense fallback={null}>
+      <PostTuitionRequestContent />
+    </Suspense>
   );
 }
