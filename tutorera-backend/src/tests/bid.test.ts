@@ -19,6 +19,11 @@ jest.mock("../utils/socket", () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
+jest.mock("../services/paymentProvider.service", () => ({
+  paymentProvider: {
+    createCheckout: jest.fn().mockResolvedValue("https://checkout.test/session"),
+  },
+}));
 
 function mockResponse(): Response {
   const res: Partial<Response> = {};
@@ -68,6 +73,9 @@ describe("BE-01: cross-request bid substitution", () => {
       request: otherRequest._id,
       tutor: tutor._id,
       amount: 2000,
+      initialStudentRate: 2000,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -122,6 +130,9 @@ describe("BE-01: cross-request bid substitution", () => {
       request: otherRequest._id,
       tutor: tutor._id,
       amount: 1800,
+      initialStudentRate: 1800,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -159,6 +170,9 @@ describe("BE-01: cross-request bid substitution", () => {
       request: request._id,
       tutor: tutor._id,
       amount: 1200,
+      initialStudentRate: 1200,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -172,12 +186,16 @@ describe("BE-01: cross-request bid substitution", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
 
+    // Accepting a marketplace offer now reserves it for payment; booking
+    // creation happens only after the signed payment webhook succeeds.
     const booking = await Booking.findOne({ request: request._id });
-    expect(booking).not.toBeNull();
-    expect(booking?.tutor.toString()).toBe(tutor._id.toString());
-    expect(booking?.amount).toBe(1200);
+    expect(booking).toBeNull();
 
-    const closedRequest = await Request.findById(request._id);
-    expect(closedRequest?.status).toBe("closed");
+    const reservedRequest = await Request.findById(request._id);
+    expect(reservedRequest?.status).toBe("awaiting_payment");
+
+    const reservedBid = await Bid.findById(bid._id);
+    expect(reservedBid?.status).toBe("payment_pending");
+    expect(reservedBid?.paymentPendingExpiresAt).toBeDefined();
   });
 });

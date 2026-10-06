@@ -18,6 +18,11 @@ jest.mock("../utils/socket", () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
+jest.mock("../services/paymentProvider.service", () => ({
+  paymentProvider: {
+    createCheckout: jest.fn().mockResolvedValue("https://checkout.test/session"),
+  },
+}));
 
 function mockResponse(): Response {
   const res: Partial<Response> = {};
@@ -54,6 +59,9 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
       request: requestDoc._id,
       tutor: tutor._id,
       amount: 1000,
+      initialStudentRate: 1000,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -80,14 +88,16 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     const successCount = statusCalls.filter((code) => code === 200).length;
     expect(successCount).toBe(1);
 
-    // The real proof: no matter how the two requests raced, the database
-    // must contain exactly one booking for this request.
+    // Acceptance now reserves the request for payment. No booking may exist
+    // until the payment webhook finalizes the winning offer.
     const bookings = await Booking.find({ request: requestDoc._id });
-    expect(bookings.length).toBe(1);
+    expect(bookings.length).toBe(0);
 
-    // And the request must have ended up closed, not stuck open or double-processed.
     const finalRequest = await Request.findById(requestDoc._id);
-    expect(finalRequest?.status).toBe("closed");
+    expect(finalRequest?.status).toBe("awaiting_payment");
+
+    const finalBid = await Bid.findById(bid._id);
+    expect(finalBid?.status).toBe("payment_pending");
   });
 
   it("firing two concurrent accept calls for two DIFFERENT bids on the same request also results in only one booking", async () => {
@@ -108,8 +118,8 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
       schedule: "Mornings",
       status: "open",
     });
-    const bidA = await Bid.create({ request: requestDoc._id, tutor: tutorA._id, amount: 1500, message: "A" });
-    const bidB = await Bid.create({ request: requestDoc._id, tutor: tutorB._id, amount: 1400, message: "B" });
+    const bidA = await Bid.create({ request: requestDoc._id, tutor: tutorA._id, amount: 1500, initialStudentRate: 1500, expiresAt: new Date(Date.now() + 60 * 60 * 1000), status: "pending", message: "A" });
+    const bidB = await Bid.create({ request: requestDoc._id, tutor: tutorB._id, amount: 1400, initialStudentRate: 1500, expiresAt: new Date(Date.now() + 60 * 60 * 1000), status: "pending", message: "B" });
 
     const reqA = mockAuthRequest({
       params: { id: requestDoc._id.toString(), bidId: bidA._id.toString() },
@@ -126,13 +136,14 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     await Promise.all([acceptBid(reqA, resA), acceptBid(reqB, resB)]);
 
     const bookings = await Booking.find({ request: requestDoc._id });
-    expect(bookings.length).toBe(1);
+    expect(bookings.length).toBe(0);
 
-    // Whichever bid lost the race must not have been silently left "pending"
-    // forever — it should be untouched (still pending) since it never made
-    // it past the atomic guard, while the DB overall still shows exactly one
-    // accepted bid for this request.
-    const acceptedBids = await Bid.find({ request: requestDoc._id, status: "accepted" });
-    expect(acceptedBids.length).toBe(1);
+    // Exactly one offer may hold the request for checkout. The other remains
+    // unselected until payment succeeds or the hold expires.
+    const paymentPendingBids = await Bid.find({ request: requestDoc._id, status: "payment_pending" });
+    expect(paymentPendingBids.length).toBe(1);
+
+    const finalRequest = await Request.findById(requestDoc._id);
+    expect(finalRequest?.status).toBe("awaiting_payment");
   });
 });
