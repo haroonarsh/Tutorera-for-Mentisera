@@ -1,4 +1,5 @@
 // src/tests/setup.ts
+// CI validation marker: current dependency graph and replica-set harness.
 import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
