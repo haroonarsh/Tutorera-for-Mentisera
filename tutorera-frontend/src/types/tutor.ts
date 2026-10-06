@@ -12,6 +12,7 @@ export interface TutorUser {
 
 export interface TutorProfile {
   _id: string;
+  updatedAt?: string;
   user: TutorUser;
   subjects: string[];
   city: string;
