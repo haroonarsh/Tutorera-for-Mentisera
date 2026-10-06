@@ -16,6 +16,7 @@ beforeAll(async () => {
   // before the first test when mirrors serve a different checksum file.
   process.env.MONGOMS_MD5_CHECK = "0";
   replSet = await MongoMemoryReplSet.create({
+    binary: { version: "8.0.16" },
     replSet: { count: 1 },
   });
   const uri = replSet.getUri();
