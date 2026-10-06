@@ -73,7 +73,7 @@ export default async function MarketPage({ params }: Props) {
       <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)", lineHeight: 1.05, color: "#021550", maxWidth: 900 }}>Find Tutors & Tutoring Opportunities in {market.countryName}</h1>
       <p style={{ fontSize: "1.1rem", lineHeight: 1.7, maxWidth: 820 }}>Students post what they need and their preferred budget in {market.currency}. Eligible tutors can respond with offers or counter-offers. Students compare tutor profiles and choose who they want to learn with.</p>
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", margin: "1.5rem 0 2.5rem" }}>
-        <Link href="/post-tuition-request" style={{ padding: "0.8rem 1.2rem", borderRadius: 10, background: "#0329b2", color: "white", textDecoration: "none", fontWeight: 700 }}>Post a Tuition Request</Link>
+        <Link href={`/post-tuition-request?market=${market.route}`} style={{ padding: "0.8rem 1.2rem", borderRadius: 10, background: "#0329b2", color: "white", textDecoration: "none", fontWeight: 700 }}>Post a Tuition Request</Link>
         <Link href={`/${market.route}/tutors`} style={{ padding: "0.8rem 1.2rem", borderRadius: 10, border: "1px solid #0329b2", color: "#0329b2", textDecoration: "none", fontWeight: 700 }}>Browse Tutors</Link>
       </div>
 
