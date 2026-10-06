@@ -1,4 +1,3 @@
-import { getCountryByCode } from "@/lib/location";
 import { MARKETS,getMarketByRoute } from "@/lib/markets";
 import { SITE_URL } from "@/lib/site";
 import { CITIES,LOCAL_SUBJECT_SLUGS,PRIMARY_CITY_SLUGS,SUBJECTS,fetchTutors } from "@/lib/tutor-directory";
@@ -40,8 +39,6 @@ export default async function MarketPage({ params }: Props) {
   if (countryCode.toLowerCase() === "gb") permanentRedirect("/uk");
   const market = getMarketByRoute(countryCode);
   if (!market) notFound();
-  const country = getCountryByCode(market.isoCountryCode);
-  if (!country) notFound();
 
   const isPakistan = market.route === "pk";
   const pakistanInventory = isPakistan
@@ -108,7 +105,7 @@ export default async function MarketPage({ params }: Props) {
         <p><strong>Checkout:</strong> {market.checkoutEnabled ? `Enabled for the ${market.countryName} market using supported payment methods.` : "Not yet live. TUTORERA will not present a payment method as available until market checkout is activated."}</p>
         <p><Link href={market.legalSchedule}>Read the {market.countryName} legal schedule</Link></p>
       </section>
-      {country.curricula?.length > 0 && <section style={{ marginTop: "2.5rem" }}><h2>Relevant curricula</h2><p>{country.curricula.join(" · ")}</p></section>}
+      
     </main>
   );
 }
