@@ -276,14 +276,19 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
 
   const handleSubjectEligibility = async (subject: string, action: "approve" | "reject" | "revoke") => {
     const key = `subject-eligibility-${subject}-${action}`;
-    const levelsInput = eligibilityLevels[subject] || "";
+    const entry = data?.profile?.subjectEligibility?.find((candidate) => candidate.subject === subject);
+    // Use what the admin typed; if they haven't touched the box, fall back to
+    // the same pre-filled default the input displays (the levels requested for
+    // this subject, else the tutor's overall levels). `??` rather than `||` so
+    // an admin who deliberately clears the box still gets the validation error.
+    const defaultLevels = (entry?.levels?.length ? entry.levels : data?.profile?.levels || []).join(", ");
+    const levelsInput = eligibilityLevels[subject] ?? defaultLevels;
     const levels = levelsInput.split(",").map(l => l.trim()).filter(Boolean);
     if (action === "approve" && levels.length === 0) {
       showError("Enter at least one teaching level (comma-separated) to approve this subject.");
       return;
     }
     const reason = eligibilityReasons[subject] || "";
-    const entry = data?.profile?.subjectEligibility?.find((candidate) => candidate.subject === subject);
     const requiresEvidenceRationale = action === "approve" && entry?.matchesDiscipline === false;
     if ((action === "reject" || action === "revoke" || requiresEvidenceRationale) && !reason.trim()) {
       showError(requiresEvidenceRationale ? "Document the supporting evidence and approval rationale for this off-discipline subject." : `A reason is required to ${action} this subject.`);
@@ -553,13 +558,16 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
         <section className={s.card} style={{ marginBottom: 16 }} aria-labelledby="subject-eligibility">
           <p id="subject-eligibility" className={s.cardTitle} style={{ marginBottom: 6 }}>Subject eligibility review</p>
           <p style={{ fontSize: 12, color: TEXT_COLORS.muted, margin: "0 0 12px" }}>
-            Tutor-selected subjects only become live after an admin approves specific teaching levels here. Subjects that don&apos;t match the declared discipline are flagged and may need supporting evidence.
+            Tutor-selected subjects only become live after an admin approves specific teaching levels here. Subjects that don&apos;t match the declared discipline are flagged and may need supporting evidence. The levels box is pre-filled with the levels requested — edit it to approve fewer or different levels.
           </p>
           {(!p.subjectEligibility || p.subjectEligibility.length === 0) ? (
             <p className={s.empty}>No subject eligibility requests yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {p.subjectEligibility.map((entry) => (
+              {p.subjectEligibility.map((entry) => {
+                const defaultLevels = (entry.levels?.length ? entry.levels : p.levels || []).join(", ");
+                const isApproved = entry.status === "approved";
+                return (
                 <div key={entry.subject} style={{ border: `1px solid ${UI_COLORS.border}`, borderRadius: 10, padding: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                     <div>
@@ -572,20 +580,26 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                         <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: STATUS_COLORS.warning.color }}>Adjacent — needs evidence</span>
                       )}
                     </div>
-                    {entry.levels?.length > 0 && <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>Approved levels: {entry.levels.join(", ")}</span>}
+                    {entry.levels?.length > 0 && (
+                      <span style={{ fontSize: 12, color: TEXT_COLORS.muted }}>
+                        {isApproved ? "Approved levels" : "Requested levels"}: {entry.levels.join(", ")}
+                      </span>
+                    )}
                   </div>
                   {entry.reason && <p style={{ fontSize: 12, color: STATUS_COLORS.danger.color, margin: "6px 0 0" }}>Reason: {entry.reason}</p>}
                   {entry.evidence?.length ? entry.evidence.map((evidence, index) => <SubjectEvidenceReviewCard key={`${entry.subject}-evidence-${index}`} evidence={evidence} index={index} subject={entry.subject} onView={(evidenceIndex) => viewSubjectEvidence(entry.subject, evidenceIndex)} onReview={["approved", "revoked", "suspended"].includes(entry.status) ? undefined : (evidenceIndex, status, reason) => reviewEvidence(entry.subject, evidenceIndex, status, reason)} />) : entry.evidenceRequired ? <p style={{ fontSize: 14, color: STATUS_COLORS.warning.color, margin: "8px 0 0" }}>Supporting evidence has not been uploaded yet.</p> : null}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                     <input
                       type="text"
+                      aria-label={`Levels to approve for ${entry.subject}`}
                       placeholder="Levels to approve, e.g. O-Level, A-Level"
-                      value={eligibilityLevels[entry.subject] || ""}
+                      value={eligibilityLevels[entry.subject] ?? defaultLevels}
                       onChange={e => setEligibilityLevels(current => ({ ...current, [entry.subject]: e.target.value }))}
                       style={{ flex: "1 1 220px", padding: "6px 10px", border: `1px solid ${UI_COLORS.border}`, borderRadius: 8, fontSize: 12 }}
                     />
                     <input
                       type="text"
+                      aria-label={`Reason or rationale for ${entry.subject}`}
                       placeholder={entry.matchesDiscipline ? "Reason (required to reject/revoke)" : "Supporting evidence & rationale (required to approve)"}
                       value={eligibilityReasons[entry.subject] || ""}
                       onChange={e => setEligibilityReasons(current => ({ ...current, [entry.subject]: e.target.value }))}
@@ -593,14 +607,19 @@ function AdminApplicationDetailContent({ params }: { params: Params }) {
                     />
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                    <button disabled={busyKey === `subject-eligibility-${entry.subject}-approve`} onClick={() => handleSubjectEligibility(entry.subject, "approve")} style={btnSuccessStyle}>Approve</button>
-                    <button disabled={busyKey === `subject-eligibility-${entry.subject}-reject`} onClick={() => handleSubjectEligibility(entry.subject, "reject")} style={btnDangerStyle}>Reject</button>
-                    {entry.status === "approved" && (
+                    {!isApproved && (
+                      <button disabled={busyKey === `subject-eligibility-${entry.subject}-approve`} onClick={() => handleSubjectEligibility(entry.subject, "approve")} style={btnSuccessStyle}>Approve</button>
+                    )}
+                    {!isApproved && (
+                      <button disabled={busyKey === `subject-eligibility-${entry.subject}-reject`} onClick={() => handleSubjectEligibility(entry.subject, "reject")} style={btnDangerStyle}>Reject</button>
+                    )}
+                    {isApproved && (
                       <button disabled={busyKey === `subject-eligibility-${entry.subject}-revoke`} onClick={() => handleSubjectEligibility(entry.subject, "revoke")} style={btnDangerStyle}>Revoke</button>
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

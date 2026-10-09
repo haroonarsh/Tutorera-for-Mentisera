@@ -12,6 +12,8 @@ const HIDE_NAVBAR_AND_FOOTER = [
   "/chat",
   "/earnings",
   "/dashboard",
+  "/book",
+  "/transactions",
   "/settings",
   "/notifications",
   "/admin",
