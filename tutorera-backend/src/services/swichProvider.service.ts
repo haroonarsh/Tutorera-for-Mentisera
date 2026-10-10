@@ -217,7 +217,7 @@ export function assertSwichCheckoutCapability(countryCode: string | undefined, c
 /**
  * OAuth2 client_credentials token fetch, cached until near expiry.
  * Confirmed real contract: POST {AUTH_BASE_URL}/connect/token with a JSON
- * JSON (not form-urlencoded) body of client_id,
+ * (not form-urlencoded) body of client_id,
  * client_secret, grant_type. Response: { access_token, token_type,
  * expires_in }.
  */
@@ -231,17 +231,21 @@ async function getAccessToken(): Promise<string> {
     const clientSecret = requireEnv("SWICH_CLIENT_SECRET");
 
     try {
+        // Swich's captured docs contract (api-docs.swichnow.com, Authentication):
+        // POST /connect/token with a JSON body. A form-urlencoded body was
+        // tried by a previous change and the endpoint answered 400, so we are
+        // back on JSON. If this 400s again, the "Swich token error body" log
+        // below prints Swich's own explanation (invalid_client / invalid_scope /
+        // unsupported_grant_type) instead of a bare status code.
         const response = await axios.post(
         `${swichAuthBaseUrl()}/connect/token`,
-        new URLSearchParams({
+        {
             client_id: clientId,
             client_secret: clientSecret,
             grant_type: "client_credentials",
-        }).toString(),
+        },
         {
-            // Swich's OAuth endpoint requires application/x-www-form-urlencoded.
-            // Do not send merchant credentials in a JSON body.
-            headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
             timeout: 15_000,
         }
         );
@@ -255,8 +259,10 @@ async function getAccessToken(): Promise<string> {
         cachedToken = { accessToken, expiresAt: now + (expiresIn - 30) * 1000 };
         return accessToken;
     } catch (error) {
-        const axErr = error as { response?: { status?: number }; message?: string };
+        const axErr = error as { response?: { status?: number; data?: unknown }; message?: string };
         const status = axErr?.response?.status;
+        // Never logs the secret — only Swich's response body and the host.
+        console.error("Swich token error body:", JSON.stringify(axErr?.response?.data), "| status:", status, "| auth host:", swichAuthBaseUrl());
         const wrapped = new Error(
         status === 401
             ? "Swich rejected the client credentials — check SWICH_CLIENT_ID/SWICH_CLIENT_SECRET"
@@ -405,6 +411,7 @@ export const swichProvider = {
         if (axErr2?.statusCode) throw error;
 
         const status = axErr2?.response?.status;
+        console.error("Swich initiate error body:", JSON.stringify(axErr2?.response?.data), "| status:", status);
         const gatewayMessage = axErr2?.response?.data?.message;
         const wrapped = new Error(
             gatewayMessage ? `Swich checkout failed: ${gatewayMessage}` : `Swich checkout failed${axErr2?.message ? `: ${axErr2.message}` : ""}`
