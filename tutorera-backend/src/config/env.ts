@@ -27,9 +27,7 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     { key: "GROQ_API_KEY" },
     { key: "GOOGLE_CLIENT_ID" },
     { key: "GOOGLE_CLIENT_SECRET" },
-    {
-    key: "SWICH_CLIENT_ID",
-    },
+    { key: "SWICH_CLIENT_ID" },
     {
         key: "SWICH_CLIENT_SECRET",
         validate: (v) => (v.length < 12 ? "appears too short for a client secret" : null),
@@ -59,7 +57,19 @@ export function validateEnv(): void {
     // non-production sandbox defaults deliberately remain available for the
     // isolated provider tests, but production must never silently use them.
     if (process.env.NODE_ENV === "production") {
-        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "SWICH_CALLBACK_URL", "SWICH_CALLBACK_SECRET", "RESEND_WEBHOOK_SECRET"]) {
+        const checkoutMode = (process.env.SWICH_CHECKOUT_MODE || "session").trim().toLowerCase();
+        if (!["session", "pwa"].includes(checkoutMode)) errors.push("  - SWICH_CHECKOUT_MODE must be session or pwa");
+
+        // Both modes need the Swich hosts. Session mode (the default) talks to
+        // the Payment Session API and confirms payment by POLLING Swich from
+        // our own backend (POST /payments/swich/confirm) — Swich's Payment
+        // Session product has no push webhook, so no callback URL or callback
+        // secret exists for it. Those two are only used by PWA checkout
+        // (checksum signing), so they are required only in that mode.
+        const productionKeys = ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "RESEND_WEBHOOK_SECRET"];
+        if (checkoutMode === "pwa") productionKeys.push("SWICH_CALLBACK_URL", "SWICH_CALLBACK_SECRET", "SWICH_PWA_BASE_URL");
+
+        for (const key of productionKeys) {
             if (!process.env[key]?.trim()) errors.push(`  - ${key} is required in production`);
         }
         for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "SWICH_CALLBACK_URL"]) {
@@ -68,9 +78,6 @@ export function validateEnv(): void {
                 errors.push(`  - ${key} must be a non-sandbox HTTPS endpoint in production`);
             }
         }
-        const checkoutMode = (process.env.SWICH_CHECKOUT_MODE || "session").trim().toLowerCase();
-        if (!["session", "pwa"].includes(checkoutMode)) errors.push("  - SWICH_CHECKOUT_MODE must be session or pwa");
-        if (checkoutMode === "pwa" && !process.env.SWICH_PWA_BASE_URL?.trim()) errors.push("  - SWICH_PWA_BASE_URL is required for PWA checkout");
         const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || process.env.SWICH_ENVIRONMENT || "live").trim().toLowerCase();
         if (swichMode === "sandbox") {
             errors.push("  - SWICH_MODE cannot be set to sandbox in production");
