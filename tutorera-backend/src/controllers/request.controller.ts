@@ -339,6 +339,9 @@ async function cancelUnpaidRequest(req: AuthRequest, res: Response, source: stri
   await classifyRequestLoss({ requestId: request._id, explicitReason: "student_cancelled",
     detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
     signals: { source } });
+  await logAudit({ action: "unpaid_tuition_request_cancelled", actor: req.user?.name || "Student",
+    actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(),
+    metadata: { source, pendingPaymentsRevoked: true } });
   res.status(200).json({ success: true, message: "Unpaid tuition request cancelled." });
 }
 
