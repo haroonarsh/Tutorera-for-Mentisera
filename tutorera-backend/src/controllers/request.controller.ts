@@ -7,7 +7,7 @@ import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
-import { calculateMarketplaceFees } from "../config/constants";
+import { resolveMarketplaceFees, MarketplaceFeeQuote } from "../services/pricing.service";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import { containsContactInfo } from "../utils/contentFilter";
 import { logAudit } from "../utils/logAudit";
@@ -622,7 +622,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       student: request.student,
       tutor: bid.tutor,
     });
-    const fees = calculateMarketplaceFees(bid.amount);
+    const fees = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK");
     const bookingArr = await Booking.create([{
       student: request.student,
       tutor: bid.tutor,
@@ -702,6 +702,12 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  // Quote and freeze the active admin fee policy before initiating checkout.
+  // A later configuration edit must not alter the settled booking fee.
+  let feeQuote: MarketplaceFeeQuote;
+  try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
+  catch (error: any) { res.status(error?.statusCode || 422).json({ success: false, message: error?.message || "Unable to calculate booking fees." }); return; }
+
   // Atomic guard — only one accept attempt can win this transition
   const reservedRequest = await Request.findOneAndUpdate(
     { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
@@ -716,14 +722,16 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
 
   const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
   bid.status = "payment_pending";
+  bid.feeQuote = feeQuote;
   bid.paymentPendingExpiresAt = paymentPendingExpiresAt;
   await bid.save();
 
   try {
     const student = await User.findById(request.student).select("name email phone");
     const checkoutUrl = await paymentProvider.createCheckout({
-      amount: bid.amount,
+      amount: feeQuote.studentTotal,
       currency: bid.currency || request.currency || "",
+      feeSnapshot: feeQuote,
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${bid._id.toString()}`,
@@ -808,7 +816,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         tutor: bid.tutor,
       }).session(session);
 
-      const fees = calculateMarketplaceFees(bid.amount);
+      const fees = bid.feeQuote || await resolveMarketplaceFees(bid.amount, request.countryCode || "PK");
 
       const bookingArr = await Booking.create([{
         student: request.student,
