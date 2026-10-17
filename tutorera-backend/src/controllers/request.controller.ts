@@ -317,13 +317,19 @@ const CANCELLABLE_REQUEST_STATES = ["draft", "open", "published", "receiving_off
 // A student may withdraw an unpaid request or checkout, but cannot silently
 // cancel an already paid lesson by changing a Request row.
 async function cancelUnpaidRequest(req: AuthRequest, res: Response, source: string): Promise<void> {
-  const request = await Request.findOneAndUpdate(
-    { _id: req.params.id, student: req.user?._id, status: { $in: CANCELLABLE_REQUEST_STATES } },
-    { $set: { status: "cancelled" } },
-    { new: true }
-  );
+  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id, status: { $in: CANCELLABLE_REQUEST_STATES } });
   if (!request) {
     res.status(409).json({ success: false, code: "REQUEST_NOT_CANCELLABLE", message: "This request does not exist or can no longer be cancelled. Review any confirmed booking separately." });
+    return;
+  }
+  // Atomic compare-and-set: signed webhook transactions cannot both settle
+  // an offer and allow its request to be cancelled concurrently.
+  const cancelled = await Request.updateOne(
+    { _id: request._id, status: { $in: CANCELLABLE_REQUEST_STATES } },
+    { $set: { status: "cancelled" } }
+  );
+  if (cancelled.modifiedCount !== 1) {
+    res.status(409).json({ success: false, code: "REQUEST_CHANGED", message: "This request was updated; refresh to see its current status." });
     return;
   }
   await Bid.updateMany({ request: request._id, status: { $in: ["payment_pending", "pending", "submitted", "viewed", "countered"] } },
