@@ -16,6 +16,8 @@ import { releaseExpiredPaymentHold, cleanupStalePaymentHolds } from "../services
 import { ensureLaunchMarkets } from "../services/market.service";
 import supertest from "supertest";
 import app from "../app";
+import PaymentLedger from "../models/PaymentLedger.model";
+import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
 import { updateBookingStatus } from "../controllers/booking.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
@@ -270,6 +272,40 @@ describe("Phase 2: direct-booking payment reservation and tutor session integrit
     await expect(confirmExistingBookingPayment(two!._id.toString())).rejects.toMatchObject({ code: "BOOKING_SLOT_TAKEN" });
     expect((await Booking.findById(two!._id))?.paymentStatus).toBe("pending");
     expect(await BookedSlot.countDocuments()).toBe(1);
+  });
+
+  it("quarantines money received after the direct-booking hold expired", async () => {
+    const { req, bid, tutorAgent } = await directFixture();
+    await tutorAgent.patch(`/api/v1/requests/${req._id}/bids/${bid._id}/accept`).expect(200);
+    const booking = await Booking.findOne({ bid: bid._id });
+    await recordPaymentLedger({ providerTransactionId: booking!._id.toString(), eventType: "checkout.created", status: "pending", amount: booking!.studentTotal, currency: "PKR", bookingId: booking!._id.toString() });
+    await Bid.updateOne({ _id: bid._id }, { $set: { paymentPendingExpiresAt: new Date(Date.now() - 5 * 60_000) } });
+    await cleanupStalePaymentHolds();
+    const signature = jest.spyOn(paymentProvider, "verifyWebhookSignature").mockReturnValue(true);
+    try {
+      const response = await supertest(app).post("/api/v1/payments/webhook")
+        .send({ eventId: "late-direct-payment", eventType: "transaction.completed", merchantTransactionId: booking!._id.toString(), status: "completed", amount: booking!.studentTotal, currency: "PKR" }).expect(200);
+      expect(response.body.code).toBe("PAYMENT_RECONCILIATION_REQUIRED");
+      expect((await Booking.findById(booking!._id))?.paymentStatus).toBe("pending");
+      expect((await Booking.findById(booking!._id))?.status).toBe("cancelled");
+      expect((await PaymentLedger.findOne({ providerEventId: "late-direct-payment" }))?.settlementStatus).toBe("exception");
+      expect(await BookedSlot.countDocuments()).toBe(0);
+    } finally { signature.mockRestore(); }
+  });
+
+  it("allows only one concurrent direct tutor acceptance to create an unpaid booking", async () => {
+    const { req, bid, tutorAgent } = await directFixture();
+    const responses = await Promise.all([
+      tutorAgent.patch(`/api/v1/requests/${req._id}/bids/${bid._id}/accept`),
+      tutorAgent.patch(`/api/v1/requests/${req._id}/bids/${bid._id}/accept`),
+    ]);
+    expect(responses.map(response => response.status).sort()).toEqual([200, 409]);
+    expect(await Booking.countDocuments({ bid: bid._id })).toBe(1);
+    expect(await BookedSlot.countDocuments()).toBe(0);
+  });
+
+  it("exposes the public tracking API at the endpoint used by the frontend", async () => {
+    await supertest(app).get("/api/v1/tracking/not-a-valid-public-token").expect(404);
   });
 
   it("rejects a tutor starting tuition without a confirmed payment", async () => {
