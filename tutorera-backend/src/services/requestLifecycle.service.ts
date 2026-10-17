@@ -366,6 +366,7 @@ export async function sendReviewRequests(io?: any): Promise<number> {
   const eligibleBookings = await Booking.find({
     status: "completed",
     completedAt: { $exists: true, $lte: oneHourAgo },
+    reviewRequestSentAt: { $exists: false },
   }).limit(50);
 
   let sent = 0;
@@ -381,6 +382,14 @@ export async function sendReviewRequests(io?: any): Promise<number> {
 
       if (!studentUser || !tutorUser) continue;
 
+      // Claim exactly once before emailing: overlapping lifecycle workers must
+      // not send the same review request on every 15-minute polling interval.
+      const claimTime = new Date();
+      const claimed = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: "completed", reviewRequestSentAt: { $exists: false } },
+        { $set: { reviewRequestSentAt: claimTime } }, { new: true }
+      );
+      if (!claimed) continue;
       const request = await (Booking.findById(booking._id).populate("request", "subject") as any);
       const subject = request?.request?.subject || "your session";
 
@@ -405,6 +414,9 @@ export async function sendReviewRequests(io?: any): Promise<number> {
 
       sent++;
     } catch (err: any) {
+      // Retry on a future run if mail delivery fails. A successful send is
+      // never intentionally repeated, even across multiple worker instances.
+      await Booking.updateOne({ _id: booking._id, reviewRequestSentAt: { $exists: true } }, { $unset: { reviewRequestSentAt: "" } });
       logger.error({ err, bookingId: booking._id }, "Failed to send review request");
     }
   }
