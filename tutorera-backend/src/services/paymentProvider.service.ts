@@ -1,6 +1,9 @@
 import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "../config/constants";
 import PaymentLedger from "../models/PaymentLedger.model";
+import Booking from "../models/Booking.model";
+import Bid from "../models/Bid.model";
+import type { MarketplaceFeeQuote } from "./pricing.service";
 import { createTransaction, verifyWebhookSignature } from "../utils/rapidGateway";
 
 export type PaymentProviderName = "rapid_gateway";
@@ -20,6 +23,7 @@ export interface CheckoutParams {
   studentId?: string;
   tutorId?: string;
   metadata?: Record<string, unknown>;
+  feeSnapshot?: MarketplaceFeeQuote;
 }
 
 export interface ProviderWebhookEvent {
@@ -63,6 +67,7 @@ export const paymentProvider = {
       bidId: params.bidId,
       studentId: params.studentId,
       tutorId: params.tutorId,
+      feeSnapshot: params.feeSnapshot,
       metadata: { checkoutUrl, ...(params.metadata || {}) },
     });
 
@@ -103,9 +108,22 @@ export async function recordPaymentLedger(args: {
   studentId?: string;
   tutorId?: string;
   metadata?: Record<string, unknown>;
+  feeSnapshot?: MarketplaceFeeQuote;
 }) {
-  const fees = calculateMarketplaceFees(args.amount);
-  const platformNet = fees.tutorFee + fees.tax;
+  // Ledger values use the agreed checkout/booking quote, never today's rates.
+  let fees: MarketplaceFeeQuote | undefined = args.feeSnapshot;
+  if (!fees && args.bookingId) {
+    const booking = await Booking.findById(args.bookingId).select("subtotal studentFee tutorFee tax studentTotal tutorNet feeConfig").lean();
+    if (booking) fees = { subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
+      tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet, feeConfig: booking.feeConfig };
+  }
+  if (!fees && args.bidId) {
+    const bid = await Bid.findById(args.bidId).select("feeQuote").lean();
+    if (bid?.feeQuote) fees = bid.feeQuote;
+  }
+  // Backwards compatibility for old transactions without an archived quote.
+  if (!fees) fees = calculateMarketplaceFees(args.amount);
+  const platformNet = fees.studentFee + fees.tutorFee;
   const settlementStatus: "expected" | "unsettled" = args.status === "succeeded" ? "expected" : "unsettled";
   const doc = {
     provider: paymentProvider.name,
