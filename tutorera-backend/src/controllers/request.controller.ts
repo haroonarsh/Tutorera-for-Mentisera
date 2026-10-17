@@ -312,21 +312,32 @@ export const getMyRequests = async (req: AuthRequest, res: Response): Promise<vo
 // @desc    Cancel request
 // @route   PATCH /api/requests/:id/cancel
 // @access  Private (student)
-export const cancelRequest = async (req: AuthRequest, res: Response): Promise<void> => {
-  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id });
+const CANCELLABLE_REQUEST_STATES = ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_payment"];
+
+// A student may withdraw an unpaid request or checkout, but cannot silently
+// cancel an already paid lesson by changing a Request row.
+async function cancelUnpaidRequest(req: AuthRequest, res: Response, source: string): Promise<void> {
+  const request = await Request.findOneAndUpdate(
+    { _id: req.params.id, student: req.user?._id, status: { $in: CANCELLABLE_REQUEST_STATES } },
+    { $set: { status: "cancelled" } },
+    { new: true }
+  );
   if (!request) {
-    res.status(404).json({ success: false, message: "Request not found" });
+    res.status(409).json({ success: false, code: "REQUEST_NOT_CANCELLABLE", message: "This request does not exist or can no longer be cancelled. Review any confirmed booking separately." });
     return;
   }
-  request.status = "cancelled";
-  await request.save();
-  await classifyRequestLoss({
-    requestId: request._id,
-    explicitReason: "student_cancelled",
+  await Bid.updateMany({ request: request._id, status: { $in: ["payment_pending", "pending", "submitted", "viewed", "countered"] } },
+    { $set: { status: "withdrawn" }, $unset: { paymentPendingExpiresAt: "" } });
+  await Booking.updateMany({ request: request._id, paymentStatus: "pending", status: "upcoming" },
+    { $set: { status: "cancelled", cancelReason: "Student cancelled before payment" } });
+  await classifyRequestLoss({ requestId: request._id, explicitReason: "student_cancelled",
     detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
-    signals: { source: "student_cancel_request" },
-  });
-  res.status(200).json({ success: true, message: "Request cancelled" });
+    signals: { source } });
+  res.status(200).json({ success: true, message: "Unpaid tuition request cancelled." });
+}
+
+export const cancelRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  await cancelUnpaidRequest(req, res, "student_cancel_request");
 };
 
 // @desc    Place a bid on a request
@@ -826,7 +837,10 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
       }
 
       const request = await Request.findById(bid.request).session(session);
-      if (!request) return;
+      if (!request || request.status !== "awaiting_payment" ||
+          (request.acceptedOffer && request.acceptedOffer.toString() !== bid._id.toString())) {
+        throw bookingTransitionError("BOOKING_REQUEST_UNAVAILABLE", "The request was cancelled or changed before payment settled.");
+      }
 
       request.status = "closed";
       await request.save({ session });
@@ -1457,41 +1471,7 @@ export const repostRequest = async (req: AuthRequest, res: Response): Promise<vo
 // @route   PATCH /api/requests/:id/close
 // @access  Private (student)
 export const closeRequest = async (req: AuthRequest, res: Response): Promise<void> => {
-  const request = await Request.findOne({ _id: req.params.id, student: req.user?._id });
-  if (!request) {
-    res.status(404).json({ success: false, message: "Request not found." });
-    return;
-  }
-
-  if (["completed", "booked"].includes(request.status)) {
-    res.status(400).json({ success: false, message: "Cannot close a completed or booked request." });
-    return;
-  }
-
-  request.status = "cancelled";
-  await request.save();
-  await classifyRequestLoss({
-    requestId: request._id,
-    explicitReason: "student_cancelled",
-    detail: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 500) : undefined,
-    signals: { source: "student_close_request" },
-  });
-
-  // Close unfinalized bids
-  await Bid.updateMany(
-    { request: request._id, status: { $in: ["pending", "submitted", "viewed"] } },
-    { $set: { status: "not_selected" } }
-  );
-
-  await logAudit({
-    action: "tuition_request_closed_by_student",
-    actor: req.user?.name,
-    actorId: req.user?._id?.toString(),
-    entity: "Request",
-    targetId: request.id,
-  });
-
-  res.status(200).json({ success: true, message: "Tuition request closed successfully." });
+  await cancelUnpaidRequest(req, res, "student_close_request");
 };
 
 // Backwards-compatible controller export for legacy integrations/tests. The
