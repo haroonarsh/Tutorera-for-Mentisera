@@ -1,4 +1,5 @@
-// Authoritative marketplace fee configuration. Historical bookings snapshot these values.
+// Legacy fallback only. New checkout quotes use the active versioned database FeeConfig
+// through services/pricing.service.ts; historical bookings retain snapshots.
 export const MARKETPLACE_FEES = Object.freeze({
   studentPlatformFeePercent: 0,
   tutorPlatformFeePercent: 20,
