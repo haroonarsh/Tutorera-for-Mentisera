@@ -518,6 +518,12 @@ export const updatePaymentStatus = async (
 ): Promise<void> => {
   const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
 
+  // A manual admin status change cannot substitute for money returned by a gateway.
+  if (["refunded", "partially_refunded"].includes(paymentStatus)) {
+    res.status(409).json({ success: false, code: "PROVIDER_REFUND_REQUIRED", message: "Refund settlement must be confirmed by the payment provider before changing booking payment status." });
+    return;
+  }
+
   const requiredPermission = paymentStatus !== undefined ? "payment.manage" : "payout.process";
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
     res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
