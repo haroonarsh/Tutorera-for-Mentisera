@@ -129,7 +129,8 @@ describe("BE-02: booking state-transition authorization", () => {
     await updateBookingStatus(studentReq, studentRes);
     expect(studentRes.status).toHaveBeenCalledWith(403);
 
-    // Tutor attempts "ongoing" — should succeed.
+    // Tutor may start ONLY after the payment is confirmed by the gateway.
+    await Booking.updateOne({ _id: booking._id }, { $set: { paymentStatus: "confirmed" } });
     const tutorReq = mockAuthRequest({
       params: { id: booking._id.toString() },
       body: { status: "ongoing" },
