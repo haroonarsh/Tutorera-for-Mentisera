@@ -438,6 +438,16 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
   };
 
   if (!REQUEST_EXPIRY_ENABLED) {
+    // Payment-hold cleanup and review invitations are independent of the
+    // request-expiry feature flag; disabling request expiry must not leave
+    // unpaid bookings stuck or suppress completed-session invitations.
+    try {
+      const paymentCleanup = await cleanupStalePaymentHolds();
+      result.paymentHoldsCleaned = paymentCleanup.cleaned;
+      result.errors.push(...paymentCleanup.errors);
+    } catch (err: any) { result.errors.push(`Payment hold cleanup: ${err?.message}`); }
+    try { result.reviewRequestsSent = await sendReviewRequests(io); }
+    catch (err: any) { result.errors.push(`Review invitations: ${err?.message}`); }
     return result;
   }
 
