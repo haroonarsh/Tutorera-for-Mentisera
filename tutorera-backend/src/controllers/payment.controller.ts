@@ -139,7 +139,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         try {
           await finalizeBidAcceptance(bidId, io);
         } catch (err: any) {
-          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE"].includes(err?.code) && err?.code !== 11000) throw err;
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_REQUEST_UNAVAILABLE"].includes(err?.code) && err?.code !== 11000) throw err;
           logger.error({ err, bidId }, "Paid offer cannot reserve tutor slot; finance reconciliation required");
         }
 
@@ -198,8 +198,14 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         const booking = await Booking.findById(event.merchantTransactionId);
 
         if (!booking) {
-          logger.warn({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Webhook for unknown booking");
-          res.status(200).json({ success: true });
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId, providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, metadata: { reconciliationReason: "BOOKING_NOT_FOUND" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ basketId: event.merchantTransactionId }, "Gateway settled against unknown booking");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
           return;
         }
 
