@@ -31,5 +31,6 @@ const bookedSlotSchema = new Schema<IBookedSlot>(
 // Prevent double booking — same tutor, same date, same startTime
 bookedSlotSchema.index({ tutor: 1, date: 1, startTime: 1 }, { unique: true });
 bookedSlotSchema.index({ tutor: 1, startAt: 1 }, { unique: true, sparse: true });
+bookedSlotSchema.index({ tutor: 1, startAt: 1, endAt: 1 });
 
 export default mongoose.model<IBookedSlot>("BookedSlot", bookedSlotSchema);
