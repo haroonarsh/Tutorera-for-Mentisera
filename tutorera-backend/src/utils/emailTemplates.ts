@@ -210,7 +210,7 @@ export const paymentFailedNotifyTutorEmail = (
       amount: `PKR ${amount.toLocaleString()}`,
     },
     cta: { label: "View Booking", url: "https://tutorera.ac.pk/dashboard" },
-    additionalInformation: "If the student does not complete payment within 48 hours, the slot will be released. Contact hello@mentisera.pk for assistance.",
+    additionalInformation: "If the student does not complete payment before the applicable reservation expires, the unconfirmed booking will be released. Contact hello@mentisera.pk for assistance.",
     includeSecurityNotice: false,
     deliverability: "This transactional notification was sent because a student payment on your TUTORERA booking was not successful.",
   });
@@ -225,7 +225,7 @@ export const bookingCancelledEmail = (name: string, otherPartyName: string, subj
     emailSubheading: subject ? `Session: ${subject}` : undefined,
     firstName: name,
     openingMessage: `Your booking with ${otherPartyName}${subject ? ` for ${subject}` : ""} has been cancelled.`,
-    mainMessage: "If you have questions, please contact our support team. Refunds, where applicable, are processed automatically to the original payment method within 3–5 business days.",
+    mainMessage: "If you have questions, please contact our support team. If a refund is applicable, it must be reviewed and separately verified as settled by the payment provider. Cancellation does not itself initiate or confirm a refund.",
     cta: { label: "Contact Support", url: "mailto:hello@mentisera.pk" },
     includeSecurityNotice: true,
   });
@@ -278,16 +278,18 @@ export const directBookingAcceptedEmail = (
   paymentInfo?: { amount: number }
 ) => {
   const schedule = date && startTime ? `📅 ${date}\n🕐 ${startTime} – ${endTime}` : "";
+  const awaitingPayment = !!paymentInfo;
+  const subjectLine = awaitingPayment ? "TUTORERA® — Tutor Approved, Payment Required" : "TUTORERA® — Booking Confirmed with Session Details";
   const html = renderTransactionalEmail({
-    subject: "TUTORERA® — Booking Confirmed with Session Details",
+    subject: subjectLine,
     emailCategory: "Booking Confirmation",
-    emailHeading: "Booking Confirmed",
-    emailSubheading: `Your session with ${otherPartyName} for ${subject} is confirmed.`,
+    emailHeading: awaitingPayment ? "Complete Payment to Confirm" : "Booking Confirmed",
+    emailSubheading: awaitingPayment ? `Your tutor approved ${subject}; the lesson is not confirmed until payment is verified.` : `Your session with ${otherPartyName} for ${subject} is confirmed.`,
     firstName: name,
-    openingMessage: `Your session with ${otherPartyName} for ${subject} is confirmed.`,
-    mainMessage: schedule
-      ? `Scheduled:\n${schedule}\n\nPlease join the lesson a few minutes before the start time.`
-      : "Please join the lesson a few minutes before the scheduled start time.",
+    openingMessage: awaitingPayment ? `${otherPartyName} approved your tutoring request for ${subject}. Complete payment from your dashboard while the reservation is active.` : `Your session with ${otherPartyName} for ${subject} is confirmed.`,
+    mainMessage: awaitingPayment
+      ? `Requested schedule: ${schedule || "see dashboard"}. No tutor calendar slot is reserved until your payment has been verified by our payment provider. The direct-booking reservation expires after 24 hours.`
+      : (schedule ? `Scheduled:\n${schedule}\n\nPlease join the lesson a few minutes before the start time.` : "Please join the lesson a few minutes before the scheduled start time."),
     ...(paymentInfo
       ? {
           transaction: {
@@ -304,7 +306,7 @@ export const directBookingAcceptedEmail = (
       : "Log in to your dashboard for full session details.",
     includeSecurityNotice: true,
   });
-  return { subject: "TUTORERA® — Booking Confirmed with Session Details", html };
+  return { subject: subjectLine, html };
 };
 
 export const directBookingDeclinedEmail = (studentName: string, subject: string) => {
