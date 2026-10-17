@@ -600,7 +600,10 @@ export async function confirmExistingBookingPayment(bookingId: string): Promise<
     await session.withTransaction(async () => {
       const booking = await Booking.findById(bookingId).session(session);
       if (!booking) throw bookingTransitionError("BOOKING_NOT_FOUND", "Payment relates to an unknown booking.");
-      if (booking.paymentStatus === "confirmed") { alreadyConfirmed = true; return; }
+      if (booking.paymentStatus === "confirmed") {
+        if (booking.status === "cancelled") throw bookingTransitionError("BOOKING_NOT_PAYABLE", "This confirmed payment belongs to a cancelled booking.");
+        alreadyConfirmed = true; return;
+      }
       if (booking.status !== "upcoming" || !["pending", "received", "failed"].includes(booking.paymentStatus)) {
         throw bookingTransitionError("BOOKING_NOT_PAYABLE", "The booking is no longer payable.");
       }
