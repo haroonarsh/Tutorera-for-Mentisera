@@ -5,6 +5,8 @@ import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
+import BookedSlot from "../models/BookedSlot.model";
+import { syncStudentTutorRelationship } from "../services/relationship.service";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
 import { GST_PERCENT, PLATFORM_FEE_PERCENT } from "../config/constants";
@@ -714,8 +716,39 @@ export const updateBookingStatus = async (
   }
 
   const previousStatus = booking.status;
-  booking.status = status;
-  await booking.save();
+  const allowedTransitions: Record<string, string[]> = {
+    upcoming: ["ongoing", "cancelled"],
+    ongoing: ["completed", "cancelled"],
+    completed: [], cancelled: [],
+  };
+  if (!allowedTransitions[previousStatus]?.includes(status)) {
+    res.status(409).json({ success: false, code: "INVALID_BOOKING_TRANSITION", message: `Cannot transition booking from ${previousStatus} to ${status}.` });
+    return;
+  }
+  if (["ongoing", "completed"].includes(status) && booking.paymentStatus !== "confirmed") {
+    res.status(409).json({ success: false, code: "PAYMENT_REQUIRED", message: "The verified student payment is required before starting or completing tuition." });
+    return;
+  }
+  // Compare-and-set protects referral credits, emails and certificates from
+  // duplicated/admin-concurrent completion commands.
+  const updated = await Booking.findOneAndUpdate(
+    { _id: booking._id, status: previousStatus, ...(status === "completed" || status === "ongoing" ? { paymentStatus: "confirmed" } : {}) },
+    { $set: { status, ...(status === "completed" ? { completedAt: new Date() } : {}),
+      ...(status === "cancelled" ? { cancelReason: typeof req.body.cancelReason === "string" ? req.body.cancelReason.slice(0, 500) : "Cancelled by admin" } : {}) } },
+    { new: true }
+  ).populate("student", "name email").populate("tutor", "name email").populate("request", "subject");
+  if (!updated) {
+    res.status(409).json({ success: false, code: "BOOKING_CHANGED", message: "Booking or payment status changed; please refresh before retrying." });
+    return;
+  }
+  // Populate existing variable for the remainder of the notification/report path.
+  booking.status = updated.status;
+  booking.completedAt = updated.completedAt;
+  if (status === "cancelled") await BookedSlot.deleteMany({ booking: booking._id });
+  if (status === "completed") {
+    try { await syncStudentTutorRelationship(updated as any); }
+    catch (err) { console.error("[Booking] Could not update completed student-tutor relationship", err); }
+  }
 
   await logAudit({
     action: `booking_${status}`,   // booking_completed, booking_cancelled, etc.
@@ -732,21 +765,9 @@ export const updateBookingStatus = async (
      await creditReferrerOnFirstBooking(booking.student.toString());
    }
 
-   // ── Send review request to student after session completion ──
-   if (status === "completed" && previousStatus !== "completed") {
-     try {
-       const studentUser = await User.findById(booking.student).select("name email");
-       const tutorUser = await User.findById(booking.tutor).select("name email");
-       const requestSubject = (booking.request as any)?.subject || "your session";
-       if (studentUser && tutorUser) {
-         const reviewMail = reviewRequestEmail(studentUser.name, tutorUser.name, requestSubject, booking._id.toString());
-         await sendEmail({ to: studentUser.email, subject: reviewMail.subject, html: reviewMail.html, eventType: "review_requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
-       }
-     } catch (err) {
-       console.error("Failed to send review request email:", err);
-     }
-   }
-  
+  // The lifecycle worker sends one delayed, idempotent review invitation
+  // using completedAt and reviewRequestSentAt; no immediate duplicate email.
+
   // Notify both parties
   const io = req.app.get("io");
   const statusMessages: Record<string, string> = {
