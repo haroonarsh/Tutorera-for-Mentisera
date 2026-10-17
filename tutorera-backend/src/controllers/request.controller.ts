@@ -312,7 +312,7 @@ export const getMyRequests = async (req: AuthRequest, res: Response): Promise<vo
 // @desc    Cancel request
 // @route   PATCH /api/requests/:id/cancel
 // @access  Private (student)
-const CANCELLABLE_REQUEST_STATES = ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_payment"];
+const CANCELLABLE_REQUEST_STATES = ["draft", "open", "published", "receiving_offers", "negotiating", "awaiting_payment"] as const;
 
 // A student may withdraw an unpaid request or checkout, but cannot silently
 // cancel an already paid lesson by changing a Request row.
