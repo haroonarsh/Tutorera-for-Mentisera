@@ -25,6 +25,7 @@ import { classifyRequestLoss } from "../services/requestLoss.service";
 import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from "../services/market.service";
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
 import { convertAmount } from "../services/exchangeRate.service";
+import { releaseExpiredPaymentHold } from "../services/requestLifecycle.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -542,33 +543,80 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
   res.status(200).json({ success: true, total: bids.length, bids });
 };
 
-// If a previous accept attempt's payment reservation has expired (student
-// abandoned checkout), revert the request/bid back to an acceptable state
-// so the bid isn't stuck in limbo forever. Called defensively at the start
-// of the accept flow.
-export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<void> {
-  const staleBid = await Bid.findOne({
-    request: requestId,
-    status: "payment_pending",
-    paymentPendingExpiresAt: { $lte: new Date() },
-  });
-
-  if (!staleBid) return;
-
-  // Best-effort revert — not wrapped in the caller's transaction since this
-  // is cleanup for a PAST abandoned attempt, not part of the current one.
-  await Bid.updateOne(
-    { _id: staleBid._id, status: "payment_pending" },
-    { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-  );
-  await Request.updateOne(
-    { _id: requestId, status: "awaiting_payment" },
-    { status: "open" }
-  );
-}
-
+// Centralize expiry and revocation with the scheduled lifecycle worker.
+export { releaseExpiredPaymentHold } from "../services/requestLifecycle.service";
 
 const PAYMENT_HOLD_MINUTES = 30;
+
+function bookingTransitionError(code: string, message: string) {
+  return Object.assign(new Error(message), { code, statusCode: 409 });
+}
+
+// Serialize reservations on the tutor document before checking interval overlap.
+// MongoDB transactions that race for this same tutor will conflict/retry instead
+// of each reading a stale free-slot snapshot and booking overlapping intervals.
+async function lockConfirmedTeachingSlot(booking: any, request: any, session: mongoose.ClientSession): Promise<void> {
+  if (!request?.isDirect || !request.selectedDate || !request.selectedStartTime || !request.selectedEndTime) return;
+  if (!request.scheduledStartAt || !request.scheduledEndAt || request.scheduledEndAt <= request.scheduledStartAt) {
+    throw bookingTransitionError("INVALID_SCHEDULE", "A valid timezone-aware lesson interval is required.");
+  }
+  const prior = await BookedSlot.findOne({ booking: booking._id }).session(session);
+  if (prior) return;
+  // A harmless internal counter provides a per-tutor transaction write lock.
+  await User.collection.updateOne({ _id: booking.tutor }, { $inc: { bookingSlotLockVersion: 1 } }, { session });
+  const overlap = await BookedSlot.findOne({
+    tutor: booking.tutor,
+    $or: [
+      { startAt: { $lt: request.scheduledEndAt }, endAt: { $gt: request.scheduledStartAt } },
+      { date: new Date(request.selectedDate), startTime: request.selectedStartTime },
+    ],
+  }).session(session);
+  if (overlap) throw bookingTransitionError("BOOKING_SLOT_TAKEN", "The tutor is no longer available at that time; a payment reconciliation is required.");
+  await BookedSlot.create([{
+    tutor: booking.tutor, student: booking.student, booking: booking._id,
+    date: new Date(request.selectedDate), startTime: request.selectedStartTime,
+    endTime: request.selectedEndTime, timezone: request.scheduleTimezone || request.timezone,
+    startAt: request.scheduledStartAt, endAt: request.scheduledEndAt,
+  }], { session });
+}
+
+// Used only after a signed and amount-matched gateway settlement. Transaction
+// guarantees request/bid/booking and teaching slot agree, or none change.
+export async function confirmExistingBookingPayment(bookingId: string): Promise<{ confirmed: boolean; alreadyConfirmed: boolean }> {
+  const session = await mongoose.startSession();
+  let alreadyConfirmed = false;
+  try {
+    await session.withTransaction(async () => {
+      const booking = await Booking.findById(bookingId).session(session);
+      if (!booking) throw bookingTransitionError("BOOKING_NOT_FOUND", "Payment relates to an unknown booking.");
+      if (booking.paymentStatus === "confirmed") { alreadyConfirmed = true; return; }
+      if (booking.status !== "upcoming" || !["pending", "received", "failed"].includes(booking.paymentStatus)) {
+        throw bookingTransitionError("BOOKING_NOT_PAYABLE", "The booking is no longer payable.");
+      }
+      const request = booking.request ? await Request.findById(booking.request).session(session) : null;
+      if (request?.isDirect) {
+        const bid = await Bid.findOne({
+          _id: booking.bid, request: request._id, status: "payment_pending",
+          paymentPendingExpiresAt: { $gt: new Date() },
+        }).session(session);
+        if (!bid || request.status !== "awaiting_payment" || request.acceptedOffer?.toString() !== bid._id.toString()) {
+          throw bookingTransitionError("BOOKING_HOLD_EXPIRED", "Direct booking reservation expired before payment was confirmed.");
+        }
+        await lockConfirmedTeachingSlot(booking, request, session);
+        bid.status = "accepted"; bid.paymentPendingExpiresAt = undefined;
+        request.status = "closed";
+        await bid.save({ session });
+        await request.save({ session });
+      }
+      booking.paymentStatus = "confirmed";
+      booking.paymentNote = "Confirmed by signed and reconciled gateway webhook";
+      await booking.save({ session });
+      await syncStudentTutorRelationship(booking as any, session);
+    });
+  } finally { await session.endSession(); }
+  return { confirmed: true, alreadyConfirmed };
+}
+
 
 // @desc    Accept an offer — reserves it and starts payment checkout.
 //          The booking is NOT created here; it's created by
@@ -616,89 +664,67 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // ─── Direct Booking Tutor Acceptance ──────────────────────────────────────────
+  // Tutor approval reserves the request only. Until the student pays,
+  // the booking remains pending and no teaching slot is committed.
+  // Keep a pending Booking row so the existing student dashboard can
+  // launch /payments/booking/:id/checkout without a UI contract change.
   if (isDirectTutorAccept) {
-    const existingBookingsCount = await Booking.countDocuments({
-      student: request.student,
-      tutor: bid.tutor,
-    });
-    const fees = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK");
-    const bookingArr = await Booking.create([{
-      student: request.student,
-      tutor: bid.tutor,
-      request: request._id,
-      bid: bid._id,
-      amount: bid.amount,
-      finalAgreedRate: bid.amount,
-      currency: bid.currency || request.currency,
-      countryCode: request.countryCode,
-      timezone: request.timezone,
-      scheduleTimezone: request.scheduleTimezone || request.timezone,
-      scheduledStartAt: request.scheduledStartAt,
-      scheduledEndAt: request.scheduledEndAt,
-      pricingUnit: bid.pricingUnit || "hour",
-      sessionCount: 1,
-      ...fees,
-      platformFee: fees.tutorFee + fees.tax,
-      tutorPayout: fees.tutorNet,
-      schedule: request.schedule,
-      teachingMode: request.teachingMode,
-      isFirstSession: existingBookingsCount === 0,
-      paymentStatus: "pending",
-      paymentNote: "Awaiting student checkout through authorized payment gateway",
-    }]);
-    const booking = bookingArr[0];
-    await syncStudentTutorRelationship(booking as any);
+    let feeQuote: MarketplaceFeeQuote;
+    try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
+    catch (err: any) { res.status(err?.statusCode || 422).json({ success: false, message: err.message || "Fee quote unavailable" }); return; }
 
-    if (request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
-      await BookedSlot.create([{
-        tutor: bid.tutor,
-        student: request.student,
-        booking: booking._id,
-        date: new Date(request.selectedDate),
-        startTime: request.selectedStartTime,
-        endTime: request.selectedEndTime,
-        timezone: request.scheduleTimezone || request.timezone,
-        startAt: request.scheduledStartAt,
-        endAt: request.scheduledEndAt,
-      }]);
-    }
-
-    bid.status = "accepted";
-    request.status = "closed";
-    request.acceptedOffer = bid._id;
-    request.finalAgreedRate = bid.amount;
-    await Promise.all([bid.save(), request.save()]);
-
-    const io = req.app.get("io");
-    if (io) {
-      await sendNotification(io, request.student.toString(), {
-        title: "✅ Direct Booking Accepted!",
-        message: `${req.user?.name || "Your tutor"} has accepted your booking request for ${request.subject}. Please complete payment on your dashboard to confirm.`,
-        type: "booking",
-        link: "/dashboard",
-      });
-    }
-
+    const session = await mongoose.startSession();
+    let booking: any;
     try {
-      const studentUser = await User.findById(request.student).select("name email");
-      if (studentUser) {
-        const { subject: emailSubject, html } = directBookingAcceptedEmail(
-          studentUser.name,
-          req.user?.name || "Your tutor",
-          request.subject
+      await session.withTransaction(async () => {
+        const locked = await Request.findOneAndUpdate(
+          { _id: requestId, isDirect: true, targetTutor: bid.tutor, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
+          { $set: { status: "awaiting_payment", acceptedOffer: bid._id, finalAgreedRate: bid.amount } },
+          { new: true, session }
         );
-        await sendEmail({ to: studentUser.email, subject: emailSubject, html });
-      }
-    } catch (emailErr) {
-      console.error("[DirectBooking] Failed to send acceptance email to student:", emailErr);
+        if (!locked) throw Object.assign(new Error("Direct booking is no longer available."), { statusCode: 409 });
+        const holdExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const lockedBid = await Bid.findOneAndUpdate(
+          { _id: bid._id, request: requestId, tutor: req.user?._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } },
+          { $set: { status: "payment_pending", paymentPendingExpiresAt: holdExpiresAt, feeQuote } },
+          { new: true, session }
+        );
+        if (!lockedBid) throw Object.assign(new Error("Tutor offer was already accepted or is no longer available."), { statusCode: 409 });
+        const previous = await Booking.countDocuments({ student: request.student, tutor: bid.tutor, paymentStatus: "confirmed" }).session(session);
+        [booking] = await Booking.create([{
+          student: request.student, tutor: bid.tutor, request: request._id, bid: bid._id,
+          amount: bid.amount, finalAgreedRate: bid.amount, currency: bid.currency || request.currency,
+          countryCode: request.countryCode, timezone: request.timezone,
+          scheduleTimezone: request.scheduleTimezone || request.timezone,
+          scheduledStartAt: request.scheduledStartAt, scheduledEndAt: request.scheduledEndAt,
+          pricingUnit: bid.pricingUnit || "hour", sessionCount: 1, ...feeQuote,
+          platformFee: feeQuote.tutorFee + feeQuote.tax, tutorPayout: feeQuote.tutorNet,
+          schedule: request.schedule, teachingMode: request.teachingMode,
+          isFirstSession: previous === 0,
+          paymentStatus: "pending", paymentNote: "Tutor approved; awaiting student payment",
+        }], { session });
+      });
+    } catch (error: any) {
+      res.status(error?.statusCode || (error?.code === 11000 ? 409 : 500)).json({ success: false, message: error?.message || "Unable to reserve direct booking." });
+      return;
+    } finally {
+      await session.endSession();
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Direct booking accepted successfully. The booking has been scheduled and the student notified to pay.",
-      bookingId: booking._id,
+    // Do not send a booked/paid confirmation before the gateway verifies money.
+    await sendNotification(req.app.get("io"), request.student.toString(), {
+      title: "Tutor approved your request",
+      message: `The tutor approved ${request.subject}. Pay before the reservation expires to confirm your lesson.`,
+      type: "booking", link: "/dashboard",
     });
+    try {
+      const student = await User.findById(request.student).select("name email");
+      if (student) {
+        const mail = directBookingAcceptedEmail(student.name, req.user?.name || "Your tutor", request.subject);
+        await sendEmail({ to: student.email, subject: mail.subject, html: mail.html });
+      }
+    } catch (err) { console.error("[DirectBooking] Failed to send approval email:", err); }
+    res.status(200).json({ success: true, message: "Tutor approved; payment is required before the booking and teaching slot are confirmed.", bookingId: booking._id, paymentPendingExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
     return;
   }
 
@@ -849,19 +875,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
 
       await OfferNegotiation.updateMany({ offer: bid._id, status: "active" }, { status: "accepted" }, { session });
 
-      if (request.isDirect && request.selectedDate && request.selectedStartTime && request.selectedEndTime) {
-        await BookedSlot.create([{
-          tutor: bid.tutor,
-          student: request.student,
-          booking: booking._id,
-          date: new Date(request.selectedDate),
-        startTime: request.selectedStartTime,
-        endTime: request.selectedEndTime,
-        timezone: request.scheduleTimezone || request.timezone,
-        startAt: request.scheduledStartAt,
-        endAt: request.scheduledEndAt,
-        }], { session });
-      }
+      await lockConfirmedTeachingSlot(booking, request, session);
 
       responseBooking = booking;
       responsePayload = {
