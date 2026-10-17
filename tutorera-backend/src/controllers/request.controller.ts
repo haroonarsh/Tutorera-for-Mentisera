@@ -720,7 +720,7 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     try {
       const student = await User.findById(request.student).select("name email");
       if (student) {
-        const mail = directBookingAcceptedEmail(student.name, req.user?.name || "Your tutor", request.subject);
+        const mail = directBookingAcceptedEmail(student.name, req.user?.name || "Your tutor", request.subject, request.selectedDate, request.selectedStartTime, request.selectedEndTime, { amount: feeQuote.studentTotal });
         await sendEmail({ to: student.email, subject: mail.subject, html: mail.html });
       }
     } catch (err) { console.error("[DirectBooking] Failed to send approval email:", err); }
