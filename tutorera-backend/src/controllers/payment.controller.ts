@@ -121,6 +121,24 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         const io = req.app.get("io");
         await finalizeBidAcceptance(bidId, io);
 
+        // A late payment can arrive after the 30-minute offer hold expired.
+        // Never send a booking-confirmed receipt when booking creation failed;
+        // preserve the money movement as an exception for finance reconciliation.
+        const completedBooking = await Booking.findOne({ bid: bidId, paymentStatus: "confirmed" });
+        if (!completedBooking) {
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, bidId,
+            metadata: { settlementException: "Gateway settled but booking could not be finalized" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ bidId, providerEventId: event.eventId }, "Payment settled without a completed booking — manual reconciliation required");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          return;
+        }
+
         const bid = await Bid.findById(bidId);
         if (bid) {
           const request = await RequestModel.findById(bid.request).select("student");
