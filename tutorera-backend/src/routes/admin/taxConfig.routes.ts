@@ -3,11 +3,12 @@
 import { Router, Request, Response } from "express";
 import TaxConfig from "../../models/TaxConfig.model";
 import { logAudit } from "../../utils/logAudit";
+import { requirePermission } from "../../middlewares/rbac.middleware";
 
 const router = Router();
 
 // GET /admin/tax-config — list all tax configs
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", requirePermission("finance.fee_configure"), async (req: Request, res: Response) => {
   try {
     const configs = await TaxConfig.find().sort("countryCode").lean();
     res.json({ success: true, configs });
@@ -17,7 +18,7 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 // POST /admin/tax-config — create new tax config
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", requirePermission("finance.fee_configure"), async (req: Request, res: Response) => {
   try {
     const existing = await TaxConfig.findOne({ countryCode: req.body.countryCode?.toUpperCase() });
     if (existing) {
@@ -44,7 +45,7 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 // PUT /admin/tax-config/:id — update tax config
-router.put("/:id", async (req: Request, res: Response) => {
+router.put("/:id", requirePermission("finance.fee_configure"), async (req: Request, res: Response) => {
   try {
     const { _id, __v, createdAt, updatedAt, ...update } = req.body;
     update.updatedBy = (req as any).user?._id;
