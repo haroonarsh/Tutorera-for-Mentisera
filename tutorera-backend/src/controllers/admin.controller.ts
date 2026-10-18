@@ -735,7 +735,7 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
   // A partial database write must not label a transfer 'paid' without its
   // corresponding immutable manual-settlement ledger event.
   const session = await mongoose.startSession();
-  let claimed: typeof booking | null = null;
+  let claimedId: string | undefined;
   try {
     await session.withTransaction(async () => {
       const changed = await Booking.findOneAndUpdate(
@@ -762,12 +762,14 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
             verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
         } }, { upsert: true, new: true, session }
       );
-      claimed = changed;
+      claimedId = changed._id.toString();
     });
   } catch (err: any) {
     res.status(err?.statusCode || 500).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED", message: err?.message || "Unable to verify transfer." });
     return;
   } finally { await session.endSession(); }
+  if (!claimedId) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
+  const claimed = await Booking.findById(claimedId);
   if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
   await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor?.toString(),
     entity: "Booking", targetId: claimed._id.toString(),
