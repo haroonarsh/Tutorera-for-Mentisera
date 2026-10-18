@@ -9,6 +9,7 @@ import {
   toggleUserStatus,
   getAllBookings,
   updatePaymentStatus,
+  verifyExternalPayout,
   getAllContacts,
   updateContactStatus,
   generateReport,
@@ -123,6 +124,7 @@ router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
 router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
+router.post("/bookings/:id/payout/verify", requirePermission("payout.process"), verifyExternalPayout);
 router.get("/contacts", requirePermission("student.read"), getAllContacts);
 router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
 router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);
