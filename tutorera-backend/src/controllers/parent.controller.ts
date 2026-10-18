@@ -289,10 +289,18 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
     return;
   }
   const currentCurrency = (bid.currency || request.currency || "").toUpperCase();
+  // A previously stored checkout quote belongs to one specific bid subtotal.
+  // Do not let changing Bid.amount while leaving feeQuote untouched satisfy
+  // the parent's old approval.
+  const storedQuoteIsStale = !!bid.feeQuote &&
+    (!Number.isFinite(bid.feeQuote.subtotal) ||
+      Math.round(bid.feeQuote.subtotal * 100) !== Math.round(bid.amount * 100));
   if (bid.request?.toString() !== approval.request.toString() ||
+      storedQuoteIsStale ||
       !Number.isFinite(currentTotal) ||
       Math.round(currentTotal * 100) !== Math.round(approval.amount * 100) ||
-      currentCurrency !== approval.currency.toUpperCase()) {
+      currentCurrency !== approval.currency.toUpperCase() ||
+      (request.currency && request.currency.toUpperCase() !== currentCurrency)) {
     res.status(409).json({ success: false, code: "PARENT_APPROVAL_QUOTE_CHANGED",
       message: "This offer's final amount or currency has changed. Request a new guardian approval." });
     return;
