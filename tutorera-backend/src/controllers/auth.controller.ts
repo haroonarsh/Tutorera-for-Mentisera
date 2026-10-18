@@ -22,6 +22,7 @@ import {
 import { trackingWelcomeEmail } from "../utils/trackingEmails";
 import { resolveMarket } from "../services/market.service";
 import { ageOnDate, issueGuardianConsent } from "../services/guardianConsent.service";
+import { newGoogleStudentSchema } from "../validators/auth.validator";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
@@ -218,6 +219,16 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
   // 3. No existing user at all — create one with selected role or pending
   if (!user) {
     const assignedRole = role === "student" || role === "tutor" || role === "parent" ? role : "pending";
+    if (assignedRole === "student") {
+      const valid = newGoogleStudentSchema.safeParse({
+        role: "student", email, dateOfBirth, guardianEmail, guardianName,
+      });
+      if (!valid.success) {
+        res.status(400).json({ success: false, code: "STUDENT_AGE_DETAILS_REQUIRED",
+          message: valid.error.issues[0]?.message || "Student date of birth and guardian details are required." });
+        return;
+      }
+    }
     const market = await resolveMarket(countryCode);
     if (!market || !market.isActive) {
       res.status(422).json({ success: false, message: "Registration is not available in the selected market." });
