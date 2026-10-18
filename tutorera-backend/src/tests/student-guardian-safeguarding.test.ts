@@ -154,6 +154,14 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
 
     const after = await request(app).get("/api/v1/students/profile/me").set(bearer);
     expect(after.status).not.toBe(403);
+    // Supervised teens must not self-attach a different guardian by ID/email
+    // or remove their own verified guardian, even after consent activation.
+    const relink = await request(app).post("/api/v1/students/guardians")
+      .set(bearer).send({ parentUserId: parent._id.toString() }).expect(403);
+    expect(relink.body.code).toBe("MINOR_GUARDIAN_LINK_RESTRICTED");
+    const unlink = await request(app).delete(`/api/v1/students/guardians/${linked!._id}`)
+      .set(bearer).expect(403);
+    expect(unlink.body.code).toBe("GUARDIAN_UNLINK_RESTRICTED");
     await agent.post("/api/v1/auth/guardian-consent/verify").send({
       studentId: student!._id.toString(), code, adultAttestation: true,
       guardianDateOfBirth: "1980-06-01",
