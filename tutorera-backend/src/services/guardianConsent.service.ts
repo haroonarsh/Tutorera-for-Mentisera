@@ -40,11 +40,11 @@ export async function issueGuardianConsent(studentId: mongoose.Types.ObjectId | 
     throw new GuardianConsentError("CONSENT_NOT_REQUIRED", "No guardian approval request is needed.", 409);
   }
   const existing = await GuardianConsent.findOne({ student: student._id });
-  if (existing?.status === "verified") throw new GuardianConsentError("ALREADY_VERIFIED", "Consent has already been verified.");
+  if (existing?.status === "verified" && student.parentConsentVerified) throw new GuardianConsentError("ALREADY_VERIFIED", "Consent has already been verified.");
   if (existing && Date.now() - existing.lastSentAt.getTime() < 60_000) {
     throw new GuardianConsentError("RESEND_TOO_SOON", "Please wait before requesting another guardian code.", 429);
   }
-  if (existing && existing.resendCount >= 5) {
+  if (existing && existing.status !== "verified" && existing.resendCount >= 5) {
     throw new GuardianConsentError("RESEND_LIMIT_REACHED", "Contact support to restart guardian verification.", 429);
   }
   const code = crypto.randomInt(0, 100_000_000).toString().padStart(8, "0");
@@ -55,7 +55,8 @@ export async function issueGuardianConsent(studentId: mongoose.Types.ObjectId | 
     $set: { guardianEmail: student.parentGuardianEmail.toLowerCase(),
       guardianName: student.parentGuardianName, codeHash: codeHash(student._id.toString(), code),
       status: "pending", expiresAt: new Date(now.getTime() + 24 * 60 * 60_000), attempts: 0, lastSentAt: now },
-    $inc: { resendCount: existing ? 1 : 0 },
+    $setOnInsert: { resendCount: 0 },
+    ...(existing ? { $inc: { resendCount: existing.status === "verified" ? 0 : 1 } } : {}),
   }, { upsert: true, new: true });
   await sendEmail({
     to: student.parentGuardianEmail,
@@ -102,12 +103,24 @@ export async function verifyGuardianConsent(args: {
         parentConsentVerified: false, parentGuardianEmail: parent.email.toLowerCase(),
       }, { $set: { parentConsentVerified: true, parentGuardianName: parent.name } }, { session, new: true });
       if (!student) throw new GuardianConsentError("STUDENT_UNAVAILABLE", "Student record cannot be approved.", 409);
-      await ParentProfile.findOneAndUpdate({ user: parent._id, "children.studentUser": { $ne: student._id } },
-        { $push: { children: { studentUser: student._id, name: student.name, level: "", subjects: [], relationship: "guardian" } },
-          $setOnInsert: { approvalRequiredForBookings: true } },
-        { upsert: true, new: true, session });
-      await User.updateOne({ _id: parent._id, $or: [{ dateOfBirth: { $exists: false } }, { dateOfBirth: new Date(guardianDateOfBirth + "T00:00:00.000Z") }] },
-        { $set: { dateOfBirth: new Date(guardianDateOfBirth + "T00:00:00.000Z") } }, { session });
+      let profile = await ParentProfile.findOne({ user: parent._id }).session(session);
+      if (!profile) {
+        [profile] = await ParentProfile.create([{ user: parent._id, children: [], approvalRequiredForBookings: true }], { session });
+      }
+      if (!profile.children.some(child => child.studentUser.toString() === student._id.toString())) {
+        profile.children.push({ studentUser: student._id, name: student.name, level: "",
+          subjects: [], relationship: "guardian" } as any);
+      }
+      // A linked minor must never inherit a parent profile's optional
+      // "approve each booking" toggle as false.
+      profile.approvalRequiredForBookings = true;
+      await profile.save({ session });
+      const guardianBirthDate = new Date(guardianDateOfBirth + "T00:00:00.000Z");
+      const savedGuardianDob = parent.dateOfBirth;
+      if (savedGuardianDob && savedGuardianDob.getTime() !== guardianBirthDate.getTime()) {
+        throw new GuardianConsentError("GUARDIAN_AGE_MISMATCH", "The guardian's date of birth differs from their account.", 409);
+      }
+      await User.updateOne({ _id: parent._id }, { $set: { dateOfBirth: guardianBirthDate } }, { session });
     });
   } finally { await session.endSession(); }
 }
