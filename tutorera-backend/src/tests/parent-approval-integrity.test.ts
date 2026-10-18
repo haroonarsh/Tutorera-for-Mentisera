@@ -150,7 +150,7 @@ describe("Phase 4 Fix 4 — exact guardian consent and spending safeguards", () 
     } });
     await Booking.create({
       student: sibling._id, tutor: fixture.tutor._id, amount: 750,
-      finalAgreedRate: 750, subtotal: 750, studentTotal: 750, tutorNet: 600,
+      finalAgreedRate: 750, subtotal: 750, studentTotal: 750, tutorNet: 600, feeConfig: { version: "test-guardian-cap" }, currency: "PKR",
       schedule: "Monday", teachingMode: "online", paymentStatus: "confirmed",
       paymentConfirmedAt: new Date(),
     });
