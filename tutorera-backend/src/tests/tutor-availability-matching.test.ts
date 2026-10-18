@@ -3,6 +3,7 @@ import app from "../app";
 import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import TutorAvailability from "../models/TutorAvailability.model";
+import type { IWeeklySlot } from "../models/TutorAvailability.model";
 import Booking from "../models/Booking.model";
 import BookedSlot from "../models/BookedSlot.model";
 import { MatchingService } from "../services/matching.service";
@@ -19,7 +20,7 @@ const nextEmail = () => `calendar-matching-${Date.now()}-${++serial}@example.tes
 function nextAvailableDate(timezone: string) {
   const future = new Date(Date.now() + 4 * 86400_000);
   const date = tutorLocalDate(future, timezone);
-  const day = new Date(`${date}T00:00:00.000Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  const day = new Date(`${date}T00:00:00.000Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }) as IWeeklySlot["day"];
   return { date, day };
 }
 
