@@ -3,6 +3,7 @@ import { Response, Request } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
 import ParentProfile from "../models/ParentProfile.model";
+import { assertParentBookingPolicy, ParentBookingPolicyError } from "../services/parentBookingPolicy.service";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
@@ -52,6 +53,18 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     const activeBid = await Bid.findOne({ _id: booking.bid, status: "payment_pending", paymentPendingExpiresAt: { $gt: new Date() } }).select("_id");
     if (!activeBid || directRequest.status !== "awaiting_payment" || directRequest.acceptedOffer?.toString() !== activeBid._id.toString()) {
       res.status(409).json({ success: false, code: "PAYMENT_HOLD_EXPIRED", message: "This direct-booking reservation expired. Request another tutor confirmation." });
+      return;
+    }
+  }
+
+  if (booking.bid && booking.request) {
+    try {
+      await assertParentBookingPolicy({
+        student: booking.student, request: booking.request, bid: booking.bid,
+        amount: booking.studentTotal, currency: booking.currency || "PKR", queueApprovals: true,
+      });
+    } catch (err: any) {
+      res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
       return;
     }
   }
@@ -148,7 +161,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         try {
           await finalizeBidAcceptance(bidId, io);
         } catch (err: any) {
-          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_REQUEST_UNAVAILABLE"].includes(err?.code) && err?.code !== 11000) throw err;
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_REQUEST_UNAVAILABLE"].includes(err?.code) && !(err instanceof ParentBookingPolicyError) && err?.code !== 11000) throw err;
           logger.error({ err, bidId }, "Paid offer cannot reserve tutor slot; finance reconciliation required");
         }
 
@@ -225,7 +238,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         } catch (err: any) {
           // The gateway has taken money, but a cancelled/expired or conflicting
           // booking must NOT be presented as confirmed or reserve an occupied slot.
-          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_NOT_PAYABLE", "BOOKING_HOLD_EXPIRED", "BOOKING_NOT_FOUND"].includes(err?.code) && err?.code !== 11000) throw err;
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_NOT_PAYABLE", "BOOKING_HOLD_EXPIRED", "BOOKING_NOT_FOUND"].includes(err?.code) && !(err instanceof ParentBookingPolicyError) && err?.code !== 11000) throw err;
           const exception = await recordPaymentLedger({
             providerTransactionId: event.merchantTransactionId, providerEventId: event.eventId,
             eventType: "payment.succeeded", status: "succeeded", amount: event.amount,

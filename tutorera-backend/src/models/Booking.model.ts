@@ -32,6 +32,7 @@ export interface IBooking extends Document {
   completedAt?: Date;
   reviewRequestSentAt?: Date;
   paymentStatus: "pending" | "received" | "confirmed" | "failed" | "refunded" | "partially_refunded" | "chargeback" | "disputed";
+  paymentConfirmedAt?: Date;
   paymentNote?: string;
   payoutStatus: "pending" | "approved" | "processing" | "paid" | "failed" | "held";
   payoutNote?: string;
@@ -88,6 +89,7 @@ const bookingSchema = new Schema<IBooking>(
       default: "pending",
     },
     paymentNote: { type: String, default: "" },
+    paymentConfirmedAt: { type: Date, index: true },
     payoutStatus: {
       type: String,
       enum: ["pending", "approved", "processing", "paid", "failed", "held"],

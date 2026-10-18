@@ -26,6 +26,7 @@ import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from ".
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
 import { convertAmount } from "../services/exchangeRate.service";
 import { releaseExpiredPaymentHold } from "../services/requestLifecycle.service";
+import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -659,6 +660,13 @@ export async function confirmExistingBookingPayment(bookingId: string): Promise<
         throw bookingTransitionError("BOOKING_NOT_PAYABLE", "The booking is no longer payable.");
       }
       const request = booking.request ? await Request.findById(booking.request).session(session) : null;
+      if (request && booking.bid) {
+        await assertParentBookingPolicy({
+          student: booking.student, request: request._id, bid: booking.bid,
+          amount: booking.studentTotal, currency: booking.currency || request.currency || "PKR",
+          session, bookingId: booking._id,
+        });
+      }
       if (request?.isDirect) {
         const bid = await Bid.findOne({
           _id: booking.bid, request: request._id, status: "payment_pending",
@@ -674,6 +682,7 @@ export async function confirmExistingBookingPayment(bookingId: string): Promise<
         await request.save({ session });
       }
       booking.paymentStatus = "confirmed";
+      booking.paymentConfirmedAt = new Date();
       booking.paymentNote = "Confirmed by signed and reconciled gateway webhook";
       await booking.save({ session });
       await syncStudentTutorRelationship(booking as any, session);
@@ -799,6 +808,14 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
   catch (error: any) { res.status(error?.statusCode || 422).json({ success: false, message: error?.message || "Unable to calculate booking fees." }); return; }
 
+  try {
+    await assertParentBookingPolicy({ student: request.student, request: request._id, bid: bid._id,
+      amount: feeQuote.studentTotal, currency: bid.currency || request.currency || "PKR", queueApprovals: true });
+  } catch (err: any) {
+    res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
+    return;
+  }
+
   // Atomic guard — only one accept attempt can win this transition
   const reservedRequest = await Request.findOneAndUpdate(
     { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
@@ -911,6 +928,10 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
       }).session(session);
 
       const fees = bid.feeQuote || await resolveMarketplaceFees(bid.amount, request.countryCode || "PK");
+      await assertParentBookingPolicy({
+        student: request.student, request: request._id, bid: bid._id,
+        amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", session,
+      });
 
       const bookingArr = await Booking.create([{
         student: request.student,
@@ -936,6 +957,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         // Payment already succeeded via the authorized payment gateway before this booking
         // was ever created — no manual confirmation step needed.
         paymentStatus: "confirmed",
+        paymentConfirmedAt: new Date(),
         paymentNote: "Paid via authorized payment gateway before booking creation",
       }], { session });
       const booking = bookingArr[0];
