@@ -262,7 +262,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": approval.student });
   if (!linked) { res.status(403).json({ success: false, code: "PARENT_LINK_REVOKED" }); return; }
   const [bid, request] = await Promise.all([
-    Bid.findById(approval.bid).select("amount currency status expiresAt"),
+    Bid.findById(approval.bid).select("amount currency status expiresAt feeQuote request"),
     RequestModel.findById(approval.request).select("student status"),
   ]);
   if (!bid || !request || request.student.toString() !== approval.student.toString() ||
@@ -270,6 +270,19 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
     !["pending", "submitted", "viewed", "countered", "payment_pending"].includes(bid.status) ||
     (bid.expiresAt && bid.expiresAt <= new Date())) {
     res.status(409).json({ success: false, code: "OFFER_NO_LONGER_AVAILABLE" }); return;
+  }
+  // Approval is consent for a specific checkout total, not merely a bid ID.
+  // If the tutor changes the quote after the guardian opened this request,
+  // invalidate the decision and require a fresh approval before settlement.
+  const currentTotal = bid.feeQuote?.studentTotal;
+  const currentCurrency = (bid.currency || "").toUpperCase();
+  if (bid.request?.toString() !== approval.request.toString() ||
+      !Number.isFinite(currentTotal) ||
+      Math.round(currentTotal * 100) !== Math.round(approval.amount * 100) ||
+      currentCurrency !== approval.currency.toUpperCase()) {
+    res.status(409).json({ success: false, code: "PARENT_APPROVAL_QUOTE_CHANGED",
+      message: "This offer's final amount or currency has changed. Request a new guardian approval." });
+    return;
   }
   const updated = await ParentBookingApproval.findOneAndUpdate(
     { _id: approval._id, parent: req.user._id, status: "pending", expiresAt: { $gt: new Date() } },
