@@ -13,6 +13,7 @@ import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { escapeHtml } from "../utils/escapeHtml";
+import GuardianConsent from "../models/GuardianConsent.model";
 import { resolveMarketplaceFees } from "../services/pricing.service";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
@@ -209,6 +210,7 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
     return;
   }
 
+  const removedChild = profile.children.find(c => c._id?.toString() === childId);
   const before = profile.children.length;
   profile.children = profile.children.filter(
     (c) => c._id?.toString() !== childId
@@ -220,6 +222,17 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
   }
 
   await profile.save();
+  if (removedChild) {
+    const child = await User.findOne({ _id: removedChild.studentUser, role: "student", isMinor: true,
+      parentGuardianEmail: req.user.email.toLowerCase() });
+    if (child) {
+      await User.updateOne({ _id: child._id }, {
+        $set: { parentConsentVerified: false },
+        $unset: { guardianConsentVerifiedAt: "" },
+      });
+      await GuardianConsent.updateOne({ student: child._id }, { $set: { status: "expired" } });
+    }
+  }
 
   res.status(200).json({ success: true, message: "Child account removed." });
 };
