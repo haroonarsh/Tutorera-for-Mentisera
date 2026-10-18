@@ -69,6 +69,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       basketId,
       bookingId: booking._id.toString(),
       studentId: booking.student.toString(),
+      payerId: req.user?._id?.toString(),
       tutorId: booking.tutor.toString(),
       description: `TUTORERA booking ${basketId}`,
       successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
@@ -390,7 +391,8 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response): Pr
   const limitNum = 20;
   const skip = (Number(page) - 1) * limitNum;
 
-  const ledgerFilter: Record<string, unknown> = { student: req.user?._id };
+  const ledgerFilter: Record<string, unknown> = req.user?.role === "parent"
+    ? { payer: req.user?._id } : { student: req.user?._id };
   if (status) ledgerFilter.status = status;
 
   const [transactions, total] = await Promise.all([
