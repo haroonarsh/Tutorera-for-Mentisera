@@ -13,6 +13,7 @@ import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { escapeHtml } from "../utils/escapeHtml";
+import { resolveMarketplaceFees } from "../services/pricing.service";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
 const MAX_LINK_ATTEMPTS = 5;
@@ -263,7 +264,7 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   if (!linked) { res.status(403).json({ success: false, code: "PARENT_LINK_REVOKED" }); return; }
   const [bid, request] = await Promise.all([
     Bid.findById(approval.bid).select("amount currency status expiresAt feeQuote request"),
-    RequestModel.findById(approval.request).select("student status"),
+    RequestModel.findById(approval.request).select("student status countryCode currency"),
   ]);
   if (!bid || !request || request.student.toString() !== approval.student.toString() ||
     !["open", "published", "receiving_offers", "negotiating", "awaiting_payment"].includes(request.status) ||
@@ -274,8 +275,20 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
   // Approval is consent for a specific checkout total, not merely a bid ID.
   // If the tutor changes the quote after the guardian opened this request,
   // invalidate the decision and require a fresh approval before settlement.
-  const currentTotal = bid.feeQuote?.studentTotal;
-  const currentCurrency = (bid.currency || "").toUpperCase();
+  // Parent requests are queued *before* checkout begins; at that point
+  // Bid.feeQuote may not exist. Use the admin fee policy in that case, just
+  // as the acceptance workflow does. Never quietly approve the raw bid rate
+  // in place of the total the student will actually be charged.
+  let currentTotal: number;
+  try {
+    currentTotal = bid.feeQuote?.studentTotal ??
+      (await resolveMarketplaceFees(bid.amount, request.countryCode || "PK")).studentTotal;
+  } catch {
+    res.status(422).json({ success: false, code: "PARENT_APPROVAL_QUOTE_UNAVAILABLE",
+      message: "The current checkout total cannot be verified. Try again later." });
+    return;
+  }
+  const currentCurrency = (bid.currency || request.currency || "").toUpperCase();
   if (bid.request?.toString() !== approval.request.toString() ||
       !Number.isFinite(currentTotal) ||
       Math.round(currentTotal * 100) !== Math.round(approval.amount * 100) ||
