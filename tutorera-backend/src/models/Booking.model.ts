@@ -29,6 +29,8 @@ export interface IBooking extends Document {
   teachingMode: "online" | "in-person" | "both";
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   cancelReason?: string;
+  completedAt?: Date;
+  reviewRequestSentAt?: Date;
   paymentStatus: "pending" | "received" | "confirmed" | "failed" | "refunded" | "partially_refunded" | "chargeback" | "disputed";
   paymentNote?: string;
   payoutStatus: "pending" | "approved" | "processing" | "paid" | "failed" | "held";
@@ -73,6 +75,8 @@ const bookingSchema = new Schema<IBooking>(
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
     status: { type: String, enum: ["upcoming", "ongoing", "completed", "cancelled"], default: "upcoming" },
     cancelReason: { type: String },
+    completedAt: { type: Date },
+    reviewRequestSentAt: { type: Date },
     paymentStatus: {
       type: String,
       enum: ["pending", "received", "confirmed", "failed", "refunded", "partially_refunded", "chargeback", "disputed"],

@@ -226,7 +226,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
           <p className={s.personSub}>Your Tutor</p>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.3rem" }}>
-          <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
+          <span className={statusBadgeClass(booking.status)}>{booking.status === "upcoming" && booking.paymentStatus !== "confirmed" ? "Payment required" : booking.status}</span>
           {/* First session badge */}
           {booking.isFirstSession && (
             <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#EEF5FF', color: '#0329B2', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
@@ -304,21 +304,21 @@ function BookingCard({ booking, onClaimSubmitted }: {
       )}
 
       {/* ── Secure checkout instructions — only when payment is pending ── */}
-      {booking.paymentStatus === "pending" && booking.status !== "cancelled" && (
+      {booking.paymentStatus === "pending" && booking.status === "upcoming" && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
           <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534', marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             💳 Payment Required
           </p>
           <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-            Review the final PKR amount below. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. TUTORERA verifies payment server-side before marking a booking paid.
+            Review the final PKR amount below. Secure online payment is processed through TUTORERA&apos;s authorized gateway when available. Your tutor is not booked until payment is verified, and a direct-booking reservation can expire.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {[
               { label: "Tutor Session", value: formatPKR(booking.subtotal || booking.amount || booking.totalAmount || 0) },
               { label: "Student Marketplace Fee", value: formatPKR(booking.studentFee || 0) },
-              { label: "Tax", value: formatPKR(0) },
+              { label: "Tax charged separately to student", value: formatPKR(0) },
               { label: "Total Payable", value: formatPKR(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
-              { label: "Currency", value: "PKR — Pakistani Rupees" },
+              { label: "Currency", value: booking.currency || "PKR" },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>
                 <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>{item.label}</span>
