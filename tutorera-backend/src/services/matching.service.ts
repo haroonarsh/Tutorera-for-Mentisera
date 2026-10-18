@@ -8,6 +8,9 @@ import Request, { IRequest } from "../models/Request.model";
 import User from "../models/User.model";
 import Bid, { IBid } from "../models/Bid.model";
 import Booking from "../models/Booking.model";
+import BookedSlot from "../models/BookedSlot.model";
+import TutorAvailability from "../models/TutorAvailability.model";
+import { CalendarSnapshot, calendarCoversInterval, isBookedIntervalConflict, normalizeTutorTimezone } from "./availability.service";
 import Review from "../models/Review.model";
 import GuaranteeClaim from "../models/GuaranteeClaim.model";
 import MatchLog, { IMatchLog } from "../models/MatchLog.model";
@@ -164,6 +167,43 @@ export class MatchingService {
       (reviewCount / (reviewCount + minThreshold)) * rating +
       (minThreshold / (reviewCount + minThreshold)) * globalMean
     );
+  }
+
+  /** Load the canonical weekly calendar once per tutor, instead of relying on
+   * the older TutorProfile.availability snapshot. Batch queries keep the match
+   * page from issuing one availability query per candidate tutor. */
+  private static async primeTutorCalendars(tutors: ITutorProfile[], request?: IRequest): Promise<void> {
+    const uncached = tutors.filter((tutor) => !(tutor as any).__calendarLoaded);
+    if (!uncached.length) return;
+    const ids = uncached.map((tutor) => {
+      const user = (tutor as any).user;
+      return (user?._id || user)?.toString();
+    }).filter(Boolean);
+    const hasFixedInterval = !!(request?.scheduledStartAt && request?.scheduledEndAt);
+    const start = request?.scheduledStartAt ? new Date(request.scheduledStartAt) : null;
+    const end = request?.scheduledEndAt ? new Date(request.scheduledEndAt) : null;
+    const validFixed = hasFixedInterval && !!start && !!end && end > start;
+    const minLegacyDate = start ? new Date(start.getTime() - 2 * 86400_000) : null;
+    const maxLegacyDate = end ? new Date(end.getTime() + 2 * 86400_000) : null;
+    const [calendars, occupied] = await Promise.all([
+      TutorAvailability.find({ tutor: { $in: ids } }).lean(),
+      validFixed && start && end && minLegacyDate && maxLegacyDate
+        ? BookedSlot.find({ tutor: { $in: ids }, $or: [
+          { startAt: { $lt: end }, endAt: { $gt: start } },
+          { startAt: { $exists: false }, date: { $gte: minLegacyDate, $lt: maxLegacyDate } },
+        ] }).lean()
+        : Promise.resolve([]),
+    ]);
+    const calendarById = new Map(calendars.map((calendar) => [calendar.tutor.toString(), calendar]));
+    for (const tutor of uncached) {
+      const user = (tutor as any).user;
+      const tutorId = (user?._id || user)?.toString();
+      const calendar = tutorId ? calendarById.get(tutorId) : undefined;
+      (tutor as any).__calendarLoaded = true;
+      (tutor as any).__calendar = calendar || null;
+      (tutor as any).__occupied = validFixed
+        ? occupied.filter((slot) => slot.tutor.toString() === tutorId) : null;
+    }
   }
 
   /**
@@ -324,8 +364,35 @@ export class MatchingService {
     }
 
     // ── 3. Availability & Timezone ──
+    if (!(tutor as any).__calendarLoaded) await this.primeTutorCalendars([tutor], request);
+    const canonicalCalendar = (tutor as any).__calendar as CalendarSnapshot | null;
+    const tutorTimezone = normalizeTutorTimezone(tutor.timezone);
+    const fixedStart = request.scheduledStartAt ? new Date(request.scheduledStartAt) : null;
+    const fixedEnd = request.scheduledEndAt ? new Date(request.scheduledEndAt) : null;
+    const validFixed = !!(fixedStart && fixedEnd && Number.isFinite(fixedStart.getTime()) && Number.isFinite(fixedEnd.getTime()) && fixedEnd > fixedStart);
+    if ((request.scheduledStartAt || request.scheduledEndAt) && !validFixed) return null;
+    // A tutor who explicitly publishes an empty calendar is not currently
+    // accepting timed lessons, even if their legacy profile still lists hours.
+    if (canonicalCalendar && canonicalCalendar.weeklySlots.length === 0) return null;
+    if (validFixed && fixedStart && fixedEnd) {
+      if (canonicalCalendar && !calendarCoversInterval(canonicalCalendar, tutorTimezone, fixedStart, fixedEnd)) return null;
+      const tutorId = ((tutor as any).user?._id || (tutor as any).user)?.toString();
+      const occupied = (tutor as any).__occupied as any[] | null;
+      const existing = occupied || (tutorId ? await BookedSlot.find({ tutor: tutorId,
+        $or: [{ startAt: { $lt: fixedEnd }, endAt: { $gt: fixedStart } },
+          { startAt: { $exists: false }, date: { $gte: new Date(fixedStart.getTime() - 2 * 86400_000), $lt: new Date(fixedEnd.getTime() + 2 * 86400_000) } }],
+      }).lean() : []);
+      if (existing.some((slot) => isBookedIntervalConflict(slot, tutorTimezone, fixedStart, fixedEnd))) return null;
+    }
+    const tutorWithCalendar = canonicalCalendar
+      ? { ...tutor, availability: canonicalCalendar.weeklySlots.map((slot) => ({
+          day: slot.day, slots: [`${slot.startTime}-${slot.endTime}`],
+        })) } as ITutorProfile
+      : tutor;
     const maxAvail = weights.availability;
-    const { overlapScore, timezoneAligned, matchingSlotsCount } = calculateScheduleOverlap(request, tutor);
+    const { overlapScore, timezoneAligned, matchingSlotsCount } = validFixed && canonicalCalendar
+      ? { overlapScore: 1, timezoneAligned: true, matchingSlotsCount: 1 }
+      : calculateScheduleOverlap(request, tutorWithCalendar);
 
     breakdown.availability = Math.round(maxAvail * overlapScore);
     if (matchingSlotsCount > 0) {
@@ -537,6 +604,7 @@ export class MatchingService {
     tutors: ITutorProfile[]
   ): Promise<RankedTutorMatch[]> {
     const config = await this.getActiveConfig();
+    await this.primeTutorCalendars(tutors, request);
     const scoredPromises = tutors.map(async (t) => {
       const match = await this.calculateMatchScore(request, t, config);
       if (!match) return null;
@@ -617,6 +685,7 @@ export class MatchingService {
     options: { limit?: number } = {}
   ): Promise<RankedRequestMatch[]> {
     const config = await this.getActiveConfig();
+    await this.primeTutorCalendars([tutor]);
     const limit = options.limit || 20;
 
     // Build base request candidate query — strictly unexpired fresh demand
