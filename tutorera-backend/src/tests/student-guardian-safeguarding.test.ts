@@ -154,6 +154,13 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
 
     const after = await request(app).get("/api/v1/students/profile/me").set(bearer);
     expect(after.status).not.toBe(403);
+    // Profile completion must not let an already-verified teen change the
+    // account birth date in order to evade age-based restrictions.
+    const editedBirthDate = await request(app).post("/api/v1/students/onboarding")
+      .set(bearer).send({ fullName: "Changed DOB", dateOfBirth: "1990-01-01" }).expect(409);
+    expect(editedBirthDate.body.code).toBe("STUDENT_DOB_MISMATCH");
+    const afterEdit = await User.findById(student!._id);
+    expect(afterEdit?.dateOfBirth?.toISOString().slice(0, 10)).toBe(underage.dateOfBirth);
     // Supervised teens must not self-attach a different guardian by ID/email
     // or remove their own verified guardian, even after consent activation.
     const relink = await request(app).post("/api/v1/students/guardians")
