@@ -13,6 +13,7 @@ import SafetyCase from "../models/SafetyCase.model";
 import FeeConfig from "../models/FeeConfig.model";
 import MarketConfig from "../models/MarketConfig.model";
 import PaymentLedger from "../models/PaymentLedger.model";
+import RefundRequest from "../models/RefundRequest.model";
 import { AtRiskRequestService } from "../services/atRiskRequest.service";
 import { ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission, Permission } from "../config/rbac";
 import mongoose from "mongoose";
@@ -306,31 +307,43 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
       .lean(),
   ]);
 
+  const [unreconciledPaymentEvents, payoutsAwaitingVerification, approvedRefundsAwaitingSettlement] = await Promise.all([
+    PaymentLedger.countDocuments({ settlementStatus: "exception" }),
+    Booking.countDocuments({ payoutStatus: "processing" }),
+    RefundRequest.countDocuments({ status: "approved" }),
+  ]);
+
   // Reconciliation summary
-  const allBookings = await Booking.find().select("studentTotal subtotal tutorFee studentFee platformFee tax paymentStatus").lean();
+  const allBookings = await Booking.find({ paymentStatus: "confirmed" }).select("studentTotal subtotal tutorFee studentFee platformFee tax paymentStatus tutorNet currency").lean();
   let totalGMV = 0;
   let totalTutorNet = 0;
   let totalPlatformGross = 0;
-  let totalEstimatedGatewayFees = 0;
+  // Gateway fees must come from real settlement statements; this API does not
+  // know the provider fee and must not manufacture 2.9% + PKR 30.
+  const totalEstimatedGatewayFees: number | null = null;
 
   for (const b of allBookings) {
-    if (["received", "confirmed"].includes(b.paymentStatus)) {
+    if (b.paymentStatus === "confirmed") {
       const gmv = b.studentTotal || b.subtotal || 0;
       totalGMV += gmv;
-      totalTutorNet += (b.subtotal || 0) - (b.tutorFee || 0);
+      totalTutorNet += b.tutorNet || 0;
       totalPlatformGross += (b.studentFee || 0) + (b.tutorFee || b.platformFee || 0);
-      totalEstimatedGatewayFees += gmv * 0.029 + 30; // 2.9% + PKR 30
+
     }
   }
 
   res.json({
     success: true,
     summary: {
+      unreconciledPaymentEvents,
+      payoutsAwaitingVerification,
+      approvedRefundsAwaitingSettlement,
       totalGMV,
       totalTutorNet,
       totalPlatformGross,
       totalEstimatedGatewayFees,
-      netPlatformSettlement: totalPlatformGross - totalEstimatedGatewayFees,
+      netPlatformSettlement: null, // unavailable until actual gateway settlement fees are supplied
+      gatewayFeeEstimateAvailable: false,
       ledger: ledgerStatusRows.reduce((acc, row) => {
         acc[row._id || "unknown"] = {
           count: row.count,
@@ -344,11 +357,11 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
     ledger: recentLedgerRows,
     bookings: bookings.map((b) => {
       const gmv = b.studentTotal || b.subtotal || 0;
-      const expectedSettlement = gmv - (gmv * 0.029 + 30);
+      const expectedSettlement = null;
       return {
         ...b,
-        estimatedGatewayFee: Math.round(gmv * 0.029 + 30),
-        expectedSettlement: Math.round(expectedSettlement),
+        estimatedGatewayFee: null,
+        expectedSettlement,
         settlementDiscrepancy: (b as any).gatewaySettlementStatus === "discrepancy",
       };
     }),
