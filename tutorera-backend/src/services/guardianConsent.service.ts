@@ -72,7 +72,7 @@ export async function verifyGuardianConsent(args: {
   guardianDateOfBirth: string;
 }): Promise<void> {
   const { parentId, studentId, code, adultAttestation, guardianDateOfBirth } = args;
-  if (!adultAttestation || ageOnDate(guardianDateOfBirth) < 18) {
+  if (!adultAttestation || ageOnDate(guardianDateOfBirth) < 18 || ageOnDate(guardianDateOfBirth) > 110) {
     throw new GuardianConsentError("ADULT_GUARDIAN_REQUIRED", "An adult guardian must confirm their age and responsibility.", 422);
   }
   if (!mongoose.isValidObjectId(studentId) || !/^\d{8}$/.test(code)) {
@@ -100,7 +100,7 @@ export async function verifyGuardianConsent(args: {
       const student = await User.findOneAndUpdate({
         _id: consent.student, role: "student", isMinor: true,
         parentConsentVerified: false, parentGuardianEmail: parent.email.toLowerCase(),
-      }, { $set: { parentConsentVerified: true, parentGuardianName: parent.name } }, { session, new: true });
+      }, { $set: { parentConsentVerified: true, parentGuardianName: parent.name, guardianConsentVerifiedAt: new Date() } }, { session, new: true });
       if (!student) throw new GuardianConsentError("STUDENT_UNAVAILABLE", "Student record cannot be approved.", 409);
       let profile = await ParentProfile.findOne({ user: parent._id }).session(session);
       if (!profile) {
