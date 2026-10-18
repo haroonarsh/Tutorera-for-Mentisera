@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { Request, Response, NextFunction } from "express";
 
+// All sign-up methods validate the market before account creation. Normalize
+// ISO country codes here so Zod does not silently strip the user's selection.
+const registrationMarketCode = z.string().trim().toUpperCase()
+  .regex(/^[A-Z]{2}$/, "Country must be a two-letter ISO code");
+const preferredLanguageCode = z.string().trim().toLowerCase()
+  .regex(/^[a-z]{2,3}(?:-[a-z]{2})?$/, "Invalid language code");
+
 export const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -8,6 +15,8 @@ export const registerSchema = z.object({
   role: z.enum(["student", "tutor", "parent"]).default("student"),
   phone: z.string().optional(),
   city: z.string().optional(),
+  countryCode: registrationMarketCode.default("PK"),
+  preferredLanguage: preferredLanguageCode.optional(),
 });
 
 export const loginSchema = z.object({
@@ -18,6 +27,8 @@ export const loginSchema = z.object({
 export const googleAuthSchema = z.object({
   idToken: z.string().min(1, "Google ID token is required"),
   role: z.enum(["student", "tutor", "parent"]).optional(),
+  countryCode: registrationMarketCode.optional(),
+  preferredLanguage: preferredLanguageCode.optional(),
 });
 
 export const selectRoleSchema = z.object({
