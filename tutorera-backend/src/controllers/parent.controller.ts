@@ -232,12 +232,13 @@ export const getPendingBookingApprovals = async (req: AuthRequest, res: Response
     student: { $in: childIds },
     status: "pending",
     expiresAt: { $gt: new Date() },
-  }).populate("request", "subject schedule teachingMode currency").populate("bid", "amount currency tutor")
+  }).populate("request", "subject schedule teachingMode currency").populate({ path: "bid", select: "amount currency tutor", populate: { path: "tutor", select: "name" } })
     .sort("-createdAt").limit(50).lean();
   const result = approvals.filter(item => item.bid && item.request).map(item => ({
     _id: item._id, studentId: item.student, bidId: item.bid?._id,
-    subject: (item.request as any).subject, amount: item.amount, currency: item.currency,
-    tutorId: (item.bid as any).tutor, expiresAt: item.expiresAt,
+    subject: (item.request as any).subject, schedule: (item.request as any).schedule,
+    teachingMode: (item.request as any).teachingMode, amount: item.amount, currency: item.currency,
+    tutorId: (item.bid as any).tutor?._id, tutorName: (item.bid as any).tutor?.name || "Tutor", expiresAt: item.expiresAt,
     createdAt: item.createdAt, status: item.status,
   }));
   res.setHeader("Cache-Control", "no-store");
