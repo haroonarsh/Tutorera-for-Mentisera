@@ -76,6 +76,16 @@ export const googleAuthSchema = z.object({
   dateOfBirth: birthDateSchema.optional(),
   guardianEmail: guardianEmailSchema.optional(),
   guardianName: z.string().trim().min(2).max(120).optional(),
+});
+
+// This schema is applied only when a new Google student account is created.
+// Existing Google users can log in without resubmitting their DOB/guardian data.
+export const newGoogleStudentSchema = z.object({
+  role: z.literal("student"),
+  email: z.string().email(),
+  dateOfBirth: birthDateSchema.optional(),
+  guardianEmail: guardianEmailSchema.optional(),
+  guardianName: z.string().trim().min(2).max(120).optional(),
 }).superRefine(checkStudentAgeFields);
 
 export const selectRoleSchema = z.object({
