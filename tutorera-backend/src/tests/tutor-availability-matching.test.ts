@@ -125,6 +125,17 @@ describe("Fix 2 — one tutor calendar for matching and public availability", ()
     expect(matches?.reasons).toContain("Available during your requested schedule");
   });
 
+  it("scores hydrated tutor profile documents without losing subject and rate fields", async () => {
+    const f = await fixture();
+    await TutorAvailability.create({ tutor: f.tutor._id, weeklySlots: [
+      { day: f.day, startTime: "08:00", endTime: "12:00" },
+    ], blockedDates: [] });
+    const result = await MatchingService.calculateMatchScore(scheduledRequest(f.date, f.timezone), f.profile as ITutorProfile);
+    expect(result).not.toBeNull();
+    expect(result?.scoreBreakdown.subject).toBeGreaterThan(0);
+    expect(result?.scoreBreakdown.availability).toBeGreaterThan(0);
+  });
+
   it("does not recommend a calendar-blocked or occupied tutor for an exact interval", async () => {
     const f = await fixture();
     await TutorAvailability.create({ tutor: f.tutor._id, weeklySlots: [
