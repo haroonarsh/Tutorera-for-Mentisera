@@ -30,6 +30,8 @@ import {
 import {
   getAllRefundRequests,
   updateRefundRequestStatus,
+  recordExternalRefundTransfer,
+  verifyExternalRefundTransfer,
 } from "../controllers/refundRequest.controller";
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
@@ -133,6 +135,8 @@ router.get("/guarantee-claims", requirePermission("claims.read"), getAllClaims);
 router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), validateGuarantee(updateClaimStatusSchema), updateClaimStatus);
 router.get("/refund-requests", requirePermission("claims.read"), getAllRefundRequests);
 router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateRefundRequestStatus);
+router.post("/refund-requests/:id/external-transfer", requirePermission("payment.refund"), recordExternalRefundTransfer);
+router.post("/refund-requests/:id/external-verify", requirePermission("payment.refund"), verifyExternalRefundTransfer);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
