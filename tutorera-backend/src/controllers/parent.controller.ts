@@ -205,6 +205,7 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
     res.status(400).json({ success: false, message: "Invalid linked student reference." }); return;
   }
   const session = await mongoose.startSession();
+  let revokedStudentId: string | null = null;
   try {
     await session.withTransaction(async () => {
       const profile = await ParentProfile.findOne({ user: req.user?._id }).session(session);
@@ -220,9 +221,18 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
         parentGuardianEmail: req.user?.email.toLowerCase(),
       }, { $set: { parentConsentVerified: false }, $unset: { guardianConsentVerifiedAt: "" } },
         { session, new: true });
-      if (child) await GuardianConsent.updateOne({ student: child._id },
-        { $set: { status: "expired" } }, { session });
+      if (child) {
+        await GuardianConsent.updateOne({ student: child._id },
+          { $set: { status: "expired" } }, { session });
+        revokedStudentId = child._id.toString();
+      }
     });
+    // Existing sockets authenticated before revocation are also disconnected.
+    // HTTP requests already reread the student record on each request.
+    if (revokedStudentId) {
+      try { req.app.get("io")?.in(revokedStudentId).disconnectSockets(true); }
+      catch (error) { console.error("[Safeguarding] Could not disconnect revoked student realtime session:", error); }
+    }
     res.status(200).json({ success: true, message: "Child account unlinked; supervised access revoked where applicable." });
   } catch (error: any) {
     res.status(error?.statusCode || 500).json({ success: false,
