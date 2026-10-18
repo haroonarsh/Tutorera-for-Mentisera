@@ -55,8 +55,7 @@ export async function issueGuardianConsent(studentId: mongoose.Types.ObjectId | 
     $set: { guardianEmail: student.parentGuardianEmail.toLowerCase(),
       guardianName: student.parentGuardianName, codeHash: codeHash(student._id.toString(), code),
       status: "pending", expiresAt: new Date(now.getTime() + 24 * 60 * 60_000), attempts: 0, lastSentAt: now },
-    $setOnInsert: { resendCount: 0 },
-    ...(existing ? { $inc: { resendCount: existing.status === "verified" ? 0 : 1 } } : {}),
+    $inc: { resendCount: existing && existing.status !== "verified" ? 1 : 0 },
   }, { upsert: true, new: true });
   await sendEmail({
     to: student.parentGuardianEmail,
