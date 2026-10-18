@@ -21,6 +21,7 @@ export interface CheckoutParams {
   bookingId?: string;
   bidId?: string;
   studentId?: string;
+  payerId?: string;
   tutorId?: string;
   metadata?: Record<string, unknown>;
   feeSnapshot?: MarketplaceFeeQuote;
@@ -66,6 +67,7 @@ export const paymentProvider = {
       bookingId: params.bookingId,
       bidId: params.bidId,
       studentId: params.studentId,
+      payerId: params.payerId || params.studentId,
       tutorId: params.tutorId,
       feeSnapshot: params.feeSnapshot,
       metadata: { checkoutUrl, ...(params.metadata || {}) },
@@ -106,10 +108,17 @@ export async function recordPaymentLedger(args: {
   bookingId?: string;
   bidId?: string;
   studentId?: string;
+  payerId?: string;
   tutorId?: string;
   metadata?: Record<string, unknown>;
   feeSnapshot?: MarketplaceFeeQuote;
 }) {
+  // Signed webhooks identify only a checkout basket; restore the authenticated
+  // parent payer from its checkout record rather than assuming the learner paid.
+  const originalCheckout = args.eventType === "checkout.created" ? null
+    : await PaymentLedger.findOne({ providerTransactionId: args.providerTransactionId, eventType: "checkout.created" })
+        .select("payer").sort("-createdAt").lean();
+  const payerId = args.payerId || originalCheckout?.payer?.toString() || args.studentId;
   // Ledger values use the agreed checkout/booking quote, never today's rates.
   let fees: MarketplaceFeeQuote | undefined = args.feeSnapshot;
   if (!fees && args.bookingId) {
@@ -145,6 +154,7 @@ export async function recordPaymentLedger(args: {
     booking: args.bookingId ? new Types.ObjectId(args.bookingId) : undefined,
     bid: args.bidId ? new Types.ObjectId(args.bidId) : undefined,
     student: args.studentId ? new Types.ObjectId(args.studentId) : undefined,
+    payer: payerId ? new Types.ObjectId(payerId) : undefined,
     tutor: args.tutorId ? new Types.ObjectId(args.tutorId) : undefined,
     metadata: args.metadata || {},
   };
