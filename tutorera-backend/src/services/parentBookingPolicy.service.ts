@@ -11,7 +11,6 @@ export class ParentBookingPolicyError extends Error {
   constructor(public code: string, message: string, public statusCode = 409) { super(message); }
 }
 
-type Guardian = Awaited<ReturnType<typeof ParentProfile.findOne>> & {};
 const round = (value: number) => Math.round(value * 100) / 100;
 const currentMonth = (now: Date) => ({
   start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
@@ -40,6 +39,7 @@ export async function assertParentBookingPolicy(args: {
   if (!guardians.length) return;
   const now = new Date();
   const { start, end } = currentMonth(now);
+  let unresolvedApproval: ParentBookingPolicyError | null = null;
 
   for (const guardian of guardians.sort((a, b) => a.user.toString().localeCompare(b.user.toString()))) {
     // This write serializes concurrent webhook settlements for siblings subject
@@ -113,9 +113,11 @@ export async function assertParentBookingPolicy(args: {
       }
       if (!approval || approval.status !== "approved" || approval.expiresAt <= now) {
         const code = approval?.status === "rejected" ? "PARENT_APPROVAL_REJECTED" : "PARENT_APPROVAL_REQUIRED";
-        throw new ParentBookingPolicyError(code,
+        unresolvedApproval ||= new ParentBookingPolicyError(code,
           code === "PARENT_APPROVAL_REJECTED" ? "Your guardian declined this offer." : "Guardian approval is required for this exact tutor offer before payment.");
       }
     }
   }
+  // All linked guardians receive their decision request in a single attempt.
+  if (unresolvedApproval) throw unresolvedApproval;
 }
