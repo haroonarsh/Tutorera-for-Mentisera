@@ -118,11 +118,11 @@ export default function TransactionsPage() {
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <p style={{ fontWeight: 800, fontSize: "1rem", margin: 0, color: C.primary }}>
-                        {tx.status === "refunded" ? "-" : ""}PKR {tx.amount.toLocaleString()}
+                        {tx.status === "refunded" ? "-" : ""}{tx.currency || "PKR"} {tx.amount.toLocaleString()}
                       </p>
                       {tx.refundAmount > 0 && tx.status === "refunded" && (
                         <p style={{ color: "#a16207", fontSize: "0.75rem", margin: "0.1rem 0 0" }}>
-                          Refund: PKR {tx.refundAmount.toLocaleString()}
+                          Refund: {tx.currency || "PKR"} {tx.refundAmount.toLocaleString()}
                         </p>
                       )}
                       <span style={{ display: "inline-block", marginTop: "0.3rem", padding: "0.2rem 0.6rem", borderRadius: "999px", background: sc.bg, color: sc.color, fontSize: "0.7rem", fontWeight: 700, textTransform: "capitalize" }}>
