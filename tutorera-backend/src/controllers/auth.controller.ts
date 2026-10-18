@@ -21,6 +21,7 @@ import {
 } from "../services/tracking.service";
 import { trackingWelcomeEmail } from "../utils/trackingEmails";
 import { resolveMarket } from "../services/market.service";
+import { ageOnDate, issueGuardianConsent } from "../services/guardianConsent.service";
 
 const TRACKING_BASE_URL = process.env.CLIENT_URL || "https://tutorera.ac.pk";
 
@@ -30,7 +31,8 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // @desc    Register user
 // @route   POST /api/auth/register
 export const register = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password, role, phone, city, countryCode = "PK" } = req.body;
+  const { name, email, password, role, phone, city, countryCode = "PK", dateOfBirth, guardianEmail, guardianName } = req.body;
+  const studentAge = role === "student" ? ageOnDate(dateOfBirth) : -1;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -53,7 +55,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     timezone: market.timezone, currency: market.currency,
     preferredLanguage: req.body.preferredLanguage || market.defaultLanguage,
     accountStatus: "registered",
+    ...(role === "student" ? {
+      dateOfBirth: new Date(dateOfBirth + "T00:00:00.000Z"),
+      isMinor: studentAge < 18, parentConsentVerified: studentAge >= 18,
+      ...(studentAge < 18 ? { parentGuardianEmail: guardianEmail.toLowerCase(),
+        parentGuardianName: guardianName.trim() } : {}),
+    } : {}),
   });
+
+  // Mailbox delivery errors must not authorize a restricted minor account.
+  if (role === "student" && studentAge < 18) {
+    try { await issueGuardianConsent(user._id); }
+    catch (err) { console.error("[Safeguarding] Could not deliver initial guardian consent:", err); }
+  }
 
   let trackingToken: string | undefined;
   if (user.role === "tutor") {
@@ -164,7 +178,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 // @desc    Google Sign-In / Sign-Up
 // @route   POST /api/auth/google
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
-  const { idToken, role, countryCode = "PK", preferredLanguage } = req.body;
+  const { idToken, role, countryCode = "PK", preferredLanguage, dateOfBirth, guardianEmail, guardianName } = req.body;
 
   let payload;
   try {
@@ -229,7 +243,20 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       timezone: market.timezone,
       preferredLanguage: preferredLanguage || market.defaultLanguage,
       accountStatus: "registered",
+      ...(assignedRole === "student" ? {
+        dateOfBirth: new Date(dateOfBirth + "T00:00:00.000Z"),
+        isMinor: ageOnDate(dateOfBirth) < 18,
+        parentConsentVerified: ageOnDate(dateOfBirth) >= 18,
+        ...(ageOnDate(dateOfBirth) < 18 ? {
+          parentGuardianEmail: guardianEmail.toLowerCase(),
+          parentGuardianName: guardianName.trim(),
+        } : {}),
+      } : {}),
     });
+    if (assignedRole === "student" && user.isMinor) {
+      try { await issueGuardianConsent(user._id); }
+      catch (err) { console.error("[Safeguarding] Could not deliver Google guardian consent:", err); }
+    }
 
     if (user.role === "tutor") {
       user.applicationId = await allocateApplicationId();
@@ -321,6 +348,8 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       currency: user.currency,
       timezone: user.timezone,
       preferredLanguage: user.preferredLanguage,
+      isMinor: user.isMinor === true,
+      parentConsentVerified: user.parentConsentVerified === true,
     },
   });
 };
@@ -328,7 +357,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
 // @desc    Set role for a Google user who registered as "pending"
 // @route   PATCH /api/auth/select-role
 export const selectRole = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { role } = req.body;
+  const { role, dateOfBirth, guardianEmail, guardianName } = req.body;
 
   const user = await User.findById(req.user?._id);
   if (!user) {
@@ -351,6 +380,16 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     return;
   }
   user.role = role;
+  if (role === "student") {
+    const studentAge = ageOnDate(dateOfBirth);
+    user.dateOfBirth = new Date(dateOfBirth + "T00:00:00.000Z");
+    user.isMinor = studentAge < 18;
+    user.parentConsentVerified = studentAge >= 18;
+    if (studentAge < 18) {
+      user.parentGuardianEmail = guardianEmail.toLowerCase();
+      user.parentGuardianName = guardianName.trim();
+    }
+  }
   let trackingToken: string | undefined;
   if (role === "tutor") {
     user.applicationId = await allocateApplicationId();
@@ -363,6 +402,10 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     await ParentProfile.create({ user: user._id, children: [], approvalRequiredForBookings: false });
   }
   await user.save();
+  if (role === "student" && user.isMinor) {
+    try { await issueGuardianConsent(user._id); }
+    catch (err) { console.error("[Safeguarding] Could not deliver selected-role guardian consent:", err); }
+  }
 
   await logAudit({
     action: "user_role_selected",
