@@ -35,7 +35,17 @@ export async function assertParentBookingPolicy(args: {
   }
   // Consent-confirmed links are authoritative. Never trust a parent ID supplied
   // by the checkout browser, and never rely on a denormalized Booking.parent.
+  const studentRecord = await User.findById(student).select("role isMinor parentConsentVerified parentGuardianEmail").session(session || null);
+  const supervisedMinor = studentRecord?.role === "student" && studentRecord.isMinor === true;
+  if (supervisedMinor && !studentRecord?.parentConsentVerified) {
+    throw new ParentBookingPolicyError("GUARDIAN_CONSENT_REQUIRED",
+      "Adult guardian verification is required before an underage student can make a booking.", 403);
+  }
   const guardians = await ParentProfile.find({ "children.studentUser": student }).session(session || null);
+  if (supervisedMinor && !guardians.length) {
+    throw new ParentBookingPolicyError("GUARDIAN_LINK_REQUIRED",
+      "This minor's verified guardian link is missing. A new verification is required.", 403);
+  }
   if (!guardians.length) return;
   const now = new Date();
   const { start, end } = currentMonth(now);
@@ -93,7 +103,7 @@ export async function assertParentBookingPolicy(args: {
       }
     }
 
-    if (guardian.approvalRequiredForBookings) {
+    if (guardian.approvalRequiredForBookings || supervisedMinor) {
       let approval = await ParentBookingApproval.findOne({ parent: guardian.user, bid }).session(session || null);
       // For a new offer, queue the exact price/currency consent once. Never
       // auto-renew a rejection, and never silently reuse an approval for a
