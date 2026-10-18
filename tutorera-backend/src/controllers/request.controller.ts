@@ -682,6 +682,7 @@ export async function confirmExistingBookingPayment(bookingId: string): Promise<
         await request.save({ session });
       }
       booking.paymentStatus = "confirmed";
+      booking.paymentConfirmedAt = new Date();
       booking.paymentNote = "Confirmed by signed and reconciled gateway webhook";
       await booking.save({ session });
       await syncStudentTutorRelationship(booking as any, session);
@@ -956,6 +957,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         // Payment already succeeded via the authorized payment gateway before this booking
         // was ever created — no manual confirmation step needed.
         paymentStatus: "confirmed",
+        paymentConfirmedAt: new Date(),
         paymentNote: "Paid via authorized payment gateway before booking creation",
       }], { session });
       const booking = bookingArr[0];
