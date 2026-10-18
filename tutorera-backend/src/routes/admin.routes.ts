@@ -48,6 +48,7 @@ import {
   handleAtRiskAction,
   getSupplyGapsIntelligence,
   getFinanceReconciliation,
+  getFinanceExceptions,
   getSystemHealth,
   listSafetyCases,
   createSafetyCase,
@@ -78,6 +79,7 @@ router.get("/supply-gaps", requirePermission("analytics.read"), getSupplyGapsInt
 
 // Finance & Reconciliation
 router.get("/finance/reconciliation", requirePermission("finance.reconcile"), getFinanceReconciliation);
+router.get("/finance/exceptions", requirePermission("finance.reconcile"), getFinanceExceptions);
 router.get("/finance/fee-config", requirePermission("finance.fee_configure"), getFeeConfig);
 router.put("/finance/fee-config", requirePermission("finance.fee_configure"), updateFeeConfig);
 
