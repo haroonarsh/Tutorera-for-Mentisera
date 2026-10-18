@@ -97,17 +97,30 @@ export const initSocket = (httpServer: HttpServer): Server => {
     });
 
     // Typing indicator
-    socket.on("typing", (data: { conversationId: string; isTyping: boolean }) => {
-      // A client may send any room name. Only sockets that passed the
-      // participant check in join_conversation can broadcast typing events.
+    socket.on("typing", async (data: { conversationId: string; isTyping: boolean }) => {
+      // Room membership reflects a PREVIOUS authorization check. A guardian
+      // can revoke consent while an existing socket stays connected (notably
+      // across replicas without a shared Socket.IO adapter). Recheck the
+      // account state before emitting each realtime user action.
       if (!data || typeof data.conversationId !== "string" ||
           !mongoose.Types.ObjectId.isValid(data.conversationId) ||
           typeof data.isTyping !== "boolean" ||
           !socket.rooms.has(data.conversationId)) return;
-      socket.to(data.conversationId).emit("user_typing", {
-        userId,
-        isTyping: data.isTyping,
-      });
+      try {
+        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified");
+        if (!current?.isActive || current.role === "pending" ||
+            (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
+          socket.disconnect(true);
+          return;
+        }
+        if (!socket.connected || !socket.rooms.has(data.conversationId)) return;
+        socket.to(data.conversationId).emit("user_typing", { userId, isTyping: data.isTyping });
+      } catch (error) {
+        // Fail closed on database outages; a stale socket is never entitled
+        // to publish events when authorization cannot be determined.
+        console.error("[Safeguarding] Could not verify realtime user status:", error);
+        socket.disconnect(true);
+      }
     });
 
     socket.on("disconnect", () => {
