@@ -6,6 +6,7 @@ import { useEffect } from "react";
 const PATH_PERMISSIONS: Record<string, string> = {
   "/admin/payments": "payment.read",
   "/admin/payouts": "payout.read",
+  "/admin/refunds": "claims.read",
   "/admin/reconciliation": "finance.reconcile",
   "/admin/fee-config": "finance.fee_configure",
   "/admin/safety-cases": "safety.read",
@@ -48,7 +49,7 @@ function hasPermission(adminRole?: string, adminPermissions?: string[], required
       tutor_operations: ["tutor.read","tutor.quality_manage","tutor.verify","tutor.reject","tutor.suspend","bookings.read","analytics.read"],
       verification_officer: ["tutor.read","tutor.verify","tutor.reject","audit.read"],
       trust_and_safety: ["safety.read","safety.create","safety.update","safety.resolve","claims.read","claims.manage","users.read","tutor.suspend","audit.read"],
-      finance: ["payment.read","payment.manage","payment.refund","payout.read","payout.approve","payout.process","finance.reconcile","finance.fee_configure","bookings.read","analytics.read"],
+      finance: ["claims.read","payment.read","payment.manage","payment.refund","payout.read","payout.approve","payout.process","finance.reconcile","finance.fee_configure","bookings.read","analytics.read"],
       support: ["student.read","tutor.read","request.read","bookings.read","claims.read","safety.create","payment.read"],
       growth: ["growth.read","growth.manage","broadcast.send","analytics.read","users.read"],
       content: ["growth.read","analytics.read"],
