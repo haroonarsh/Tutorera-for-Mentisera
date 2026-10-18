@@ -22,7 +22,7 @@ beforeAll(() => { process.env.JWT_SECRET = "test-secret-at-least-16-chars"; });
 let counter = 0;
 const email = () => `market-signup-${Date.now()}-${++counter}@example.test`;
 const register = (countryCode: string, role: "student" | "tutor" | "parent" = "student") => ({
-  name: "Market Signup Test", email: email(), password: "password123", role, countryCode, preferredLanguage: "en",
+  name: "Market Signup Test", email: email(), password: "password123", role, countryCode, preferredLanguage: "en", dateOfBirth: "1999-03-15",
 });
 
 describe("Fix 3 — registration market integrity", () => {
@@ -87,12 +87,12 @@ describe("Fix 3 — registration market integrity", () => {
   it("does not silently register Google users into unsupported markets or accept unverified identities", async () => {
     const unsupportedEmail = email();
     await request(app).post("/api/v1/auth/google")
-      .send({ idToken: `verified|${unsupportedEmail}`, role: "student", countryCode: "ZZ" }).expect(422);
+      .send({ idToken: `verified|${unsupportedEmail}`, role: "student", countryCode: "ZZ", dateOfBirth: "1998-01-15" }).expect(422);
     expect(await User.findOne({ email: unsupportedEmail })).toBeNull();
 
     const unverifiedEmail = email();
     await request(app).post("/api/v1/auth/google")
-      .send({ idToken: `unverified|${unverifiedEmail}`, role: "student", countryCode: "AE" }).expect(401);
+      .send({ idToken: `unverified|${unverifiedEmail}`, role: "student", countryCode: "AE", dateOfBirth: "1998-01-15" }).expect(401);
     expect(await User.findOne({ email: unverifiedEmail })).toBeNull();
   });
 
