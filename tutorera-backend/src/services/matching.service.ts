@@ -175,10 +175,13 @@ export class MatchingService {
   private static async primeTutorCalendars(tutors: ITutorProfile[], request?: IRequest): Promise<void> {
     const uncached = tutors.filter((tutor) => !(tutor as any).__calendarLoaded);
     if (!uncached.length) return;
+    // In-memory match scoring also supports profiles not persisted in MongoDB
+    // (legacy recommendation tests, cold-start previews). Query canonical
+    // calendars only for actual user ObjectIds; otherwise preserve fallback.
     const ids = uncached.map((tutor) => {
       const user = (tutor as any).user;
       return (user?._id || user)?.toString();
-    }).filter(Boolean);
+    }).filter((id): id is string => !!id && mongoose.isValidObjectId(id));
     const hasFixedInterval = !!(request?.scheduledStartAt && request?.scheduledEndAt);
     const start = request?.scheduledStartAt ? new Date(request.scheduledStartAt) : null;
     const end = request?.scheduledEndAt ? new Date(request.scheduledEndAt) : null;
@@ -378,7 +381,7 @@ export class MatchingService {
       if (canonicalCalendar && !calendarCoversInterval(canonicalCalendar, tutorTimezone, fixedStart, fixedEnd)) return null;
       const tutorId = ((tutor as any).user?._id || (tutor as any).user)?.toString();
       const occupied = (tutor as any).__occupied as any[] | null;
-      const existing = occupied || (tutorId ? await BookedSlot.find({ tutor: tutorId,
+      const existing = occupied || (tutorId && mongoose.isValidObjectId(tutorId) ? await BookedSlot.find({ tutor: tutorId,
         $or: [{ startAt: { $lt: fixedEnd }, endAt: { $gt: fixedStart } },
           { startAt: { $exists: false }, date: { $gte: new Date(fixedStart.getTime() - 2 * 86400_000), $lt: new Date(fixedEnd.getTime() + 2 * 86400_000) } }],
       }).lean() : []);
