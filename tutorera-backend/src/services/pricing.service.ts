@@ -1,130 +1,100 @@
-// backend/src/services/pricing.service.ts
-// Global fee and tax calculation engine.
-// Replaces the hardcoded calculateMarketplaceFees() with a country-aware version
-// that reads TaxConfig from the database and applies the correct VAT/GST rate.
-
+// Authoritative pricing service for new TUTORERA bookings. Both checkout
+// and booking creation must use the same versioned quote.
+import FeeConfig from "../models/FeeConfig.model";
 import TaxConfig from "../models/TaxConfig.model";
+import { MARKETPLACE_FEES, calculateMarketplaceFees } from "../config/constants";
 import { convertAmount } from "./exchangeRate.service";
 
-export interface FeeBreakdown {
-  grossAmount: number;          // what the student pays (amount agreed)
-  currency: string;             // ISO 4217 currency code
-  studentFeeRate: number;       // % charged to student on top
+export interface MarketplaceFeeQuote {
+  subtotal: number;
   studentFee: number;
-  studentTotal: number;         // grossAmount + studentFee
-  platformFeeRate: number;      // % taken from tutor's side
-  platformFee: number;
-  taxRate: number;              // % tax (VAT / GST)
-  taxAmount: number;
-  taxType: string;              // "VAT", "GST", etc.
-  tutorNet: number;             // what the tutor receives after fees & tax
-  tutorFee: number;             // platform fee on tutor side
-  platformNet: number;          // platform's gross revenue
-  amountUSD?: number;           // normalised USD equivalent
+  tutorFee: number;
+  tax: number;
+  studentTotal: number;
+  tutorNet: number;
+  feeConfig: Record<string, unknown>;
 }
 
-// Default platform fee rates (overrideable by MarketConfig in future)
-const STUDENT_FEE_RATE = 0.05;  // 5% service fee on top of agreed amount
-const PLATFORM_FEE_RATE = 0.15; // 15% commission from tutor's payment
+export interface FeeBreakdown {
+  grossAmount: number;
+  currency: string;
+  studentFeeRate: number;
+  studentFee: number;
+  studentTotal: number;
+  platformFeeRate: number;
+  platformFee: number;
+  taxRate: number;
+  taxAmount: number;
+  taxType: string;
+  tutorNet: number;
+  tutorFee: number;
+  platformNet: number;
+  amountUSD?: number;
+}
 
-/** Static fallback — used when no TaxConfig is found for a country */
-const DEFAULT_TAX_CONFIG = { rate: 0, taxType: "none", name: "None" };
-
-/**
- * Calculate all fees and tax for a given booking amount.
- *
- * @param amount      - The agreed tuition amount (in the given currency)
- * @param currency    - ISO 4217 currency of the transaction (e.g. "PKR")
- * @param countryCode - ISO 3166-1 alpha-2 country code for tax lookup (e.g. "PK")
- * @param mode        - "online" | "in-person" | "both" — affects DST applicability
- */
-export async function calculateFees(
-  amount: number,
-  currency: string,
-  countryCode = "PK",
-  mode: "online" | "in-person" | "both" = "online"
-): Promise<FeeBreakdown> {
-  // 1. Fetch tax config for this country
-  const taxCfg = await TaxConfig.findOne({
-    countryCode: countryCode.toUpperCase(),
-    isActive: true,
-  }).lean() ?? DEFAULT_TAX_CONFIG;
-
-  const taxRate = taxCfg.rate / 100;
-  const taxType = (taxCfg as any).taxType ?? "none";
-  const taxApplies = mode === "in-person"
-    ? (taxCfg as any).appliesHomeTuition !== false
-    : (taxCfg as any).appliesOnlineServices !== false;
-
-  // 2. Student fee (added on top of agreed amount)
-  const studentFee = Math.round(amount * STUDENT_FEE_RATE);
-  const studentTotal = amount + studentFee;
-
-  // 3. Platform fee (deducted from tutor's received payment)
-  const platformFee = Math.round(amount * PLATFORM_FEE_RATE);
-
-  // 4. Tax (applied to platform revenue if platform is the collector)
-  const taxableBase = platformFee + studentFee;
-  const taxAmount = taxApplies && (taxCfg as any).platformCollects !== false
-    ? Math.round(taxableBase * taxRate)
-    : 0;
-
-  // 5. Tutor receives the gross amount minus the platform cut
-  const tutorNet = amount - platformFee;
-
-  // 6. Platform net = fees collected - tax remitted
-  const platformNet = studentFee + platformFee - taxAmount;
-
-  // 7. Normalise to USD for analytics
-  let amountUSD: number | undefined;
-  try {
-    amountUSD = await convertAmount(amount, currency, "USD");
-    amountUSD = Math.round(amountUSD * 100) / 100;
-  } catch { /* non-critical */ }
-
+// Applies approved FeeConfig rates. Historical bookings retain fee snapshots;
+// country TaxConfig describes regulatory classification but must never silently
+// override an explicit pricing policy or substitute for legal tax validation.
+export async function resolveMarketplaceFees(amount: number, countryCode = "PK"): Promise<MarketplaceFeeQuote> {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw Object.assign(new Error("A positive tuition amount is required."), { statusCode: 422 });
+  }
+  const code = countryCode.toUpperCase();
+  const config = await FeeConfig.findOne({ countryCode: code, isActive: true }).sort("-effectiveDate").lean()
+    || await FeeConfig.findOne({ countryCode: "GLOBAL", isActive: true }).sort("-effectiveDate").lean();
+  if (!config) {
+    // Existing production rates until an admin actively publishes a version.
+    const fallback = calculateMarketplaceFees(amount);
+    return { ...fallback, feeConfig: { ...MARKETPLACE_FEES, version: "legacy-2026-08-30", countryCode: code } };
+  }
+  const cap = config.maximumFee;
+  const charge = (rate: number) => Math.min(cap, Math.max(config.minimumFee, Math.round(amount * rate / 100)));
+  const studentFee = charge(config.studentFeePercent);
+  const tutorFee = charge(config.tutorFeePercent);
+  const tax = Math.round(tutorFee * config.taxPercent / 100);
+  const tutorNet = amount - tutorFee - tax;
+  if (tutorNet < 0) {
+    throw Object.assign(new Error("Configured tutor fee and tax exceed the agreed amount."), { statusCode: 422 });
+  }
   return {
-    grossAmount: amount,
-    currency: (currency || "PKR").toUpperCase(),
-    studentFeeRate: STUDENT_FEE_RATE * 100,
-    studentFee,
-    studentTotal,
-    platformFeeRate: PLATFORM_FEE_RATE * 100,
-    platformFee,
-    taxRate: taxCfg.rate,
-    taxAmount,
-    taxType,
-    tutorNet,
-    tutorFee: platformFee,
-    platformNet,
+    subtotal: amount, studentFee, tutorFee, tax,
+    studentTotal: amount + studentFee, tutorNet,
+    feeConfig: { version: config.version, countryCode: config.countryCode, currency: config.currency,
+      studentFeePercent: config.studentFeePercent, tutorFeePercent: config.tutorFeePercent,
+      minimumFee: config.minimumFee, maximumFee: config.maximumFee, taxPercent: config.taxPercent,
+      effectiveDate: config.effectiveDate },
+  };
+}
+
+export async function calculateFees(amount: number, currency: string, countryCode = "PK", mode: "online" | "in-person" | "both" = "online"): Promise<FeeBreakdown> {
+  const quote = await resolveMarketplaceFees(amount, countryCode);
+  const cfg = quote.feeConfig;
+  const taxCfg = await TaxConfig.findOne({ countryCode: countryCode.toUpperCase(), isActive: true }).lean();
+  let amountUSD: number | undefined;
+  try { amountUSD = Math.round(await convertAmount(amount, currency, "USD") * 100) / 100; } catch { /* analytics optional */ }
+  return {
+    grossAmount: amount, currency: currency.toUpperCase(),
+    studentFeeRate: Number(cfg.studentFeePercent || 0), studentFee: quote.studentFee, studentTotal: quote.studentTotal,
+    platformFeeRate: Number(cfg.tutorFeePercent || 0), platformFee: quote.tutorFee,
+    taxRate: Number(cfg.taxPercent || 0), taxAmount: quote.tax,
+    taxType: taxCfg?.taxType || "unclassified",
+    tutorNet: quote.tutorNet, tutorFee: quote.tutorFee,
+    platformNet: quote.studentFee + quote.tutorFee,
     amountUSD,
   };
 }
 
-/**
- * Lightweight synchronous version using hardcoded rates — for use in
- * non-async contexts (e.g. validators) where DB access is not available.
- */
+// Legacy calculations only: never use a synchronous fallback to price a
+// checkout once the database-backed admin configuration is operational.
 export function calculateFeesSync(amount: number, currency = "PKR"): FeeBreakdown {
-  const studentFee = Math.round(amount * STUDENT_FEE_RATE);
-  const studentTotal = amount + studentFee;
-  const platformFee = Math.round(amount * PLATFORM_FEE_RATE);
-  const tutorNet = amount - platformFee;
-  const platformNet = studentFee + platformFee;
-
+  const quote = calculateMarketplaceFees(amount);
   return {
-    grossAmount: amount,
-    currency: currency.toUpperCase(),
-    studentFeeRate: STUDENT_FEE_RATE * 100,
-    studentFee,
-    studentTotal,
-    platformFeeRate: PLATFORM_FEE_RATE * 100,
-    platformFee,
-    taxRate: 0,
-    taxAmount: 0,
-    taxType: "none",
-    tutorNet,
-    tutorFee: platformFee,
-    platformNet,
+    grossAmount: amount, currency: currency.toUpperCase(),
+    studentFeeRate: MARKETPLACE_FEES.studentPlatformFeePercent,
+    studentFee: quote.studentFee, studentTotal: quote.studentTotal,
+    platformFeeRate: MARKETPLACE_FEES.tutorPlatformFeePercent, platformFee: quote.tutorFee,
+    taxRate: MARKETPLACE_FEES.taxRatePercent, taxAmount: quote.tax, taxType: "unclassified",
+    tutorNet: quote.tutorNet, tutorFee: quote.tutorFee, platformNet: quote.studentFee + quote.tutorFee,
   };
 }
 

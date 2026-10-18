@@ -134,6 +134,12 @@ export const getAllRefundRequests = async (req: AuthRequest, res: Response): Pro
 
 export const updateRefundRequestStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   const { status, adminNote } = req.body;
+  // No provider-confirmed refund settlement adapter is configured yet.
+  // Approvals are decisions, not evidence that money has been refunded.
+  if (!["approved", "rejected"].includes(status)) {
+    res.status(422).json({ success: false, code: "REFUND_SETTLEMENT_UNAVAILABLE", message: "Only approval or rejection is available. Processing requires verified gateway settlement." });
+    return;
+  }
 
   const refundReq = await RefundRequest.findById(req.params.id)
     .populate<{ student: { name: string; email: string }; booking: { studentTotal: number; amount: number } }>(
@@ -147,18 +153,16 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
     return;
   }
 
-  refundReq.status = status as IRefundRequest["status"];
-  refundReq.adminNote = adminNote || "";
-  if (status === "processed" || status === "approved") {
-    refundReq.processedAt = new Date();
+  if (refundReq.status !== "pending") {
+    res.status(409).json({ success: false, code: "REFUND_ALREADY_REVIEWED", message: "The refund decision has already been recorded." });
+    return;
   }
+  refundReq.status = status as IRefundRequest["status"];
+  refundReq.adminNote = typeof adminNote === "string" ? adminNote.slice(0, 2000) : "";
+  // processedAt can only be written after a verified settlement callback.
   await refundReq.save();
 
   const student = refundReq.student as unknown as { name: string; email: string };
-
-  if (status === "approved") {
-    await Booking.findByIdAndUpdate(refundReq.booking, { paymentStatus: "refunded" });
-  }
 
   if (status === "approved" || status === "rejected") {
     const refundAmount = (refundReq.booking as unknown as { studentTotal: number; amount: number }).studentTotal || refundReq.amount;
@@ -175,7 +179,7 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
           : `After review, we were unable to approve your refund request at this time.`,
       mainMessage:
         status === "approved"
-          ? `The refund will be processed to your original payment method within 5–7 business days.`
+          ? `Your refund request has been approved for processing, but funds have not yet been returned. We will confirm separately after the payment provider verifies settlement.`
           : adminNote || `If you have questions, please contact our support team.`,
       transaction: {
         referenceId: `REF-${refundReq._id}`,
@@ -186,7 +190,7 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
       cta: { label: "Contact Support", url: "https://tutorera.ac.pk/contact" },
       additionalInformation:
         status === "approved"
-          ? "The refund will appear in your account within 5–7 business days depending on your bank."
+          ? "Approval does not confirm transfer. We will contact you once a provider-verified refund has settled."
           : "You may contact hello@mentisera.pk for further clarification.",
       includeSecurityNotice: true,
       deliverability: "This transactional notification was sent because you submitted a refund request on TUTORERA.",

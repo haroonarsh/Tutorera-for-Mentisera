@@ -12,6 +12,7 @@ import sendEmail from "../utils/sendEmail";
 import { paymentConfirmedEmail, paymentFailedEmail, paymentFailedNotifyTutorEmail } from "../utils/emailTemplates";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
+import { isValidObjectId } from "mongoose";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
@@ -49,8 +50,10 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
 
   try {
     const checkoutUrl = await paymentProvider.createCheckout({
-      amount: booking.amount,
+      amount: booking.studentTotal,
       currency: booking.currency || "",
+      feeSnapshot: { subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
+        tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet, feeConfig: booking.feeConfig },
       customerMobileNo: payer?.phone || "03000000000",
       customerEmail: payer?.email || student.email,
       basketId,
@@ -103,11 +106,38 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
   });
 
   try {
+    // Match every settlement to an initiated checkout: an authenticated webhook
+    // can still contain the wrong amount, currency or basket ID.
     if (event.eventType === "transaction.completed") {
+      const quote = await PaymentLedger.findOne({ providerTransactionId: event.merchantTransactionId, eventType: "checkout.created" }).sort("-createdAt");
+      const paidAmount = Number(event.amount);
+      if (!quote || !Number.isFinite(paidAmount) || paidAmount <= 0 || Math.abs(quote.grossAmount - paidAmount) > 0.01 || quote.currency.toUpperCase() !== String(event.currency || "").toUpperCase()) {
+        logger.error({ basketId: event.merchantTransactionId, amount: event.amount, currency: event.currency }, "Payment webhook failed checkout reconciliation");
+        res.status(409).json({ success: false, code: "PAYMENT_RECONCILIATION_FAILED" });
+        return;
+      }
       if (event.merchantTransactionId.startsWith("BID-")) {
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const io = req.app.get("io");
         await finalizeBidAcceptance(bidId, io);
+
+        // A late payment can arrive after the 30-minute offer hold expired.
+        // Never send a booking-confirmed receipt when booking creation failed;
+        // preserve the money movement as an exception for finance reconciliation.
+        const completedBooking = await Booking.findOne({ bid: bidId, paymentStatus: "confirmed" });
+        if (!completedBooking) {
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, bidId,
+            metadata: { settlementException: "Gateway settled but booking could not be finalized" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ bidId, providerEventId: event.eventId }, "Payment settled without a completed booking — manual reconciliation required");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          return;
+        }
 
         const bid = await Bid.findById(bidId);
         if (bid) {
@@ -281,6 +311,31 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
     logger.error({ requestId: (req as any).id, err }, "Error processing payment gateway webhook");
     res.status(500).json({ success: false });
   }
+};
+
+// A gateway-return URL is NOT evidence of payment. This endpoint reads only
+// server-owned booking state, scoped to the authenticated student or parent.
+export const getVerifiedPaymentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { kind, id } = req.params;
+  if (!isValidObjectId(id) || !["booking", "bid"].includes(String(kind))) {
+    res.status(400).json({ success: false, message: "Invalid payment reference." });
+    return;
+  }
+  const userId = req.user?._id;
+  let booking;
+  if (kind === "booking") {
+    booking = await Booking.findOne({ _id: id, $or: [{ student: userId }, { parent: userId }] });
+    if (!booking) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+  } else {
+    const bid = await Bid.findById(id).select("request");
+    const request = bid ? await RequestModel.findOne({ _id: bid.request, student: userId }).select("_id") : null;
+    if (!request) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+    booking = await Booking.findOne({ bid: id, student: userId });
+    if (!booking) { res.json({ success: true, verified: false, paymentStatus: "pending", bookingStatus: "pending" }); return; }
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, verified: booking.paymentStatus === "confirmed", paymentStatus: booking.paymentStatus,
+    bookingStatus: booking.status, bookingId: booking._id, currency: booking.currency, amount: booking.studentTotal });
 };
 
 // @desc    Get student's transaction history

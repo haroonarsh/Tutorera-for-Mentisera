@@ -518,6 +518,12 @@ export const updatePaymentStatus = async (
 ): Promise<void> => {
   const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
 
+  // A manual admin status change cannot substitute for money returned by a gateway.
+  if (["refunded", "partially_refunded"].includes(paymentStatus)) {
+    res.status(409).json({ success: false, code: "PROVIDER_REFUND_REQUIRED", message: "Refund settlement must be confirmed by the payment provider before changing booking payment status." });
+    return;
+  }
+
   const requiredPermission = paymentStatus !== undefined ? "payment.manage" : "payout.process";
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
     res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
@@ -1129,10 +1135,14 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   ]);
 
   // ── Derived calculations ──────────────────────────────────────
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
-  const platformFeeTotal = Math.round(totalRevenue * (PLATFORM_FEE_PERCENT / 100));
-  const gstTotal = Math.round(platformFeeTotal * (GST_PERCENT / 100));
-  const tutorPayoutTotal = totalRevenue - platformFeeTotal;
+  // Financial figures must come from confirmed bookings and their immutable fee snapshots.
+  // Pending/failed/cancelled payment attempts are not revenue. Admin fee changes
+  // must not silently rewrite the amounts charged in historical bookings.
+  const paidBookings = bookings.filter(b => b.paymentStatus === "confirmed");
+  const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.subtotal || 0), 0);
+  const platformFeeTotal = paidBookings.reduce((sum, b) => sum + (b.studentFee || 0) + (b.tutorFee || 0), 0);
+  const gstTotal = paidBookings.reduce((sum, b) => sum + (b.tax || 0), 0);
+  const tutorPayoutTotal = paidBookings.reduce((sum, b) => sum + (b.tutorNet || 0), 0);
 
   const bookingsByStatus = {
     upcoming:  bookings.filter(b => b.status === "upcoming").length,
@@ -1158,7 +1168,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       tutorMap[tid] = { name: tutor.name, email: tutor.email, bookings: 0, earnings: 0, avgRating: 0, totalReviews: 0 };
     }
     tutorMap[tid].bookings++;
-    tutorMap[tid].earnings += b.amount || 0;
+    tutorMap[tid].earnings += b.paymentStatus === "confirmed" ? (b.tutorNet || 0) : 0;
   }
 
   // Add ratings from TutorProfile
@@ -1274,9 +1284,9 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
     styleSection(ws1.addRow(["💰 REVENUE SUMMARY", ""]));
     styleHeader(ws1.addRow(["Metric", "Amount (PKR)"]));
     [
-      ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
-      ["Platform Fee (20%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
-      ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
+      ["Confirmed Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
+      ["Platform Fees (confirmed payments)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["Tax in Booking Snapshots", `Rs. ${gstTotal.toLocaleString()}`],
       ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
     ].forEach(([k, v]) => ws1.addRow([k, v]));
 
@@ -1450,9 +1460,9 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
     const rWidths = [350, 145];
     drawTableRow(["Metric", "Amount (PKR)"], rWidths, true);
     [
-      ["Total Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
-      ["Platform Fee (20%)", `Rs. ${platformFeeTotal.toLocaleString()}`],
-      ["GST on Platform Fee (15%)", `Rs. ${gstTotal.toLocaleString()}`],
+      ["Confirmed Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
+      ["Platform Fees (confirmed payments)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["Tax in Booking Snapshots", `Rs. ${gstTotal.toLocaleString()}`],
       ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
     ].forEach(([k, v]) => drawTableRow([k, v], rWidths));
 

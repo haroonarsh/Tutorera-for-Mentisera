@@ -6,7 +6,7 @@ import Request from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import TutorProfile from "../models/TutorProfile.model";
-import { calculateMarketplaceFees } from "../config/constants";
+import { resolveMarketplaceFees } from "../services/pricing.service";
 import { containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
@@ -14,7 +14,7 @@ import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
 import { escapeHtml } from "../utils/escapeHtml";
 import { calculateMatchScore, sortMarketplaceOffers } from "../utils/marketplaceRules";
-import { createTransaction } from "../utils/rapidGateway";
+import { paymentProvider } from "../services/paymentProvider.service";
 import { releaseExpiredPaymentHold } from "./request.controller";
 import { MatchingService } from "../services/matching.service";
 import MatchLog from "../models/MatchLog.model";
@@ -155,6 +155,8 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const feeQuote = await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
+
     // Atomic guard — same purpose as before: only one accept attempt can
     // win this transition, so two concurrent accept clicks can't both
     // proceed. We reserve the AGREED RATE here too, exactly like before,
@@ -170,14 +172,20 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
     const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
     offer.status = "payment_pending";
+    offer.feeQuote = feeQuote;
     offer.paymentPendingExpiresAt = paymentPendingExpiresAt;
     await offer.save();
 
     try {
       const student = await User.findById(request.student).select("name email phone");
-      const checkoutUrl = await createTransaction({
-        amount: offer.amount,
-        customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
+      const checkoutUrl = await paymentProvider.createCheckout({
+        amount: feeQuote.studentTotal,
+        currency: offer.currency || request.currency || "PKR",
+        feeSnapshot: feeQuote,
+        bidId: offer._id.toString(),
+        studentId: request.student.toString(),
+        tutorId: offer.tutor.toString(),
+        customerMobileNo: student?.phone || "03000000000",  // no hardcoded fallback — let gateway handle gracefully
         customerEmail: student?.email || "",
         // Same "BID-" prefix the webhook handler already branches on —
         // Offer and Bid are the same collection, so this is fully
@@ -239,6 +247,10 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  // Reuse the originally quoted rates on retry (never recalculate a new fee).
+  const feeQuote = offer.feeQuote || await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
+  offer.feeQuote = feeQuote;
+
   // Extend the hold from this retry attempt, so the student gets a full
   // fresh window instead of racing whatever was left of the original one.
   offer.paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
@@ -246,8 +258,13 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
   try {
     const student = await User.findById(request.student).select("name email phone");
-    const checkoutUrl = await createTransaction({
-      amount: offer.amount,
+    const checkoutUrl = await paymentProvider.createCheckout({
+      amount: feeQuote.studentTotal,
+      currency: offer.currency || request.currency || "PKR",
+      feeSnapshot: feeQuote,
+      bidId: offer._id.toString(),
+      studentId: request.student.toString(),
+      tutorId: offer.tutor.toString(),
       customerMobileNo: student?.phone || "03000000000",
       customerEmail: student?.email || "",
       basketId: `BID-${offer._id.toString()}`,
