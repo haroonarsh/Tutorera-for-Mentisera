@@ -32,6 +32,8 @@ interface RegisterData {
   role: "student" | "tutor" | "parent";
   phone?: string;
   city?: string;
+  countryCode?: string;
+  preferredLanguage?: string;
 }
 
 interface AuthContextType {
@@ -39,7 +41,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
-  loginWithGoogle: (idToken: string, role?: "student" | "tutor" | "parent") => Promise<GoogleAuthResult>;
+  loginWithGoogle: (idToken: string, role?: "student" | "tutor" | "parent", countryCode?: string, preferredLanguage?: string) => Promise<GoogleAuthResult>;
   selectRole: (role: "student" | "tutor" | "parent") => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
@@ -84,9 +86,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginWithGoogle = async (
     idToken: string,
-    role?: "student" | "tutor" | "parent"
+    role?: "student" | "tutor" | "parent",
+    countryCode?: string,
+    preferredLanguage?: string
   ): Promise<GoogleAuthResult> => {
-    const res = await api.post("/auth/google", { idToken, role });
+    const res = await api.post("/auth/google", { idToken, role, countryCode, preferredLanguage });
     localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
     return { user: res.data.user, needsRole: res.data.needsRole };
