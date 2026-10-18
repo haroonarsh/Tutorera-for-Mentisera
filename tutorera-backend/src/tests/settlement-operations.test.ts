@@ -37,10 +37,10 @@ describe("Phase 3 finance settlement and payer-accounting controls", () => {
     const booking = await completedBooking(student.user, tutor.user, parentA.user);
     await PaymentLedger.create([
       { booking: booking._id, student: student.user._id, payer: parentA.user._id, tutor: tutor.user._id,
-        provider: "rapid_gateway", providerTransactionId: "parent-checkout", eventType: "payment.succeeded",
+        provider: "rapid_gateway", providerEventId: "parent-a-event", providerTransactionId: "parent-checkout", eventType: "payment.succeeded",
         status: "succeeded", grossAmount: 1200, currency: "PKR", studentPayment: 1200 },
       { booking: booking._id, student: student.user._id, payer: parentB.user._id, tutor: tutor.user._id,
-        provider: "rapid_gateway", providerTransactionId: "different-parent-checkout", eventType: "payment.succeeded",
+        provider: "rapid_gateway", providerEventId: "parent-b-event", providerTransactionId: "different-parent-checkout", eventType: "payment.succeeded",
         status: "succeeded", grossAmount: 1200, currency: "PKR", studentPayment: 1200 },
     ]);
     const a = await parentA.agent.get("/api/v1/payments/history").expect(200);
