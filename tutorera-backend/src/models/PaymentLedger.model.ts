@@ -4,6 +4,7 @@ export interface IPaymentLedger extends Document {
   booking?: Types.ObjectId;
   bid?: Types.ObjectId;
   student?: Types.ObjectId;
+  payer?: Types.ObjectId;
   tutor?: Types.ObjectId;
   provider: string;
   providerEventId?: string;
@@ -31,6 +32,7 @@ const paymentLedgerSchema = new Schema<IPaymentLedger>(
     booking: { type: Schema.Types.ObjectId, ref: "Booking", index: true },
     bid: { type: Schema.Types.ObjectId, ref: "Bid", index: true },
     student: { type: Schema.Types.ObjectId, ref: "User", index: true },
+    payer: { type: Schema.Types.ObjectId, ref: "User", index: true },
     tutor: { type: Schema.Types.ObjectId, ref: "User", index: true },
     provider: { type: String, required: true, trim: true, default: "rapid_gateway", index: true },
     providerEventId: { type: String, trim: true, index: true },
