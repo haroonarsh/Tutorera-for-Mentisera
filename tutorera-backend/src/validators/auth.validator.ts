@@ -11,7 +11,7 @@ const preferredLanguageCode = z.string().trim().toLowerCase()
 // ISO calendar dates are self-declared and normalized; they are not evidence
 // of identity. Requiring them before student account creation prevents an
 // omitted date of birth from bypassing the guardian-consent gate.
-const birthDateSchema = z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Date of birth must be YYYY-MM-DD");
+const birthDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be YYYY-MM-DD");
 const guardianEmailSchema = z.string().trim().toLowerCase().email("A valid guardian email is required");
 
 function ageAtSignup(dateText: string): number {
