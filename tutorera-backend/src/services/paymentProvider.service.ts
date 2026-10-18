@@ -134,9 +134,13 @@ export async function recordPaymentLedger(args: {
   if (!fees) fees = calculateMarketplaceFees(args.amount);
   const platformNet = fees.studentFee + fees.tutorFee;
   const settlementStatus: "expected" | "unsettled" = args.status === "succeeded" ? "expected" : "unsettled";
+  // Legacy compound unique index includes the always-present provider field;
+  // missing providerEventId was indexed as null and blocked second checkouts.
+  // Use deterministic internal IDs for checkout records, preserving idempotency.
+  const eventId = args.providerEventId || (args.eventType === "checkout.created" ? `checkout:${args.providerTransactionId}` : undefined);
   const doc = {
     provider: paymentProvider.name,
-    providerEventId: args.providerEventId,
+    providerEventId: eventId,
     providerTransactionId: args.providerTransactionId,
     eventType: args.eventType,
     status: args.status,
@@ -159,9 +163,9 @@ export async function recordPaymentLedger(args: {
     metadata: args.metadata || {},
   };
 
-  if (args.providerEventId) {
+  if (eventId) {
     return PaymentLedger.findOneAndUpdate(
-      { provider: paymentProvider.name, providerEventId: args.providerEventId },
+      { provider: paymentProvider.name, providerEventId: eventId },
       { $setOnInsert: doc },
       { upsert: true, new: true }
     );
