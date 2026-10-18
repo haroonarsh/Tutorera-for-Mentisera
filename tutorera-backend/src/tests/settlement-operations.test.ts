@@ -4,6 +4,7 @@ import User from "../models/User.model";
 import Booking from "../models/Booking.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import RefundRequest from "../models/RefundRequest.model";
+import ParentProfile from "../models/ParentProfile.model";
 import { withDistributedJobLease } from "../services/jobLease.service";
 
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
@@ -49,6 +50,19 @@ describe("Phase 3 finance settlement and payer-accounting controls", () => {
     expect(a.body.total).toBe(1);
     expect(b.body.total).toBe(1);
     expect(st.body.total).toBe(2);
+  });
+
+  it("uses the consent-confirmed parent/child link for payment status instead of a missing booking.parent field", async () => {
+    const student = await createUser("student");
+    const tutor = await createUser("tutor");
+    const guardian = await createUser("parent");
+    const booking = await completedBooking(student.user, tutor.user);
+    await guardian.agent.get(`/api/v1/payments/status/booking/${booking._id}`).expect(404);
+    await ParentProfile.create({ user: guardian.user._id, children: [{ studentUser: student.user._id, name: student.user.name, level: "O-Level", subjects: ["Mathematics"], relationship: "child" }] });
+    const linked = await guardian.agent.get(`/api/v1/payments/status/booking/${booking._id}`).expect(200);
+    expect(linked.body.verified).toBe(true);
+    await ParentProfile.updateOne({ user: guardian.user._id }, { $set: { children: [] } });
+    await guardian.agent.get(`/api/v1/payments/status/booking/${booking._id}`).expect(404);
   });
 
   it("records a tutor payout request without falsely marking it processing or paid", async () => {
