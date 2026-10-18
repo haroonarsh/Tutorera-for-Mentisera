@@ -194,6 +194,9 @@ export const linkParentGuardian = async (req: AuthRequest, res: Response): Promi
 // @route   DELETE /api/students/guardians/:parentProfileId
 // @access  Private (student)
 export const unlinkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.isMinor) {
+    res.status(403).json({ success: false, code: "GUARDIAN_UNLINK_RESTRICTED", message: "A verified guardian or support must manage this link." }); return;
+  }
   const { parentProfileId } = req.params;
 
   const ParentProfile = (await import("../models/ParentProfile.model")).default;
