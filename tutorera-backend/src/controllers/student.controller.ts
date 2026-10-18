@@ -133,6 +133,13 @@ export const getFavouriteIds = async (req: AuthRequest, res: Response): Promise<
 // @route   POST /api/students/guardians
 // @access  Private (student)
 export const linkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  // Underage users cannot link an arbitrary parent account using a known
+  // parent ID/email. Their supervising adult must confirm through the
+  // authenticated parent mailbox/consent workflow.
+  if (req.user?.isMinor) {
+    res.status(403).json({ success: false, code: "MINOR_GUARDIAN_LINK_RESTRICTED",
+      message: "A verified guardian must manage this relationship through guardian consent." }); return;
+  }
   const { parentProfileId, parentUserId, name, email } = req.body;
 
   if (!parentProfileId && !parentUserId && !email) {
