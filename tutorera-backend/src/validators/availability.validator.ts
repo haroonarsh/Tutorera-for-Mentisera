@@ -3,8 +3,8 @@ import { Request, Response, NextFunction } from "express";
 
 const weeklySlotSchema = z.object({
   day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]),
-  startTime: z.string().regex(/^([01]\\d|2[0-3]):([0-5]\\d)$/, "Start time must be in 24-hour HH:mm format"),
-  endTime: z.string().regex(/^([01]\\d|2[0-3]):([0-5]\\d)$/, "End time must be in 24-hour HH:mm format"),
+  startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Start time must be in 24-hour HH:mm format"),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "End time must be in 24-hour HH:mm format"),
 }).refine((slot) => slot.endTime > slot.startTime, { path: ["endTime"], message: "End time must be after start time." });
 
 export const saveAvailabilitySchema = z.object({
