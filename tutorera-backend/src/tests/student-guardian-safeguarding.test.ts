@@ -224,13 +224,21 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
     const { studentEmail, guardianEmail } = await signupMinor();
     const student = await User.findOne({ email: studentEmail });
     const { agent } = await parentAgent(guardianEmail);
+    // The in-memory express-rate-limit store is shared by previous
+    // supertest requests in this suite. Give this scenario its own
+    // trusted-proxy address so it measures the *per-consent* five-code
+    // ceiling rather than the unrelated per-IP throttle.
+    const testAddress = "198.18.0.42";
+    const correct = getCode(guardianEmail);
+    const wrong = correct === "00000000" ? "00000001" : "00000000";
     for (let n = 0; n < 5; n++) {
       await agent.post("/api/v1/auth/guardian-consent/verify")
-        .send({ studentId: student!._id.toString(), code: "00000000",
+        .set("X-Forwarded-For", testAddress)
+        .send({ studentId: student!._id.toString(), code: wrong,
           adultAttestation: true, guardianDateOfBirth: "1980-04-10" }).expect(400);
     }
-    const correct = getCode(guardianEmail);
     const result = await agent.post("/api/v1/auth/guardian-consent/verify")
+      .set("X-Forwarded-For", testAddress)
       .send({ studentId: student!._id.toString(), code: correct,
         adultAttestation: true, guardianDateOfBirth: "1980-04-10" }).expect(409);
     expect(result.body.code).toBe("CONSENT_EXPIRED");
