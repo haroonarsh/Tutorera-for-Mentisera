@@ -347,6 +347,15 @@ export const updateParentSettings = async (req: AuthRequest, res: Response): Pro
     return;
   }
 
+  if (approvalRequiredForBookings === false) {
+    const current = await ParentProfile.findOne({ user: req.user._id }).select("children").lean();
+    const children = current?.children.map(child => child.studentUser) || [];
+    if (children.length && await User.exists({ _id: { $in: children }, role: "student", isMinor: true })) {
+      res.status(409).json({ success: false, code: "MINOR_BOOKING_APPROVAL_REQUIRED",
+        message: "Per-booking guardian approval cannot be disabled while supervising an underage student." });
+      return;
+    }
+  }
   const profile = await ParentProfile.findOneAndUpdate(
     { user: req.user._id },
     {
@@ -379,6 +388,15 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
     res.status(400).json({ success: false, code: "INVALID_PARENT_SETTINGS" }); return;
   }
 
+  if (approvalRequiredForBookings === false) {
+    const current = await ParentProfile.findOne({ user: req.user._id }).select("children").lean();
+    const children = current?.children.map(child => child.studentUser) || [];
+    if (children.length && await User.exists({ _id: { $in: children }, role: "student", isMinor: true })) {
+      res.status(409).json({ success: false, code: "MINOR_BOOKING_APPROVAL_REQUIRED",
+        message: "Per-booking guardian approval cannot be disabled while supervising an underage student." });
+      return;
+    }
+  }
   await User.findByIdAndUpdate(req.user._id, {
     name: name || req.user.name,
     phone: phone || req.user.phone,
