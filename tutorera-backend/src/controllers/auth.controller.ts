@@ -390,6 +390,11 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     res.status(422).json({ success: false, message: "Registration for this account type is not available in the selected market." });
     return;
   }
+  if (role === "student" && ageOnDate(dateOfBirth) < 18 &&
+      guardianEmail?.toLowerCase() === user.email.toLowerCase()) {
+    res.status(400).json({ success: false, code: "DISTINCT_GUARDIAN_EMAIL_REQUIRED",
+      message: "A student cannot designate their own account email as the guardian." }); return;
+  }
   user.role = role;
   if (role === "student") {
     const studentAge = ageOnDate(dateOfBirth);
