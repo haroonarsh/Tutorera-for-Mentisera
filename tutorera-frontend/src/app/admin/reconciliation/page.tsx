@@ -9,8 +9,11 @@ interface ReconciliationSummary {
   totalGMV: number;
   totalTutorNet: number;
   totalPlatformGross: number;
-  totalEstimatedGatewayFees: number;
-  netPlatformSettlement: number;
+  totalEstimatedGatewayFees: number | null;
+  netPlatformSettlement: number | null;
+  unreconciledPaymentEvents?: number;
+  payoutsAwaitingVerification?: number;
+  approvedRefundsAwaitingSettlement?: number;
   ledger?: Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>;
 }
 
@@ -40,8 +43,8 @@ interface BookingReconciledItem {
   subtotal: number;
   studentFee: number;
   tutorFee: number;
-  estimatedGatewayFee: number;
-  expectedSettlement: number;
+  estimatedGatewayFee: number | null;
+  expectedSettlement: number | null;
   paymentStatus: string;
   payoutStatus: string;
   settlementDiscrepancy: boolean;
@@ -88,7 +91,7 @@ export default function ReconciliationPage() {
             Settlement & Financial Reconciliation
           </h1>
           <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
-            Audit Gross Marketplace Value, platform commission, gateway deductions, and expected settlements.
+            Review confirmed payments, booked fee snapshots and financial exceptions. Actual gateway fee and settlement statements are not imported yet.
           </p>
         </div>
 
@@ -156,15 +159,15 @@ export default function ReconciliationPage() {
         <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
           <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase" }}>Est. Gateway Fees</span>
           <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#d97706", marginTop: "0.2rem" }}>
-            PKR {(summary?.totalEstimatedGatewayFees ?? 0).toLocaleString()}
+            {summary?.totalEstimatedGatewayFees == null ? "Not reported" : `PKR ${summary.totalEstimatedGatewayFees.toLocaleString()}`}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>2.9% + PKR 30 Processing</span>
+          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Provider fee unverified — do not use estimates as settlements</span>
         </div>
 
         <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #a7f3d0", background: "#ecfdf5" }}>
           <span style={{ fontSize: "0.72rem", color: "#065f46", fontWeight: 800, textTransform: "uppercase" }}>Net Platform Settlement</span>
           <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#059669", marginTop: "0.2rem" }}>
-            PKR {(summary?.netPlatformSettlement ?? 0).toLocaleString()}
+            {summary?.netPlatformSettlement == null ? "Awaiting statement" : `PKR ${summary.netPlatformSettlement.toLocaleString()}`}
           </div>
           <span style={{ fontSize: "0.72rem", color: "#047857", fontWeight: 600 }}>Net Take Home Revenue</span>
         </div>
@@ -241,10 +244,10 @@ export default function ReconciliationPage() {
                     PKR {((b.studentFee || 0) + (b.tutorFee || 0)).toLocaleString()}
                   </td>
                   <td style={{ padding: "0.9rem 1rem", color: "#d97706" }}>
-                    PKR {b.estimatedGatewayFee.toLocaleString()}
+                    {b.estimatedGatewayFee == null ? "Unverified" : `PKR ${b.estimatedGatewayFee.toLocaleString()}`}
                   </td>
                   <td style={{ padding: "0.9rem 1rem", fontWeight: 800, color: "#0f172a" }}>
-                    PKR {b.expectedSettlement.toLocaleString()}
+                    {b.expectedSettlement == null ? "Unverified" : `PKR ${b.expectedSettlement.toLocaleString()}`}
                   </td>
                   <td style={{ padding: "0.9rem 1.2rem" }}>
                     <span
