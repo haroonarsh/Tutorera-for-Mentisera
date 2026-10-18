@@ -1,5 +1,6 @@
 "use client";
 import ConsentLinkChildModal from "@/components/Parent/ConsentLinkChildModal";
+import GuardianConsentInbox from "@/components/Parent/GuardianConsentInbox";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
 import { formatPKR } from "@/lib/site";
@@ -207,6 +208,8 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
           Manage your children&apos;s tutoring accounts, track sessions, and oversee bookings.
         </p>
       </div>
+
+      <GuardianConsentInbox onApproved={fetchProfile} />
 
       {/* Parent ID share card */}
       <div style={{ backgroundColor: "#EEF5FF", border: "1px solid #bfdbfe", borderRadius: "0.875rem", padding: "1.25rem 1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
