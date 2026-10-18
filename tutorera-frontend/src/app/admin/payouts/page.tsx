@@ -66,27 +66,55 @@ export default function PayoutsPage() {
     fetchPayouts(filter);
   }, [filter]);
 
-  const handleMarkPaid = async (bookingId: string) => {
-    if (!confirm("Mark this payout as paid? This cannot be undone.")) return;
+  // This workflow never moves money. Finance first approves a completed
+  // session; records details of a transfer made OUTSIDE TUTORERA; a different
+  // reviewer independently reconciles the statement before 'paid'.
+  const handlePayoutAction = async (booking: Booking) => {
+    const bookingId = booking._id;
+    const state = booking.payoutStatus;
     setActionLoading(bookingId);
     try {
-      await api.patch(`/admin/bookings/${bookingId}/payment`, {
-        payoutStatus: "paid",
-        payoutNote: "Paid via NayaPay by admin",
-      });
-      // Update local state immediately
-      setBookings(prev =>
-        prev.map(b => b._id === bookingId ? { ...b, payoutStatus: "paid", payoutNote: "Paid via NayaPay by admin" } : b)
-      );
-      // Refresh stats
-      fetchPayouts(filter);
-      showSuccess("Payout marked as paid.");
-    } catch {
-      showError("Failed to update payout status.");
+      if (state === "pending" || state === "failed" || state === "held") {
+        if (!confirm("Approve this completed, fully paid booking for external transfer? No money will be moved by TUTORERA.")) return;
+        await api.patch(`/admin/bookings/${bookingId}/payment`, {
+          payoutStatus: "approved", payoutNote: "Finance approved external payout after eligibility review",
+        });
+        showSuccess("Payout approved; no funds transferred.");
+      } else if (state === "approved") {
+        const method = window.prompt("External transfer method (e.g. bank transfer):");
+        if (!method) return;
+        const reference = window.prompt("External bank/wallet transaction reference (at least 8 characters):");
+        if (!reference) return;
+        const evidence = window.prompt("Receipt or statement reference (at least 8 characters):");
+        if (!evidence) return;
+        await api.patch(`/admin/bookings/${bookingId}/payment`, {
+          payoutStatus: "processing", payoutNote: "External transfer recorded; independent verification still pending",
+          payoutSettlementMethod: method, payoutSettlementReference: reference,
+          payoutEvidenceReference: evidence,
+        });
+        showSuccess("Transfer evidence recorded. A different finance reviewer must reconcile it.");
+      } else if (state === "processing") {
+        const reference = window.prompt("Re-enter the recorded external transfer reference:");
+        if (!reference) return;
+        const evidence = window.prompt("Independent bank statement or settlement evidence reference:");
+        if (!evidence) return;
+        const note = window.prompt("Describe the independent verification (at least 12 characters):");
+        if (!note) return;
+        await api.post(`/admin/bookings/${bookingId}/payout/verify`, {
+          settlementReference: reference, verificationEvidence: evidence, note,
+        });
+        showSuccess("External payout independently verified and recorded.");
+      } else return;
+      await fetchPayouts(filter);
+    } catch (err) {
+      showError(err, "Payout action failed. The transfer has not been marked paid.");
     } finally {
       setActionLoading(null);
     }
   };
+
+  const actionLabel = (status: string) => status === "approved" ? "Record transfer evidence"
+    : status === "processing" ? "Verify external transfer" : status === "pending" || status === "failed" || status === "held" ? "Approve payout" : "";
 
   const filterTabs: { key: FilterStatus; label: string }[] = [
     { key: "pending", label: `Pending (${stats?.pendingCount ?? 0})` },
@@ -101,7 +129,7 @@ export default function PayoutsPage() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Payouts</h1>
         <p style={{ color: C.gray500, fontSize: '0.875rem' }}>
-          Manage tutor payouts for confirmed bookings. Mark payouts as paid after transferring via NayaPay.
+          External payouts require finance approval, transaction evidence and independent settlement verification. TUTORERA does not initiate transfers.
         </p>
       </div>
 
@@ -265,7 +293,7 @@ export default function PayoutsPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => handleMarkPaid(booking._id)}
+                    onClick={() => handlePayoutAction(booking)}
                     disabled={actionLoading === booking._id}
                     style={{
                       padding: '0.45rem 0.875rem', borderRadius: '0.4rem',
@@ -276,7 +304,7 @@ export default function PayoutsPage() {
                       border: '1px solid #bbf7d0',
                       whiteSpace: 'nowrap',
                     }}>
-                    {actionLoading === booking._id ? 'Saving...' : '✓ Mark as Paid'}
+                    {actionLoading === booking._id ? 'Saving...' : actionLabel(booking.payoutStatus)}
                   </button>
                 )}
               </div>
@@ -307,22 +335,22 @@ export default function PayoutsPage() {
                   <div>
                     <p style={{ fontSize: '0.75rem', color: C.gray500, margin: 0 }}>Student: {booking.student?.name}</p>
                     <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#16a34a', margin: '0.25rem 0 0' }}>
-                      Payout: Rs. {(booking.tutorPayout || 0).toLocaleString()}
+                      Payout: {booking.currency || "PKR"} {(booking.tutorPayout || 0).toLocaleString()}
                       <span style={{ fontSize: '0.7rem', color: C.gray500, fontWeight: '500' }}>
-                        {" "}/ Rs. {(booking.amount || 0).toLocaleString()} total
+                        {" "}/ {booking.currency || "PKR"} {(booking.amount || 0).toLocaleString()} total
                       </span>
                     </p>
                   </div>
                   {booking.payoutStatus !== "paid" && (
                     <button
-                      onClick={() => handleMarkPaid(booking._id)}
+                      onClick={() => handlePayoutAction(booking)}
                       disabled={actionLoading === booking._id}
                       style={{
                         padding: '0.45rem 0.875rem', border: '1px solid #bbf7d0', borderRadius: '0.4rem',
                         backgroundColor: '#f0fdf4', color: '#16a34a',
                         fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer',
                       }}>
-                      {actionLoading === booking._id ? 'Saving...' : '✓ Mark as Paid'}
+                      {actionLoading === booking._id ? 'Saving...' : actionLabel(booking.payoutStatus)}
                     </button>
                   )}
                   {booking.payoutStatus === "paid" && booking.tutor?._id && (
