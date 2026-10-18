@@ -202,6 +202,41 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
     expect(getCode(guardian)).toMatch(/^\d{8}$/);
   });
 
+  it("does not allow a new Google student to omit age; blocks unselected role access", async () => {
+    const newEmail = email("google-undated");
+    const noAge = await request(app).post("/api/v1/auth/google")
+      .send({ idToken: newEmail, role: "student", countryCode: "PK" }).expect(400);
+    expect(noAge.body.code).toBe("STUDENT_AGE_DETAILS_REQUIRED");
+    expect(await User.findOne({ email: newEmail })).toBeNull();
+
+    const pendingEmail = email("pending-protected");
+    const pending = await request(app).post("/api/v1/auth/google")
+      .send({ idToken: pendingEmail, countryCode: "PK" }).expect(201);
+    const restricted = await request(app).get("/api/v1/payments/history")
+      .set("Authorization", `Bearer ${pending.body.token}`).expect(403);
+    expect(restricted.body.code).toBe("ROLE_SELECTION_REQUIRED");
+    await request(app).patch("/api/v1/auth/select-role")
+      .set("Authorization", `Bearer ${pending.body.token}`)
+      .send({ role: "student", ...underage, guardianEmail: pendingEmail }).expect(400);
+  });
+
+  it("locks guardian consent after five wrong codes and requires a fresh guarded request", async () => {
+    const { studentEmail, guardianEmail } = await signupMinor();
+    const student = await User.findOne({ email: studentEmail });
+    const { agent } = await parentAgent(guardianEmail);
+    for (let n = 0; n < 5; n++) {
+      await agent.post("/api/v1/auth/guardian-consent/verify")
+        .send({ studentId: student!._id.toString(), code: "00000000",
+          adultAttestation: true, guardianDateOfBirth: "1980-04-10" }).expect(400);
+    }
+    const correct = getCode(guardianEmail);
+    const result = await agent.post("/api/v1/auth/guardian-consent/verify")
+      .send({ studentId: student!._id.toString(), code: correct,
+        adultAttestation: true, guardianDateOfBirth: "1980-04-10" }).expect(409);
+    expect(result.body.code).toBe("CONSENT_EXPIRED");
+    expect((await User.findById(student!._id))?.parentConsentVerified).toBe(false);
+  });
+
   it("allows a declared adult student to complete local registration without a guardian", async () => {
     const adultEmail = email("adult");
     const result = await request(app).post("/api/v1/auth/register").send({
