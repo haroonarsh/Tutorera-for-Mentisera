@@ -54,13 +54,18 @@ export default function ReconciliationPage() {
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
   const [bookings, setBookings] = useState<BookingReconciledItem[]>([]);
   const [ledger, setLedger] = useState<LedgerItem[]>([]);
+  const [exceptions, setExceptions] = useState<LedgerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/finance/reconciliation${filter !== "all" ? `?status=${filter}` : ""}`);
+      const [res, cases] = await Promise.all([
+        api.get(`/admin/finance/reconciliation${filter !== "all" ? `?status=${filter}` : ""}`),
+        api.get("/admin/finance/exceptions?limit=10"),
+      ]);
+      setExceptions(cases.data.exceptions || []);
       setSummary(res.data.summary);
       setBookings(res.data.bookings || []);
       setLedger(res.data.ledger || []);
@@ -128,6 +133,31 @@ export default function ReconciliationPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Exception queues reflect unverified actual financial events. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+        {[
+          { name: "Unreconciled payment events", count: summary?.unreconciledPaymentEvents ?? 0 },
+          { name: "Payouts awaiting independent review", count: summary?.payoutsAwaitingVerification ?? 0 },
+          { name: "Approved refunds awaiting settlement", count: summary?.approvedRefundsAwaitingSettlement ?? 0 },
+        ].map(metric => (
+          <div key={metric.name} style={{ background: "white", padding: "0.9rem", border: "1px solid #e2e8f0", borderRadius: "0.6rem" }}>
+            <span style={{ color: "#64748b", fontSize: "0.8rem" }}>{metric.name}</span>
+            <strong style={{ display: "block", fontSize: "1.5rem", color: metric.count ? "#b45309" : "#14532d" }}>{metric.count}</strong>
+          </div>
+        ))}
+      </div>
+      {exceptions.length > 0 && (
+        <section style={{ background: "#fff", border: "1px solid #fbbf24", padding: "1rem", borderRadius: "0.75rem", marginBottom: "1.25rem" }} aria-label="Unresolved gateway settlement exceptions">
+          <h2 style={{ fontSize: "1rem", fontWeight: 800, color: "#92400e" }}>Payment events requiring reconciliation</h2>
+          <p style={{ fontSize: "0.8rem", color: "#475569" }}>Funds may have moved without a confirmed lesson. Investigate the provider statement before resolving a booking or issuing an external refund.</p>
+          {exceptions.map(item => (
+            <div key={item._id} style={{ padding: "0.5rem 0", borderTop: "1px solid #fef3c7", fontSize: "0.82rem" }}>
+              <strong>{item.providerTransactionId}</strong> · {item.currency} {item.grossAmount.toLocaleString()} · {item.eventType}
+            </div>
+          ))}
+        </section>
       )}
 
       {/* Financial Metrics Summary */}
