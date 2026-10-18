@@ -182,6 +182,16 @@ export class MatchingService {
       const user = (tutor as any).user;
       return (user?._id || user)?.toString();
     }).filter((id): id is string => !!id && mongoose.isValidObjectId(id));
+    // Scoring can run for synthetic/preview tutors without a MongoDB
+    // connection. An empty $in query would still buffer until timeout.
+    if (ids.length === 0) {
+      for (const tutor of uncached) {
+        (tutor as any).__calendarLoaded = true;
+        (tutor as any).__calendar = null;
+        (tutor as any).__occupied = null;
+      }
+      return;
+    }
     const hasFixedInterval = !!(request?.scheduledStartAt && request?.scheduledEndAt);
     const start = request?.scheduledStartAt ? new Date(request.scheduledStartAt) : null;
     const end = request?.scheduledEndAt ? new Date(request.scheduledEndAt) : null;
