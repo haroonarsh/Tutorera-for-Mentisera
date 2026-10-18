@@ -7,6 +7,7 @@ import Booking from "../models/Booking.model";
 import OfferNegotiation from "../models/OfferNegotiation.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { resolveMarketplaceFees } from "../services/pricing.service";
+import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
 import { containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
@@ -156,6 +157,8 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const feeQuote = await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
+    await assertParentBookingPolicy({ student: request.student, request: request._id, bid: offer._id,
+      amount: feeQuote.studentTotal, currency: offer.currency || request.currency || "PKR", queueApprovals: true });
 
     // Atomic guard — same purpose as before: only one accept attempt can
     // win this transition, so two concurrent accept clicks can't both
@@ -225,7 +228,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
     }
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message || "Unable to accept offer." });
+    res.status(error.statusCode || 500).json({ success: false, code: error.code, message: error.message || "Unable to accept offer." });
   }
 };
 
@@ -250,6 +253,13 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
   // Reuse the originally quoted rates on retry (never recalculate a new fee).
   const feeQuote = offer.feeQuote || await resolveMarketplaceFees(offer.amount, request.countryCode || "PK");
   offer.feeQuote = feeQuote;
+  try {
+    await assertParentBookingPolicy({ student: request.student, request: request._id, bid: offer._id,
+      amount: feeQuote.studentTotal, currency: offer.currency || request.currency || "PKR", queueApprovals: true });
+  } catch (error: any) {
+    res.status(error?.statusCode || 409).json({ success: false, code: error?.code || "PARENT_POLICY_BLOCKED", message: error?.message });
+    return;
+  }
 
   // Extend the hold from this retry attempt, so the student gets a full
   // fresh window instead of racing whatever was left of the original one.
