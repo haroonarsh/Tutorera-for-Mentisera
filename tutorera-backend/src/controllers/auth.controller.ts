@@ -164,7 +164,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 // @desc    Google Sign-In / Sign-Up
 // @route   POST /api/auth/google
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
-  const { idToken, role } = req.body;
+  const { idToken, role, countryCode = "PK", preferredLanguage } = req.body;
 
   let payload;
   try {
@@ -178,7 +178,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  if (!payload || !payload.email) {
+  if (!payload || !payload.email || payload.email_verified !== true) {
     res.status(401).json({ success: false, message: "Could not verify Google account" });
     return;
   }
@@ -203,8 +203,19 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
 
   // 3. No existing user at all — create one with selected role or pending
   if (!user) {
-    isNewUser = true;
     const assignedRole = role === "student" || role === "tutor" || role === "parent" ? role : "pending";
+    const market = await resolveMarket(countryCode);
+    if (!market || !market.isActive) {
+      res.status(422).json({ success: false, message: "Registration is not available in the selected market." });
+      return;
+    }
+    if ((assignedRole === "tutor" && !market.tutorRegistration) ||
+        ((assignedRole === "student" || assignedRole === "parent") && !market.studentRegistration) ||
+        (assignedRole === "pending" && !market.tutorRegistration && !market.studentRegistration)) {
+      res.status(422).json({ success: false, message: "Registration for this account type is not available in the selected market." });
+      return;
+    }
+    isNewUser = true;
     user = await User.create({
       name: name || email.split("@")[0],
       email,
@@ -212,6 +223,12 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       authProvider: "google",
       role: assignedRole,
       avatar: picture || "",
+      countryCode: market.countryCode,
+      countryName: market.countryName,
+      currency: market.currency,
+      timezone: market.timezone,
+      preferredLanguage: preferredLanguage || market.defaultLanguage,
+      accountStatus: "registered",
     });
 
     if (user.role === "tutor") {
@@ -299,6 +316,11 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       isVerified: user.isVerified,
       isApproved: user.isApproved,
       avatar: user.avatar,
+      countryCode: user.countryCode,
+      countryName: user.countryName,
+      currency: user.currency,
+      timezone: user.timezone,
+      preferredLanguage: user.preferredLanguage,
     },
   });
 };
@@ -319,6 +341,15 @@ export const selectRole = async (req: AuthRequest, res: Response): Promise<void>
     return;
   }
 
+  // Pending Google accounts also remain bound to their original market.
+  // A role selected later must not bypass that market's registration policy.
+  const market = await resolveMarket(user.countryCode);
+  if (!market || !market.isActive ||
+      (role === "tutor" && !market.tutorRegistration) ||
+      ((role === "student" || role === "parent") && !market.studentRegistration)) {
+    res.status(422).json({ success: false, message: "Registration for this account type is not available in the selected market." });
+    return;
+  }
   user.role = role;
   let trackingToken: string | undefined;
   if (role === "tutor") {
