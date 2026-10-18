@@ -78,6 +78,16 @@ describe("Fix 2 — one tutor calendar for matching and public availability", ()
     expect(response.body.timezone).toBe(f.timezone);
   });
 
+  it("keeps a slot available when an earlier confirmed lesson ends exactly at its start", async () => {
+    const f = await fixture();
+    await TutorAvailability.create({ tutor: f.tutor._id, weeklySlots: [
+      { day: f.day, startTime: "10:30", endTime: "11:30" },
+    ], blockedDates: [] });
+    await booked(f, "09:30", "10:30");
+    const response = await request(app).get(`/api/v1/tutors/${f.tutor._id}/availability`).expect(200);
+    expect(response.body.slots).toContainEqual({ date: f.date, dayName: f.day, startTime: "10:30", endTime: "11:30" });
+  });
+
   it("honors blocked dates and does not erase them when weekly hours are updated", async () => {
     const f = await fixture("Asia/Dubai");
     await TutorAvailability.create({ tutor: f.tutor._id, weeklySlots: [
