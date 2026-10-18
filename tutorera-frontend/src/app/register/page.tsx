@@ -14,7 +14,17 @@ const C = UI_COLORS;
 const launchMarkets = [{ code: "PK", name: "Pakistan", dial: "+92" }, { code: "AE", name: "United Arab Emirates", dial: "+971" }, { code: "GB", name: "United Kingdom", dial: "+44" }];
 
 function RegisterForm() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "", countryCode: "PK", preferredLanguage: "en" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" as "student" | "tutor" | "parent", phone: "", city: "", countryCode: "PK", preferredLanguage: "en", dateOfBirth: "", guardianEmail: "", guardianName: "" });
+  const studentAge = (() => {
+    if (!form.dateOfBirth) return null;
+    const date = new Date(form.dateOfBirth + "T00:00:00.000Z");
+    if (!Number.isFinite(date.getTime())) return null;
+    const now = new Date();
+    let years = now.getUTCFullYear() - date.getUTCFullYear();
+    if (now.getUTCMonth() < date.getUTCMonth() || (now.getUTCMonth() === date.getUTCMonth() && now.getUTCDate() < date.getUTCDate())) years--;
+    return years;
+  })();
+  const needsGuardian = form.role === "student" && studentAge !== null && studentAge >= 13 && studentAge < 18;
   const [citySuggestions, setCitySuggestions] = useState<Array<{ _id?: string; name: string }>>([]);
   const [referralCode, setReferralCode] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -49,6 +59,12 @@ function RegisterForm() {
     e.preventDefault();
     setError("");
     if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
+    if (form.role === "student" && (studentAge === null || studentAge < 13 || studentAge > 110)) {
+      setError(studentAge !== null && studentAge < 13 ? "Children under 13 require guardian-managed enrollment. Please contact support." : "Enter a valid student date of birth."); return;
+    }
+    if (needsGuardian && (!form.guardianEmail || !form.guardianName.trim() || form.guardianEmail.toLowerCase() === form.email.toLowerCase())) {
+      setError("Enter a separate guardian email and name to request adult supervision."); return;
+    }
     setLoading(true);
     try {
     await register(form);
@@ -68,7 +84,7 @@ function RegisterForm() {
     } else if (form.role === "parent") {
       router.push("/dashboard");
     } else {
-      router.push("/onboarding/student");
+      router.push(needsGuardian ? "/guardian-consent-pending" : "/onboarding/student");
     }
   } catch (err: unknown) {
     const error = err as { response?: { data?: { message?: string } } };
@@ -81,13 +97,20 @@ function RegisterForm() {
   const handleGoogleToken = async (idToken: string) => {
     setError("");
     try {
-      const { user, needsRole } = await loginWithGoogle(idToken, form.role, form.countryCode, form.preferredLanguage);
+      if (form.role === "student" && (studentAge === null || studentAge < 13 || (needsGuardian && (!form.guardianEmail || !form.guardianName)))) {
+        setError("Enter a valid date of birth and any required guardian details before Google sign-up."); return;
+      }
+      const { user, needsRole } = await loginWithGoogle(idToken, form.role, form.countryCode, form.preferredLanguage, {
+        dateOfBirth: form.role === "student" ? form.dateOfBirth : undefined,
+        guardianEmail: needsGuardian ? form.guardianEmail : undefined,
+        guardianName: needsGuardian ? form.guardianName : undefined,
+      });
       if (needsRole) {
         router.push("/select-role");
       } else if (user.role === "tutor") {
         router.push("/onboarding/tutor");
       } else if (user.role === "student") {
-        router.push("/onboarding/student");
+        router.push(user.isMinor && !user.parentConsentVerified ? "/guardian-consent-pending" : "/onboarding/student");
       } else if (user.role === "parent") {
         router.push("/dashboard");
       } else if (user.role === "admin") {
@@ -155,6 +178,27 @@ function RegisterForm() {
             </select>
             {form.countryCode !== "PK" && <p style={{ margin: '.45rem 0 0', color: C.gray500, fontSize: '.78rem', lineHeight: 1.5 }}>Discovery beta: profiles, requests, offers, and negotiation are available. Acceptance and payment are not available yet.</p>}
           </div>
+
+          {form.role === "student" && (
+            <div>
+              <label htmlFor="student-dob" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, color: C.primary, marginBottom: "0.4rem" }}>Student date of birth</label>
+              <input id="student-dob" type="date" name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange}
+                required max={new Date().toISOString().slice(0, 10)}
+                style={{ width: "100%", padding: "0.75rem 1rem", border: "1.5px solid #e5e7eb", borderRadius: "0.5rem", boxSizing: "border-box", color: C.primary }} />
+              <p style={{ marginTop: "0.35rem", fontSize: "0.78rem", color: C.gray500 }}>Students aged 13–17 require an adult guardian to approve their account. Children under 13 cannot register independently.</p>
+            </div>
+          )}
+          {needsGuardian && (
+            <div style={{ padding: "1rem", background: "#eef5ff", borderRadius: "0.75rem", display: "grid", gap: "0.65rem" }}>
+              <label htmlFor="guardian-name">Guardian's full name</label>
+              <input id="guardian-name" name="guardianName" value={form.guardianName} onChange={handleChange} required
+                placeholder="Parent or guardian" style={{ padding: "0.7rem", border: "1px solid #cbd5e1", borderRadius: "0.4rem" }} />
+              <label htmlFor="guardian-email">Guardian's separate email address</label>
+              <input id="guardian-email" name="guardianEmail" type="email" value={form.guardianEmail} onChange={handleChange} required
+                placeholder="guardian@example.com" style={{ padding: "0.7rem", border: "1px solid #cbd5e1", borderRadius: "0.4rem" }} />
+              <p style={{ fontSize: "0.78rem", color: C.gray500 }}>Your guardian must sign in to their own parent account and enter the email verification code. Tutoring is blocked until this is complete.</p>
+            </div>
+          )}
 
           {/* Phone + City */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
