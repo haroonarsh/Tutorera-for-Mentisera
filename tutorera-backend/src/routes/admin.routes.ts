@@ -9,6 +9,7 @@ import {
   toggleUserStatus,
   getAllBookings,
   updatePaymentStatus,
+  verifyExternalPayout,
   getAllContacts,
   updateContactStatus,
   generateReport,
@@ -29,6 +30,8 @@ import {
 import {
   getAllRefundRequests,
   updateRefundRequestStatus,
+  recordExternalRefundTransfer,
+  verifyExternalRefundTransfer,
 } from "../controllers/refundRequest.controller";
 import { getAllReferrals } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
@@ -45,6 +48,7 @@ import {
   handleAtRiskAction,
   getSupplyGapsIntelligence,
   getFinanceReconciliation,
+  getFinanceExceptions,
   getSystemHealth,
   listSafetyCases,
   createSafetyCase,
@@ -75,6 +79,7 @@ router.get("/supply-gaps", requirePermission("analytics.read"), getSupplyGapsInt
 
 // Finance & Reconciliation
 router.get("/finance/reconciliation", requirePermission("finance.reconcile"), getFinanceReconciliation);
+router.get("/finance/exceptions", requirePermission("finance.reconcile"), getFinanceExceptions);
 router.get("/finance/fee-config", requirePermission("finance.fee_configure"), getFeeConfig);
 router.put("/finance/fee-config", requirePermission("finance.fee_configure"), updateFeeConfig);
 
@@ -123,6 +128,7 @@ router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
 router.patch("/bookings/:id/payment", validateBooking(updateAdminPaymentSchema), updatePaymentStatus);
+router.post("/bookings/:id/payout/verify", requirePermission("payout.process"), verifyExternalPayout);
 router.get("/contacts", requirePermission("student.read"), getAllContacts);
 router.patch("/contacts/:id", requirePermission("student.read"), updateContactStatus);
 router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);
@@ -131,6 +137,8 @@ router.get("/guarantee-claims", requirePermission("claims.read"), getAllClaims);
 router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), validateGuarantee(updateClaimStatusSchema), updateClaimStatus);
 router.get("/refund-requests", requirePermission("claims.read"), getAllRefundRequests);
 router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateRefundRequestStatus);
+router.post("/refund-requests/:id/external-transfer", requirePermission("payment.refund"), recordExternalRefundTransfer);
+router.post("/refund-requests/:id/external-verify", requirePermission("payment.refund"), verifyExternalRefundTransfer);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);

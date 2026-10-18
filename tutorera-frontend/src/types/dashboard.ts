@@ -106,8 +106,8 @@ export interface DashBooking {
   schedule?: string;
   teachingMode?: string;
   isFirstSession?: boolean;
-  paymentStatus?: "pending" | "paid" | "refunded" | "failed";
-  status: "pending" | "confirmed" | "upcoming" | "in_progress" | "completed" | "cancelled" | "disputed";
+  paymentStatus?: "pending" | "received" | "confirmed" | "paid" | "refunded" | "partially_refunded" | "failed" | "chargeback" | "disputed";
+  status: "pending" | "confirmed" | "upcoming" | "ongoing" | "in_progress" | "completed" | "cancelled" | "disputed";
   scheduledAt?: string;
   createdAt: string;
 }

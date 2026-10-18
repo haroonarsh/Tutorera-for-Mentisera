@@ -5,6 +5,10 @@ import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
+import PaymentLedger from "../models/PaymentLedger.model";
+import mongoose from "mongoose";
+import BookedSlot from "../models/BookedSlot.model";
+import { syncStudentTutorRelationship } from "../services/relationship.service";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
 import { GST_PERCENT, PLATFORM_FEE_PERCENT } from "../config/constants";
@@ -516,7 +520,7 @@ export const updatePaymentStatus = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
+  const { paymentStatus, paymentNote, payoutStatus, payoutNote, payoutSettlementReference, payoutSettlementMethod, payoutEvidenceReference } = req.body;
 
   // A manual admin status change cannot substitute for money returned by a gateway.
   if (["refunded", "partially_refunded"].includes(paymentStatus)) {
@@ -524,7 +528,13 @@ export const updatePaymentStatus = async (
     return;
   }
 
-  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : "payout.process";
+  // A transfer cannot be declared paid by changing a booking enum. A separate
+  // second-finance-officer verification endpoint records the reviewed evidence.
+  if (payoutStatus === "paid") {
+    res.status(409).json({ success: false, code: "INDEPENDENT_PAYOUT_VERIFICATION_REQUIRED", message: "Only an independent finance reviewer can verify a documented external transfer." });
+    return;
+  }
+  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : payoutStatus === "approved" ? "payout.approve" : "payout.process";
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
     res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
     return;
@@ -560,7 +570,7 @@ export const updatePaymentStatus = async (
     res.status(409).json({ success: false, message: `Payout cannot move from ${booking.payoutStatus} to ${payoutStatus}.` });
     return;
   }
-  if (payoutStatus !== undefined && booking.paymentStatus !== "confirmed") {
+  if (payoutStatus !== undefined && (booking.paymentStatus !== "confirmed" || booking.status !== "completed")) {
     res.status(409).json({ success: false, message: "A payout cannot change until student payment is confirmed." });
     return;
   }
@@ -572,7 +582,13 @@ export const updatePaymentStatus = async (
     booking.payoutStatus = payoutStatus;
     const changedAt = new Date();
     if (payoutStatus === "approved") booking.payoutApprovedAt = changedAt;
-    if (payoutStatus === "processing") booking.payoutProcessingAt = changedAt;
+    if (payoutStatus === "processing") {
+      booking.payoutProcessingAt = changedAt;
+      booking.payoutSettlementMethod = payoutSettlementMethod;
+      booking.payoutSettlementReference = payoutSettlementReference;
+      booking.payoutEvidenceReference = payoutEvidenceReference;
+      booking.payoutInitiatedBy = req.user?._id;
+    }
     if (payoutStatus === "paid") booking.payoutPaidAt = changedAt;
     if (payoutStatus === "failed") booking.payoutFailedAt = changedAt;
   }
@@ -690,6 +706,77 @@ export const updateContactStatus = async (req: AuthRequest, res: Response): Prom
   res.status(200).json({ success: true, contact });
 };
 
+// Review of an EXTERNAL bank/wallet transfer. This does NOT move funds.
+// Two distinct finance actors must attest to transaction evidence and a
+// matching transfer reference before a booking can become 'paid'.
+export const verifyExternalPayout = async (req: AuthRequest, res: Response): Promise<void> => {
+  const actor = req.user?._id;
+  if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, "payout.process")) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED" }); return;
+  }
+  const { settlementReference, verificationEvidence, note } = req.body || {};
+  if (typeof settlementReference !== "string" || settlementReference.trim().length < 8 ||
+      typeof verificationEvidence !== "string" || verificationEvidence.trim().length < 8 ||
+      typeof note !== "string" || note.trim().length < 12) {
+    res.status(400).json({ success: false, code: "PAYOUT_EVIDENCE_REQUIRED", message: "External transaction reference, independently checked statement reference and verification note are required." });
+    return;
+  }
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) { res.status(404).json({ success: false, code: "BOOKING_NOT_FOUND" }); return; }
+  if (booking.status !== "completed" || booking.paymentStatus !== "confirmed" || booking.payoutStatus !== "processing") {
+    res.status(409).json({ success: false, code: "PAYOUT_NOT_READY", message: "Only a completed, paid booking with a recorded external transfer can be verified." }); return;
+  }
+  if (!booking.payoutInitiatedBy || booking.payoutInitiatedBy.toString() === actor?.toString()) {
+    res.status(403).json({ success: false, code: "SECOND_REVIEWER_REQUIRED", message: "Verification must be performed by another authorized finance reviewer." }); return;
+  }
+  if (booking.payoutSettlementReference !== settlementReference.trim()) {
+    res.status(409).json({ success: false, code: "PAYOUT_REFERENCE_MISMATCH", message: "Evidence reference must match the initiated transfer." }); return;
+  }
+  // A partial database write must not label a transfer 'paid' without its
+  // corresponding immutable manual-settlement ledger event.
+  const session = await mongoose.startSession();
+  let claimedId: string | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const changed = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: "completed", paymentStatus: "confirmed", payoutStatus: "processing",
+          payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: { $ne: actor } },
+        { $set: { payoutStatus: "paid", payoutPaidAt: new Date(), payoutVerifiedBy: actor,
+          payoutNote: `Manually reconciled external transfer; ${note.trim().slice(0, 250)}`,
+          payoutEvidenceReference: verificationEvidence.trim().slice(0, 300) } },
+        { new: true, session }
+      );
+      if (!changed) throw Object.assign(new Error("Payout was already reconciled or changed."), { statusCode: 409 });
+      await PaymentLedger.findOneAndUpdate(
+        { provider: "external_transfer", providerEventId: `payout-${changed._id}` },
+        { $setOnInsert: {
+          provider: "external_transfer", providerEventId: `payout-${changed._id}`,
+          providerTransactionId: settlementReference.trim(), booking: changed._id,
+          student: changed.student, tutor: changed.tutor,
+          eventType: "payout.completed", status: "succeeded", currency: changed.currency || "PKR",
+          grossAmount: changed.tutorPayout, studentPayment: 0, studentFee: 0, tutorFee: 0,
+          tax: 0, gatewayFee: 0, refundAmount: 0, tutorPayable: changed.tutorPayout,
+          platformNet: 0, settlementStatus: "reconciled",
+          metadata: { settlementMethod: changed.payoutSettlementMethod, evidenceReference: verificationEvidence.trim(),
+            initiatedBy: changed.payoutInitiatedBy?.toString(), reviewedBy: actor?.toString(),
+            verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
+        } }, { upsert: true, new: true, session }
+      );
+      claimedId = changed._id.toString();
+    });
+  } catch (err: any) {
+    res.status(err?.statusCode || 500).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED", message: err?.message || "Unable to verify transfer." });
+    return;
+  } finally { await session.endSession(); }
+  if (!claimedId) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
+  const claimed = await Booking.findById(claimedId);
+  if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
+  await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor?.toString(),
+    entity: "Booking", targetId: claimed._id.toString(),
+    metadata: { reference: settlementReference.trim(), reviewer: actor?.toString(), evidence: verificationEvidence.trim() } });
+  res.status(200).json({ success: true, message: "External transfer independently reconciled; payout recorded as paid.", booking: claimed });
+};
+
 // @desc    Update booking status
 // @route   PATCH /api/admin/bookings/:id/status
 // @access  Private (admin)
@@ -714,8 +801,39 @@ export const updateBookingStatus = async (
   }
 
   const previousStatus = booking.status;
-  booking.status = status;
-  await booking.save();
+  const allowedTransitions: Record<string, string[]> = {
+    upcoming: ["ongoing", "cancelled"],
+    ongoing: ["completed", "cancelled"],
+    completed: [], cancelled: [],
+  };
+  if (!allowedTransitions[previousStatus]?.includes(status)) {
+    res.status(409).json({ success: false, code: "INVALID_BOOKING_TRANSITION", message: `Cannot transition booking from ${previousStatus} to ${status}.` });
+    return;
+  }
+  if (["ongoing", "completed"].includes(status) && booking.paymentStatus !== "confirmed") {
+    res.status(409).json({ success: false, code: "PAYMENT_REQUIRED", message: "The verified student payment is required before starting or completing tuition." });
+    return;
+  }
+  // Compare-and-set protects referral credits, emails and certificates from
+  // duplicated/admin-concurrent completion commands.
+  const updated = await Booking.findOneAndUpdate(
+    { _id: booking._id, status: previousStatus, ...(status === "completed" || status === "ongoing" ? { paymentStatus: "confirmed" } : {}) },
+    { $set: { status, ...(status === "completed" ? { completedAt: new Date() } : {}),
+      ...(status === "cancelled" ? { cancelReason: typeof req.body.cancelReason === "string" ? req.body.cancelReason.slice(0, 500) : "Cancelled by admin" } : {}) } },
+    { new: true }
+  ).populate("student", "name email").populate("tutor", "name email").populate("request", "subject");
+  if (!updated) {
+    res.status(409).json({ success: false, code: "BOOKING_CHANGED", message: "Booking or payment status changed; please refresh before retrying." });
+    return;
+  }
+  // Populate existing variable for the remainder of the notification/report path.
+  booking.status = updated.status;
+  booking.completedAt = updated.completedAt;
+  if (status === "cancelled") await BookedSlot.deleteMany({ booking: booking._id });
+  if (status === "completed") {
+    try { await syncStudentTutorRelationship(updated as any); }
+    catch (err) { console.error("[Booking] Could not update completed student-tutor relationship", err); }
+  }
 
   await logAudit({
     action: `booking_${status}`,   // booking_completed, booking_cancelled, etc.
@@ -732,21 +850,9 @@ export const updateBookingStatus = async (
      await creditReferrerOnFirstBooking(booking.student.toString());
    }
 
-   // ── Send review request to student after session completion ──
-   if (status === "completed" && previousStatus !== "completed") {
-     try {
-       const studentUser = await User.findById(booking.student).select("name email");
-       const tutorUser = await User.findById(booking.tutor).select("name email");
-       const requestSubject = (booking.request as any)?.subject || "your session";
-       if (studentUser && tutorUser) {
-         const reviewMail = reviewRequestEmail(studentUser.name, tutorUser.name, requestSubject, booking._id.toString());
-         await sendEmail({ to: studentUser.email, subject: reviewMail.subject, html: reviewMail.html, eventType: "review_requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
-       }
-     } catch (err) {
-       console.error("Failed to send review request email:", err);
-     }
-   }
-  
+  // The lifecycle worker sends one delayed, idempotent review invitation
+  // using completedAt and reviewRequestSentAt; no immediate duplicate email.
+
   // Notify both parties
   const io = req.app.get("io");
   const statusMessages: Record<string, string> = {
@@ -781,16 +887,16 @@ export const updateBookingStatus = async (
 // @route   GET /api/admin/payouts
 // @access  Private (admin)
 export const getPayouts = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { status } = req.query; // "pending" | "paid" | undefined (all)
+  const { status } = req.query; // "pending" (action queue) | "paid" | undefined (all)
 
   // Only show bookings where the student has already paid — those are the ones
   // that need a tutor payout. Unconfirmed payments haven't earned a payout yet.
   const filter: Record<string, unknown> = {
-    paymentStatus: "confirmed",
+    paymentStatus: "confirmed", status: "completed",
   };
 
   if (status && status !== "all") {
-    filter.payoutStatus = status;
+    filter.payoutStatus = status === "pending" ? { $in: ["pending", "approved", "processing", "held", "failed"] } : status;
   }
 
   const bookings = await Booking.find(filter)
@@ -799,8 +905,8 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
     .sort("-createdAt");
 
   // ── Summary stats across ALL confirmed bookings (ignore status filter for stats) ──
-  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" });
-  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus === "pending");
+  const allConfirmed = await Booking.find({ paymentStatus: "confirmed", status: "completed" });
+  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus !== "paid");
   const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
 
   const totalPendingAmount = pendingOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);

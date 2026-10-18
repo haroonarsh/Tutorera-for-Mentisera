@@ -9,8 +9,11 @@ interface ReconciliationSummary {
   totalGMV: number;
   totalTutorNet: number;
   totalPlatformGross: number;
-  totalEstimatedGatewayFees: number;
-  netPlatformSettlement: number;
+  totalEstimatedGatewayFees: number | null;
+  netPlatformSettlement: number | null;
+  unreconciledPaymentEvents?: number;
+  payoutsAwaitingVerification?: number;
+  approvedRefundsAwaitingSettlement?: number;
   ledger?: Record<string, { count: number; grossAmount: number; platformNet: number; tutorPayable: number }>;
 }
 
@@ -40,8 +43,8 @@ interface BookingReconciledItem {
   subtotal: number;
   studentFee: number;
   tutorFee: number;
-  estimatedGatewayFee: number;
-  expectedSettlement: number;
+  estimatedGatewayFee: number | null;
+  expectedSettlement: number | null;
   paymentStatus: string;
   payoutStatus: string;
   settlementDiscrepancy: boolean;
@@ -51,13 +54,18 @@ export default function ReconciliationPage() {
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
   const [bookings, setBookings] = useState<BookingReconciledItem[]>([]);
   const [ledger, setLedger] = useState<LedgerItem[]>([]);
+  const [exceptions, setExceptions] = useState<LedgerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/finance/reconciliation${filter !== "all" ? `?status=${filter}` : ""}`);
+      const [res, cases] = await Promise.all([
+        api.get(`/admin/finance/reconciliation${filter !== "all" ? `?status=${filter}` : ""}`),
+        api.get("/admin/finance/exceptions?limit=10"),
+      ]);
+      setExceptions(cases.data.exceptions || []);
       setSummary(res.data.summary);
       setBookings(res.data.bookings || []);
       setLedger(res.data.ledger || []);
@@ -88,7 +96,7 @@ export default function ReconciliationPage() {
             Settlement & Financial Reconciliation
           </h1>
           <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.2rem 0 0" }}>
-            Audit Gross Marketplace Value, platform commission, gateway deductions, and expected settlements.
+            Review confirmed payments, booked fee snapshots and financial exceptions. Actual gateway fee and settlement statements are not imported yet.
           </p>
         </div>
 
@@ -127,6 +135,31 @@ export default function ReconciliationPage() {
         </div>
       )}
 
+      {/* Exception queues reflect unverified actual financial events. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+        {[
+          { name: "Unreconciled payment events", count: summary?.unreconciledPaymentEvents ?? 0 },
+          { name: "Payouts awaiting independent review", count: summary?.payoutsAwaitingVerification ?? 0 },
+          { name: "Approved refunds awaiting settlement", count: summary?.approvedRefundsAwaitingSettlement ?? 0 },
+        ].map(metric => (
+          <div key={metric.name} style={{ background: "white", padding: "0.9rem", border: "1px solid #e2e8f0", borderRadius: "0.6rem" }}>
+            <span style={{ color: "#64748b", fontSize: "0.8rem" }}>{metric.name}</span>
+            <strong style={{ display: "block", fontSize: "1.5rem", color: metric.count ? "#b45309" : "#14532d" }}>{metric.count}</strong>
+          </div>
+        ))}
+      </div>
+      {exceptions.length > 0 && (
+        <section style={{ background: "#fff", border: "1px solid #fbbf24", padding: "1rem", borderRadius: "0.75rem", marginBottom: "1.25rem" }} aria-label="Unresolved gateway settlement exceptions">
+          <h2 style={{ fontSize: "1rem", fontWeight: 800, color: "#92400e" }}>Payment events requiring reconciliation</h2>
+          <p style={{ fontSize: "0.8rem", color: "#475569" }}>Funds may have moved without a confirmed lesson. Investigate the provider statement before resolving a booking or issuing an external refund.</p>
+          {exceptions.map(item => (
+            <div key={item._id} style={{ padding: "0.5rem 0", borderTop: "1px solid #fef3c7", fontSize: "0.82rem" }}>
+              <strong>{item.providerTransactionId}</strong> · {item.currency} {item.grossAmount.toLocaleString()} · {item.eventType}
+            </div>
+          ))}
+        </section>
+      )}
+
       {/* Financial Metrics Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
         <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
@@ -156,15 +189,15 @@ export default function ReconciliationPage() {
         <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #e2e8f0" }}>
           <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase" }}>Est. Gateway Fees</span>
           <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#d97706", marginTop: "0.2rem" }}>
-            PKR {(summary?.totalEstimatedGatewayFees ?? 0).toLocaleString()}
+            {summary?.totalEstimatedGatewayFees == null ? "Not reported" : `PKR ${summary.totalEstimatedGatewayFees.toLocaleString()}`}
           </div>
-          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>2.9% + PKR 30 Processing</span>
+          <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Provider fee unverified — do not use estimates as settlements</span>
         </div>
 
         <div style={{ backgroundColor: "white", borderRadius: "0.75rem", padding: "1.1rem", border: "1px solid #a7f3d0", background: "#ecfdf5" }}>
           <span style={{ fontSize: "0.72rem", color: "#065f46", fontWeight: 800, textTransform: "uppercase" }}>Net Platform Settlement</span>
           <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#059669", marginTop: "0.2rem" }}>
-            PKR {(summary?.netPlatformSettlement ?? 0).toLocaleString()}
+            {summary?.netPlatformSettlement == null ? "Awaiting statement" : `PKR ${summary.netPlatformSettlement.toLocaleString()}`}
           </div>
           <span style={{ fontSize: "0.72rem", color: "#047857", fontWeight: 600 }}>Net Take Home Revenue</span>
         </div>
@@ -241,10 +274,10 @@ export default function ReconciliationPage() {
                     PKR {((b.studentFee || 0) + (b.tutorFee || 0)).toLocaleString()}
                   </td>
                   <td style={{ padding: "0.9rem 1rem", color: "#d97706" }}>
-                    PKR {b.estimatedGatewayFee.toLocaleString()}
+                    {b.estimatedGatewayFee == null ? "Unverified" : `PKR ${b.estimatedGatewayFee.toLocaleString()}`}
                   </td>
                   <td style={{ padding: "0.9rem 1rem", fontWeight: 800, color: "#0f172a" }}>
-                    PKR {b.expectedSettlement.toLocaleString()}
+                    {b.expectedSettlement == null ? "Unverified" : `PKR ${b.expectedSettlement.toLocaleString()}`}
                   </td>
                   <td style={{ padding: "0.9rem 1.2rem" }}>
                     <span

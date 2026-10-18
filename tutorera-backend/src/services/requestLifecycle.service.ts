@@ -299,43 +299,54 @@ export async function processRequestArchival(): Promise<number> {
  * Reverts requests stuck in awaiting_payment beyond the hold window (30 minutes).
  * Prevents orphaned payment_pending bids and stuck request states.
  */
+// Release a stale acceptance only if its bid is still in payment_pending.
+// The bid state is our compare-and-set fence against a racing payment webhook.
+export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<boolean> {
+  const session = await mongoose.startSession();
+  let released = false;
+  try {
+    await session.withTransaction(async () => {
+      const stale = await Bid.findOneAndUpdate(
+        { request: requestId, status: "payment_pending", paymentPendingExpiresAt: { $lte: new Date() } },
+        { $set: { status: "submitted" }, $unset: { paymentPendingExpiresAt: "" } },
+        { new: true, session }
+      );
+      if (!stale) return;
+      // Direct tutor acceptances have an unpaid booking for the student dashboard.
+      // Never delete these records: late gateway callbacks must reconcile against
+      // a cancelled booking rather than an unrelated newer checkout.
+      await Booking.updateMany(
+        { bid: stale._id, paymentStatus: "pending", status: "upcoming" },
+        { $set: { status: "cancelled", cancelReason: "Payment reservation expired" } },
+        { session }
+      );
+      await Request.updateOne(
+        { _id: requestId, status: "awaiting_payment", $or: [{ acceptedOffer: stale._id }, { acceptedOffer: { $exists: false } }] },
+        { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "" } },
+        { session }
+      );
+      released = true;
+    });
+  } finally {
+    await session.endSession();
+  }
+  return released;
+}
+
 export async function cleanupStalePaymentHolds(): Promise<{ cleaned: number; errors: string[] }> {
   const result = { cleaned: 0, errors: [] as string[] };
-  const now = new Date();
-  const staleThreshold = new Date(now.getTime() - 30 * 60 * 1000);
-
-  const staleRequests = await Request.find({
-    status: "awaiting_payment",
-    updatedAt: { $lte: staleThreshold },
-  }).limit(50);
-
-  for (const reqDoc of staleRequests) {
+  // Expiry belongs to the BID hold, not Request.updatedAt (which may be
+  // changed by unrelated operations and can expire a valid checkout early).
+  const stale = await Bid.find({ status: "payment_pending", paymentPendingExpiresAt: { $lte: new Date() } })
+    .select("request").limit(50).lean();
+  for (const bid of stale) {
     try {
-      const staleBid = await Bid.findOne({
-        request: reqDoc._id,
-        status: "payment_pending",
-        paymentPendingExpiresAt: { $lte: now },
-      });
-
-      if (staleBid) {
-        await Bid.updateOne(
-          { _id: staleBid._id, status: "payment_pending" },
-          { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-        );
-      }
-
-      await Request.updateOne(
-        { _id: reqDoc._id, status: "awaiting_payment" },
-        { status: "open" }
-      );
-
-      result.cleaned++;
+      if (await releaseExpiredPaymentHold(bid.request)) result.cleaned++;
     } catch (err: any) {
-      result.errors.push(`Failed to cleanup payment hold for request ${reqDoc._id}: ${err?.message}`);
-      logger.error({ err, requestId: reqDoc._id }, "Failed to cleanup stale payment hold");
+      result.errors.push(`Failed to clean expired payment hold ${bid._id}: ${err?.message}`);
+      logger.error({ err, bidId: bid._id }, "Payment-hold release failed");
     }
   }
-
   return result;
 }
 
@@ -355,6 +366,7 @@ export async function sendReviewRequests(io?: any): Promise<number> {
   const eligibleBookings = await Booking.find({
     status: "completed",
     completedAt: { $exists: true, $lte: oneHourAgo },
+    reviewRequestSentAt: { $exists: false },
   }).limit(50);
 
   let sent = 0;
@@ -370,6 +382,14 @@ export async function sendReviewRequests(io?: any): Promise<number> {
 
       if (!studentUser || !tutorUser) continue;
 
+      // Claim exactly once before emailing: overlapping lifecycle workers must
+      // not send the same review request on every 15-minute polling interval.
+      const claimTime = new Date();
+      const claimed = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: "completed", reviewRequestSentAt: { $exists: false } },
+        { $set: { reviewRequestSentAt: claimTime } }, { new: true }
+      );
+      if (!claimed) continue;
       const request = await (Booking.findById(booking._id).populate("request", "subject") as any);
       const subject = request?.request?.subject || "your session";
 
@@ -394,6 +414,9 @@ export async function sendReviewRequests(io?: any): Promise<number> {
 
       sent++;
     } catch (err: any) {
+      // Retry on a future run if mail delivery fails. A successful send is
+      // never intentionally repeated, even across multiple worker instances.
+      await Booking.updateOne({ _id: booking._id, reviewRequestSentAt: { $exists: true } }, { $unset: { reviewRequestSentAt: "" } });
       logger.error({ err, bookingId: booking._id }, "Failed to send review request");
     }
   }
@@ -415,6 +438,16 @@ export async function processRequestLifecycle(io?: any): Promise<LifecycleRunRes
   };
 
   if (!REQUEST_EXPIRY_ENABLED) {
+    // Payment-hold cleanup and review invitations are independent of the
+    // request-expiry feature flag; disabling request expiry must not leave
+    // unpaid bookings stuck or suppress completed-session invitations.
+    try {
+      const paymentCleanup = await cleanupStalePaymentHolds();
+      result.paymentHoldsCleaned = paymentCleanup.cleaned;
+      result.errors.push(...paymentCleanup.errors);
+    } catch (err: any) { result.errors.push(`Payment hold cleanup: ${err?.message}`); }
+    try { result.reviewRequestsSent = await sendReviewRequests(io); }
+    catch (err: any) { result.errors.push(`Review invitations: ${err?.message}`); }
     return result;
   }
 

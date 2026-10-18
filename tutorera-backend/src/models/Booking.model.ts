@@ -29,6 +29,8 @@ export interface IBooking extends Document {
   teachingMode: "online" | "in-person" | "both";
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   cancelReason?: string;
+  completedAt?: Date;
+  reviewRequestSentAt?: Date;
   paymentStatus: "pending" | "received" | "confirmed" | "failed" | "refunded" | "partially_refunded" | "chargeback" | "disputed";
   paymentNote?: string;
   payoutStatus: "pending" | "approved" | "processing" | "paid" | "failed" | "held";
@@ -38,6 +40,11 @@ export interface IBooking extends Document {
   payoutProcessingAt?: Date;
   payoutPaidAt?: Date;
   payoutFailedAt?: Date;
+  payoutSettlementReference?: string;
+  payoutSettlementMethod?: string;
+  payoutEvidenceReference?: string;
+  payoutInitiatedBy?: Types.ObjectId;
+  payoutVerifiedBy?: Types.ObjectId;
   isFirstSession: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -73,6 +80,8 @@ const bookingSchema = new Schema<IBooking>(
     teachingMode: { type: String, enum: ["online", "in-person", "both"], default: "both" },
     status: { type: String, enum: ["upcoming", "ongoing", "completed", "cancelled"], default: "upcoming" },
     cancelReason: { type: String },
+    completedAt: { type: Date },
+    reviewRequestSentAt: { type: Date },
     paymentStatus: {
       type: String,
       enum: ["pending", "received", "confirmed", "failed", "refunded", "partially_refunded", "chargeback", "disputed"],
@@ -90,6 +99,11 @@ const bookingSchema = new Schema<IBooking>(
     payoutProcessingAt: { type: Date },
     payoutPaidAt: { type: Date },
     payoutFailedAt: { type: Date },
+    payoutSettlementReference: { type: String, trim: true },
+    payoutSettlementMethod: { type: String, trim: true },
+    payoutEvidenceReference: { type: String, trim: true },
+    payoutInitiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    payoutVerifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
     isFirstSession: { type: Boolean, default: false },
   },
   { timestamps: true }

@@ -23,7 +23,7 @@ export default function PublicTrackPage({ params }: { params: Params }) {
     (async () => {
       try {
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
-        const res = await fetch(`${apiBase}/track/tutor/${token}`);
+        const res = await fetch(`${apiBase}/tracking/${encodeURIComponent(token)}`);
         if (!res.ok) {
           if (!cancelled) setError("Tracking link not found. Please check the URL and try again.");
           return;

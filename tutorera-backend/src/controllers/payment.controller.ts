@@ -2,12 +2,13 @@
 import { Response, Request } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
-import { finalizeBidAcceptance } from "./request.controller";
+import { finalizeBidAcceptance, confirmExistingBookingPayment } from "./request.controller";
 import sendEmail from "../utils/sendEmail";
 import { paymentConfirmedEmail, paymentFailedEmail, paymentFailedNotifyTutorEmail } from "../utils/emailTemplates";
 import { sendNotification } from "../utils/socket";
@@ -24,18 +25,35 @@ const FRONTEND_URL = process.env.CLIENT_URL as string;
 // @access  Private (student who owns the booking)
 export const createBookingCheckout = async (req: AuthRequest, res: Response): Promise<void> => {
   const isParent = req.user?.role === "parent";
+  // A booking's optional parent field is not reliably set for existing rows.
+  // Use the explicit student-consented ParentProfile link as the authorization
+  // source of truth, and re-check it on every checkout/status request.
   const booking = isParent
-    ? await Booking.findOne({ _id: req.params.bookingId, parent: req.user?._id })
+    ? await Booking.findById(req.params.bookingId)
     : await Booking.findOne({ _id: req.params.bookingId, student: req.user?._id });
+  if (isParent && booking) {
+    const linked = await ParentProfile.exists({ user: req.user?._id, "children.studentUser": booking.student });
+    if (!linked) { res.status(404).json({ success: false, message: "Booking not found" }); return; }
+  }
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
     return;
   }
 
-  if (booking.paymentStatus === "confirmed") {
-    res.status(400).json({ success: false, message: "This booking has already been paid." });
+  if (booking.status !== "upcoming" || !["pending", "failed"].includes(booking.paymentStatus)) {
+    res.status(409).json({ success: false, code: "BOOKING_NOT_PAYABLE", message: "This booking is cancelled, completed or has already been paid." });
     return;
+  }
+  // Direct booking approval is a timed reservation, not a completed lesson.
+  // Do not generate a new checkout after its offer hold has expired.
+  const directRequest = booking.request ? await RequestModel.findById(booking.request).select("isDirect status acceptedOffer") : null;
+  if (directRequest?.isDirect) {
+    const activeBid = await Bid.findOne({ _id: booking.bid, status: "payment_pending", paymentPendingExpiresAt: { $gt: new Date() } }).select("_id");
+    if (!activeBid || directRequest.status !== "awaiting_payment" || directRequest.acceptedOffer?.toString() !== activeBid._id.toString()) {
+      res.status(409).json({ success: false, code: "PAYMENT_HOLD_EXPIRED", message: "This direct-booking reservation expired. Request another tutor confirmation." });
+      return;
+    }
   }
 
   const student = await User.findById(isParent ? booking.student : req.user?._id).select("name email phone");
@@ -59,6 +77,7 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       basketId,
       bookingId: booking._id.toString(),
       studentId: booking.student.toString(),
+      payerId: req.user?._id?.toString(),
       tutorId: booking.tutor.toString(),
       description: `TUTORERA booking ${basketId}`,
       successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
@@ -116,10 +135,22 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         res.status(409).json({ success: false, code: "PAYMENT_RECONCILIATION_FAILED" });
         return;
       }
+      // Multiple provider events for one basket must never repeat receipts or
+      // re-apply an already-settled booking state.
+      const previouslySettled = await PaymentLedger.findOne({ providerTransactionId: event.merchantTransactionId, eventType: "payment.succeeded" }).select("settlementStatus").lean();
+      if (previouslySettled) {
+        res.status(200).json({ success: true, code: previouslySettled.settlementStatus === "exception" ? "PAYMENT_RECONCILIATION_REQUIRED" : "ALREADY_CONFIRMED" });
+        return;
+      }
       if (event.merchantTransactionId.startsWith("BID-")) {
         const bidId = event.merchantTransactionId.slice("BID-".length);
         const io = req.app.get("io");
-        await finalizeBidAcceptance(bidId, io);
+        try {
+          await finalizeBidAcceptance(bidId, io);
+        } catch (err: any) {
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_REQUEST_UNAVAILABLE"].includes(err?.code) && err?.code !== 11000) throw err;
+          logger.error({ err, bidId }, "Paid offer cannot reserve tutor slot; finance reconciliation required");
+        }
 
         // A late payment can arrive after the 30-minute offer hold expired.
         // Never send a booking-confirmed receipt when booking creation failed;
@@ -176,15 +207,36 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         const booking = await Booking.findById(event.merchantTransactionId);
 
         if (!booking) {
-          logger.warn({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Webhook for unknown booking");
-          res.status(200).json({ success: true });
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId, providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, metadata: { reconciliationReason: "BOOKING_NOT_FOUND" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ basketId: event.merchantTransactionId }, "Gateway settled against unknown booking");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
           return;
         }
 
-        if (booking.paymentStatus !== "confirmed") {
-          booking.paymentStatus = "confirmed";
-          booking.paymentNote = `Confirmed via authorized payment gateway (event ${event.eventId})`;
-          await booking.save();
+        let newlyConfirmed = false;
+        try {
+          const finalized = await confirmExistingBookingPayment(booking._id.toString());
+          newlyConfirmed = !finalized.alreadyConfirmed;
+        } catch (err: any) {
+          // The gateway has taken money, but a cancelled/expired or conflicting
+          // booking must NOT be presented as confirmed or reserve an occupied slot.
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_NOT_PAYABLE", "BOOKING_HOLD_EXPIRED", "BOOKING_NOT_FOUND"].includes(err?.code) && err?.code !== 11000) throw err;
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId, providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, bookingId: booking._id.toString(),
+            studentId: booking.student.toString(), tutorId: booking.tutor.toString(),
+            metadata: { reconciliationReason: err?.code || "BOOKING_CONFLICT" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ err, bookingId: booking._id }, "Gateway settled against unavailable booking");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          return;
         }
         await recordPaymentLedger({
           providerTransactionId: event.merchantTransactionId,
@@ -200,6 +252,7 @@ export const handleRapidGatewayWebhook = async (req: Request, res: Response): Pr
         });
 
         try {
+          if (!newlyConfirmed) { res.status(200).json({ success: true, code: "ALREADY_CONFIRMED" }); return; }
           const student = await User.findById(booking.student).select("name email");
           const tutor = await User.findById(booking.tutor).select("name email");
           const populatedBooking = await Booking.findById(booking._id).populate("request");
@@ -324,7 +377,12 @@ export const getVerifiedPaymentStatus = async (req: AuthRequest, res: Response):
   const userId = req.user?._id;
   let booking;
   if (kind === "booking") {
-    booking = await Booking.findOne({ _id: id, $or: [{ student: userId }, { parent: userId }] });
+    booking = req.user?.role === "parent" ? await Booking.findById(id)
+      : await Booking.findOne({ _id: id, student: userId });
+    if (req.user?.role === "parent" && booking) {
+      const linked = await ParentProfile.exists({ user: userId, "children.studentUser": booking.student });
+      if (!linked) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+    }
     if (!booking) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
   } else {
     const bid = await Bid.findById(id).select("request");
@@ -346,7 +404,8 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response): Pr
   const limitNum = 20;
   const skip = (Number(page) - 1) * limitNum;
 
-  const ledgerFilter: Record<string, unknown> = { student: req.user?._id };
+  const ledgerFilter: Record<string, unknown> = req.user?.role === "parent"
+    ? { payer: req.user?._id } : { student: req.user?._id };
   if (status) ledgerFilter.status = status;
 
   const [transactions, total] = await Promise.all([

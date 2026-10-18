@@ -170,7 +170,7 @@ function BookingCard({ booking }: { booking: DashBooking }) {
             <p className={s.personSub}>Student</p>
           </div>
         </div>
-        <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
+        <span className={statusBadgeClass(booking.status)}>{booking.status === "upcoming" && booking.paymentStatus !== "confirmed" ? "Awaiting student payment" : booking.status}</span>
       </div>
 
       {/* Action buttons row */}
@@ -695,7 +695,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
     if (tab === "browse") fetchDirectRequests();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const upcomingCount  = bookings.filter((b) => b.status === "upcoming").length;
+  const upcomingCount  = bookings.filter((b) => b.status === "upcoming" && b.paymentStatus === "confirmed").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
 
   return (
