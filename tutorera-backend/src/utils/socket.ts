@@ -98,6 +98,12 @@ export const initSocket = (httpServer: HttpServer): Server => {
 
     // Typing indicator
     socket.on("typing", (data: { conversationId: string; isTyping: boolean }) => {
+      // A client may send any room name. Only sockets that passed the
+      // participant check in join_conversation can broadcast typing events.
+      if (!data || typeof data.conversationId !== "string" ||
+          !mongoose.Types.ObjectId.isValid(data.conversationId) ||
+          typeof data.isTyping !== "boolean" ||
+          !socket.rooms.has(data.conversationId)) return;
       socket.to(data.conversationId).emit("user_typing", {
         userId,
         isTyping: data.isTyping,
