@@ -6,6 +6,7 @@ import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
 import PaymentLedger from "../models/PaymentLedger.model";
+import mongoose from "mongoose";
 import BookedSlot from "../models/BookedSlot.model";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import Contact from "../models/Contact.model";
@@ -731,32 +732,43 @@ export const verifyExternalPayout = async (req: AuthRequest, res: Response): Pro
   if (booking.payoutSettlementReference !== settlementReference.trim()) {
     res.status(409).json({ success: false, code: "PAYOUT_REFERENCE_MISMATCH", message: "Evidence reference must match the initiated transfer." }); return;
   }
-  const claimed = await Booking.findOneAndUpdate(
-    { _id: booking._id, status: "completed", paymentStatus: "confirmed", payoutStatus: "processing",
-      payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: { $ne: actor } },
-    { $set: { payoutStatus: "paid", payoutPaidAt: new Date(), payoutVerifiedBy: actor,
-      payoutNote: `Manually reconciled external transfer; ${note.trim().slice(0, 250)}`,
-      payoutEvidenceReference: verificationEvidence.trim().slice(0, 300) } },
-    { new: true }
-  );
-  if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_ALREADY_REVIEWED" }); return; }
-  // One settlement ledger entry per booking, with a distinct manual provider
-  // and evidence metadata. No gateway API or automatic transfer is implied.
-  await PaymentLedger.findOneAndUpdate(
-    { provider: "external_transfer", providerEventId: `payout-${claimed._id}` },
-    { $setOnInsert: {
-      provider: "external_transfer", providerEventId: `payout-${claimed._id}`,
-      providerTransactionId: settlementReference.trim(), booking: claimed._id,
-      student: claimed.student, tutor: claimed.tutor,
-      eventType: "payout.completed", status: "succeeded", currency: claimed.currency || "PKR",
-      grossAmount: claimed.tutorPayout, studentPayment: 0, studentFee: 0, tutorFee: 0,
-      tax: 0, gatewayFee: 0, refundAmount: 0, tutorPayable: claimed.tutorPayout,
-      platformNet: 0, settlementStatus: "reconciled",
-      metadata: { settlementMethod: claimed.payoutSettlementMethod, evidenceReference: verificationEvidence.trim(),
-        initiatedBy: claimed.payoutInitiatedBy?.toString(), reviewedBy: actor?.toString(),
-        verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
-    } }, { upsert: true, new: true }
-  );
+  // A partial database write must not label a transfer 'paid' without its
+  // corresponding immutable manual-settlement ledger event.
+  const session = await mongoose.startSession();
+  let claimed: typeof booking | null = null;
+  try {
+    await session.withTransaction(async () => {
+      const changed = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: "completed", paymentStatus: "confirmed", payoutStatus: "processing",
+          payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: { $ne: actor } },
+        { $set: { payoutStatus: "paid", payoutPaidAt: new Date(), payoutVerifiedBy: actor,
+          payoutNote: `Manually reconciled external transfer; ${note.trim().slice(0, 250)}`,
+          payoutEvidenceReference: verificationEvidence.trim().slice(0, 300) } },
+        { new: true, session }
+      );
+      if (!changed) throw Object.assign(new Error("Payout was already reconciled or changed."), { statusCode: 409 });
+      await PaymentLedger.findOneAndUpdate(
+        { provider: "external_transfer", providerEventId: `payout-${changed._id}` },
+        { $setOnInsert: {
+          provider: "external_transfer", providerEventId: `payout-${changed._id}`,
+          providerTransactionId: settlementReference.trim(), booking: changed._id,
+          student: changed.student, tutor: changed.tutor,
+          eventType: "payout.completed", status: "succeeded", currency: changed.currency || "PKR",
+          grossAmount: changed.tutorPayout, studentPayment: 0, studentFee: 0, tutorFee: 0,
+          tax: 0, gatewayFee: 0, refundAmount: 0, tutorPayable: changed.tutorPayout,
+          platformNet: 0, settlementStatus: "reconciled",
+          metadata: { settlementMethod: changed.payoutSettlementMethod, evidenceReference: verificationEvidence.trim(),
+            initiatedBy: changed.payoutInitiatedBy?.toString(), reviewedBy: actor?.toString(),
+            verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
+        } }, { upsert: true, new: true, session }
+      );
+      claimed = changed;
+    });
+  } catch (err: any) {
+    res.status(err?.statusCode || 500).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED", message: err?.message || "Unable to verify transfer." });
+    return;
+  } finally { await session.endSession(); }
+  if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
   await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor?.toString(),
     entity: "Booking", targetId: claimed._id.toString(),
     metadata: { reference: settlementReference.trim(), reviewer: actor?.toString(), evidence: verificationEvidence.trim() } });
