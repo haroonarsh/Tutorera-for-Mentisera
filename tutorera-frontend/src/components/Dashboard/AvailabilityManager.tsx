@@ -20,6 +20,9 @@ interface WeeklySlot {
 
 export default function AvailabilityManager() {
   const [slots, setSlots] = useState<WeeklySlot[]>([]);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [newBlockedDate, setNewBlockedDate] = useState("");
+  const [timezone, setTimezone] = useState("Asia/Karachi");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,8 @@ export default function AvailabilityManager() {
         if (res.data.availability?.weeklySlots) {
           setSlots(res.data.availability.weeklySlots);
         }
+        setTimezone(res.data.timezone || "Asia/Karachi");
+        setBlockedDates((res.data.availability?.blockedDates || []).map((date: string) => date.slice(0, 10)));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -50,7 +55,7 @@ export default function AvailabilityManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axiosInstance.post("/tutors/availability", { weeklySlots: slots });
+      await axiosInstance.post("/tutors/availability", { weeklySlots: slots, blockedDates });
       showSuccess("Availability saved successfully.");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -68,7 +73,7 @@ export default function AvailabilityManager() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <p style={{ fontWeight: 700, color: '#021550', fontSize: '0.95rem', margin: 0 }}>Weekly Availability</p>
-          <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: '2px 0 0' }}>Set your standard weekly availability. Students will see your next 2 weeks of open slots.</p>
+          <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: '2px 0 0' }}>Set your weekly hours in {timezone}. Students see only time windows that are not blocked or already booked.</p>
         </div>
         <button onClick={handleSave} disabled={saving}
           style={{ padding: '0.5rem 1.25rem', backgroundColor: saving ? '#93c5fd' : saved ? '#16a34a' : '#0329B2', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.8rem', cursor: saving ? 'not-allowed' : 'pointer' }}>
@@ -119,6 +124,29 @@ export default function AvailabilityManager() {
             </div>
           );
         })}
+      </div>
+      <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
+        <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#021550", marginBottom: "0.4rem" }}>Blocked dates</p>
+        <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.6rem" }}>These dates will not appear as available. Save availability after editing.</p>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <input type="date" aria-label="Date to block" value={newBlockedDate} min={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setNewBlockedDate(e.target.value)}
+            style={{ padding: "0.4rem", border: "1px solid #cbd5e1", borderRadius: "0.35rem" }} />
+          <button type="button" disabled={!newBlockedDate} onClick={() => {
+            if (!newBlockedDate) return;
+            setBlockedDates((dates) => Array.from(new Set([...dates, newBlockedDate])).sort());
+            setNewBlockedDate("");
+          }} style={{ padding: "0.4rem 0.8rem", borderRadius: "0.35rem", backgroundColor: "#eef5ff", color: "#0329b2", border: "1px solid #bfd4ff" }}>Block date</button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
+          {blockedDates.map((date) => (
+            <button key={date} type="button" onClick={() => setBlockedDates((days) => days.filter((d) => d !== date))}
+              title={`Unblock ${date}`} aria-label={`Unblock ${date}`}
+              style={{ padding: "0.4rem 0.7rem", border: "1px solid #fecaca", borderRadius: "0.4rem", color: "#991b1b", background: "#fff1f2" }}>
+              {date} ×
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
