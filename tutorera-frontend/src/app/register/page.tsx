@@ -81,7 +81,7 @@ function RegisterForm() {
   const handleGoogleToken = async (idToken: string) => {
     setError("");
     try {
-      const { user, needsRole } = await loginWithGoogle(idToken, form.role);
+      const { user, needsRole } = await loginWithGoogle(idToken, form.role, form.countryCode, form.preferredLanguage);
       if (needsRole) {
         router.push("/select-role");
       } else if (user.role === "tutor") {
