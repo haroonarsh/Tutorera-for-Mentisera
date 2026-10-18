@@ -5,7 +5,7 @@ import GuardianConsent from "../models/GuardianConsent.model";
 import ParentProfile from "../models/ParentProfile.model";
 import sendEmail from "../utils/sendEmail";
 import { ensureLaunchMarkets } from "../services/market.service";
-import { ageOnDate } from "../services/guardianConsent.service";
+import { ageOnDate, verifyGuardianConsent } from "../services/guardianConsent.service";
 
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 jest.mock("google-auth-library", () => ({
@@ -258,6 +258,42 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
         adultAttestation: true, guardianDateOfBirth: "1980-04-10" }).expect(409);
     expect(result.body.code).toBe("CONSENT_EXPIRED");
     expect((await User.findById(student!._id))?.parentConsentVerified).toBe(false);
+  });
+
+  it("consumes invalid verification-code attempts atomically during concurrent requests", async () => {
+    const { studentEmail, guardianEmail } = await signupMinor();
+    const student = await User.findOne({ email: studentEmail });
+    const { parent } = await parentAgent(guardianEmail);
+    const correct = getCode(guardianEmail);
+    const wrong = correct === "00000000" ? "00000001" : "00000000";
+    const input = { parentId: parent._id, studentId: student!._id.toString(),
+      adultAttestation: true, guardianDateOfBirth: "1980-01-01" };
+    const attempts = await Promise.allSettled(Array.from({ length: 5 }, () =>
+      verifyGuardianConsent({ ...input, code: wrong })));
+    expect(attempts).toHaveLength(5);
+    expect(attempts.every(result => result.status === "rejected")).toBe(true);
+    const current = await GuardianConsent.findOne({ student: student!._id });
+    expect(current?.attempts).toBe(5);
+    await expect(verifyGuardianConsent({ ...input, code: correct }))
+      .rejects.toMatchObject({ code: "CONSENT_EXPIRED" });
+    expect((await User.findById(student!._id))?.parentConsentVerified).toBe(false);
+  });
+
+  it("accepts the fifth and last valid guardian-code attempt after four failures", async () => {
+    const { studentEmail, guardianEmail } = await signupMinor();
+    const student = await User.findOne({ email: studentEmail });
+    const { parent } = await parentAgent(guardianEmail);
+    const correct = getCode(guardianEmail);
+    const wrong = correct === "00000000" ? "00000001" : "00000000";
+    const args = { parentId: parent._id, studentId: student!._id.toString(),
+      adultAttestation: true, guardianDateOfBirth: "1980-01-01" };
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await expect(verifyGuardianConsent({ ...args, code: wrong }))
+        .rejects.toMatchObject({ code: "INVALID_CONSENT_CODE" });
+    }
+    await verifyGuardianConsent({ ...args, code: correct });
+    expect((await GuardianConsent.findOne({ student: student!._id }))?.status).toBe("verified");
+    expect((await User.findById(student!._id))?.parentConsentVerified).toBe(true);
   });
 
   it("allows a declared adult student to complete local registration without a guardian", async () => {
