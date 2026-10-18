@@ -4,7 +4,7 @@ import Booking from "../models/Booking.model";
 import PDFDocument from "pdfkit";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
-import { payoutProcessedEmail } from "../utils/emailTemplates";
+import { renderTransactionalEmail } from "../utils/emailBrand";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
@@ -252,34 +252,32 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
   const { bookingId } = req.params;
   const tutorId = req.user?._id;
 
-  const booking = await Booking.findOne({
-    _id: bookingId,
-    tutor: tutorId,
-    status: "completed",
-    paymentStatus: "confirmed",
-    payoutStatus: "pending",
-  });
+  const booking = await Booking.findOneAndUpdate({
+    _id: bookingId, tutor: tutorId, status: "completed", paymentStatus: "confirmed",
+    payoutStatus: "pending", payoutRequestedAt: { $exists: false },
+  }, {
+    $set: { payoutRequestedAt: new Date(), payoutNote: "Tutor submitted payout request; awaiting finance approval" },
+  }, { new: true });
 
   if (!booking) {
-    res.status(404).json({ success: false, message: "Eligible booking not found for payout request." });
+    res.status(409).json({ success: false, code: "PAYOUT_NOT_ELIGIBLE", message: "Payout was already requested or the session is not eligible." });
     return;
   }
-
-  booking.payoutStatus = "processing";
-  booking.payoutNote = "Payout requested by tutor";
-  const requestedAt = new Date();
-  booking.payoutRequestedAt = requestedAt;
-  booking.payoutProcessingAt = requestedAt;
-  await booking.save();
 
   const tutorUser = await User.findById(tutorId).select("name email");
   if (tutorUser) {
     try {
-      const mail = payoutProcessedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString());
-      await sendEmail({ to: tutorUser.email, subject: mail.subject, html: mail.html, eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
-    } catch (err) {
-      logger.error({ err, bookingId: booking._id }, "Failed to send payout request email");
-    }
+      const html = renderTransactionalEmail({
+        subject: "TUTORERA® — Payout Request Received", emailCategory: "Payout",
+        emailHeading: "Payout Request Received", emailSubheading: "Awaiting finance review",
+        firstName: tutorUser.name,
+        openingMessage: `We received your payout request for ${booking.currency || "PKR"} ${booking.tutorPayout.toLocaleString()}.`,
+        mainMessage: "No transfer has been initiated or completed. Finance will review your request and confirm settlement separately.",
+        includeSecurityNotice: true,
+      });
+      await sendEmail({ to: tutorUser.email, subject: "TUTORERA® — Payout Request Received", html,
+        eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
+    } catch (err) { logger.error({ err, bookingId: booking._id }, "Failed to send payout request email"); }
   }
 
   res.status(200).json({ success: true, message: "Payout request submitted successfully.", booking });
