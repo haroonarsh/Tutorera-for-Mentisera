@@ -384,8 +384,12 @@ export class MatchingService {
       }).lean() : []);
       if (existing.some((slot) => isBookedIntervalConflict(slot, tutorTimezone, fixedStart, fixedEnd))) return null;
     }
+    // Recommended-request scoring also receives hydrated Mongoose documents;
+    // spreading a Document directly drops schema fields. Normalize first.
+    const tutorData = typeof (tutor as any).toObject === "function"
+      ? (tutor as any).toObject() : tutor;
     const tutorWithCalendar = canonicalCalendar
-      ? { ...tutor, availability: canonicalCalendar.weeklySlots.map((slot) => ({
+      ? { ...tutorData, availability: canonicalCalendar.weeklySlots.map((slot) => ({
           day: slot.day, slots: [`${slot.startTime}-${slot.endTime}`],
         })) } as ITutorProfile
       : tutor;
