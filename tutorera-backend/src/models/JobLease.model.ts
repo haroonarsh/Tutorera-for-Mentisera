@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-interface IJobLease extends Document {
+interface IJobLease {
   _id: string;
   owner: string;
   leaseUntil: Date;
