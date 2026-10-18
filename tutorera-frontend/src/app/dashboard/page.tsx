@@ -230,6 +230,9 @@ export default function DashboardPage() {
     if (!loading && !user) {
       router.replace("/login");
     }
+    if (!loading && user?.role === "student" && user.isMinor && !user.parentConsentVerified) {
+      router.replace("/guardian-consent-pending");
+    }
     if (!loading && user?.role === "pending") {
       router.replace("/select-role");
     }
@@ -266,7 +269,7 @@ export default function DashboardPage() {
   }, [user]);
 
   // Show loading while auth or status check is in progress
-  if (loading || !user || user.role === "pending" || user.role === "admin" || (user.role === "tutor" && (checkingStatus || verificationStatus === null))) {
+  if (loading || !user || user.role === "pending" || user.role === "admin" || (user.role === "student" && user.isMinor && !user.parentConsentVerified) || (user.role === "tutor" && (checkingStatus || verificationStatus === null))) {
     return <LoadingScreen />;
   }
 
