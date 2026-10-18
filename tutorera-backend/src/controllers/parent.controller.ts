@@ -198,43 +198,36 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
 
 export const removeChildAccount = async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "parent") {
-    res.status(403).json({ success: false, message: "Access denied." });
-    return;
+    res.status(403).json({ success: false, message: "Access denied." }); return;
   }
-
-  const { childId } = req.params;
-
-  const profile = await ParentProfile.findOne({ user: req.user._id });
-  if (!profile) {
-    res.status(404).json({ success: false, message: "Parent profile not found." });
-    return;
+  const childId = req.params.childId;
+  if (!mongoose.isValidObjectId(childId)) {
+    res.status(400).json({ success: false, message: "Invalid linked student reference." }); return;
   }
-
-  const removedChild = profile.children.find(c => c._id?.toString() === childId);
-  const before = profile.children.length;
-  profile.children = profile.children.filter(
-    (c) => c._id?.toString() !== childId
-  );
-
-  if (profile.children.length === before) {
-    res.status(404).json({ success: false, message: "Child account not found." });
-    return;
-  }
-
-  await profile.save();
-  if (removedChild) {
-    const child = await User.findOne({ _id: removedChild.studentUser, role: "student", isMinor: true,
-      parentGuardianEmail: req.user.email.toLowerCase() });
-    if (child) {
-      await User.updateOne({ _id: child._id }, {
-        $set: { parentConsentVerified: false },
-        $unset: { guardianConsentVerifiedAt: "" },
-      });
-      await GuardianConsent.updateOne({ student: child._id }, { $set: { status: "expired" } });
-    }
-  }
-
-  res.status(200).json({ success: true, message: "Child account removed." });
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const profile = await ParentProfile.findOne({ user: req.user?._id }).session(session);
+      if (!profile) throw Object.assign(new Error("Parent profile not found."), { statusCode: 404 });
+      const removed = profile.children.find(child => child._id?.toString() === childId);
+      if (!removed) throw Object.assign(new Error("Linked student not found."), { statusCode: 404 });
+      profile.children = profile.children.filter(child => child._id?.toString() !== childId);
+      await profile.save({ session });
+      // Removing the account's verified supervising parent and revoking
+      // that minor's authorization must be one indivisible operation.
+      const child = await User.findOneAndUpdate({
+        _id: removed.studentUser, role: "student", isMinor: true,
+        parentGuardianEmail: req.user?.email.toLowerCase(),
+      }, { $set: { parentConsentVerified: false }, $unset: { guardianConsentVerifiedAt: "" } },
+        { session, new: true });
+      if (child) await GuardianConsent.updateOne({ student: child._id },
+        { $set: { status: "expired" } }, { session });
+    });
+    res.status(200).json({ success: true, message: "Child account unlinked; supervised access revoked where applicable." });
+  } catch (error: any) {
+    res.status(error?.statusCode || 500).json({ success: false,
+      message: error?.statusCode ? error.message : "Unable to safely remove the guardian link." });
+  } finally { await session.endSession(); }
 };
 
 export const getPendingBookingApprovals = async (req: AuthRequest, res: Response): Promise<void> => {
