@@ -80,12 +80,16 @@ export async function verifyGuardianConsent(args: {
   }
   const parent = await User.findOne({ _id: parentId, role: "parent", isActive: true });
   if (!parent) throw new GuardianConsentError("PARENT_ACCOUNT_REQUIRED", "Sign in with a parent account.", 403);
-  const approval = await GuardianConsent.findOne({ student: studentId, guardianEmail: parent.email.toLowerCase(),
-    status: "pending", expiresAt: { $gt: new Date() }, attempts: { $lt: 5 } }).select("+codeHash");
+  // Claim an attempt BEFORE comparing secrets. A read-then-increment lets
+  // concurrent requests all see attempts < 5 and bypass the OTP ceiling.
+  // Returning the post-update document includes the selected +codeHash.
+  const approval = await GuardianConsent.findOneAndUpdate({
+    student: studentId, guardianEmail: parent.email.toLowerCase(),
+    status: "pending", expiresAt: { $gt: new Date() }, attempts: { $lt: 5 },
+  }, { $inc: { attempts: 1 } }, { new: true }).select("+codeHash");
   if (!approval) throw new GuardianConsentError("CONSENT_EXPIRED", "The request has expired or is unavailable.", 409);
   const suppliedHash = codeHash(studentId, code);
   if (!safeCompare(suppliedHash, approval.codeHash)) {
-    await GuardianConsent.updateOne({ _id: approval._id, status: "pending" }, { $inc: { attempts: 1 } });
     throw new GuardianConsentError("INVALID_CONSENT_CODE", "Invalid guardian verification code.", 400);
   }
   const session = await mongoose.startSession();
@@ -93,7 +97,10 @@ export async function verifyGuardianConsent(args: {
     await session.withTransaction(async () => {
       const consent = await GuardianConsent.findOneAndUpdate({
         _id: approval._id, guardianEmail: parent.email.toLowerCase(), status: "pending",
-        expiresAt: { $gt: new Date() }, attempts: { $lt: 5 },
+        // The successful attempt itself increments to 5 when four failures
+        // preceded it; the sixth attempt was already prevented atomically.
+        expiresAt: { $gt: new Date() }, attempts: { $lte: 5 },
+        codeHash: approval.codeHash,
       }, { $set: { status: "verified", verifiedBy: parent._id, verifiedAt: new Date() } },
         { session, new: true });
       if (!consent) throw new GuardianConsentError("CONSENT_ALREADY_USED", "Guardian approval has already been processed.");
