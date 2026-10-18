@@ -374,6 +374,22 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
   });
 };
 
+// Explicit finance exception queue (not inferred from report totals).
+export const getFinanceExceptions = async (req: AuthRequest, res: Response): Promise<void> => {
+  const pageNum = Math.max(1, Number.parseInt(String(req.query.page || 1), 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || 25), 10) || 25));
+  const filter = { settlementStatus: "exception" as const };
+  const [total, exceptions] = await Promise.all([
+    PaymentLedger.countDocuments(filter),
+    PaymentLedger.find(filter).populate("student", "name email").populate("tutor", "name email")
+      .populate("booking", "status paymentStatus currency studentTotal").sort("-createdAt")
+      .skip((pageNum - 1) * limitNum).limit(limitNum).lean(),
+  ]);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).json({ success: true, total, page: pageNum,
+    pages: Math.ceil(total / limitNum), exceptions });
+};
+
 // ─── 5. System Health & Jobs ─────────────────────────────────────────────────
 
 export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise<void> => {
