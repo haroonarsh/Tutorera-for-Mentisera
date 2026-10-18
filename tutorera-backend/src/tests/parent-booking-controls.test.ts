@@ -82,7 +82,8 @@ describe("Fix 4: enforce linked guardian spending and booking decisions", () => 
       description: "English tuition request", budget: 600, currency: "PKR", countryCode: "PK",
       pricingUnit: "hour", teachingMode: "online", schedule: "Flexible", status: "awaiting_payment" });
     await Bid.create({ request: req2._id, tutor: f.tutor.user._id, amount: 600, initialStudentRate: 600, currency: "PKR",
-      status: "payment_pending", pricingUnit: "hour", feeQuote: {
+      status: "payment_pending", pricingUnit: "hour", message: "Pending sibling tutoring payment",
+      expiresAt: new Date(Date.now() + 7200_000), feeQuote: {
         subtotal: 600, studentFee: 0, tutorFee: 120, tax: 18,
         studentTotal: 600, tutorNet: 462, feeConfig: { version: "test" },
       }, paymentPendingExpiresAt: new Date(Date.now() + 3600_000) });
