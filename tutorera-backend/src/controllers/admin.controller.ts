@@ -887,16 +887,16 @@ export const updateBookingStatus = async (
 // @route   GET /api/admin/payouts
 // @access  Private (admin)
 export const getPayouts = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { status } = req.query; // "pending" | "paid" | undefined (all)
+  const { status } = req.query; // "pending" (action queue) | "paid" | undefined (all)
 
   // Only show bookings where the student has already paid — those are the ones
   // that need a tutor payout. Unconfirmed payments haven't earned a payout yet.
   const filter: Record<string, unknown> = {
-    paymentStatus: "confirmed",
+    paymentStatus: "confirmed", status: "completed",
   };
 
   if (status && status !== "all") {
-    filter.payoutStatus = status;
+    filter.payoutStatus = status === "pending" ? { $in: ["pending", "approved", "processing", "held", "failed"] } : status;
   }
 
   const bookings = await Booking.find(filter)
@@ -905,8 +905,8 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
     .sort("-createdAt");
 
   // ── Summary stats across ALL confirmed bookings (ignore status filter for stats) ──
-  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" });
-  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus === "pending");
+  const allConfirmed = await Booking.find({ paymentStatus: "confirmed", status: "completed" });
+  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus !== "paid");
   const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
 
   const totalPendingAmount = pendingOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
