@@ -2,6 +2,7 @@
 import { Response, Request } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
+import ParentProfile from "../models/ParentProfile.model";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
@@ -24,9 +25,16 @@ const FRONTEND_URL = process.env.CLIENT_URL as string;
 // @access  Private (student who owns the booking)
 export const createBookingCheckout = async (req: AuthRequest, res: Response): Promise<void> => {
   const isParent = req.user?.role === "parent";
+  // A booking's optional parent field is not reliably set for existing rows.
+  // Use the explicit student-consented ParentProfile link as the authorization
+  // source of truth, and re-check it on every checkout/status request.
   const booking = isParent
-    ? await Booking.findOne({ _id: req.params.bookingId, parent: req.user?._id })
+    ? await Booking.findById(req.params.bookingId)
     : await Booking.findOne({ _id: req.params.bookingId, student: req.user?._id });
+  if (isParent && booking) {
+    const linked = await ParentProfile.exists({ user: req.user?._id, "children.studentUser": booking.student });
+    if (!linked) { res.status(404).json({ success: false, message: "Booking not found" }); return; }
+  }
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
@@ -369,7 +377,12 @@ export const getVerifiedPaymentStatus = async (req: AuthRequest, res: Response):
   const userId = req.user?._id;
   let booking;
   if (kind === "booking") {
-    booking = await Booking.findOne({ _id: id, $or: [{ student: userId }, { parent: userId }] });
+    booking = req.user?.role === "parent" ? await Booking.findById(id)
+      : await Booking.findOne({ _id: id, student: userId });
+    if (req.user?.role === "parent" && booking) {
+      const linked = await ParentProfile.exists({ user: userId, "children.studentUser": booking.student });
+      if (!linked) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+    }
     if (!booking) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
   } else {
     const bid = await Bid.findById(id).select("request");
