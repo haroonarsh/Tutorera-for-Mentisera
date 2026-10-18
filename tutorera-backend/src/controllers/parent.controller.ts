@@ -6,6 +6,9 @@ import StudentProfile from "../models/StudentProfile.model";
 import Booking from "../models/Booking.model";
 import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import ParentLinkRequest from "../models/ParentLinkRequest.model";
+import ParentBookingApproval from "../models/ParentBookingApproval.model";
+import Bid from "../models/Bid.model";
+import RequestModel from "../models/Request.model";
 import sendEmail from "../utils/sendEmail";
 import crypto from "crypto";
 import mongoose from "mongoose";
@@ -220,13 +223,78 @@ export const removeChildAccount = async (req: AuthRequest, res: Response): Promi
   res.status(200).json({ success: true, message: "Child account removed." });
 };
 
+export const getPendingBookingApprovals = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") { res.status(403).json({ success: false, message: "Parent access required." }); return; }
+  const profile = await ParentProfile.findOne({ user: req.user._id }).select("children.studentUser").lean();
+  const childIds = profile?.children.map(child => child.studentUser) || [];
+  const approvals = await ParentBookingApproval.find({
+    parent: req.user._id,
+    student: { $in: childIds },
+    status: "pending",
+    expiresAt: { $gt: new Date() },
+  }).populate("request", "subject schedule teachingMode currency").populate("bid", "amount currency tutor")
+    .sort("-createdAt").limit(50).lean();
+  const result = approvals.filter(item => item.bid && item.request).map(item => ({
+    _id: item._id, studentId: item.student, bidId: item.bid?._id,
+    subject: (item.request as any).subject, amount: item.amount, currency: item.currency,
+    tutorId: (item.bid as any).tutor, expiresAt: item.expiresAt,
+    createdAt: item.createdAt, status: item.status,
+  }));
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, approvals: result });
+};
+
+export const decideBookingApproval = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== "parent") { res.status(403).json({ success: false, message: "Parent access required." }); return; }
+  const { decision } = req.body || {};
+  if (!["approved", "rejected"].includes(decision)) {
+    res.status(400).json({ success: false, message: "Decision must be approved or rejected." }); return;
+  }
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ success: false, message: "Invalid approval identifier." }); return;
+  }
+  const approval = await ParentBookingApproval.findOne({
+    _id: req.params.id, parent: req.user._id, status: "pending", expiresAt: { $gt: new Date() },
+  });
+  if (!approval) { res.status(409).json({ success: false, code: "APPROVAL_NOT_PENDING" }); return; }
+  // Revoked guardian links must immediately revoke authority to approve.
+  const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": approval.student });
+  if (!linked) { res.status(403).json({ success: false, code: "PARENT_LINK_REVOKED" }); return; }
+  const [bid, request] = await Promise.all([
+    Bid.findById(approval.bid).select("amount currency status expiresAt"),
+    RequestModel.findById(approval.request).select("student status"),
+  ]);
+  if (!bid || !request || request.student.toString() !== approval.student.toString() ||
+    !["open", "published", "receiving_offers", "negotiating", "awaiting_payment"].includes(request.status) ||
+    !["pending", "submitted", "viewed", "countered", "payment_pending"].includes(bid.status) ||
+    (bid.expiresAt && bid.expiresAt <= new Date())) {
+    res.status(409).json({ success: false, code: "OFFER_NO_LONGER_AVAILABLE" }); return;
+  }
+  const updated = await ParentBookingApproval.findOneAndUpdate(
+    { _id: approval._id, parent: req.user._id, status: "pending", expiresAt: { $gt: new Date() } },
+    { $set: { status: decision, decidedAt: new Date() } },
+    { new: true }
+  );
+  if (!updated) { res.status(409).json({ success: false, code: "APPROVAL_ALREADY_REVIEWED" }); return; }
+  res.json({ success: true, approval: updated, message: decision === "approved"
+    ? "Guardian approved this exact booking offer. The student may continue checkout."
+    : "Guardian declined this booking offer." });
+};
+
 export const updateParentSettings = async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "parent") {
     res.status(403).json({ success: false, message: "Access denied." });
     return;
   }
 
-  const { approvalRequiredForBookings, spendingLimitMonthly, notificationsEnabled } = req.body;
+  const { approvalRequiredForBookings, spendingLimitMonthly, spendingLimitCurrency, notificationsEnabled } = req.body;
+  if ((approvalRequiredForBookings !== undefined && typeof approvalRequiredForBookings !== "boolean") ||
+      (notificationsEnabled !== undefined && typeof notificationsEnabled !== "boolean") ||
+      (spendingLimitMonthly != null && (typeof spendingLimitMonthly !== "number" || !Number.isFinite(spendingLimitMonthly) || spendingLimitMonthly < 0 || spendingLimitMonthly > 1e9)) ||
+      (spendingLimitCurrency !== undefined && (typeof spendingLimitCurrency !== "string" || !/^[A-Za-z]{3}$/.test(spendingLimitCurrency)))) {
+    res.status(400).json({ success: false, code: "INVALID_PARENT_SETTINGS", message: "Invalid approval, spending limit or currency settings." });
+    return;
+  }
 
   const profile = await ParentProfile.findOneAndUpdate(
     { user: req.user._id },
@@ -234,6 +302,7 @@ export const updateParentSettings = async (req: AuthRequest, res: Response): Pro
       $set: {
         ...(approvalRequiredForBookings !== undefined && { approvalRequiredForBookings }),
         ...(spendingLimitMonthly !== undefined && { spendingLimitMonthly }),
+        ...(spendingLimitCurrency !== undefined && { spendingLimitCurrency: spendingLimitCurrency.toUpperCase() }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
     },
@@ -252,7 +321,12 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
     return;
   }
 
-  const { name, phone, city, approvalRequiredForBookings, spendingLimitMonthly, notificationsEnabled } = req.body;
+  const { name, phone, city, approvalRequiredForBookings, spendingLimitMonthly, spendingLimitCurrency, notificationsEnabled } = req.body;
+  if ((spendingLimitMonthly != null && (typeof spendingLimitMonthly !== "number" || !Number.isFinite(spendingLimitMonthly) || spendingLimitMonthly < 0 || spendingLimitMonthly > 1e9)) ||
+      (spendingLimitCurrency !== undefined && (typeof spendingLimitCurrency !== "string" || !/^[A-Za-z]{3}$/.test(spendingLimitCurrency))) ||
+      (approvalRequiredForBookings !== undefined && typeof approvalRequiredForBookings !== "boolean")) {
+    res.status(400).json({ success: false, code: "INVALID_PARENT_SETTINGS" }); return;
+  }
 
   await User.findByIdAndUpdate(req.user._id, {
     name: name || req.user.name,
@@ -266,6 +340,7 @@ export const saveParentOnboarding = async (req: AuthRequest, res: Response): Pro
       $set: {
         ...(approvalRequiredForBookings !== undefined && { approvalRequiredForBookings }),
         ...(spendingLimitMonthly !== undefined && { spendingLimitMonthly }),
+        ...(spendingLimitCurrency !== undefined && { spendingLimitCurrency: spendingLimitCurrency.toUpperCase() }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
     },
