@@ -56,6 +56,43 @@ describe("parent and student account linking", () => {
     expect(profile?.children).toHaveLength(0);
   });
 
+  it("does not send a student-mailbox link code for an underage account", async () => {
+    const { agent, parent } = await loginParent();
+    const minor = await User.create({
+      name: "Supervised Minor", email: `legacy-minor-${Date.now()}@test.com`,
+      password: "password123", role: "student", isMinor: true,
+      parentConsentVerified: false, parentGuardianEmail: parent.email,
+    });
+    const blocked = await agent.post("/api/v1/parent/children").send({
+      studentEmail: minor.email, name: minor.name,
+    }).expect(403);
+    expect(blocked.body.code).toBe("GUARDIAN_CONSENT_FLOW_REQUIRED");
+    const { default: ParentLinkRequest } = await import("../models/ParentLinkRequest.model");
+    expect(await ParentLinkRequest.countDocuments({ parent: parent._id, student: minor._id })).toBe(0);
+    expect((await ParentProfile.findOne({ user: parent._id }))?.children.length || 0).toBe(0);
+  });
+
+  it("rejects an old student-email link request after its student becomes a minor", async () => {
+    const { agent, parent } = await loginParent();
+    const student = await User.create({
+      name: "Reclassified Student", email: `reclassified-${Date.now()}@test.com`,
+      password: "password123", role: "student", isMinor: false,
+    });
+    const requested = await agent.post("/api/v1/parent/children").send({
+      studentEmail: student.email, name: student.name,
+    }).expect(202);
+    const emailCalls = (sendEmail as jest.Mock).mock.calls;
+    const code = String(emailCalls[emailCalls.length - 1][0].html).match(/>(\d{6})</)?.[1];
+    expect(code).toMatch(/^\d{6}$/);
+    await User.updateOne({ _id: student._id }, {
+      $set: { isMinor: true, parentConsentVerified: false, parentGuardianEmail: parent.email },
+    });
+    const blocked = await agent.post("/api/v1/parent/children/confirm")
+      .send({ requestId: requested.body.requestId, code }).expect(403);
+    expect(blocked.body.code).toBe("GUARDIAN_CONSENT_FLOW_REQUIRED");
+    expect((await ParentProfile.findOne({ user: parent._id }))?.children.length || 0).toBe(0);
+  });
+
   it("rejects the legacy direct student identifier contract", async () => {
     const { agent } = await loginParent();
     const student = await User.create({ name: "Direct Link Student", email: `direct-student-${Date.now()}@test.com`, password: "password123", role: "student" });

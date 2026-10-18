@@ -93,6 +93,14 @@ export const addChildAccount = async (req: AuthRequest, res: Response): Promise<
     res.status(404).json({ success: false, message: "Student account not found." });
     return;
   }
+  // The legacy link flow verifies control of the STUDENT mailbox. That
+  // cannot grant supervisory access to an underage student's account; their
+  // separate parent mailbox must complete the adult-consent workflow.
+  if (student.isMinor) {
+    res.status(403).json({ success: false, code: "GUARDIAN_CONSENT_FLOW_REQUIRED",
+      message: "An underage student must be linked through verified guardian consent." });
+    return;
+  }
 
   let profile = await ParentProfile.findOne({ user: req.user._id });
   if (!profile) {
@@ -166,6 +174,14 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
     res.status(410).json({ success: false, message: "This verification request has expired. Request a new code." });
     return;
   }
+  // Recheck during confirmation too: a request sent while an account was
+  // marked adult may outlive its later classification as a minor.
+  const studentForLink = await User.findById(linkRequest.student).select("role isMinor");
+  if (!studentForLink || studentForLink.role !== "student" || studentForLink.isMinor) {
+    res.status(403).json({ success: false, code: "GUARDIAN_CONSENT_FLOW_REQUIRED",
+      message: "This link cannot be confirmed through the student-email pathway." });
+    return;
+  }
 
   const suppliedHash = linkCodeHash(String(code));
   const matches = crypto.timingSafeEqual(Buffer.from(linkRequest.codeHash, "hex"), Buffer.from(suppliedHash, "hex"));
@@ -179,6 +195,12 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
+      const currentStudent = await User.findById(linkRequest.student).select("role isMinor").session(session);
+      if (!currentStudent || currentStudent.role !== "student" || currentStudent.isMinor) {
+        throw Object.assign(new Error("Underage student link requires verified guardian consent."), {
+          statusCode: 403, code: "GUARDIAN_CONSENT_FLOW_REQUIRED",
+        });
+      }
       const profile = await ParentProfile.findOneAndUpdate(
         { user: req.user?._id, "children.studentUser": { $ne: linkRequest.student } },
         { $push: { children: { studentUser: linkRequest.student, name: linkRequest.name, level: linkRequest.level, subjects: linkRequest.subjects, relationship: linkRequest.relationship } } },
@@ -189,6 +211,11 @@ export const confirmChildAccount = async (req: AuthRequest, res: Response): Prom
       linkRequest.confirmedAt = new Date();
       await linkRequest.save({ session });
     });
+  } catch (error: any) {
+    res.status(error?.statusCode || 500).json({ success: false,
+      code: error?.code || "PARENT_LINK_CONFIRMATION_FAILED",
+      message: error?.statusCode ? error.message : "Unable to safely confirm this student link." });
+    return;
   } finally {
     await session.endSession();
   }
