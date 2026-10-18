@@ -99,10 +99,14 @@ export const optionalAuth = async (
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
     const user = await User.findById(decoded.id);
-    if (user && user.isActive) {
+    // Optional authentication is only advisory. A pending role or a minor
+    // awaiting adult supervision must not become an authenticated actor
+    // through a public endpoint that uses optionalAuth instead of protect.
+    if (user?.isActive && user.role !== "pending" &&
+        !(user.role === "student" && user.isMinor && !user.parentConsentVerified)) {
       req.user = user;
     }
-    // If suspended, silently proceed as if logged out — no error, since this route is public anyway
+    // If restricted/suspended, proceed as unauthenticated on public routes.
   } catch {
     // Invalid/expired token — proceed without a user
   }
