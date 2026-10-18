@@ -46,6 +46,16 @@ export const protect = async (
     // Accounts created by a minor are kept in a restricted holding state
     // until an adult has authenticated and verified the guardian mailbox.
     // JWT possession is not an alternate consent mechanism.
+    if (user.role === "pending") {
+      const allowed = new Set(["/api/v1/auth/me", "/api/v1/auth/logout",
+        "/api/v1/auth/select-role", "/api/v1/auth/me/delete-account",
+        "/api/v1/auth/me/export"]);
+      if (!allowed.has(req.originalUrl.split("?")[0])) {
+        res.status(403).json({ success: false, code: "ROLE_SELECTION_REQUIRED",
+          message: "Choose an account role before using the platform." });
+        return;
+      }
+    }
     if (user.role === "student" && user.isMinor && !user.parentConsentVerified) {
       const allowed = new Set([
         "/api/v1/auth/me", "/api/v1/auth/logout",
