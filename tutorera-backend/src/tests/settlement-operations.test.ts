@@ -47,9 +47,9 @@ describe("Phase 3 finance settlement and payer-accounting controls", () => {
     const a = await parentA.agent.get("/api/v1/payments/history").expect(200);
     const b = await parentB.agent.get("/api/v1/payments/history").expect(200);
     const st = await student.agent.get("/api/v1/payments/history").expect(200);
-    expect(a.body.total).toBe(1);
-    expect(b.body.total).toBe(1);
-    expect(st.body.total).toBe(2);
+    expect(a.body.pagination.total).toBe(1);
+    expect(b.body.pagination.total).toBe(1);
+    expect(st.body.pagination.total).toBe(2);
   });
 
   it("uses the consent-confirmed parent/child link for payment status instead of a missing booking.parent field", async () => {
