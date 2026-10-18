@@ -32,7 +32,7 @@ async function fixture() {
     subject: "Mathematics", level: "Matric", description: "Tutor math preparation", budget: 1000,
     currency: "PKR", countryCode: "PK", pricingUnit: "hour", teachingMode: "online",
     schedule: "Flexible after school", status: "open" });
-  const bid = await Bid.create({ request: req._id, tutor: tutor.user._id, amount: 1000,
+  const bid = await Bid.create({ request: req._id, tutor: tutor.user._id, amount: 1000, initialStudentRate: 1000,
     currency: "PKR", status: "submitted", message: "I can tutor", pricingUnit: "hour",
     expiresAt: new Date(Date.now() + 3600_000) });
   return { student, parent, tutor, guardian, req, bid };
@@ -81,7 +81,7 @@ describe("Fix 4: enforce linked guardian spending and booking decisions", () => 
     const req2 = await RequestModel.create({ student: f.student.user._id, subject: "English", level: "Matric",
       description: "English tuition request", budget: 600, currency: "PKR", countryCode: "PK",
       pricingUnit: "hour", teachingMode: "online", schedule: "Flexible", status: "awaiting_payment" });
-    await Bid.create({ request: req2._id, tutor: f.tutor.user._id, amount: 600, currency: "PKR",
+    await Bid.create({ request: req2._id, tutor: f.tutor.user._id, amount: 600, initialStudentRate: 600, currency: "PKR",
       status: "payment_pending", pricingUnit: "hour", feeQuote: {
         subtotal: 600, studentFee: 0, tutorFee: 120, tax: 18,
         studentTotal: 600, tutorNet: 462, feeConfig: { version: "test" },
