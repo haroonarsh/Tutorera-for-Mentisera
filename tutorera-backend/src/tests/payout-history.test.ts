@@ -2,6 +2,8 @@ import User from "../models/User.model";
 import Booking from "../models/Booking.model";
 import { getMyPayouts, requestPayout } from "../controllers/earnings.controller";
 
+jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
+
 const response = () => {
   const res: any = {};
   res.status = jest.fn(() => res);
@@ -34,7 +36,7 @@ describe("tutor payout history", () => {
     expect(body.stats).toMatchObject({ totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 });
   });
 
-  it("records request and processing timestamps", async () => {
+  it("records a payout request without prematurely marking funds processing", async () => {
     const [student, tutor] = await User.create([
       { name: "Student Two", email: "request-student@test.com", password: "password123", role: "student" },
       { name: "Tutor Two", email: "request-tutor@test.com", password: "password123", role: "tutor" },
@@ -43,8 +45,8 @@ describe("tutor payout history", () => {
     const res = response();
     await requestPayout({ user: { _id: tutor._id, role: "tutor" }, params: { bookingId: booking._id.toString() } } as any, res);
     const updated = await Booking.findById(booking._id).lean();
-    expect(updated?.payoutStatus).toBe("processing");
+    expect(updated?.payoutStatus).toBe("pending");
     expect(updated?.payoutRequestedAt).toBeInstanceOf(Date);
-    expect(updated?.payoutProcessingAt).toBeInstanceOf(Date);
+    expect(updated?.payoutProcessingAt).toBeUndefined();
   });
 });
