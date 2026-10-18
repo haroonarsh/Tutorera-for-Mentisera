@@ -29,9 +29,12 @@ export const initSocket = (httpServer: HttpServer): Server => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
 
-      const user = await User.findById(decoded.id).select("isActive role");
+      const user = await User.findById(decoded.id).select("isActive role isMinor parentConsentVerified");
       if (!user) return next(new Error("User no longer exists"));
       if (!user.isActive) return next(new Error("Account is deactivated"));
+      if (user.role === "student" && user.isMinor && !user.parentConsentVerified) {
+        return next(new Error("Guardian approval is required before realtime tutoring is available"));
+      }
 
       socket.data.userId = decoded.id;
       socket.data.role = user.role;
@@ -57,6 +60,12 @@ export const initSocket = (httpServer: HttpServer): Server => {
       }
 
       try {
+        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified");
+        if (!current?.isActive || (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
+          if (callback) callback({ ok: false, error: "Guardian approval required or session deactivated" });
+          socket.disconnect(true);
+          return;
+        }
         const conversation = await Conversation.findById(conversationId).select("student tutor");
         if (!conversation) {
           if (callback) callback({ ok: false, error: "Conversation not found" });
