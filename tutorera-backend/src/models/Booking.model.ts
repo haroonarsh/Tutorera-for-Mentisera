@@ -40,6 +40,11 @@ export interface IBooking extends Document {
   payoutProcessingAt?: Date;
   payoutPaidAt?: Date;
   payoutFailedAt?: Date;
+  payoutSettlementReference?: string;
+  payoutSettlementMethod?: string;
+  payoutEvidenceReference?: string;
+  payoutInitiatedBy?: Types.ObjectId;
+  payoutVerifiedBy?: Types.ObjectId;
   isFirstSession: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -94,6 +99,11 @@ const bookingSchema = new Schema<IBooking>(
     payoutProcessingAt: { type: Date },
     payoutPaidAt: { type: Date },
     payoutFailedAt: { type: Date },
+    payoutSettlementReference: { type: String, trim: true },
+    payoutSettlementMethod: { type: String, trim: true },
+    payoutEvidenceReference: { type: String, trim: true },
+    payoutInitiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    payoutVerifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
     isFirstSession: { type: Boolean, default: false },
   },
   { timestamps: true }
