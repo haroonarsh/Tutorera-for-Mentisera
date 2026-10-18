@@ -5,6 +5,7 @@ import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
+import PaymentLedger from "../models/PaymentLedger.model";
 import BookedSlot from "../models/BookedSlot.model";
 import { syncStudentTutorRelationship } from "../services/relationship.service";
 import Contact from "../models/Contact.model";
@@ -518,7 +519,7 @@ export const updatePaymentStatus = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
+  const { paymentStatus, paymentNote, payoutStatus, payoutNote, payoutSettlementReference, payoutSettlementMethod, payoutEvidenceReference } = req.body;
 
   // A manual admin status change cannot substitute for money returned by a gateway.
   if (["refunded", "partially_refunded"].includes(paymentStatus)) {
@@ -526,7 +527,13 @@ export const updatePaymentStatus = async (
     return;
   }
 
-  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : "payout.process";
+  // A transfer cannot be declared paid by changing a booking enum. A separate
+  // second-finance-officer verification endpoint records the reviewed evidence.
+  if (payoutStatus === "paid") {
+    res.status(409).json({ success: false, code: "INDEPENDENT_PAYOUT_VERIFICATION_REQUIRED", message: "Only an independent finance reviewer can verify a documented external transfer." });
+    return;
+  }
+  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : payoutStatus === "approved" ? "payout.approve" : "payout.process";
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
     res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
     return;
@@ -562,7 +569,7 @@ export const updatePaymentStatus = async (
     res.status(409).json({ success: false, message: `Payout cannot move from ${booking.payoutStatus} to ${payoutStatus}.` });
     return;
   }
-  if (payoutStatus !== undefined && booking.paymentStatus !== "confirmed") {
+  if (payoutStatus !== undefined && (booking.paymentStatus !== "confirmed" || booking.status !== "completed")) {
     res.status(409).json({ success: false, message: "A payout cannot change until student payment is confirmed." });
     return;
   }
@@ -574,7 +581,13 @@ export const updatePaymentStatus = async (
     booking.payoutStatus = payoutStatus;
     const changedAt = new Date();
     if (payoutStatus === "approved") booking.payoutApprovedAt = changedAt;
-    if (payoutStatus === "processing") booking.payoutProcessingAt = changedAt;
+    if (payoutStatus === "processing") {
+      booking.payoutProcessingAt = changedAt;
+      booking.payoutSettlementMethod = payoutSettlementMethod;
+      booking.payoutSettlementReference = payoutSettlementReference;
+      booking.payoutEvidenceReference = payoutEvidenceReference;
+      booking.payoutInitiatedBy = req.user?._id;
+    }
     if (payoutStatus === "paid") booking.payoutPaidAt = changedAt;
     if (payoutStatus === "failed") booking.payoutFailedAt = changedAt;
   }
@@ -690,6 +703,64 @@ export const updateContactStatus = async (req: AuthRequest, res: Response): Prom
     return;
   }
   res.status(200).json({ success: true, contact });
+};
+
+// Review of an EXTERNAL bank/wallet transfer. This does NOT move funds.
+// Two distinct finance actors must attest to transaction evidence and a
+// matching transfer reference before a booking can become 'paid'.
+export const verifyExternalPayout = async (req: AuthRequest, res: Response): Promise<void> => {
+  const actor = req.user?._id;
+  if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, "payout.process")) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED" }); return;
+  }
+  const { settlementReference, verificationEvidence, note } = req.body || {};
+  if (typeof settlementReference !== "string" || settlementReference.trim().length < 8 ||
+      typeof verificationEvidence !== "string" || verificationEvidence.trim().length < 8 ||
+      typeof note !== "string" || note.trim().length < 12) {
+    res.status(400).json({ success: false, code: "PAYOUT_EVIDENCE_REQUIRED", message: "External transaction reference, independently checked statement reference and verification note are required." });
+    return;
+  }
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) { res.status(404).json({ success: false, code: "BOOKING_NOT_FOUND" }); return; }
+  if (booking.status !== "completed" || booking.paymentStatus !== "confirmed" || booking.payoutStatus !== "processing") {
+    res.status(409).json({ success: false, code: "PAYOUT_NOT_READY", message: "Only a completed, paid booking with a recorded external transfer can be verified." }); return;
+  }
+  if (!booking.payoutInitiatedBy || booking.payoutInitiatedBy.toString() === actor?.toString()) {
+    res.status(403).json({ success: false, code: "SECOND_REVIEWER_REQUIRED", message: "Verification must be performed by another authorized finance reviewer." }); return;
+  }
+  if (booking.payoutSettlementReference !== settlementReference.trim()) {
+    res.status(409).json({ success: false, code: "PAYOUT_REFERENCE_MISMATCH", message: "Evidence reference must match the initiated transfer." }); return;
+  }
+  const claimed = await Booking.findOneAndUpdate(
+    { _id: booking._id, status: "completed", paymentStatus: "confirmed", payoutStatus: "processing",
+      payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: { $ne: actor } },
+    { $set: { payoutStatus: "paid", payoutPaidAt: new Date(), payoutVerifiedBy: actor,
+      payoutNote: `Manually reconciled external transfer; ${note.trim().slice(0, 250)}`,
+      payoutEvidenceReference: verificationEvidence.trim().slice(0, 300) } },
+    { new: true }
+  );
+  if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_ALREADY_REVIEWED" }); return; }
+  // One settlement ledger entry per booking, with a distinct manual provider
+  // and evidence metadata. No gateway API or automatic transfer is implied.
+  await PaymentLedger.findOneAndUpdate(
+    { provider: "external_transfer", providerEventId: `payout-${claimed._id}` },
+    { $setOnInsert: {
+      provider: "external_transfer", providerEventId: `payout-${claimed._id}`,
+      providerTransactionId: settlementReference.trim(), booking: claimed._id,
+      student: claimed.student, tutor: claimed.tutor,
+      eventType: "payout.completed", status: "succeeded", currency: claimed.currency || "PKR",
+      grossAmount: claimed.tutorPayout, studentPayment: 0, studentFee: 0, tutorFee: 0,
+      tax: 0, gatewayFee: 0, refundAmount: 0, tutorPayable: claimed.tutorPayout,
+      platformNet: 0, settlementStatus: "reconciled",
+      metadata: { settlementMethod: claimed.payoutSettlementMethod, evidenceReference: verificationEvidence.trim(),
+        initiatedBy: claimed.payoutInitiatedBy?.toString(), reviewedBy: actor?.toString(),
+        verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
+    } }, { upsert: true, new: true }
+  );
+  await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor?.toString(),
+    entity: "Booking", targetId: claimed._id.toString(),
+    metadata: { reference: settlementReference.trim(), reviewer: actor?.toString(), evidence: verificationEvidence.trim() } });
+  res.status(200).json({ success: true, message: "External transfer independently reconciled; payout recorded as paid.", booking: claimed });
 };
 
 // @desc    Update booking status
