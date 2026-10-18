@@ -97,7 +97,10 @@ interface PendingBookingApproval {
   studentId: string;
   bidId: string;
   tutorId: string;
+  tutorName: string;
   subject: string;
+  schedule?: string;
+  teachingMode?: string;
   amount: number;
   currency: string;
   expiresAt: string;
@@ -279,6 +282,7 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
           <div key={approval._id} style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.8rem", marginTop: "0.8rem", display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
             <div>
               <strong>{approval.subject}</strong>
+              <p style={{ fontSize: "0.8rem", color: C.gray500, marginTop: "0.25rem" }}>Tutor: {approval.tutorName} · {approval.teachingMode || "Tuition"} · {approval.schedule || "Schedule to be agreed"}</p>
               <p style={{ fontSize: "0.8rem", color: C.gray500, marginTop: "0.25rem" }}>
                 Child: {children.find(child => child.studentUser === approval.studentId)?.name || "Linked student"} — {approval.currency} {approval.amount.toLocaleString()}
               </p>
