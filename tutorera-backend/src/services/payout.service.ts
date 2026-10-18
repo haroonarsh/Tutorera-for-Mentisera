@@ -1,4 +1,6 @@
 import Booking from "../models/Booking.model";
+import PaymentLedger from "../models/PaymentLedger.model";
+import RefundRequest from "../models/RefundRequest.model";
 import logger from "../config/logger";
 
 export interface PayoutRunResult {
@@ -6,34 +8,38 @@ export interface PayoutRunResult {
   processed: number;
   failed: number;
   errors: string[];
+  awaitingApproval: number;
+  awaitingIndependentVerification: number;
+  approvedRefundsAwaitingSettlement: number;
+  paymentExceptionsAwaitingReconciliation: number;
 }
 
-const AUTO_PAYOUT_MINIMUM_AMOUNT = 500;
-const AUTO_PAYOUT_MAX_BATCH = 50;
-
+// Queue monitoring ONLY. Real bank/wallet transfers are initiated externally,
+// then independently attested by finance. In the absence of a provider payout
+// API, this worker must never auto-transition a booking to 'paid'.
 export async function processPendingPayouts(): Promise<PayoutRunResult> {
-  const result: PayoutRunResult = { scanned: 0, processed: 0, failed: 0, errors: [] };
-
+  const result: PayoutRunResult = {
+    scanned: 0, processed: 0, failed: 0, errors: [],
+    awaitingApproval: 0, awaitingIndependentVerification: 0,
+    approvedRefundsAwaitingSettlement: 0, paymentExceptionsAwaitingReconciliation: 0,
+  };
   try {
-    const pendingBookings = await Booking.find({
-      paymentStatus: "confirmed",
-      payoutStatus: "pending",
-      tutorPayout: { $gte: AUTO_PAYOUT_MINIMUM_AMOUNT },
-    })
-      .select("_id tutorPayout")
-      .limit(AUTO_PAYOUT_MAX_BATCH)
-      .lean();
-
-    result.scanned = pendingBookings.length;
-    if (pendingBookings.length > 0) {
-      const message = "Automatic payout settlement is disabled because no verified payout-provider adapter is configured.";
-      result.errors.push(message);
-      logger.warn({ eligiblePayouts: pendingBookings.length }, message);
-    }
+    const [pending, processing, refunds, exceptions] = await Promise.all([
+      Booking.countDocuments({ status: "completed", paymentStatus: "confirmed", payoutStatus: "pending", payoutRequestedAt: { $exists: true } }),
+      Booking.countDocuments({ status: "completed", paymentStatus: "confirmed", payoutStatus: "processing" }),
+      RefundRequest.countDocuments({ status: "approved" }),
+      PaymentLedger.countDocuments({ settlementStatus: "exception" }),
+    ]);
+    result.awaitingApproval = pending;
+    result.awaitingIndependentVerification = processing;
+    result.approvedRefundsAwaitingSettlement = refunds;
+    result.paymentExceptionsAwaitingReconciliation = exceptions;
+    result.scanned = pending + processing + refunds + exceptions;
+    if (result.scanned > 0) logger.warn({ ...result }, "Finance action queue has unresolved transfers or reconciliation exceptions");
   } catch (err: any) {
-    result.errors.push(`Scan error: ${err?.message || "unknown error"}`);
-    logger.error({ err }, "Failed to scan pending payouts");
+    result.failed++;
+    result.errors.push(`Finance queue scan failed: ${err?.message || "unknown error"}`);
+    logger.error({ err }, "Finance queue scan failed");
   }
-
   return result;
 }
