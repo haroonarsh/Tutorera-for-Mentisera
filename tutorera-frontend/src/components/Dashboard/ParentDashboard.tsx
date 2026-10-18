@@ -41,6 +41,8 @@ interface ParentProfileData {
     children: ChildProfile[];
     approvalRequiredForBookings: boolean;
     spendingLimitMonthly?: number;
+    spendingLimitCurrency?: string;
+    currency?: string;
     notificationsEnabled: boolean;
   };
   recentBookings: RecentBooking[];
@@ -90,6 +92,18 @@ function EmptyState({ onLink }: { onLink: () => void }) {
   );
 }
 
+interface PendingBookingApproval {
+  _id: string;
+  studentId: string;
+  bidId: string;
+  tutorId: string;
+  subject: string;
+  amount: number;
+  currency: string;
+  expiresAt: string;
+  status: "pending";
+}
+
 interface ParentDashboardProps {
   userId: string;
   userName: string;
@@ -100,17 +114,68 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
   const [data, setData] = useState<ParentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [approvals, setApprovals] = useState<PendingBookingApproval[]>([]);
+  const [actingOnApproval, setActingOnApproval] = useState<string | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(true);
+  const [limitEnabled, setLimitEnabled] = useState(false);
+  const [monthlyLimit, setMonthlyLimit] = useState("0");
+  const [limitCurrency, setLimitCurrency] = useState("PKR");
+
+  const fetchApprovals = async () => {
+    try {
+      const response = await api.get("/parent/booking-approvals");
+      setApprovals(response.data.approvals || []);
+    } catch {
+      showError("Unable to load booking approval requests.");
+    }
+  };
+
+  const decideApproval = async (id: string, decision: "approved" | "rejected") => {
+    setActingOnApproval(id);
+    try {
+      await api.post(`/parent/booking-approvals/${id}/decision`, { decision });
+      showSuccess(decision === "approved" ? "Offer approved for your child." : "Offer declined.");
+      await fetchApprovals();
+    } catch (error) {
+      showError(error, "Could not process this approval. Refresh and try again.");
+    } finally { setActingOnApproval(null); }
+  };
+
+  const saveControls = async () => {
+    const limit = Number(monthlyLimit);
+    if (limitEnabled && (!Number.isFinite(limit) || limit < 0 || limit > 1e9)) {
+      showError("Provide a valid monthly spending limit.");
+      return;
+    }
+    setSavingSettings(true);
+    try {
+      await api.patch("/parent/settings", {
+        approvalRequiredForBookings: approvalRequired,
+        spendingLimitMonthly: limitEnabled ? limit : null,
+        spendingLimitCurrency: limitCurrency,
+      });
+      showSuccess("Parent booking controls updated.");
+      fetchProfile();
+    } catch (error) { showError(error, "Could not save guardian settings."); }
+    finally { setSavingSettings(false); }
+  };
+
 
   const fetchProfile = () => {
     api.get("/parent/profile")
-      .then(res => {
+.then(res => {
         setData(res.data);
+        setApprovalRequired(res.data.profile.approvalRequiredForBookings ?? true);
+        setLimitEnabled(res.data.profile.spendingLimitMonthly != null);
+        setMonthlyLimit(String(res.data.profile.spendingLimitMonthly ?? "0"));
+        setLimitCurrency(res.data.profile.spendingLimitCurrency || res.data.profile.currency || "PKR");
       })
       .catch(() => showError("Failed to load parent profile."))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchProfile(); }, []);
+  useEffect(() => { fetchProfile(); void fetchApprovals(); }, []);
 
   const handleUnlink = async (childId: string) => {
     if (!confirm("Are you sure you want to unlink this child account?")) return;
@@ -181,6 +246,53 @@ export default function ParentDashboard({ userId }: ParentDashboardProps) {
           <p style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary }}>{recentBookings.filter(b => b.status === "upcoming").length}</p>
         </div>
       </div>
+
+      <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "0.875rem", padding: "1.2rem", marginBottom: "1.25rem" }} aria-label="Guardian booking controls">
+        <h2 style={{ fontWeight: 700, color: C.primary, marginBottom: "0.75rem" }}>Booking approvals and spending controls</h2>
+        <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginBottom: "0.8rem" }}>
+          <input type="checkbox" checked={approvalRequired} onChange={event => setApprovalRequired(event.target.checked)} />
+          Require my approval before a linked student's tutoring payment
+        </label>
+        <label style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginBottom: "0.5rem" }}>
+          <input type="checkbox" checked={limitEnabled} onChange={event => setLimitEnabled(event.target.checked)} />
+          Apply a monthly spending cap across all linked students
+        </label>
+        {limitEnabled && <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.8rem" }}>
+          <label>Monthly limit <input aria-label="Monthly spending limit" type="number" min="0" step="0.01" value={monthlyLimit} onChange={event => setMonthlyLimit(event.target.value)}
+            style={{ padding: "0.5rem", border: "1px solid #cbd5e1", borderRadius: "0.375rem", maxWidth: "160px" }} /></label>
+          <label>Currency <select aria-label="Spending limit currency" value={limitCurrency} onChange={event => setLimitCurrency(event.target.value)}
+            style={{ padding: "0.5rem", border: "1px solid #cbd5e1", borderRadius: "0.375rem" }}>
+            {["PKR", "AED", "GBP"].map(code => <option value={code} key={code}>{code}</option>)}
+          </select></label>
+        </div>}
+        <p style={{ color: C.gray500, fontSize: "0.78rem", marginBottom: "0.7rem" }}>
+          The limit includes paid lessons and outstanding checkout reservations. Payments in a different currency are blocked until you update the cap.
+        </p>
+        <button type="button" onClick={saveControls} disabled={savingSettings || loading}
+          style={{ background: C.accent, color: "white", padding: "0.6rem 1rem", borderRadius: "0.5rem", border: "none", fontWeight: 700 }}>
+          {savingSettings ? "Saving…" : "Save parent controls"}
+        </button>
+      </section>
+      <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "0.875rem", marginBottom: "1.25rem", padding: "1.2rem" }} aria-label="Awaiting guardian approval">
+        <h2 style={{ fontWeight: 700, color: C.primary, marginBottom: "0.75rem" }}>Offers awaiting your approval ({approvals.length})</h2>
+        {approvals.length === 0 ? <p style={{ color: C.gray500, fontSize: "0.875rem" }}>No offers need your decision.</p> : approvals.map(approval => (
+          <div key={approval._id} style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.8rem", marginTop: "0.8rem", display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div>
+              <strong>{approval.subject}</strong>
+              <p style={{ fontSize: "0.8rem", color: C.gray500, marginTop: "0.25rem" }}>
+                Child: {children.find(child => child.studentUser === approval.studentId)?.name || "Linked student"} — {approval.currency} {approval.amount.toLocaleString()}
+              </p>
+              <p style={{ fontSize: "0.75rem", color: C.gray500 }}>Expires: {new Date(approval.expiresAt).toLocaleString()}</p>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <button type="button" disabled={actingOnApproval === approval._id} onClick={() => decideApproval(approval._id, "approved")}
+                style={{ background: "#dcfce7", color: "#166534", padding: "0.5rem 0.75rem", border: "1px solid #86efac", borderRadius: "0.45rem" }}>Approve</button>
+              <button type="button" disabled={actingOnApproval === approval._id} onClick={() => decideApproval(approval._id, "rejected")}
+                style={{ background: "#fee2e2", color: "#991b1b", padding: "0.5rem 0.75rem", border: "1px solid #fecaca", borderRadius: "0.45rem" }}>Decline</button>
+            </div>
+          </div>
+        ))}
+      </section>
 
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
