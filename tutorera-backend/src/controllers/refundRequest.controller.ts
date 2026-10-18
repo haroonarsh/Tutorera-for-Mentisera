@@ -1,8 +1,10 @@
 import { Response } from "express";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { AuthRequest } from "../types";
 import RefundRequest, { IRefundRequest } from "../models/RefundRequest.model";
 import Booking from "../models/Booking.model";
+import PaymentLedger from "../models/PaymentLedger.model";
+import { logAudit } from "../utils/logAudit";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
 import { escapeHtml } from "../utils/escapeHtml";
@@ -204,4 +206,113 @@ export const updateRefundRequestStatus = async (req: AuthRequest, res: Response)
   }
 
   res.status(200).json({ success: true, refundRequest: refundReq });
+};
+
+function validReference(value: unknown, min = 8): value is string {
+  return typeof value === "string" && value.trim().length >= min && value.trim().length <= 300;
+}
+
+// Phase 3 supports only documented, EXTERNALLY executed refunds. TUTORERA
+// does not have a refund execution/lookup adapter for Rapid Gateway. Recording
+// evidence here is an auditable operator claim; it never moves money.
+export const recordExternalRefundTransfer = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { settlementReference, settlementMethod, evidenceReference } = req.body || {};
+  if (!validReference(settlementReference) || !validReference(settlementMethod, 3) || !validReference(evidenceReference)) {
+    res.status(400).json({ success: false, code: "REFUND_EVIDENCE_REQUIRED", message: "External transfer reference, method, and documentary evidence reference are required." }); return;
+  }
+  const refund = await RefundRequest.findOne({ _id: req.params.id, status: "approved", settlementReference: { $exists: false } });
+  if (!refund) { res.status(409).json({ success: false, code: "REFUND_NOT_APPROVED", message: "Refund is not approved or settlement evidence has already been recorded." }); return; }
+  const booking = await Booking.findById(refund.booking);
+  if (!booking || booking.paymentStatus !== "confirmed" || Math.abs(refund.amount - booking.studentTotal) > 0.01) {
+    res.status(409).json({ success: false, code: "REFUND_AMOUNT_MISMATCH", message: "Only the exact original confirmed student payment can be reconciled via this workflow." }); return;
+  }
+  if (["paid", "processing"].includes(booking.payoutStatus)) {
+    res.status(409).json({ success: false, code: "PAYOUT_REVERSAL_REQUIRED", message: "Resolve existing tutor settlement before refund reconciliation." }); return;
+  }
+  const recorded = await RefundRequest.findOneAndUpdate(
+    { _id: refund._id, status: "approved", settlementReference: { $exists: false } },
+    { $set: { settlementReference: settlementReference.trim(), settlementMethod: settlementMethod.trim(),
+      settlementEvidenceReference: evidenceReference.trim(), settlementInitiatedBy: req.user?._id } }, { new: true }
+  );
+  if (!recorded) { res.status(409).json({ success: false, code: "REFUND_ALREADY_CLAIMED" }); return; }
+  await logAudit({ action: "external_refund_evidence_recorded", actor: req.user?.name || "Finance", actorId: req.user?._id?.toString(),
+    entity: "RefundRequest", targetId: refund._id.toString(), metadata: { settlementReference: settlementReference.trim(), evidenceReference: evidenceReference.trim() } });
+  res.json({ success: true, message: "External refund evidence recorded. A separate finance reviewer must reconcile the provider or bank statement.", refundRequest: recorded });
+};
+
+// Second finance officer independently verifies external statement evidence.
+// MongoDB transaction keeps Booking, RefundRequest and the accounting ledger
+// consistent; never call this from a browser payment-return URL.
+export const verifyExternalRefundTransfer = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { settlementReference, verificationEvidence, note } = req.body || {};
+  if (!validReference(settlementReference) || !validReference(verificationEvidence) || !validReference(note, 12)) {
+    res.status(400).json({ success: false, code: "REFUND_VERIFICATION_REQUIRED", message: "Matching transaction reference, independent bank/provider statement evidence and review note are required." }); return;
+  }
+  const current = await RefundRequest.findById(req.params.id);
+  if (!current || current.status !== "approved" || !current.settlementReference) {
+    res.status(409).json({ success: false, code: "REFUND_NOT_READY" }); return;
+  }
+  if (!current.settlementInitiatedBy || current.settlementInitiatedBy.toString() === req.user?._id?.toString()) {
+    res.status(403).json({ success: false, code: "SECOND_REVIEWER_REQUIRED" }); return;
+  }
+  if (current.settlementReference !== settlementReference.trim()) {
+    res.status(409).json({ success: false, code: "REFUND_REFERENCE_MISMATCH" }); return;
+  }
+  const session = await mongoose.startSession();
+  let settled: IRefundRequest | null = null;
+  let studentEmail: string | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const refund = await RefundRequest.findOne({ _id: current._id, status: "approved", settlementReference: settlementReference.trim(), settlementVerifiedBy: { $exists: false } }).session(session);
+      if (!refund) throw Object.assign(new Error("Refund was already reconciled."), { statusCode: 409 });
+      const booking = await Booking.findById(refund.booking).session(session);
+      if (!booking || booking.paymentStatus !== "confirmed" || Math.abs(refund.amount - booking.studentTotal) > 0.01 || ["paid", "processing"].includes(booking.payoutStatus)) {
+        throw Object.assign(new Error("Original payment, amount or tutor settlement no longer matches."), { statusCode: 409 });
+      }
+      booking.paymentStatus = "refunded";
+      booking.paymentNote = "Full refund independently reconciled against external settlement evidence";
+      booking.payoutStatus = "held";
+      booking.payoutNote = "Tutor payout held after full student refund";
+      await booking.save({ session });
+      refund.status = "processed"; refund.processedAt = new Date();
+      refund.settlementVerifiedBy = req.user?._id;
+      refund.settlementEvidenceReference = verificationEvidence.trim();
+      await refund.save({ session });
+      await PaymentLedger.findOneAndUpdate(
+        { provider: "external_refund", providerEventId: `refund-${refund._id}` },
+        { $setOnInsert: {
+          provider: "external_refund", providerEventId: `refund-${refund._id}`,
+          providerTransactionId: settlementReference.trim(), eventType: "payment.refunded", status: "refunded",
+          booking: booking._id, student: booking.student, tutor: booking.tutor,
+          currency: booking.currency || "PKR", grossAmount: booking.studentTotal,
+          studentPayment: 0, studentFee: 0, tutorFee: 0, tax: 0, gatewayFee: 0,
+          refundAmount: refund.amount, tutorPayable: 0, platformNet: 0, settlementStatus: "reconciled",
+          metadata: { verificationMode: "two_person_external_statement_review",
+            initiatedBy: refund.settlementInitiatedBy?.toString(), reviewedBy: req.user?._id?.toString(),
+            settlementMethod: refund.settlementMethod, evidenceReference: verificationEvidence.trim(),
+            note: note.trim().slice(0, 500) },
+        } }, { upsert: true, new: true, session }
+      );
+      settled = refund;
+    });
+  } catch (err: any) {
+    res.status(err?.statusCode || 500).json({ success: false, code: "REFUND_RECONCILIATION_FAILED", message: err?.message || "Unable to reconcile refund." }); return;
+  } finally { await session.endSession(); }
+  await logAudit({ action: "external_refund_verified", actor: req.user?.name || "Finance", actorId: req.user?._id?.toString(),
+    entity: "RefundRequest", targetId: current._id.toString(),
+    metadata: { reference: settlementReference.trim(), evidenceReference: verificationEvidence.trim() } });
+  // A separate refund-confirmation email should not claim a gateway API was called.
+  const student = await User.findById(current.student).select("email name");
+  studentEmail = student?.email;
+  if (studentEmail) {
+    try {
+      const html = renderTransactionalEmail({ subject: "TUTORERA® — External Refund Reconciled", emailCategory: "Refund",
+        emailHeading: "Refund Reconciled", emailSubheading: "External settlement verification completed", firstName: student?.name,
+        openingMessage: `The finance team independently reconciled an external refund of ${(await Booking.findById(current.booking))?.currency || "PKR"} ${current.amount.toLocaleString()} against transaction ${settlementReference.trim()}.`,
+        mainMessage: "This confirmation records reconciliation of an externally executed transfer, not an automatic in-app refund. Contact support if your original payment method has not received the funds.",
+        includeSecurityNotice: true });
+      await sendEmail({ to: studentEmail, subject: "TUTORERA® — External Refund Reconciled", html });
+    } catch (err) { console.error("Unable to email refund reconciliation confirmation", err); }
+  }
+  res.json({ success: true, message: "Externally executed full refund independently reconciled.", refundRequest: settled });
 };
