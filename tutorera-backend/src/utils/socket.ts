@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import Notification from "../models/Notification.model";
 import Conversation from "../models/Conversation.model";
-import { isConversationStudentEligible } from "../services/chatAccess.service";
+import { isConversationStudentEligible, isRealtimeStudentAllowed } from "../services/chatAccess.service";
 import User from "../models/User.model";
 
 interface ConnectedUsers {
@@ -30,11 +30,11 @@ export const initSocket = (httpServer: HttpServer): Server => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
 
-      const user = await User.findById(decoded.id).select("isActive role isMinor parentConsentVerified");
+      const user = await User.findById(decoded.id).select("isActive role isMinor parentConsentVerified dateOfBirth");
       if (!user) return next(new Error("User no longer exists"));
       if (!user.isActive) return next(new Error("Account is deactivated"));
       if (user.role === "pending") return next(new Error("Account role selection is required"));
-      if (user.role === "student" && user.isMinor && !user.parentConsentVerified) {
+      if (!isRealtimeStudentAllowed(user)) {
         return next(new Error("Guardian approval is required before realtime tutoring is available"));
       }
 
@@ -62,8 +62,8 @@ export const initSocket = (httpServer: HttpServer): Server => {
       }
 
       try {
-        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified");
-        if (!current?.isActive || (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
+        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified dateOfBirth");
+        if (!isRealtimeStudentAllowed(current)) {
           if (callback) callback({ ok: false, error: "Guardian approval required or session deactivated" });
           socket.disconnect(true);
           return;
@@ -115,9 +115,8 @@ export const initSocket = (httpServer: HttpServer): Server => {
           typeof data.isTyping !== "boolean" ||
           !socket.rooms.has(data.conversationId)) return;
       try {
-        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified");
-        if (!current?.isActive || current.role === "pending" ||
-            (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
+        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified dateOfBirth");
+        if (!isRealtimeStudentAllowed(current)) {
           socket.disconnect(true);
           return;
         }
