@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listPendingAgeReviews, closeAgeReview } from "../controllers/ageReview.controller";
+import { listPendingAgeReviews, closeAgeReview, claimAgeReview } from "../controllers/ageReview.controller";
 import {
   getDashboardStats,
   getPendingVerifications,
@@ -86,6 +86,7 @@ router.put("/finance/fee-config", requirePermission("finance.fee_configure"), up
 
 // Legacy age-review intake: authorized safety staff can triage but cannot alter DOB or consent.
 router.get("/safety/age-reviews", requirePermission("safety.read"), listPendingAgeReviews);
+router.post("/safety/age-reviews/:id/claim", requirePermission("safety.update"), claimAgeReview);
 router.post("/safety/age-reviews/:id/close", requirePermission("safety.resolve"), closeAgeReview);
 
 // Trust & Safety Cases
