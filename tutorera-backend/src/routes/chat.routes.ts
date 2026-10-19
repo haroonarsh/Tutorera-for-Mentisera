@@ -5,14 +5,14 @@ import {
   getMessages,
   sendMessage,
 } from "../controllers/chat.controller";
-import { protect } from "../middlewares/auth.middleware";
+import { protect, authorize("student", "tutor"), authorize } from "../middlewares/auth.middleware";
 import { validate, sendMessageSchema, getOrCreateConversationSchema } from "../validators/chat.validator";
 
 const router = Router();
 
-router.post("/conversation", protect, validate(getOrCreateConversationSchema), getOrCreateConversation);
-router.get("/conversations", protect, getMyConversations);
-router.get("/:conversationId/messages", protect, getMessages);
-router.post("/:conversationId/messages", protect, validate(sendMessageSchema), sendMessage);
+router.post("/conversation", protect, authorize("student", "tutor"), validate(getOrCreateConversationSchema), getOrCreateConversation);
+router.get("/conversations", protect, authorize("student", "tutor"), getMyConversations);
+router.get("/:conversationId/messages", protect, authorize("student", "tutor"), getMessages);
+router.post("/:conversationId/messages", protect, authorize("student", "tutor"), validate(sendMessageSchema), sendMessage);
 
 export default router;
