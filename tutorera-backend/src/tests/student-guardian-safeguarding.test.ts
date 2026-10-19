@@ -7,6 +7,15 @@ import sendEmail from "../utils/sendEmail";
 import { ensureLaunchMarkets } from "../services/market.service";
 import { ageOnDate, verifyGuardianConsent } from "../services/guardianConsent.service";
 
+// Guardian-consent behavior is tested here, not the IP-based HTTP throttle.
+// Other integration suites exercise rate limiting itself. Without isolation,
+// repeated invalid OTP checks share one in-memory counter across test cases
+// and return 429 before consent-validation assertions can run.
+jest.mock("../middlewares/rateLimiters", () => ({
+  ...jest.requireActual("../middlewares/rateLimiters"),
+  otpVerifyLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 jest.mock("google-auth-library", () => ({
   OAuth2Client: jest.fn().mockImplementation(() => ({
