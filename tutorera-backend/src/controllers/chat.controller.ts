@@ -5,6 +5,7 @@ import Message from "../models/Message.model";
 import Booking from "../models/Booking.model";
 import { filterContactInfo, containsContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
+import { isConversationStudentEligible } from "../services/chatAccess.service";
 import { Types } from "mongoose";
 
 // @desc    Get or create conversation
@@ -188,6 +189,15 @@ export const sendMessage = async (
 
   if (!isStudent && !isTutor) {
     res.status(403).json({ success: false, message: "Not authorized" });
+    return;
+  }
+
+  // A tutor may still have an active chat after the parent revokes a minor's
+  // consent. Do not store, broadcast, or notify a suspended/unapproved learner.
+  // Checking only req.user would miss this because the sender is the tutor.
+  if (!(await isConversationStudentEligible(conversation.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE",
+      message: "The student account is not authorized to receive tutoring messages." });
     return;
   }
 
