@@ -119,4 +119,57 @@ describe("BE-03: Socket.IO conversation room authorization", () => {
 
     await expect(connectAs(suspended._id.toString())).rejects.toBeDefined();
   });
+  it("rejects sockets for students whose guardian consent was revoked", async () => {
+    const student = await User.create({
+      name: "Revoked Student", email: "socket-revoked-student@test.com",
+      password: "password123", role: "student", isActive: true,
+      isMinor: true, parentConsentVerified: false,
+    });
+    await expect(connectAs(student._id.toString())).rejects.toBeDefined();
+  });
+
+  it("stops tutors joining or sending typing to a conversation after the student loses consent", async () => {
+    const student = await User.create({
+      name: "Supervised Student", email: "socket-supervised-student@test.com",
+      password: "password123", role: "student", isActive: true,
+      isMinor: true, parentConsentVerified: true,
+    });
+    const tutor = await User.create({
+      name: "Tutor for Supervised Student", email: "socket-supervised-tutor@test.com",
+      password: "password123", role: "tutor", isActive: true,
+    });
+    const booking = await Booking.create({
+      student: student._id, tutor: tutor._id, amount: 1200, finalAgreedRate: 1200,
+      subtotal: 1200, studentTotal: 1200, tutorNet: 960,
+      feeConfig: { version: 1 }, schedule: "Wednesday 17:00",
+    });
+    const conversation = await Conversation.create({
+      student: student._id, tutor: tutor._id, booking: booking._id,
+    });
+    const tutorSocket = await connectAs(tutor._id.toString());
+    const studentSocket = await connectAs(student._id.toString());
+    try {
+      const chatId = conversation._id.toString();
+      const join = (socket: ClientSocket) => new Promise<{ ok: boolean; error?: string }>(
+        resolve => socket.emit("join_conversation", chatId, resolve)
+      );
+      expect((await join(tutorSocket)).ok).toBe(true);
+      expect((await join(studentSocket)).ok).toBe(true);
+      await User.updateOne({ _id: student._id }, { $set: { parentConsentVerified: false } });
+
+      const received = new Promise<boolean>(resolve => {
+        const timeout = setTimeout(() => resolve(false), 250);
+        studentSocket.once("user_typing", () => { clearTimeout(timeout); resolve(true); });
+      });
+      tutorSocket.emit("typing", { conversationId: chatId, isTyping: true });
+      expect(await received).toBe(false);
+      const rejoin = await join(tutorSocket);
+      expect(rejoin.ok).toBe(false);
+      expect(rejoin.error).toMatch(/unavailable/i);
+    } finally {
+      tutorSocket.close();
+      studentSocket.close();
+    }
+  });
+
 });
