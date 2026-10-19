@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import Notification from "../models/Notification.model";
 import Conversation from "../models/Conversation.model";
+import { isConversationStudentEligible } from "../services/chatAccess.service";
 import User from "../models/User.model";
 
 interface ConnectedUsers {
@@ -29,9 +30,13 @@ export const initSocket = (httpServer: HttpServer): Server => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
 
-      const user = await User.findById(decoded.id).select("isActive role");
+      const user = await User.findById(decoded.id).select("isActive role isMinor parentConsentVerified");
       if (!user) return next(new Error("User no longer exists"));
       if (!user.isActive) return next(new Error("Account is deactivated"));
+      if (user.role === "pending") return next(new Error("Account role selection is required"));
+      if (user.role === "student" && user.isMinor && !user.parentConsentVerified) {
+        return next(new Error("Guardian approval is required before realtime tutoring is available"));
+      }
 
       socket.data.userId = decoded.id;
       socket.data.role = user.role;
@@ -57,6 +62,12 @@ export const initSocket = (httpServer: HttpServer): Server => {
       }
 
       try {
+        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified");
+        if (!current?.isActive || (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
+          if (callback) callback({ ok: false, error: "Guardian approval required or session deactivated" });
+          socket.disconnect(true);
+          return;
+        }
         const conversation = await Conversation.findById(conversationId).select("student tutor");
         if (!conversation) {
           if (callback) callback({ ok: false, error: "Conversation not found" });
@@ -69,6 +80,13 @@ export const initSocket = (httpServer: HttpServer): Server => {
 
         if (!isParticipant) {
           if (callback) callback({ ok: false, error: "Not authorized to join this conversation" });
+          return;
+        }
+
+        // The tutor may still be approved after the student's guardian has
+        // revoked consent. Never add a socket to an unavailable child room.
+        if (!(await isConversationStudentEligible(conversation.student))) {
+          if (callback) callback({ ok: false, error: "Student is unavailable for supervised chat" });
           return;
         }
 
@@ -87,11 +105,37 @@ export const initSocket = (httpServer: HttpServer): Server => {
     });
 
     // Typing indicator
-    socket.on("typing", (data: { conversationId: string; isTyping: boolean }) => {
-      socket.to(data.conversationId).emit("user_typing", {
-        userId,
-        isTyping: data.isTyping,
-      });
+    socket.on("typing", async (data: { conversationId: string; isTyping: boolean }) => {
+      // Room membership reflects a PREVIOUS authorization check. A guardian
+      // can revoke consent while an existing socket stays connected (notably
+      // across replicas without a shared Socket.IO adapter). Recheck the
+      // account state before emitting each realtime user action.
+      if (!data || typeof data.conversationId !== "string" ||
+          !mongoose.Types.ObjectId.isValid(data.conversationId) ||
+          typeof data.isTyping !== "boolean" ||
+          !socket.rooms.has(data.conversationId)) return;
+      try {
+        const current = await User.findById(userId).select("isActive role isMinor parentConsentVerified");
+        if (!current?.isActive || current.role === "pending" ||
+            (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
+          socket.disconnect(true);
+          return;
+        }
+        // Guard BOTH participants: checking only the sender misses a tutor
+        // emitting typing events into a stale socket owned by a revoked minor.
+        const conversation = await Conversation.findById(data.conversationId).select("student").lean();
+        if (!conversation || !(await isConversationStudentEligible(conversation.student))) {
+          socket.leave(data.conversationId);
+          return;
+        }
+        if (!socket.connected || !socket.rooms.has(data.conversationId)) return;
+        socket.to(data.conversationId).emit("user_typing", { userId, isTyping: data.isTyping });
+      } catch (error) {
+        // Fail closed on database outages; a stale socket is never entitled
+        // to publish events when authorization cannot be determined.
+        console.error("[Safeguarding] Could not verify realtime user status:", error);
+        socket.disconnect(true);
+      }
     });
 
     socket.on("disconnect", () => {

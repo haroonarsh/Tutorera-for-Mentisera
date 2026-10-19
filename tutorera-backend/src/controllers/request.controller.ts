@@ -26,6 +26,7 @@ import { assertAcceptanceAvailable, assertMarketFeature, resolveMarket } from ".
 import { isValidIanaTimezone, zonedDateTimeToUtc } from "../utils/timezone";
 import { convertAmount } from "../services/exchangeRate.service";
 import { releaseExpiredPaymentHold } from "../services/requestLifecycle.service";
+import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
 import {
   MARKETPLACE_REQUEST_EXPIRY_DAYS,
   MAX_REQUEST_EXTENSIONS,
@@ -572,31 +573,73 @@ function bookingTransitionError(code: string, message: string) {
   return Object.assign(new Error(message), { code, statusCode: 409 });
 }
 
-// Serialize reservations on the tutor document before checking interval overlap.
-// MongoDB transactions that race for this same tutor will conflict/retry instead
-// of each reading a stale free-slot snapshot and booking overlapping intervals.
+// Reserve scheduled teaching time for *every* paid booking, whether the tutor
+// was chosen from marketplace bids or through a direct request. A request with
+// an unscheduled textual preference cannot reserve a specific interval; the
+// eventual scheduling flow must call this same guard when the time is agreed.
+// Serialize claims with a tutor-document write conflict inside the surrounding
+// MongoDB transaction, so concurrent check-then-insert operations cannot both
+// observe a free interval. Adjacent sessions (end === start) remain valid.
 async function lockConfirmedTeachingSlot(booking: any, request: any, session: mongoose.ClientSession): Promise<void> {
-  if (!request?.isDirect || !request.selectedDate || !request.selectedStartTime || !request.selectedEndTime) return;
-  if (!request.scheduledStartAt || !request.scheduledEndAt || request.scheduledEndAt <= request.scheduledStartAt) {
-    throw bookingTransitionError("INVALID_SCHEDULE", "A valid timezone-aware lesson interval is required.");
+  const hasScheduleData = !!(
+    request?.selectedDate || request?.selectedStartTime || request?.selectedEndTime ||
+    request?.scheduledStartAt || request?.scheduledEndAt
+  );
+  if (!hasScheduleData) return;
+
+  const startAt = request?.scheduledStartAt ? new Date(request.scheduledStartAt) : null;
+  const endAt = request?.scheduledEndAt ? new Date(request.scheduledEndAt) : null;
+  if (!startAt || !endAt || !Number.isFinite(startAt.getTime()) || !Number.isFinite(endAt.getTime()) || endAt <= startAt) {
+    throw bookingTransitionError("INVALID_SCHEDULE", "A valid start and end time with a timezone must be agreed before booking this lesson.");
   }
-  const prior = await BookedSlot.findOne({ booking: booking._id }).session(session);
-  if (prior) return;
-  // A harmless internal counter provides a per-tutor transaction write lock.
-  await User.collection.updateOne({ _id: booking.tutor }, { $inc: { bookingSlotLockVersion: 1 } }, { session });
+  // Local fields are only descriptive / backward-compatible. UTC intervals
+  // are the sole canonical source for overlap and concurrency checks.
+  const hasCompleteLocalTime = !!(request.selectedDate && request.selectedStartTime && request.selectedEndTime);
+  const dateKey = hasCompleteLocalTime ? request.selectedDate : startAt.toISOString().slice(0, 10);
+  const startTime = hasCompleteLocalTime ? request.selectedStartTime : startAt.toISOString().slice(11, 16);
+  const endTime = hasCompleteLocalTime ? request.selectedEndTime : endAt.toISOString().slice(11, 16);
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  if (!Number.isFinite(date.getTime())) {
+    throw bookingTransitionError("INVALID_SCHEDULE", "The selected lesson date is invalid.");
+  }
+
+  const previous = await BookedSlot.findOne({ booking: booking._id }).session(session);
+  if (previous) {
+    if (previous.startAt?.getTime() !== startAt.getTime() || previous.endAt?.getTime() !== endAt.getTime()) {
+      throw bookingTransitionError("BOOKING_SLOT_CHANGED", "An existing lesson reservation does not match the booked interval.");
+    }
+    return;
+  }
+
+  // Intentionally use the raw collection: this is a contention-only write,
+  // not user profile data. Every claimant for this tutor writes the same doc.
+  const lock = await User.collection.updateOne(
+    { _id: booking.tutor },
+    { $inc: { bookingSlotLockVersion: 1 } },
+    { session }
+  );
+  if (lock.matchedCount !== 1) throw bookingTransitionError("TUTOR_NOT_FOUND", "Tutor is not available for booking.");
+
   const overlap = await BookedSlot.findOne({
     tutor: booking.tutor,
     $or: [
-      { startAt: { $lt: request.scheduledEndAt }, endAt: { $gt: request.scheduledStartAt } },
-      { date: new Date(request.selectedDate), startTime: request.selectedStartTime },
+      { startAt: { $lt: endAt }, endAt: { $gt: startAt } },
+      // Legacy rows may only contain local date and HH:mm times. Block a
+      // partial overlap on that same local date instead of treating old data
+      // as unconstrained. These rows need a separate timezone-aware backfill.
+      { startAt: { $exists: false }, date,
+        startTime: { $lt: endTime }, endTime: { $gt: startTime } },
     ],
   }).session(session);
-  if (overlap) throw bookingTransitionError("BOOKING_SLOT_TAKEN", "The tutor is no longer available at that time; a payment reconciliation is required.");
+  if (overlap) {
+    throw bookingTransitionError("BOOKING_SLOT_TAKEN", "This tutor already has a confirmed lesson overlapping the requested time; payment needs reconciliation.");
+  }
+
   await BookedSlot.create([{
     tutor: booking.tutor, student: booking.student, booking: booking._id,
-    date: new Date(request.selectedDate), startTime: request.selectedStartTime,
-    endTime: request.selectedEndTime, timezone: request.scheduleTimezone || request.timezone,
-    startAt: request.scheduledStartAt, endAt: request.scheduledEndAt,
+    date, startTime, endTime,
+    timezone: hasCompleteLocalTime ? (request.scheduleTimezone || request.timezone || "UTC") : "UTC",
+    startAt, endAt,
   }], { session });
 }
 
@@ -617,6 +660,13 @@ export async function confirmExistingBookingPayment(bookingId: string): Promise<
         throw bookingTransitionError("BOOKING_NOT_PAYABLE", "The booking is no longer payable.");
       }
       const request = booking.request ? await Request.findById(booking.request).session(session) : null;
+      if (request && booking.bid) {
+        await assertParentBookingPolicy({
+          student: booking.student, request: request._id, bid: booking.bid,
+          amount: booking.studentTotal, currency: booking.currency || request.currency || "PKR",
+          session, bookingId: booking._id,
+        });
+      }
       if (request?.isDirect) {
         const bid = await Bid.findOne({
           _id: booking.bid, request: request._id, status: "payment_pending",
@@ -632,6 +682,7 @@ export async function confirmExistingBookingPayment(bookingId: string): Promise<
         await request.save({ session });
       }
       booking.paymentStatus = "confirmed";
+      booking.paymentConfirmedAt = new Date();
       booking.paymentNote = "Confirmed by signed and reconciled gateway webhook";
       await booking.save({ session });
       await syncStudentTutorRelationship(booking as any, session);
@@ -757,6 +808,14 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   try { feeQuote = await resolveMarketplaceFees(bid.amount, request.countryCode || "PK"); }
   catch (error: any) { res.status(error?.statusCode || 422).json({ success: false, message: error?.message || "Unable to calculate booking fees." }); return; }
 
+  try {
+    await assertParentBookingPolicy({ student: request.student, request: request._id, bid: bid._id,
+      amount: feeQuote.studentTotal, currency: bid.currency || request.currency || "PKR", queueApprovals: true });
+  } catch (err: any) {
+    res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
+    return;
+  }
+
   // Atomic guard — only one accept attempt can win this transition
   const reservedRequest = await Request.findOneAndUpdate(
     { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
@@ -869,6 +928,10 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
       }).session(session);
 
       const fees = bid.feeQuote || await resolveMarketplaceFees(bid.amount, request.countryCode || "PK");
+      await assertParentBookingPolicy({
+        student: request.student, request: request._id, bid: bid._id,
+        amount: fees.studentTotal, currency: bid.currency || request.currency || "PKR", session,
+      });
 
       const bookingArr = await Booking.create([{
         student: request.student,
@@ -894,6 +957,7 @@ export async function finalizeBidAcceptance(bidId: string, io: any): Promise<voi
         // Payment already succeeded via the authorized payment gateway before this booking
         // was ever created — no manual confirmation step needed.
         paymentStatus: "confirmed",
+        paymentConfirmedAt: new Date(),
         paymentNote: "Paid via authorized payment gateway before booking creation",
       }], { session });
       const booking = bookingArr[0];

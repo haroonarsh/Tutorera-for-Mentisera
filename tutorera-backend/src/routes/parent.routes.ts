@@ -7,6 +7,8 @@ import {
   confirmChildAccount,
   removeChildAccount,
   updateParentSettings,
+  getPendingBookingApprovals,
+  decideBookingApproval,
   saveParentOnboarding,
 } from "../controllers/parent.controller";
 
@@ -17,6 +19,8 @@ router.post("/children", protect, otpRequestLimiter, addChildAccount);
 router.post("/children/confirm", protect, otpVerifyLimiter, confirmChildAccount);
 router.delete("/children/:childId", protect, removeChildAccount);
 router.patch("/settings", protect, updateParentSettings);
+router.get("/booking-approvals", protect, getPendingBookingApprovals);
+router.post("/booking-approvals/:id/decision", protect, decideBookingApproval);
 router.post("/onboarding", protect, saveParentOnboarding);
 
 export default router;

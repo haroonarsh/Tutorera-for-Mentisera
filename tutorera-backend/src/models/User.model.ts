@@ -97,6 +97,7 @@ const userSchema = new Schema<IUser>(
     legalAcceptedAt: { type: Date, default: Date.now },
     legalAcceptedIp: { type: String },
     parentConsentVerified: { type: Boolean, default: false },
+    guardianConsentVerifiedAt: { type: Date },
     parentGuardianEmail: { type: String, trim: true },
     parentGuardianName: { type: String, trim: true },
     children: [{ type: Schema.Types.ObjectId, ref: "User" }],

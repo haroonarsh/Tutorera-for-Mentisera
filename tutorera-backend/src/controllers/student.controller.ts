@@ -19,6 +19,17 @@ export const saveStudentOnboarding = async (
     budgetRange, teachingModePreference,
   } = req.body;
 
+  // Identity/age controls use the immutable User.dateOfBirth established
+  // at signup. A profile-onboarding payload must never rewrite or contradict
+  // that value (including after adult guardian verification).
+  const registeredDateOfBirth = req.user?.dateOfBirth?.toISOString().slice(0, 10);
+  if (registeredDateOfBirth && dateOfBirth && dateOfBirth !== registeredDateOfBirth) {
+    res.status(409).json({ success: false, code: "STUDENT_DOB_MISMATCH",
+      message: "Student date of birth differs from the registered account. Contact support for a verified correction." });
+    return;
+  }
+  const profileDateOfBirth = registeredDateOfBirth || dateOfBirth;
+
   // Update user name
   await User.findByIdAndUpdate(req.user?._id, {
     name: fullName,
@@ -31,7 +42,7 @@ export const saveStudentOnboarding = async (
     { user: req.user?._id },
     {
       user: req.user?._id,
-      fullName, phone, city, gender, dateOfBirth,
+      fullName, phone, city, gender, dateOfBirth: profileDateOfBirth,
       currentLevel, institution, subjectsNeeded,
       budgetRange, teachingModePreference,
       onboardingComplete: true,
@@ -133,6 +144,13 @@ export const getFavouriteIds = async (req: AuthRequest, res: Response): Promise<
 // @route   POST /api/students/guardians
 // @access  Private (student)
 export const linkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  // Underage users cannot link an arbitrary parent account using a known
+  // parent ID/email. Their supervising adult must confirm through the
+  // authenticated parent mailbox/consent workflow.
+  if (req.user?.isMinor) {
+    res.status(403).json({ success: false, code: "MINOR_GUARDIAN_LINK_RESTRICTED",
+      message: "A verified guardian must manage this relationship through guardian consent." }); return;
+  }
   const { parentProfileId, parentUserId, name, email } = req.body;
 
   if (!parentProfileId && !parentUserId && !email) {
@@ -194,6 +212,9 @@ export const linkParentGuardian = async (req: AuthRequest, res: Response): Promi
 // @route   DELETE /api/students/guardians/:parentProfileId
 // @access  Private (student)
 export const unlinkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.isMinor) {
+    res.status(403).json({ success: false, code: "GUARDIAN_UNLINK_RESTRICTED", message: "A verified guardian or support must manage this link." }); return;
+  }
   const { parentProfileId } = req.params;
 
   const ParentProfile = (await import("../models/ParentProfile.model")).default;

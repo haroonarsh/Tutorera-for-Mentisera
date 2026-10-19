@@ -5,6 +5,7 @@ import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
+import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
 import PaymentLedger from "../models/PaymentLedger.model";
 import mongoose from "mongoose";
 import BookedSlot from "../models/BookedSlot.model";
@@ -575,8 +576,19 @@ export const updatePaymentStatus = async (
     return;
   }
 
+  if (paymentStatus === "confirmed" && booking.request && booking.bid) {
+    try {
+      await assertParentBookingPolicy({ student: (booking.student as any)._id || booking.student, request: booking.request,
+        bid: booking.bid, amount: booking.studentTotal, currency: booking.currency || "PKR" });
+    } catch (err: any) {
+      res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
+      return;
+    }
+  }
+
   // Update only fields that are provided
   if (paymentStatus !== undefined) booking.paymentStatus = paymentStatus;
+  if (paymentStatus === "confirmed") booking.paymentConfirmedAt = new Date();
   if (paymentNote !== undefined) booking.paymentNote = paymentNote;
   if (payoutStatus !== undefined) {
     booking.payoutStatus = payoutStatus;

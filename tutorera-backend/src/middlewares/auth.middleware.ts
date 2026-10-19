@@ -43,6 +43,31 @@ export const protect = async (
       return;
     }
 
+    // Accounts created by a minor are kept in a restricted holding state
+    // until an adult has authenticated and verified the guardian mailbox.
+    // JWT possession is not an alternate consent mechanism.
+    if (user.role === "pending") {
+      const allowed = new Set(["/api/v1/auth/me", "/api/v1/auth/logout",
+        "/api/v1/auth/select-role", "/api/v1/auth/me/delete-account",
+        "/api/v1/auth/me/export"]);
+      if (!allowed.has(req.originalUrl.split("?")[0])) {
+        res.status(403).json({ success: false, code: "ROLE_SELECTION_REQUIRED",
+          message: "Choose an account role before using the platform." });
+        return;
+      }
+    }
+    if (user.role === "student" && user.isMinor && !user.parentConsentVerified) {
+      const allowed = new Set([
+        "/api/v1/auth/me", "/api/v1/auth/logout",
+        "/api/v1/auth/me/export", "/api/v1/auth/me/delete-account",
+        "/api/v1/auth/me/consent", "/api/v1/auth/guardian-consent/resend",
+      ]);
+      if (!allowed.has(req.path.startsWith("/api/v1/") ? req.path : req.originalUrl.split("?")[0])) {
+        res.status(403).json({ success: false, code: "GUARDIAN_CONSENT_REQUIRED",
+          message: "An adult guardian must verify and approve this student account before tutoring features are available." });
+        return;
+      }
+    }
     req.user = user;
     next();
   } catch {
@@ -74,10 +99,14 @@ export const optionalAuth = async (
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
     const user = await User.findById(decoded.id);
-    if (user && user.isActive) {
+    // Optional authentication is only advisory. A pending role or a minor
+    // awaiting adult supervision must not become an authenticated actor
+    // through a public endpoint that uses optionalAuth instead of protect.
+    if (user?.isActive && user.role !== "pending" &&
+        !(user.role === "student" && user.isMinor && !user.parentConsentVerified)) {
       req.user = user;
     }
-    // If suspended, silently proceed as if logged out — no error, since this route is public anyway
+    // If restricted/suspended, proceed as unauthenticated on public routes.
   } catch {
     // Invalid/expired token — proceed without a user
   }
