@@ -1,4 +1,5 @@
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import app from "../app";
 import User from "../models/User.model";
 import GuardianConsent from "../models/GuardianConsent.model";
@@ -316,5 +317,29 @@ describe("Phase 5 — student age declaration and verified guardian mailbox cons
     const response = await request(app).get("/api/v1/students/profile/me")
       .set("Authorization", `Bearer ${result.body.token}`);
     expect(response.status).not.toBe(403);
+  });
+});
+
+
+describe("Phase 6 — legacy unknown-age access controls", () => {
+  const previous = process.env.LEGACY_STUDENT_AGE_ENFORCEMENT;
+  afterEach(() => {
+    if (previous === undefined) delete process.env.LEGACY_STUDENT_AGE_ENFORCEMENT;
+    else process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = previous;
+  });
+
+  it("blocks legacy student protected routes with age review enabled while retaining account access", async () => {
+    const student = await User.create({ name: "Legacy Student", email: email("legacy"),
+      password: "password123", role: "student", countryCode: "PK" });
+    const token = jwt.sign({ id: student._id.toString(), role: "student" }, process.env.JWT_SECRET!);
+    const headers = { Authorization: `Bearer ${token}` };
+    process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "true";
+    const denial = await request(app).get("/api/v1/payments/history").set(headers).expect(403);
+    expect(denial.body.code).toBe("STUDENT_AGE_REVIEW_REQUIRED");
+    await request(app).get("/api/v1/auth/me").set(headers).expect(200);
+    expect((await User.findById(student._id))?.dateOfBirth).toBeUndefined();
+    process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "false";
+    const oldBehavior = await request(app).get("/api/v1/payments/history").set(headers);
+    expect(oldBehavior.body.code).not.toBe("STUDENT_AGE_REVIEW_REQUIRED");
   });
 });
