@@ -80,6 +80,7 @@ export const protect = async (
         "/api/v1/auth/me", "/api/v1/auth/logout",
         "/api/v1/auth/me/export", "/api/v1/auth/me/delete-account",
         "/api/v1/auth/me/consent", "/api/v1/auth/guardian-consent/resend",
+        "/api/v1/auth/me/age-review", "/api/v1/auth/me/age-review/request",
       ]);
       if (!allowed.has(req.path.startsWith("/api/v1/") ? req.path : req.originalUrl.split("?")[0])) {
         res.status(403).json({ success: false, code: "GUARDIAN_CONSENT_REQUIRED",
