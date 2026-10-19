@@ -3,7 +3,7 @@ import { AuthRequest } from "../types";
 import Conversation from "../models/Conversation.model";
 import Message from "../models/Message.model";
 import Booking from "../models/Booking.model";
-import { filterContactInfo, containsContactInfo } from "../utils/contentFilter";
+import { filterContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
 import { isConversationStudentEligible } from "../services/chatAccess.service";
 import { Types } from "mongoose";
@@ -17,7 +17,6 @@ export const getOrCreateConversation = async (
 ): Promise<void> => {
   const { bookingId } = req.body;
   const userId = req.user?._id;
-  const userRole = req.user?.role;
 
   // Verify booking exists and user is part of it
   const booking = await Booking.findById(bookingId);
@@ -71,6 +70,10 @@ export const getMyConversations = async (
   const role = req.user?.role;
   const { page = "1", limit = "20" } = req.query;
 
+  if (role !== "student" && role !== "tutor") {
+    res.status(403).json({ success: false, code: "CHAT_ROLE_NOT_ALLOWED" });
+    return;
+  }
   const filter = role === "student"
     ? { student: userId }
     : { tutor: userId };
@@ -215,21 +218,20 @@ export const sendMessage = async (
   const populatedMessage = await Message.findById(message._id)
     .populate("sender", "name avatar") as InstanceType<typeof Message>;
 
-  const updateData: Record<string, unknown> = {
-    lastMessage: filteredContent.substring(0, 100),
-    lastMessageAt: new Date(),
-  };
-
-  if (isStudent) {
-    updateData.tutorUnread = conversation.tutorUnread + 1;
-  } else {
-    updateData.studentUnread = conversation.studentUnread + 1;
-  }
-
-  await Conversation.findByIdAndUpdate(conversationId, updateData);
+  // Atomic increment avoids losing unread messages when multiple sends race.
+  // Use a server-generated message timestamp for the conversation preview.
+  await Conversation.findByIdAndUpdate(conversationId, {
+    $set: {
+      lastMessage: filteredContent.substring(0, 100),
+      lastMessageAt: message.createdAt,
+    },
+    $inc: isStudent ? { tutorUnread: 1 } : { studentUnread: 1 },
+  });
 
   const io = req.app.get("io");
-  io.to(conversationId).emit("new_message", {
+  // The HTTP API is also used by Supertest without a Socket.IO server.
+  // A missing realtime transport must not turn a saved message into HTTP 500.
+  if (io) io.to(conversationId).emit("new_message", {
     _id: populatedMessage._id,
     conversation: conversationId,
     sender: { _id: userId, name: req.user?.name, avatar: req.user?.avatar },
