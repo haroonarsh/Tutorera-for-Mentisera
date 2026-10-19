@@ -12,6 +12,7 @@ import mongoose from "mongoose";
 import User from "../models/User.model";
 import StudentProfile from "../models/StudentProfile.model";
 import GuardianConsent from "../models/GuardianConsent.model";
+import ParentProfile from "../models/ParentProfile.model";
 
 async function run() {
   if (process.argv.some(arg => ["--apply", "--write", "--migrate", "--fix"].includes(arg))) {
@@ -30,6 +31,7 @@ async function run() {
       totalStudents, missingAccountDob, storedMinor, minorWithoutConsent,
       consentVerifiedMinor, dobIndicatesMinorButFlagMissing,
       adultDobButMinorFlag, verifiedConsentRecords, profileDateMismatch,
+      guardianLinkedWithoutVerifiedConsent,
     ] = await Promise.all([
       User.countDocuments({ role: "student" }),
       User.countDocuments({ role: "student", $or: [
@@ -59,6 +61,16 @@ async function run() {
         { $match: { $expr: { $ne: ["$profileDate", "$accountDate"] } } },
         { $count: "total" },
       ]),
+      ParentProfile.aggregate<{ total: number }>([
+        { $unwind: "$children" },
+        { $group: { _id: "$children.studentUser" } },
+        { $lookup: {
+          from: User.collection.name, localField: "_id", foreignField: "_id", as: "student",
+        } },
+        { $unwind: "$student" },
+        { $match: { "student.role": "student", "student.parentConsentVerified": { $ne: true } } },
+        { $count: "total" },
+      ]),
     ]);
 
     process.stdout.write(JSON.stringify({
@@ -70,6 +82,7 @@ async function run() {
         consentVerifiedMinor, dobIndicatesMinorButFlagMissing,
         adultDobButMinorFlag, verifiedConsentRecords,
         studentProfileBirthDateMismatch: profileDateMismatch[0]?.total || 0,
+        guardianLinkedWithoutVerifiedConsent: guardianLinkedWithoutVerifiedConsent[0]?.total || 0,
       },
       interpretation: "The counts may overlap. Do not classify unknown DOB as verified adult, migrate automatically, or change consent without supervised review.",
     }, null, 2) + "\n");
