@@ -5,6 +5,7 @@ import app from "../app";
 import User from "../models/User.model";
 import GuardianConsent from "../models/GuardianConsent.model";
 import ParentProfile from "../models/ParentProfile.model";
+import AgeReviewRequest from "../models/AgeReviewRequest.model";
 import sendEmail from "../utils/sendEmail";
 import { ensureLaunchMarkets } from "../services/market.service";
 import { ageOnDate, verifyGuardianConsent } from "../services/guardianConsent.service";
@@ -383,6 +384,8 @@ describe("Phase 6 — age review intake concurrency", () => {
     const token = jwt.sign({ id: student._id.toString(), role: "student" }, process.env.JWT_SECRET!);
     const headers = { Authorization: `Bearer ${token}` };
     process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "true";
+    // The MongoDB partial unique index must exist before racing requests.
+    await AgeReviewRequest.init();
 
     const submissions = await Promise.all(Array.from({ length: 3 }, () =>
       request(app).post("/api/v1/auth/me/age-review/request").set(headers)
