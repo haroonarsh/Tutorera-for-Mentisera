@@ -46,7 +46,7 @@ export const getMyAgeReviewRequest = async (req: AuthRequest, res: Response): Pr
     res.status(403).json({ success: false, code: "STUDENT_ACCOUNT_REQUIRED" }); return;
   }
   const review = await AgeReviewRequest.findOne({ student: req.user._id }).sort({ createdAt: -1 })
-    .select("status reason createdAt updatedAt").lean();
+    .select("status reason resolution createdAt updatedAt reviewedAt").lean();
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, review: review || null });
 };
@@ -72,7 +72,9 @@ export const closeAgeReview = async (req: AuthRequest, res: Response): Promise<v
     res.status(400).json({ success: false, code: "INVALID_REVIEW_RESOLUTION" }); return;
   }
   const closed = await AgeReviewRequest.findOneAndUpdate(
-    { _id: id, status: "pending" }, { $set: { status: "closed" } }, { new: true });
+    { _id: id, status: "pending" },
+    { $set: { status: "closed", resolution: req.body.resolution,
+      reviewedBy: req.user?._id, reviewedAt: new Date() } }, { new: true });
   if (!closed) {
     res.status(409).json({ success: false, code: "REVIEW_ALREADY_CLOSED_OR_MISSING" }); return;
   }
