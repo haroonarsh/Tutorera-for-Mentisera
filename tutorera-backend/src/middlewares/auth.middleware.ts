@@ -8,6 +8,18 @@ interface JwtPayload {
   role: UserRole;
 }
 
+// Opt-in restriction for historical students whose age is unknown.
+// Enable only after audit, staged notification, and support readiness.
+const needsLegacyAgeReview = (user: { role: UserRole; dateOfBirth?: Date | null }) =>
+  process.env.LEGACY_STUDENT_AGE_ENFORCEMENT === "true" &&
+  user.role === "student" &&
+  (!user.dateOfBirth || !Number.isFinite(new Date(user.dateOfBirth).getTime()));
+
+const legacyAccountPaths = new Set([
+  "/api/v1/auth/me", "/api/v1/auth/logout",
+  "/api/v1/auth/me/export", "/api/v1/auth/me/delete-account",
+]);
+
 export const protect = async (
   req: AuthRequest,
   res: Response,
@@ -56,6 +68,11 @@ export const protect = async (
         return;
       }
     }
+    if (needsLegacyAgeReview(user) && !legacyAccountPaths.has(req.originalUrl.split("?")[0])) {
+      res.status(403).json({ success: false, code: "STUDENT_AGE_REVIEW_REQUIRED",
+        message: "Your account needs an age review before tutoring access. Please contact support." });
+      return;
+    }
     if (user.role === "student" && user.isMinor && !user.parentConsentVerified) {
       const allowed = new Set([
         "/api/v1/auth/me", "/api/v1/auth/logout",
@@ -102,7 +119,7 @@ export const optionalAuth = async (
     // Optional authentication is only advisory. A pending role or a minor
     // awaiting adult supervision must not become an authenticated actor
     // through a public endpoint that uses optionalAuth instead of protect.
-    if (user?.isActive && user.role !== "pending" &&
+    if (user?.isActive && user.role !== "pending" && !needsLegacyAgeReview(user) &&
         !(user.role === "student" && user.isMinor && !user.parentConsentVerified)) {
       req.user = user;
     }
