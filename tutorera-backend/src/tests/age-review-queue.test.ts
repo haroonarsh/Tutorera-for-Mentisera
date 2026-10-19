@@ -21,5 +21,14 @@ describe("Phase 1 safeguarding age-review queue", () => {
     await request(app).get("/api/v1/admin/safety/age-reviews?page=0").set(adminAuth).expect(400);
     await request(app).get("/api/v1/admin/safety/age-reviews?limit=999").set(adminAuth).expect(400);
     await request(app).get("/api/v1/admin/safety/age-reviews").set(studentAuth).expect(403);
+    const claim = await request(app).post("/api/v1/admin/safety/age-reviews/" + page.body.reviews[0]._id + "/claim")
+      .set(adminAuth).send({}).expect(200);
+    expect(claim.body.status).toBe("in_review");
+    const activePage = await request(app).get("/api/v1/admin/safety/age-reviews?page=1&limit=1")
+      .set(adminAuth).expect(200);
+    expect(activePage.body.reviews[0].status).toBe("in_review");
+    await request(app).post("/api/v1/admin/safety/age-reviews/" + page.body.reviews[0]._id + "/claim")
+      .set(adminAuth).send({}).expect(409);
+    expect((await User.findById(student._id))?.dateOfBirth).toBeUndefined();
   });
 });
