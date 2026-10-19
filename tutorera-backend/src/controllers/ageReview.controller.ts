@@ -18,7 +18,21 @@ export const requestAgeReview = async (req: AuthRequest, res: Response): Promise
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json({ success: true, status: "pending", requestId: existing._id }); return;
   }
-  const review = await AgeReviewRequest.create({ student: user._id, reason, status: "pending" });
+  let review;
+  try {
+    review = await AgeReviewRequest.create({ student: user._id, reason, status: "pending" });
+  } catch (error: unknown) {
+    // Another concurrent request may have created the unique pending case.
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
+      const pending = await AgeReviewRequest.findOne({ student: user._id, status: "pending" });
+      if (pending) {
+        res.setHeader("Cache-Control", "no-store");
+        res.status(200).json({ success: true, status: "pending", requestId: pending._id });
+        return;
+      }
+    }
+    throw error;
+  }
   await logAudit({ action: "student_age_review_requested", actorId: user._id.toString(),
     actor: "Student", entity: "AgeReviewRequest", targetId: review._id.toString(),
     metadata: { reason } });
