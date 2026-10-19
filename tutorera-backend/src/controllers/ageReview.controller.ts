@@ -52,12 +52,23 @@ export const getMyAgeReviewRequest = async (req: AuthRequest, res: Response): Pr
 };
 
 export const listPendingAgeReviews = async (req: AuthRequest, res: Response): Promise<void> => {
-  const limit = Math.min(Math.max(Number(req.query.limit) || 25, 1), 50);
-  const reviews = await AgeReviewRequest.find({ status: "pending" })
-    .sort({ createdAt: 1 }).limit(limit)
-    .select("student reason status createdAt").lean();
+  const rawLimit = Number(req.query.limit ?? 25);
+  const rawPage = Number(req.query.page ?? 1);
+  if (!Number.isSafeInteger(rawLimit) || rawLimit < 1 || rawLimit > 50 ||
+      !Number.isSafeInteger(rawPage) || rawPage < 1 || rawPage > 100000) {
+    res.status(400).json({ success: false, code: "INVALID_PAGINATION" }); return;
+  }
+  const filter = { status: "pending" };
+  const [total, reviews] = await Promise.all([
+    AgeReviewRequest.countDocuments(filter),
+    AgeReviewRequest.find(filter).sort({ createdAt: 1, _id: 1 })
+      .skip((rawPage - 1) * rawLimit).limit(rawLimit)
+      .select("student reason status createdAt").lean(),
+  ]);
   res.setHeader("Cache-Control", "no-store");
-  res.json({ success: true, reviews });
+  res.json({ success: true, reviews, pagination: {
+    page: rawPage, limit: rawLimit, total, pages: Math.ceil(total / rawLimit),
+  } });
 };
 
 // Administrative triage closes an intake case; it is not proof of identity,
