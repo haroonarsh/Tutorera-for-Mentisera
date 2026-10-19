@@ -5,7 +5,7 @@ import {
   getMessages,
   sendMessage,
 } from "../controllers/chat.controller";
-import { protect, authorize("student", "tutor"), authorize } from "../middlewares/auth.middleware";
+import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, sendMessageSchema, getOrCreateConversationSchema } from "../validators/chat.validator";
 
 const router = Router();
