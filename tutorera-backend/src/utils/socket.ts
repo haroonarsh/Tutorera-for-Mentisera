@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import Notification from "../models/Notification.model";
 import Conversation from "../models/Conversation.model";
+import { isConversationStudentEligible } from "../services/chatAccess.service";
 import User from "../models/User.model";
 
 interface ConnectedUsers {
@@ -82,6 +83,13 @@ export const initSocket = (httpServer: HttpServer): Server => {
           return;
         }
 
+        // The tutor may still be approved after the student's guardian has
+        // revoked consent. Never add a socket to an unavailable child room.
+        if (!(await isConversationStudentEligible(conversation.student))) {
+          if (callback) callback({ ok: false, error: "Student is unavailable for supervised chat" });
+          return;
+        }
+
         socket.join(conversationId);
         console.log(`User ${userId} joined conversation ${conversationId}`);
         if (callback) callback({ ok: true });
@@ -111,6 +119,13 @@ export const initSocket = (httpServer: HttpServer): Server => {
         if (!current?.isActive || current.role === "pending" ||
             (current.role === "student" && current.isMinor && !current.parentConsentVerified)) {
           socket.disconnect(true);
+          return;
+        }
+        // Guard BOTH participants: checking only the sender misses a tutor
+        // emitting typing events into a stale socket owned by a revoked minor.
+        const conversation = await Conversation.findById(data.conversationId).select("student").lean();
+        if (!conversation || !(await isConversationStudentEligible(conversation.student))) {
+          socket.leave(data.conversationId);
           return;
         }
         if (!socket.connected || !socket.rooms.has(data.conversationId)) return;
