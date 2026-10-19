@@ -168,7 +168,7 @@ export const proposeVerifiedDob = async (req: AuthRequest, res: Response): Promi
   const id = req.params.id;
   const { dateOfBirth, evidenceReference } = req.body || {};
   if (typeof id !== "string" || !/^[a-fA-F0-9]{24}$/.test(id) ||
-      typeof dateOfBirth !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(dateOfBirth) ||
+      typeof dateOfBirth !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) ||
       typeof evidenceReference !== "string" || !/^[A-Za-z0-9_-]{8,120}$/.test(evidenceReference)) {
     res.status(400).json({ success: false, code: "INVALID_VERIFICATION_PROPOSAL" }); return;
   }
