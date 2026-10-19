@@ -9,6 +9,10 @@ const ageReviewRequestSchema = new Schema({
   reviewedAt: { type: Date },
   assignedTo: { type: Schema.Types.ObjectId, ref: "User" },
   assignedAt: { type: Date },
+  verifiedDateOfBirth: { type: Date, select: false },
+  evidenceReference: { type: String, select: false, maxlength: 120 },
+  evidenceCheckedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  evidenceCheckedAt: { type: Date },
   // Never accept identity documents or raw birth dates in this request.
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
