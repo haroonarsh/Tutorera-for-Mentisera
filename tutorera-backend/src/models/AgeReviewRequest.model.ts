@@ -8,5 +8,10 @@ const ageReviewRequestSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-ageReviewRequestSchema.index({ student: 1, status: 1 });
+// At most one pending age review per student, including concurrent submissions.
+// Historical duplicates must be reconciled before deploying this unique index.
+ageReviewRequestSchema.index({ student: 1 }, {
+  unique: true, partialFilterExpression: { status: "pending" },
+  name: "unique_pending_student_age_review",
+});
 export default mongoose.model("AgeReviewRequest", ageReviewRequestSchema);
