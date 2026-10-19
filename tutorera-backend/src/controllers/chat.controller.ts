@@ -33,6 +33,11 @@ export const getOrCreateConversation = async (
     return;
   }
 
+  if (!(await isConversationStudentEligible(booking.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE" });
+    return;
+  }
+
   // Find existing conversation
   let conversation = await Conversation.findOne({ booking: bookingId })
     .populate("student", "name avatar")
@@ -40,13 +45,19 @@ export const getOrCreateConversation = async (
 
   // Create if not exists
   if (!conversation) {
-    conversation = await Conversation.create({
-      student: booking.student,
-      tutor: booking.tutor,
-      booking: bookingId,
-    });
-    await conversation.populate("student", "name avatar");
-    await conversation.populate("tutor", "name avatar");
+    // Unique booking index makes concurrent opens safe once initialized.
+    try {
+      conversation = await Conversation.create({
+        student: booking.student, tutor: booking.tutor, booking: bookingId,
+      });
+      await conversation.populate("student", "name avatar");
+      await conversation.populate("tutor", "name avatar");
+    } catch (err: unknown) {
+      if (!(typeof err === "object" && err !== null && "code" in err && err.code === 11000)) throw err;
+      conversation = await Conversation.findOne({ booking: bookingId })
+        .populate("student", "name avatar").populate("tutor", "name avatar");
+      if (!conversation) throw err;
+    }
   }
 
   // Reset unread count for current user
@@ -135,6 +146,11 @@ export const getMessages = async (
   const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 50));
   const skip = (pageNum - 1) * limitNum;
 
+  if (!(await isConversationStudentEligible(conversation.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE" });
+    return;
+  }
+
   const total = await Message.countDocuments({ conversation: conversationId });
 
   // Fetch newest messages first for pagination, then reverse so the client
@@ -152,6 +168,9 @@ export const getMessages = async (
     { conversation: conversationId, sender: { $ne: userId }, isRead: false },
     { isRead: true }
   );
+
+  await Conversation.findByIdAndUpdate(conversationId,
+    isParticipant ? { $set: { [conversation.student.toString() === userId?.toString() ? "studentUnread" : "tutorUnread"]: 0 } } : {});
 
   res.status(200).json({
     success: true,
