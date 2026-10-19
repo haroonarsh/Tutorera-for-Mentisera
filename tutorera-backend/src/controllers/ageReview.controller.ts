@@ -10,7 +10,9 @@ export const requestAgeReview = async (req: AuthRequest, res: Response): Promise
     res.status(403).json({ success: false, code: "STUDENT_ACCOUNT_REQUIRED" }); return;
   }
   const reason = req.body?.reason;
-  if (reason !== "missing_date_of_birth" && reason !== "incorrect_date_of_birth") {
+  // Only intake a category: no proposed guardian email, DOB or documents accepted.
+  if (reason !== "missing_date_of_birth" && reason !== "incorrect_date_of_birth" &&
+      reason !== "guardian_contact_recovery") {
     res.status(400).json({ success: false, code: "INVALID_AGE_REVIEW_REASON" }); return;
   }
   const existing = await AgeReviewRequest.findOne({ student: user._id, status: { $in: ["pending", "in_review"] } });
