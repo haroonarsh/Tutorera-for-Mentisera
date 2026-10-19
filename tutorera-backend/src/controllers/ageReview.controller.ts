@@ -58,7 +58,7 @@ export const listPendingAgeReviews = async (req: AuthRequest, res: Response): Pr
       !Number.isSafeInteger(rawPage) || rawPage < 1 || rawPage > 100000) {
     res.status(400).json({ success: false, code: "INVALID_PAGINATION" }); return;
   }
-  const filter = { status: { $in: ["pending", "in_review"] } };
+  const filter = { status: { $in: ["pending", "in_review"] as const } };
   const [total, reviews] = await Promise.all([
     AgeReviewRequest.countDocuments(filter),
     AgeReviewRequest.find(filter).sort({ createdAt: 1, _id: 1 })
