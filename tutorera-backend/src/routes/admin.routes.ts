@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listPendingAgeReviews, closeAgeReview, claimAgeReview, reassignAgeReview } from "../controllers/ageReview.controller";
+import { listPendingAgeReviews, closeAgeReview, claimAgeReview, reassignAgeReview, proposeVerifiedDob, approveVerifiedDob } from "../controllers/ageReview.controller";
 import {
   getDashboardStats,
   getPendingVerifications,
@@ -88,6 +88,8 @@ router.put("/finance/fee-config", requirePermission("finance.fee_configure"), up
 router.get("/safety/age-reviews", requirePermission("safety.read"), listPendingAgeReviews);
 router.post("/safety/age-reviews/:id/claim", requirePermission("safety.update"), claimAgeReview);
 router.post("/safety/age-reviews/:id/reassign", requirePermission("safety.update"), reassignAgeReview);
+router.post("/safety/age-reviews/:id/dob-proposal", requirePermission("safety.update"), proposeVerifiedDob);
+router.post("/safety/age-reviews/:id/approve-dob", requirePermission("safety.resolve"), approveVerifiedDob);
 router.post("/safety/age-reviews/:id/close", requirePermission("safety.resolve"), closeAgeReview);
 
 // Trust & Safety Cases
