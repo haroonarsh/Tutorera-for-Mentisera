@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const ageReviewRequestSchema = new Schema({
   student: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
   status: { type: String, enum: ["pending", "in_review", "closed"], default: "pending", index: true },
-  reason: { type: String, enum: ["missing_date_of_birth", "incorrect_date_of_birth"], required: true },
+  reason: { type: String, enum: ["missing_date_of_birth", "incorrect_date_of_birth", "guardian_contact_recovery"], required: true },
   resolution: { type: String, enum: ["referred_to_support", "duplicate_request"] },
   reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
   reviewedAt: { type: Date },
