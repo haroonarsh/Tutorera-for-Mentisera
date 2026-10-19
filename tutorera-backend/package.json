@@ -10,6 +10,7 @@
     "test:watch": "jest --watch --runInBand",
     "test:marketplace": "npm run build && node --test test/*.test.js",
     "backfill:tracking": "ts-node src/scripts/backfillTutorTracking.ts",
+    "audit:student-age": "ts-node src/scripts/auditStudentAgeCoverage.ts",
     "geo:import": "ts-node src/scripts/importGeoNames.ts",
     "migrate:pk": "ts-node src/scripts/migrateLegacyPakistan.ts"
   },
