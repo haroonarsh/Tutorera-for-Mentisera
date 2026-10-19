@@ -170,7 +170,7 @@ export const getMessages = async (
   );
 
   await Conversation.findByIdAndUpdate(conversationId,
-    isParticipant ? { $set: { [conversation.student.toString() === userId?.toString() ? "studentUnread" : "tutorUnread"]: 0 } } : {});
+    { $set: { [conversation.student.toString() === userId?.toString() ? "studentUnread" : "tutorUnread"]: 0 } });
 
   res.status(200).json({
     success: true,
