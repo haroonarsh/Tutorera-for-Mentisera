@@ -368,3 +368,31 @@ describe("Phase 6 — realtime historical age gate", () => {
       dateOfBirth: new Date("2011-01-01") })).toBe(false);
   });
 });
+
+
+describe("Phase 6 — age review intake concurrency", () => {
+  const previous = process.env.LEGACY_STUDENT_AGE_ENFORCEMENT;
+  afterEach(() => {
+    if (previous === undefined) delete process.env.LEGACY_STUDENT_AGE_ENFORCEMENT;
+    else process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = previous;
+  });
+
+  it("creates exactly one pending review across simultaneous requests and allows self-service when restricted", async () => {
+    const student = await User.create({ name: "Historical Student", email: email("age-review"),
+      password: "password123", role: "student", countryCode: "PK" });
+    const token = jwt.sign({ id: student._id.toString(), role: "student" }, process.env.JWT_SECRET!);
+    const headers = { Authorization: `Bearer ${token}` };
+    process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "true";
+
+    const submissions = await Promise.all(Array.from({ length: 3 }, () =>
+      request(app).post("/api/v1/auth/me/age-review/request").set(headers)
+        .send({ reason: "missing_date_of_birth" })));
+    expect(submissions.every(result => result.status === 200 || result.status === 201)).toBe(true);
+    const ids = submissions.map(result => String(result.body.requestId));
+    expect(new Set(ids).size).toBe(1);
+    const latest = await request(app).get("/api/v1/auth/me/age-review/request").set(headers).expect(200);
+    expect(latest.body.review.status).toBe("pending");
+    expect(String(latest.body.review._id)).toBe(ids[0]);
+    expect((await User.findById(student._id))?.dateOfBirth).toBeUndefined();
+  });
+});
