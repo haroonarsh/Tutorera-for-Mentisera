@@ -338,6 +338,10 @@ describe("Phase 6 — legacy unknown-age access controls", () => {
     const denial = await request(app).get("/api/v1/payments/history").set(headers).expect(403);
     expect(denial.body.code).toBe("STUDENT_AGE_REVIEW_REQUIRED");
     await request(app).get("/api/v1/auth/me").set(headers).expect(200);
+    const review = await request(app).get("/api/v1/auth/me/age-review").set(headers).expect(200);
+    expect(review.body.status).toBe("age_review_required");
+    expect(review.body.supportRequired).toBe(true);
+    expect(review.body.enforcementEnabled).toBe(true);
     expect((await User.findById(student._id))?.dateOfBirth).toBeUndefined();
     process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "false";
     const oldBehavior = await request(app).get("/api/v1/payments/history").set(headers);

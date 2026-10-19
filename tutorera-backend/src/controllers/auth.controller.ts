@@ -841,3 +841,27 @@ export const updateConsent = async (req: AuthRequest, res: Response): Promise<vo
     res.status(500).json({ success: false, message: "Failed to update consent preferences" });
   }
 };
+
+
+// Read-only account guidance. This endpoint never accepts or changes a DOB.
+export const getAgeReviewStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = req.user;
+  if (!user || user.role !== "student") {
+    res.status(403).json({ success: false, code: "STUDENT_ACCOUNT_REQUIRED" });
+    return;
+  }
+  const unknownAge = !user.dateOfBirth || !Number.isFinite(new Date(user.dateOfBirth).getTime());
+  const guardianPending = user.isMinor === true && user.parentConsentVerified !== true;
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    success: true,
+    status: unknownAge ? "age_review_required" : guardianPending ? "guardian_consent_required" : "no_age_review_required",
+    enforcementEnabled: process.env.LEGACY_STUDENT_AGE_ENFORCEMENT === "true",
+    supportRequired: unknownAge,
+    message: unknownAge
+      ? "Contact support for a secure age review. Do not submit identity documents in chat."
+      : guardianPending
+        ? "Guardian consent is required to use tutoring features."
+        : "No age review is currently required for this account.",
+  });
+};
