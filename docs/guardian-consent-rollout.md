@@ -24,6 +24,8 @@ This release adds age declaration and supervised access for newly registered stu
 Old accounts often lack `User.dateOfBirth`, and `isMinor` defaults to false. This PR deliberately does **not** silently convert existing users or invent birth dates.
 
 1. Produce a read-only count of existing student accounts with missing DOB, inconsistent DOB in StudentProfile, or existing guardian links without verified consent. Preserve only the aggregates in the audit report.
+
+   Run `npm run audit:student-age` from `tutorera-backend` using a read-only database account. The command produces aggregate counts only and refuses `--apply`. Never publish production student details or database credentials in CI logs.
 2. Define an explicit re-verification journey for those accounts and age-specific treatment after approval by the privacy/safeguarding owner.
 3. Migrate in reviewed batches, with a dry run and rollback snapshot. Do not classify unknown-age accounts as verified adults.
 4. Verify that guardian links, booking policies and prior transactions are preserved, and ensure affected users receive proper messaging.
