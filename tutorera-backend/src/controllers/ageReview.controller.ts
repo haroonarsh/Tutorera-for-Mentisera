@@ -122,3 +122,39 @@ export const claimAgeReview = async (req: AuthRequest, res: Response): Promise<v
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, status: "in_review", reviewId: assigned._id });
 };
+
+
+// Only the platform super-admin can transfer ownership of an already claimed
+// review. This does not determine the student's age or alter consent.
+export const reassignAgeReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const reviewerId = req.body?.reviewerId;
+  if (typeof id !== "string" || !/^[a-fA-F0-9]{24}$/.test(id) ||
+      typeof reviewerId !== "string" || !/^[a-fA-F0-9]{24}$/.test(reviewerId)) {
+    res.status(400).json({ success: false, code: "INVALID_REASSIGNMENT" }); return;
+  }
+  if (req.user?.adminRole !== "super_admin") {
+    res.status(403).json({ success: false, code: "SUPERVISOR_REQUIRED" }); return;
+  }
+  const User = (await import("../models/User.model")).default;
+  const reviewer = await User.findOne({ _id: reviewerId, role: "admin", isActive: true });
+  if (!reviewer || !["super_admin", "trust_and_safety"].includes(reviewer.adminRole || "")) {
+    res.status(400).json({ success: false, code: "INELIGIBLE_REVIEWER" }); return;
+  }
+  const original = await AgeReviewRequest.findOne({ _id: id, status: "in_review" });
+  if (!original) {
+    res.status(409).json({ success: false, code: "REVIEW_NOT_IN_PROGRESS" }); return;
+  }
+  const oldReviewer = original.assignedTo?.toString();
+  const updated = await AgeReviewRequest.findOneAndUpdate(
+    { _id: id, status: "in_review", assignedTo: original.assignedTo },
+    { $set: { assignedTo: reviewer._id, assignedAt: new Date() } }, { new: true });
+  if (!updated) {
+    res.status(409).json({ success: false, code: "REVIEW_REASSIGNMENT_CONFLICT" }); return;
+  }
+  await logAudit({ action: "student_age_review_reassigned", actor: req.user.name || "Super Admin",
+    actorId: req.user._id.toString(), entity: "AgeReviewRequest",
+    targetId: updated._id.toString(), metadata: { previousReviewerId: oldReviewer, newReviewerId: reviewer._id.toString() } });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, status: "in_review", assignedTo: reviewer._id });
+};

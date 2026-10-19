@@ -29,6 +29,31 @@ describe("Phase 1 safeguarding age-review queue", () => {
     expect(activePage.body.reviews[0].status).toBe("in_review");
     await request(app).post("/api/v1/admin/safety/age-reviews/" + page.body.reviews[0]._id + "/claim")
       .set(adminAuth).send({}).expect(409);
+    // A second safety reviewer cannot close another reviewer's claimed case.
+    const second = await User.create({ name: "Second Reviewer",
+      email: "second-reviewer-" + Date.now() + "@example.test",
+      password: "password123", role: "admin", adminRole: "trust_and_safety" });
+    const supervisor = await User.create({ name: "Supervisor",
+      email: "review-supervisor-" + Date.now() + "@example.test",
+      password: "password123", role: "admin", adminRole: "super_admin" });
+    const secondAuth = { Authorization: "Bearer " +
+      jwt.sign({ id: second._id.toString(), role: "admin" }, process.env.JWT_SECRET!) };
+    const supervisorAuth = { Authorization: "Bearer " +
+      jwt.sign({ id: supervisor._id.toString(), role: "admin" }, process.env.JWT_SECRET!) };
+    const reviewUrl = "/api/v1/admin/safety/age-reviews/" + page.body.reviews[0]._id;
+    await request(app).post(reviewUrl + "/close").set(secondAuth)
+      .send({ resolution: "duplicate_request" }).expect(409);
+    await request(app).post(reviewUrl + "/reassign").set(secondAuth)
+      .send({ reviewerId: second._id.toString() }).expect(403);
+    await request(app).post(reviewUrl + "/reassign").set(supervisorAuth)
+      .send({ reviewerId: second._id.toString() }).expect(200);
+    await request(app).post(reviewUrl + "/close").set(adminAuth)
+      .send({ resolution: "duplicate_request" }).expect(409);
+    await request(app).post(reviewUrl + "/close").set(secondAuth)
+      .send({ resolution: "referred_to_support" }).expect(200);
+    const closed = await AgeReviewRequest.findById(page.body.reviews[0]._id);
+    expect(closed?.assignedTo?.toString()).toBe(second._id.toString());
+    expect(closed?.resolution).toBe("referred_to_support");
     expect((await User.findById(student._id))?.dateOfBirth).toBeUndefined();
   });
 });
