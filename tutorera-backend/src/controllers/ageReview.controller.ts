@@ -13,10 +13,10 @@ export const requestAgeReview = async (req: AuthRequest, res: Response): Promise
   if (reason !== "missing_date_of_birth" && reason !== "incorrect_date_of_birth") {
     res.status(400).json({ success: false, code: "INVALID_AGE_REVIEW_REASON" }); return;
   }
-  const existing = await AgeReviewRequest.findOne({ student: user._id, status: "pending" });
+  const existing = await AgeReviewRequest.findOne({ student: user._id, status: { $in: ["pending", "in_review"] } });
   if (existing) {
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ success: true, status: "pending", requestId: existing._id }); return;
+    res.status(200).json({ success: true, status: existing.status, requestId: existing._id }); return;
   }
   let review;
   try {
@@ -24,10 +24,10 @@ export const requestAgeReview = async (req: AuthRequest, res: Response): Promise
   } catch (error: unknown) {
     // Another concurrent request may have created the unique pending case.
     if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
-      const pending = await AgeReviewRequest.findOne({ student: user._id, status: "pending" });
+      const pending = await AgeReviewRequest.findOne({ student: user._id, status: { $in: ["pending", "in_review"] } });
       if (pending) {
         res.setHeader("Cache-Control", "no-store");
-        res.status(200).json({ success: true, status: "pending", requestId: pending._id });
+        res.status(200).json({ success: true, status: pending.status, requestId: pending._id });
         return;
       }
     }
@@ -58,12 +58,12 @@ export const listPendingAgeReviews = async (req: AuthRequest, res: Response): Pr
       !Number.isSafeInteger(rawPage) || rawPage < 1 || rawPage > 100000) {
     res.status(400).json({ success: false, code: "INVALID_PAGINATION" }); return;
   }
-  const filter = { status: "pending" as const };
+  const filter = { status: { $in: ["pending", "in_review"] } };
   const [total, reviews] = await Promise.all([
     AgeReviewRequest.countDocuments(filter),
     AgeReviewRequest.find(filter).sort({ createdAt: 1, _id: 1 })
       .skip((rawPage - 1) * rawLimit).limit(rawLimit)
-      .select("student reason status createdAt").lean(),
+      .select("student reason status createdAt assignedTo assignedAt").lean(),
   ]);
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, reviews, pagination: {
@@ -83,7 +83,7 @@ export const closeAgeReview = async (req: AuthRequest, res: Response): Promise<v
     res.status(400).json({ success: false, code: "INVALID_REVIEW_RESOLUTION" }); return;
   }
   const closed = await AgeReviewRequest.findOneAndUpdate(
-    { _id: id, status: "pending" },
+    { _id: id, status: { $in: ["pending", "in_review"] } },
     { $set: { status: "closed", resolution: req.body.resolution,
       reviewedBy: req.user?._id, reviewedAt: new Date() } }, { new: true });
   if (!closed) {
@@ -94,4 +94,28 @@ export const closeAgeReview = async (req: AuthRequest, res: Response): Promise<v
     targetId: closed._id.toString(), metadata: { resolution: req.body.resolution } });
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, status: "closed" });
+};
+
+
+// Assign an active case to the authenticated safety reviewer. This is a
+// workflow step only: it never modifies student DOB or guardian consent.
+export const claimAgeReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (typeof id !== "string" || !/^[a-fA-F0-9]{24}$/.test(id)) {
+    res.status(400).json({ success: false, code: "INVALID_REVIEW_ID" }); return;
+  }
+  if (!req.user) { res.status(403).json({ success: false }); return; }
+  const assigned = await AgeReviewRequest.findOneAndUpdate(
+    { _id: id, status: "pending" },
+    { $set: { status: "in_review", assignedTo: req.user._id, assignedAt: new Date() } },
+    { new: true },
+  );
+  if (!assigned) {
+    res.status(409).json({ success: false, code: "REVIEW_NOT_PENDING" }); return;
+  }
+  await logAudit({ action: "student_age_review_claimed", actor: req.user.name || "Admin",
+    actorId: req.user._id.toString(), entity: "AgeReviewRequest",
+    targetId: assigned._id.toString() });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, status: "in_review", reviewId: assigned._id });
 };
