@@ -1,5 +1,6 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
+import { isRealtimeStudentAllowed } from "../services/chatAccess.service";
 import app from "../app";
 import User from "../models/User.model";
 import GuardianConsent from "../models/GuardianConsent.model";
@@ -341,5 +342,25 @@ describe("Phase 6 — legacy unknown-age access controls", () => {
     process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "false";
     const oldBehavior = await request(app).get("/api/v1/payments/history").set(headers);
     expect(oldBehavior.body.code).not.toBe("STUDENT_AGE_REVIEW_REQUIRED");
+  });
+});
+
+
+describe("Phase 6 — realtime historical age gate", () => {
+  const previous = process.env.LEGACY_STUDENT_AGE_ENFORCEMENT;
+  afterEach(() => {
+    if (previous === undefined) delete process.env.LEGACY_STUDENT_AGE_ENFORCEMENT;
+    else process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = previous;
+  });
+
+  it("rejects unknown-age student realtime identity only when enforcement is enabled", () => {
+    const legacy = { role: "student", isActive: true, isMinor: false, parentConsentVerified: false };
+    process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "false";
+    expect(isRealtimeStudentAllowed(legacy)).toBe(true);
+    process.env.LEGACY_STUDENT_AGE_ENFORCEMENT = "true";
+    expect(isRealtimeStudentAllowed(legacy)).toBe(false);
+    expect(isRealtimeStudentAllowed({ ...legacy, dateOfBirth: new Date("1995-01-01") })).toBe(true);
+    expect(isRealtimeStudentAllowed({ ...legacy, isMinor: true, parentConsentVerified: false,
+      dateOfBirth: new Date("2011-01-01") })).toBe(false);
   });
 });
