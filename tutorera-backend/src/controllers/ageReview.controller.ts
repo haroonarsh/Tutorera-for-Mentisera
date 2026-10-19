@@ -82,8 +82,11 @@ export const closeAgeReview = async (req: AuthRequest, res: Response): Promise<v
   if (req.body?.resolution !== "referred_to_support" && req.body?.resolution !== "duplicate_request") {
     res.status(400).json({ success: false, code: "INVALID_REVIEW_RESOLUTION" }); return;
   }
+  // Only the assigned reviewer may close a claimed case. Unclaimed cases
+  // can still be triaged by safety.resolve staff.
   const closed = await AgeReviewRequest.findOneAndUpdate(
-    { _id: id, status: { $in: ["pending", "in_review"] } },
+    { _id: id, $or: [{ status: "pending" },
+      { status: "in_review", assignedTo: req.user?._id }] },
     { $set: { status: "closed", resolution: req.body.resolution,
       reviewedBy: req.user?._id, reviewedAt: new Date() } }, { new: true });
   if (!closed) {
