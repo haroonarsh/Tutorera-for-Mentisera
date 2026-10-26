@@ -27,6 +27,13 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     { key: "GROQ_API_KEY" },
     { key: "GOOGLE_CLIENT_ID" },
     { key: "GOOGLE_CLIENT_SECRET" },
+    {
+        // Swich charges in PKR only; the platform prices in USD. This is the
+        // USD->PKR rate applied at checkout (e.g. 280). Update it as the
+        // market moves — students are shown the converted rupee amount.
+        key: "USD_PKR_RATE",
+        validate: (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? null : "must be a positive number, e.g. 280"),
+    },
     { key: "SWICH_CLIENT_ID" },
     {
         key: "SWICH_CLIENT_SECRET",

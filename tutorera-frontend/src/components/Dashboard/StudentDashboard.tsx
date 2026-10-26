@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award, RotateCcw } from "lucide-react";
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
+import CnicModal from "@/components/payments/CnicModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { SUPPORT_EMAIL, formatMoney } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
@@ -538,6 +539,9 @@ function RequestCard({
   const [selectedBids, setSelectedBids] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
+  // Swich requires the payer's CNIC on every checkout. We ask in a dialog,
+  // keep it in memory only, and send it with the accept/retry request.
+  const [cnicTarget, setCnicTarget] = useState<{ bidId: string; mode: "accept" | "retry" | "compare" } | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timeline, setTimeline] = useState<{ id: string; action: string; actor: string; createdAt: string }[]>([]);
@@ -614,11 +618,14 @@ function RequestCard({
     }
   }
 
-  async function acceptBid(bidId: string, promoCodeToApply?: string) {
+  async function acceptBid(bidId: string, promoCodeToApply?: string, cnic?: string) {
     setAccepting(bidId);
     setPromoError("");
     try {
-      const res = await axiosInstance.post(`/offers/${bidId}/accept`, promoCodeToApply ? { promoCode: promoCodeToApply } : undefined);
+      const res = await axiosInstance.post(`/offers/${bidId}/accept`, {
+        ...(promoCodeToApply && { promoCode: promoCodeToApply }),
+        ...(cnic && { cnic }),
+      });
       const checkoutUrl = res.data?.checkoutUrl;
       if (checkoutUrl) {
         window.location.assign(checkoutUrl);
@@ -628,7 +635,13 @@ function RequestCard({
       }
     } catch (err: any) {
       console.error("Failed to accept bid:", err);
-      if (promoCodeToApply) {
+      const errCode = err?.response?.data?.code;
+      if (errCode === "CNIC_REQUIRED" || errCode === "PHONE_REQUIRED") {
+        // Checked before the promo branch below, which would otherwise show
+        // these as a "promo code couldn't be applied" message.
+        showError(err, errCode === "PHONE_REQUIRED" ? "Please add a valid mobile number to your profile before paying." : "Please enter a valid 13-digit CNIC.");
+        if (errCode === "CNIC_REQUIRED") setCnicTarget({ bidId, mode: "accept" });
+      } else if (promoCodeToApply) {
         setPromoError(err?.response?.data?.message || "That promo code couldn't be applied.");
       } else if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
         // Payments aren't live yet in this offer's market - the Accept
@@ -642,10 +655,10 @@ function RequestCard({
     }
   }
 
-  async function retryPayment(bidId: string) {
+  async function retryPayment(bidId: string, cnic?: string) {
     setAccepting(bidId);
     try {
-      const res = await axiosInstance.post(`/offers/${bidId}/retry-payment`);
+      const res = await axiosInstance.post(`/offers/${bidId}/retry-payment`, cnic ? { cnic } : undefined);
       const checkoutUrl = res.data?.checkoutUrl;
       if (checkoutUrl) {
         window.location.assign(checkoutUrl); // reuses the same useEffect-based redirect from acceptBid
@@ -656,7 +669,11 @@ function RequestCard({
       }
     } catch (err: any) {
       console.error("Failed to retry payment:", err);
-      if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
+      const retryCode = err?.response?.data?.code;
+      if (retryCode === "CNIC_REQUIRED" || retryCode === "PHONE_REQUIRED") {
+        showError(err, retryCode === "PHONE_REQUIRED" ? "Please add a valid mobile number to your profile before paying." : "Please enter a valid 13-digit CNIC.");
+        if (retryCode === "CNIC_REQUIRED") setCnicTarget({ bidId, mode: "retry" });
+      } else if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
         showError(err, "Online payment isn't available in this market yet.");
       } else {
         showError(err, "Failed to resume payment. Please try again.");
@@ -665,6 +682,25 @@ function RequestCard({
     }
   }
   
+  // Accept from the comparison modal. Previously this swallowed every error
+  // with only a console.error, so a failed checkout looked like a dead button.
+  async function acceptFromCompare(id: string, cnic: string) {
+    setAcceptingCompare(id);
+    try {
+      const res = await axiosInstance.post(`/offers/${id}/accept`, { cnic });
+      const checkoutUrl = res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        window.location.assign(checkoutUrl);
+      }
+    } catch (err: any) {
+      console.error("Failed to accept bid:", err);
+      showError(err, "Failed to accept this offer. Please try again.");
+      if (err?.response?.data?.code === "CNIC_REQUIRED") setCnicTarget({ bidId: id, mode: "compare" });
+    } finally {
+      setAcceptingCompare(null);
+    }
+  }
+
   async function counterOffer() {
     if (!countering || Number(counterAmount) <= 0) return;
     try { await axiosInstance.post(`/offers/${countering._id}/counter`, { amount: Number(counterAmount), message: counterMessage }); setCountering(null); setCounterAmount(""); setCounterMessage(""); await loadBids(true); }
@@ -858,7 +894,7 @@ function RequestCard({
                         )}
                         {["pending", "submitted", "viewed", "countered"].includes(bid.status) && (<>
                           <button
-                            onClick={() => acceptBid(bid._id, promoInputFor === bid._id ? promoCode.trim() || undefined : undefined)}
+                            onClick={() => setCnicTarget({ bidId: bid._id, mode: "accept" })}
                             disabled={accepting === bid._id}
                             className={s.btnSuccess}
                           >
@@ -888,7 +924,7 @@ function RequestCard({
                         </>)}
                         {(bid.status as string) === "payment_pending" && (
                           <button
-                            onClick={() => retryPayment(bid._id)}
+                            onClick={() => setCnicTarget({ bidId: bid._id, mode: "retry" })}
                             disabled={accepting === bid._id}
                             className={s.btnSuccess}
                           >
@@ -935,23 +971,26 @@ function RequestCard({
           offers={bids}
           selected={selectedBids}
           onClose={() => setShowCompare(false)}
-          onAccept={async (id) => {
-            setAcceptingCompare(id);
-            try {
-              const res = await axiosInstance.post(`/offers/${id}/accept`);
-              const checkoutUrl = res.data?.checkoutUrl;
-              if (checkoutUrl) {
-                window.location.assign(checkoutUrl);
-              }
-            } catch (err) {
-              console.error("Failed to accept bid:", err);
-            } finally {
-              setAcceptingCompare(null);
-            }
-          }}
+          onAccept={(id) => setCnicTarget({ bidId: id, mode: "compare" })}
           acceptingId={acceptingCompare}
         />
       )}
+
+      <CnicModal
+        isOpen={!!cnicTarget}
+        busy={!!accepting || !!acceptingCompare}
+        subtitle={cnicTarget ? `${request.subject} (${request.level})${bids.find((b) => b._id === cnicTarget.bidId)?.tutor?.name ? ` with ${bids.find((b) => b._id === cnicTarget.bidId)?.tutor?.name}` : ""}` : undefined}
+        onSubmit={(cnic) => {
+          if (!cnicTarget) return;
+          const { bidId, mode } = cnicTarget;
+          setCnicTarget(null);
+          const promo = promoInputFor === bidId ? promoCode.trim() || undefined : undefined;
+          if (mode === "accept") void acceptBid(bidId, promo, cnic);
+          else if (mode === "retry") void retryPayment(bidId, cnic);
+          else void acceptFromCompare(bidId, cnic);
+        }}
+        onClose={() => setCnicTarget(null)}
+      />
     </div>
   );
 }

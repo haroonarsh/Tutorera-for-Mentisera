@@ -35,11 +35,14 @@ export interface MarketplaceFees {
 // Bootstrapping fallback only - used the first time the server ever runs,
 // before an admin has saved a FeeConfig record. Once a record exists,
 // getActiveFeeConfig() always uses the real one from the database.
+//
+// minimumFee / maximumFee are in the SAME currency as the amounts being
+// priced (the platform prices in USD). maximumFee 0 means "no cap".
 const DEFAULT_FEE_CONFIG = {
   studentFeePercent: 0,
   tutorFeePercent: 20,
   minimumFee: 0,
-  maximumFee: 5000,
+  maximumFee: 0,
   gatewayFeePercent: 2.9,
   gatewayFixedFee: 0,
 };
@@ -55,6 +58,16 @@ async function getTaxConfigForCountry(countryCode: string) {
   return cfg || { rate: 0, taxType: "none" as const, platformCollects: true, appliesOnlineServices: true, appliesHomeTuition: true };
 }
 
+// Currencies that are charged in whole units. Everything else (USD, GBP, AED,
+// ...) is rounded to cents. Rounding USD to whole dollars used to turn a
+// 2.55 USD commission into 3 USD and a 0.85 USD fee into 1 USD.
+const WHOLE_UNIT_CURRENCIES = new Set(["PKR", "JPY", "KRW", "VND"]);
+
+function makeRounder(currency: string): (n: number) => number {
+  if (WHOLE_UNIT_CURRENCIES.has(currency)) return (n) => Math.round(n);
+  return (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 function clampFee(rawFee: number, minimumFee: number, maximumFee: number): number {
   if (rawFee < minimumFee) return minimumFee;
   if (maximumFee > 0 && rawFee > maximumFee) return maximumFee;
@@ -65,7 +78,7 @@ function clampFee(rawFee: number, minimumFee: number, maximumFee: number): numbe
  * Calculate every fee, commission, tax, and gateway cost for a booking.
  *
  * @param subtotal    - the agreed tuition rate (before any fees)
- * @param opts.currency    - ISO 4217 currency of the transaction (e.g. "PKR")
+ * @param opts.currency    - ISO 4217 currency of the transaction (e.g. "USD")
  * @param opts.countryCode - ISO 3166-1 alpha-2 country for tax lookup (e.g. "PK")
  * @param opts.teachingMode - affects whether tax applies (online vs home tuition can differ per country)
  */
@@ -76,23 +89,28 @@ export async function calculateMarketplaceFees(
   const currency = (opts.currency || "USD").toUpperCase();
   const countryCode = (opts.countryCode || "PK").toUpperCase();
   const teachingMode = opts.teachingMode || "online";
+  const round = makeRounder(currency);
 
   const [feeCfg, taxCfg] = await Promise.all([
     getActiveFeeConfig(),
     getTaxConfigForCountry(countryCode),
   ]);
 
-  const studentFee = clampFee(
-    Math.round(subtotal * feeCfg.studentFeePercent / 100),
-    feeCfg.minimumFee,
-    feeCfg.maximumFee
-  );
-  const tutorFee = clampFee(
-    Math.round(subtotal * feeCfg.tutorFeePercent / 100),
-    feeCfg.minimumFee,
-    feeCfg.maximumFee
-  );
-  const studentTotal = subtotal + studentFee;
+  // A percentage of 0 means "no fee", so the minimum must not turn it into a
+  // fee. The minimum only applies when a percentage fee is actually charged.
+  const studentFee = feeCfg.studentFeePercent > 0
+    ? clampFee(round(subtotal * feeCfg.studentFeePercent / 100), feeCfg.minimumFee, feeCfg.maximumFee)
+    : 0;
+
+  // The commission can never exceed the lesson price itself, whatever the
+  // configured minimum is - otherwise the tutor's net goes negative.
+  const tutorFee = feeCfg.tutorFeePercent > 0
+    ? Math.min(
+        subtotal,
+        clampFee(round(subtotal * feeCfg.tutorFeePercent / 100), feeCfg.minimumFee, feeCfg.maximumFee)
+      )
+    : 0;
+  const studentTotal = round(subtotal + studentFee);
 
   // "both" used to silently alias to "online" here, checking only
   // appliesOnlineServices and ignoring appliesHomeTuition entirely - a mixed
@@ -108,15 +126,16 @@ export async function calculateMarketplaceFees(
     ? taxCfg.appliesOnlineServices !== false || taxCfg.appliesHomeTuition !== false
     : taxCfg.appliesOnlineServices !== false;
   const tax = taxApplies && taxCfg.platformCollects !== false
-    ? Math.round(tutorFee * (taxCfg.rate || 0) / 100)
+    ? round(tutorFee * (taxCfg.rate || 0) / 100)
     : 0;
 
   // The gateway charges on the full amount that actually flows through it -
   // the student's total checkout amount - and this cost is absorbed by the
   // platform's own margin, never deducted from the tutor's payout.
-  const gatewayFee = Math.round(studentTotal * feeCfg.gatewayFeePercent / 100 + feeCfg.gatewayFixedFee);
+  const gatewayFee = round(studentTotal * feeCfg.gatewayFeePercent / 100 + feeCfg.gatewayFixedFee);
 
-  const tutorNet = subtotal - tutorFee - tax;
+  // Never negative: the tutor can't owe money on a lesson.
+  const tutorNet = Math.max(0, round(subtotal - tutorFee - tax));
 
   return {
     subtotal,
@@ -150,7 +169,8 @@ export async function calculateMarketplaceFees(
  * gatewayFee accurate. Mutates and returns the same object.
  */
 export function recomputeGatewayFee(fees: MarketplaceFees): MarketplaceFees {
-  fees.gatewayFee = Math.round(fees.studentTotal * fees.feeConfig.gatewayFeePercent / 100 + fees.feeConfig.gatewayFixedFee);
+  const round = makeRounder(fees.currency);
+  fees.gatewayFee = round(fees.studentTotal * fees.feeConfig.gatewayFeePercent / 100 + fees.feeConfig.gatewayFixedFee);
   return fees;
 }
 

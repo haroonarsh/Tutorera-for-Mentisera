@@ -49,6 +49,23 @@ const SANDBOX_AUTH_BASE_URL = "https://sandbox-auth.swichnow.com";
 const SANDBOX_API_BASE_URL = "https://sandbox-api.swichnow.com";
 const DEFAULT_CATEGORIES = ["ewallet", "visamastercardpayment", "bankaccount", "rtpnowpayment"];
 
+/**
+ * Payment categories offered on the hosted page. Override with the env var
+ * SWICH_PAYMENT_CATEGORIES (comma-separated, e.g. "visamastercardpayment")
+ * to restrict them — useful because some categories (wallets, bank accounts)
+ * can require extra payer identity data such as a CNIC.
+ */
+function paymentCategories(): string[] {
+    const configured = process.env.SWICH_PAYMENT_CATEGORIES?.split(",").map((c) => c.trim()).filter(Boolean);
+    return configured && configured.length > 0 ? configured : DEFAULT_CATEGORIES;
+}
+
+/** Pakistani CNIC: exactly 13 digits once dashes/spaces are stripped. */
+export function normalizeCnic(raw: string | undefined | null): string | undefined {
+    const digits = String(raw || "").replace(/\D/g, "");
+    return /^\d{13}$/.test(digits) ? digits : undefined;
+}
+
 function isProduction(): boolean {
     return process.env.NODE_ENV === "production";
 }
@@ -200,7 +217,13 @@ export function getSwichCapabilities() {
         // market as Switch-unapproved (paymentProvider "none", payments
         // disabled) whenever SWICH_SUPPORTED_CURRENCIES isn't set in the
         // environment, which is the case in this repo's own .env today.
-        currencies: configuredValues("SWICH_SUPPORTED_CURRENCIES", ["USD"]),
+        // USD stays listed because market.service.ts reads this set to decide
+        // whether a market is Swich-approved under USD settlement. PKR is
+        // listed because that is the ONLY currency Swich actually charges in
+        // (its docs: "Decimal, 1 to 10,000,000 PKR") — paymentProvider
+        // converts USD to PKR before calling this provider. If you set
+        // SWICH_SUPPORTED_CURRENCIES in the environment it must include both.
+        currencies: configuredValues("SWICH_SUPPORTED_CURRENCIES", ["USD", "PKR"]),
     };
 }
 
@@ -216,9 +239,8 @@ export function assertSwichCheckoutCapability(countryCode: string | undefined, c
 
 /**
  * OAuth2 client_credentials token fetch, cached until near expiry.
- * Confirmed real contract: POST {AUTH_BASE_URL}/connect/token with a JSON
- * (not form-urlencoded) body of client_id,
- * client_secret, grant_type. Response: { access_token, token_type,
+ * Confirmed real contract: POST {AUTH_BASE_URL}/connect/token with a
+ * form-urlencoded (NOT JSON) body of client_id, client_secret, grant_type. Response: { access_token, token_type,
  * expires_in }.
  */
 async function getAccessToken(): Promise<string> {
@@ -231,21 +253,19 @@ async function getAccessToken(): Promise<string> {
     const clientSecret = requireEnv("SWICH_CLIENT_SECRET");
 
     try {
-        // Swich's captured docs contract (api-docs.swichnow.com, Authentication):
-        // POST /connect/token with a JSON body. A form-urlencoded body was
-        // tried by a previous change and the endpoint answered 400, so we are
-        // back on JSON. If this 400s again, the "Swich token error body" log
-        // below prints Swich's own explanation (invalid_client / invalid_scope /
-        // unsupported_grant_type) instead of a bare status code.
+        // Swich's auth server is OpenIddict. /connect/token ONLY accepts
+        // application/x-www-form-urlencoded — a JSON body is rejected with
+        // 400 invalid_request "The specified 'Content-Type' header is invalid"
+        // (OpenIddict ID2082). Confirmed from a real sandbox response.
         const response = await axios.post(
         `${swichAuthBaseUrl()}/connect/token`,
-        {
+        new URLSearchParams({
             client_id: clientId,
             client_secret: clientSecret,
             grant_type: "client_credentials",
-        },
+        }).toString(),
         {
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
             timeout: 15_000,
         }
         );
@@ -274,6 +294,24 @@ async function getAccessToken(): Promise<string> {
     }
 }
 
+/**
+ * Swich validates MSISDN strictly: its docs example is a local Pakistani
+ * mobile, "03001234567" (11 digits, no "+", no spaces). Students type phone
+ * numbers in all sorts of shapes ("+92 345 6656533", "923456656533",
+ * "3456656533"), and test data can be garbage (the sandbox rejected
+ * "+92 3456656533434"). Normalise what can be normalised; return undefined
+ * for anything that still isn't a valid PK mobile, so the caller omits the
+ * field instead of sending a value Swich is guaranteed to reject — the payer
+ * enters their own wallet/card details on Swich's hosted page anyway.
+ */
+export function normalizePkMobile(raw: string | undefined | null): string | undefined {
+    let digits = String(raw || "").replace(/\D/g, "");
+    if (digits.startsWith("0092")) digits = digits.slice(4);
+    else if (digits.startsWith("92")) digits = digits.slice(2);
+    if (digits.startsWith("0")) digits = digits.slice(1);
+    return /^3\d{9}$/.test(digits) ? `0${digits}` : undefined;
+}
+
 export const swichProvider = {
     /**
      * Creates a Payment Session and returns its hosted checkout URL.
@@ -287,8 +325,18 @@ export const swichProvider = {
         // Settlement currency is owned by the market configuration. A caller
         // that omitted it is a server-side defect, not a reason to resurrect
         // the retired Pakistan-only PKR fallback.
-        const currency = (params.currency || "USD").toUpperCase();
+        const currency = (params.currency || "PKR").toUpperCase();
         assertSwichCheckoutCapability(params.marketCountryCode, currency);
+        // Hard guard: Swich's `amount` is always rupees. Sending a USD figure
+        // here would charge that many RUPEES (a $10 booking becoming Rs. 10),
+        // so anything but PKR is refused. Conversion happens one layer up in
+        // paymentProvider.createCheckout.
+        if (currency !== "PKR") {
+        const error = new Error(`Swich charges in PKR only; received ${currency}. Convert the amount to PKR before calling the provider.`) as Error & { statusCode?: number; code?: string };
+        error.statusCode = 409;
+        error.code = "SWICH_CURRENCY_UNSUPPORTED";
+        throw error;
+        }
         if (!Number.isFinite(params.amount) || params.amount <= 0) {
         const error = new Error("Payment amount must be a positive number") as Error & { statusCode?: number; code?: string };
         error.statusCode = 400;
@@ -299,7 +347,13 @@ export const swichProvider = {
         const metadata = params.metadata || {};
         const customerName = String(metadata.customerName || "TUTORERA Student").trim();
         const customerEmail = String(metadata.studentEmail || "").trim();
-        const customerMobile = String(metadata.studentMobileNo || "").trim();
+        const customerMobile = normalizePkMobile(String(metadata.studentMobileNo || "")) || "";
+        if (!customerMobile && metadata.studentMobileNo) {
+            console.warn("Swich: student phone number is not a valid Pakistani mobile; omitting msisdn from the payment session.");
+        }
+        // CNIC is only ever passed through to Swich for this one request. It is
+        // never logged and never stored by us.
+        const customerCnic = normalizeCnic(String(metadata.customerCnic || ""));
         const successURL = String(metadata.successUrl || "").trim();
         const failedURL = String(metadata.failureUrl || successURL).trim();
         const item = String(metadata.description || "TUTORERA tutoring session").slice(0, 999);
@@ -355,16 +409,22 @@ export const swichProvider = {
         currency,
         item,
         billReferenceNo: params.reference,
-        customerSessionId: params.reference, // reuse our own basketId as the session correlation id too — always unique per checkout attempt
+        // Swich rejects a repeated CustomerSessionId ("A payment session with the
+        // provided CustomerSessionId already exists", code 50001), and a payment
+        // retry reuses the same basket reference. So the session id gets a short
+        // random suffix: unique per checkout ATTEMPT, while billReferenceNo (below)
+        // keeps the stable basket reference for reconciliation.
+        customerSessionId: `${params.reference}-${crypto.randomBytes(4).toString("hex")}`,
         attempts: 10,
         expiry: 30, // minutes — matches the existing 30-minute PAYMENT_HOLD_MINUTES pattern already used elsewhere in this codebase
         successURL,
         failedURL,
-        categoryList: DEFAULT_CATEGORIES,
+        categoryList: paymentCategories(),
         customerDetails: {
             name: customerName,
             email: customerEmail,
-            msisdn: customerMobile,
+            ...(customerMobile && { msisdn: customerMobile }),
+            ...(customerCnic && { cnic: customerCnic }),
         },
         // Required-but-empty for one-off payments, per Swich's own docs.
         recurringDetails: {
@@ -420,6 +480,23 @@ export const swichProvider = {
         wrapped.code = "SWICH_CHECKOUT_FAILED";
         throw wrapped;
         }
+    },
+
+    /**
+     * Cancels a payment session so the customer can no longer pay it. Used when
+     * a retry creates a NEW session for the same order — otherwise the old
+     * session's link could still be paid, and the student could pay twice.
+     */
+    async cancelPaymentSession(paymentSessionGuid: string): Promise<void> {
+        const accessToken = await getAccessToken();
+        await axios.post(
+            `${swichApiBaseUrl()}/gateway/paymentsession/cancel`,
+            { paymentSessionGuid },
+            {
+                headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", Accept: "application/json" },
+                timeout: 15_000,
+            }
+        );
     },
 
     /**

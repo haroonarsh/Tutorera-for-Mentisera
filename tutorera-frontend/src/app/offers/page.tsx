@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import CnicModal from "@/components/payments/CnicModal";
 
 type History = { 
   _id: string; 
@@ -105,13 +106,20 @@ function OffersContent() {
   const [sortBy, setSortBy] = useState("best_match");
   const [now, setNow] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
+  // Swich needs the payer's CNIC before a checkout can start. We ask in a
+  // dialog, hold it in memory only, and send it with the accept/retry request.
+  const [cnicTarget, setCnicTarget] = useState<{ offer: Offer; mode: "accept" | "retry" } | null>(null);
+  const [startingPayment, setStartingPayment] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const load = useCallback(() => {
     setLoading(true);
     api.get("/offers/my")
-      .then((r) => setOffers(r.data.offers || []))
+      // An offer whose tutor or request no longer exists (deleted account or
+      // request) comes back with a null reference. Skip those rows instead of
+      // crashing the whole page on o.tutor.avatar.
+      .then((r) => setOffers(((r.data.offers || []) as Offer[]).filter((o) => o && o.tutor && o.request)))
       .catch((e) => showError(e, "Unable to load offers."))
       .finally(() => setLoading(false));
   }, []);
@@ -195,18 +203,29 @@ function OffersContent() {
     }
   }
 
-  async function action(o: Offer, type: "accept" | "decline" | "withdraw") {
+  // Returns true when the request was handled (including a redirect to the
+  // payment page) and false when it failed, so callers can keep a dialog open.
+  async function action(o: Offer, type: "accept" | "decline" | "withdraw", cnic?: string): Promise<boolean> {
     try {
-      const res = await api.post(`/offers/${o._id}/${type}`);
+      const res = await api.post(`/offers/${o._id}/${type}`, type === "accept" && cnic ? { cnic } : undefined);
       if (type === "accept" && res.data?.checkoutUrl) {
         window.location.assign(res.data.checkoutUrl);
-        return;
+        return true;
       }
-      showSuccess(type === "accept" ? "Rate agreed! Proceeding to booking." : "Offer updated.");
+      showSuccess(type === "accept" ? (res.data?.message || "Rate agreed! Proceeding to booking.") : "Offer updated.");
       load();
+      return true;
     } catch (e) {
       showError(e, "Unable to update offer.");
+      return false;
     }
+  }
+
+  // The paying side (student/parent) must give a CNIC first; a tutor accepting
+  // a student's counter-offer never starts a checkout, so no prompt for them.
+  function requestAccept(o: Offer) {
+    if (isRequester) setCnicTarget({ offer: o, mode: "accept" });
+    else void action(o, "accept");
   }
 
   async function toggleShortlist(o: Offer) {
@@ -238,17 +257,30 @@ function OffersContent() {
   // student's earlier attempt failed (declined card, insufficient balance,
   // closed the tab) but the 30-minute hold hasn't expired yet. Without this,
   // there's no visible action for a payment_pending offer at all.
-  async function retryPayment(o: Offer) {
+  async function retryPayment(o: Offer, cnic: string): Promise<boolean> {
     try {
-      const res = await api.post(`/offers/${o._id}/retry-payment`);
+      const res = await api.post(`/offers/${o._id}/retry-payment`, { cnic });
       if (res.data?.checkoutUrl) {
         window.location.assign(res.data.checkoutUrl);
-        return;
+        return true;
       }
       showError(new Error("No checkout URL"), "Unable to resume payment. Please try again.");
+      return false;
     } catch (e) {
       showError(e, "Unable to resume payment. Please try again.");
+      return false;
     }
+  }
+
+  async function submitCnic(cnic: string) {
+    if (!cnicTarget) return;
+    setStartingPayment(true);
+    const ok = cnicTarget.mode === "accept"
+      ? await action(cnicTarget.offer, "accept", cnic)
+      : await retryPayment(cnicTarget.offer, cnic);
+    setStartingPayment(false);
+    // Keep the dialog open on failure so a mistyped CNIC can be corrected.
+    if (ok) setCnicTarget(null);
   }
 
   // Sorted offers
@@ -353,7 +385,8 @@ function OffersContent() {
       ) : (
         <div style={{ display: "grid", gap: "1.5rem" }}>
           {sortedOffers.map((o) => {
-            const last = o.history[o.history.length - 1];
+            const history = o.history || [];
+            const last = history[history.length - 1];
             const tutorCanAccept = user?.role === "tutor" && last?.senderRole === "student";
             const canCounter = active.includes(o.status) && o.request.allowCounterOffers && last?.senderRole !== negotiationRole;
             const fees = calculateMarketplaceFees(o.amount);
@@ -440,10 +473,10 @@ function OffersContent() {
                 {/* Immutable Negotiation Timeline */}
                 <details style={{ background: "#f8fafc", padding: "0.85rem 1rem", borderRadius: "0.625rem", border: "1px solid #e2e8f0", marginBottom: "1rem" }}>
                   <summary style={{ fontWeight: 700, fontSize: "0.85rem", color: "#021550", cursor: "pointer" }}>
-                    Negotiation History ({o.history.length} events)
+                    Negotiation History ({history.length} events)
                   </summary>
                   <ol style={{ borderLeft: "2px solid #bfdbfe", paddingLeft: 18, margin: "0.75rem 0 0 0.5rem", listStyle: "none" }}>
-                    {o.history.map((h) => (
+                    {history.map((h) => (
                       <li key={h._id} style={{ marginBottom: "0.75rem", position: "relative" }}>
                         <span style={{ position: "absolute", left: -24, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#0329b2" }} />
                         <strong style={{ fontSize: "0.85rem", color: "#021550" }}>
@@ -468,7 +501,7 @@ function OffersContent() {
                   <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "center", marginTop: "1rem" }}>
                     {(isRequester || tutorCanAccept) && (
                       <button
-                        onClick={() => action(o, "accept")}
+                        onClick={() => requestAccept(o)}
                         style={{
                           background: "#10b981",
                           color: "white",
@@ -580,7 +613,7 @@ function OffersContent() {
 
                 {o.status === "payment_pending" && isRequester && (
                   <button
-                    onClick={() => retryPayment(o)}
+                    onClick={() => setCnicTarget({ offer: o, mode: "retry" })}
                     style={{
                       background: "#10b981",
                       color: "white",
@@ -682,7 +715,7 @@ function OffersContent() {
           onAcceptOffer={(offerId) => {
             const offer = offers.find((o) => o._id === offerId);
             if (offer) {
-              action(offer, "accept");
+              requestAccept(offer);
               setShowComparison(false);
             }
           }}
@@ -700,6 +733,13 @@ function OffersContent() {
           }}
         />
       )}
+      <CnicModal
+        isOpen={!!cnicTarget}
+        busy={startingPayment}
+        subtitle={cnicTarget ? `${cnicTarget.offer.request.subject} (${cnicTarget.offer.request.level}) with ${cnicTarget.offer.tutor.name}` : undefined}
+        onSubmit={submitCnic}
+        onClose={() => { if (!startingPayment) setCnicTarget(null); }}
+      />
     </main>
   );
 }

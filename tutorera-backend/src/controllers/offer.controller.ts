@@ -25,6 +25,8 @@ import MatchLog from "../models/MatchLog.model";
 import { assertAcceptanceAvailable, assertMarketFeature } from "../services/market.service";
 import { convertAmount } from "../services/exchangeRate.service";
 import { checkSubjectEligibility } from "../services/subjectEligibility.service";
+import StudentProfile from "../models/StudentProfile.model";
+import { normalizeCnic, normalizePkMobile } from "../services/swichProvider.service";
 
 const ACTIVE_REQUEST_STATES = ["open", "published", "receiving_offers", "negotiating"] as const;
 const ACTIVE_OFFER_STATES = ["pending", "submitted", "viewed", "countered"] as const;
@@ -222,6 +224,28 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       }
     }
 
+    // Swich needs a valid payer phone (MSISDN) and CNIC on every session. Check
+    // both BEFORE reserving anything, so a missing value is a cheap 422 and not
+    // a reserve-then-rollback. Only the paying student needs them — a tutor
+    // accepting a counter-offer never starts a checkout. The CNIC arrives in the
+    // request body, is passed straight to Swich, and is never stored or logged.
+    let payerPhone: string | undefined;
+    let payerCnic: string | undefined;
+    if (isStudentOwner) {
+      const studentUser = await User.findById(request.student).select("phone");
+      const studentProfile = await StudentProfile.findOne({ user: request.student }).select("phone").lean();
+      payerPhone = normalizePkMobile(studentUser?.phone || studentProfile?.phone);
+      if (!payerPhone) {
+        res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Please add a valid Pakistani mobile number (e.g. 03001234567) to your profile before paying." });
+        return;
+      }
+      payerCnic = normalizeCnic(req.body?.cnic);
+      if (!payerCnic) {
+        res.status(422).json({ success: false, code: "CNIC_REQUIRED", message: "Enter the 13-digit CNIC of the person paying (e.g. 4210112345671)." });
+        return;
+      }
+    }
+
     // Atomic guard — same purpose as before: only one accept attempt can
     // win this transition, so two concurrent accept clicks can't both
     // proceed. We reserve the AGREED RATE here too, exactly like before,
@@ -287,8 +311,9 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         amount: fees.studentTotal,
         currency: offer.currency || request.currency || "USD",
         marketCountryCode: request.countryCode,
-        customerMobileNo: student?.phone || "",  // no hardcoded fallback — let gateway handle gracefully
+        customerMobileNo: payerPhone || "",  // validated above; never a made-up fallback number
         customerEmail: student?.email || "",
+        customerCnic: payerCnic,
         // "BID-" prefix — confirmSwichPayment (payment.controller.ts)
         // branches on this same prefix to tell an accept-offer checkout
         // apart from an existing-booking checkout (createBookingCheckout).
@@ -375,6 +400,20 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
+  // Same payer checks as acceptOffer: Swich requires a valid phone and CNIC.
+  const retryStudentUser = await User.findById(request.student).select("phone");
+  const retryStudentProfile = await StudentProfile.findOne({ user: request.student }).select("phone").lean();
+  const payerPhone = normalizePkMobile(retryStudentUser?.phone || retryStudentProfile?.phone);
+  if (!payerPhone) {
+    res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Please add a valid Pakistani mobile number (e.g. 03001234567) to your profile before paying." });
+    return;
+  }
+  const payerCnic = normalizeCnic(req.body?.cnic);
+  if (!payerCnic) {
+    res.status(422).json({ success: false, code: "CNIC_REQUIRED", message: "Enter the 13-digit CNIC of the person paying (e.g. 4210112345671)." });
+    return;
+  }
+
   // Extend the hold from this retry attempt, so the student gets a full
   // fresh window instead of racing whatever was left of the original one.
   offer.paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
@@ -410,8 +449,9 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       amount: fees.studentTotal,
       currency: offer.currency || request.currency || "USD",
       marketCountryCode: request.countryCode,
-      customerMobileNo: student?.phone || "03000000000",
+      customerMobileNo: payerPhone,
       customerEmail: student?.email || "",
+      customerCnic: payerCnic,
       basketId: `BID-${offer._id.toString()}`,
       bidId: offer._id.toString(),
       studentId: request.student.toString(),
@@ -426,6 +466,11 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
 
     res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });
   } catch (err) {
+    const retryErr = err as { code?: string; message?: string };
+    if (retryErr.code === "PAYMENT_ALREADY_COMPLETED") {
+      res.status(409).json({ success: false, code: retryErr.code, message: retryErr.message });
+      return;
+    }
     console.error("Failed to create Swich retry checkout:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
   }
