@@ -208,23 +208,51 @@ export async function approveComponent(
   (profile as any)[statusField] = "approved";
   (profile as any)[reviewedField] = new Date();
 
-  await profile.save({ validateBeforeSave: false });
-
-  item.status = "approved";
-  item.completedAt = new Date();
-  await item.save();
-
-  await AdminVerificationReview.create({
-    tutor: item.tutor,
-    tutorProfile: item.tutorProfile,
-    admin: new mongoose.Types.ObjectId(actor.id),
-    component,
-    decision: "approved",
-    previousStatus,
-    newStatus: "approved",
-  });
-
+  // Reads for notification can happen before the transaction since they are
+  // read-only and the tutorUser is also needed inside the session for the audit.
   const tutorUser = await User.findById(item.tutor).select("name email applicationId");
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await profile.save({ validateBeforeSave: false, session });
+      item.status = "approved";
+      item.completedAt = new Date();
+      await item.save({ session });
+      await AdminVerificationReview.create([{
+        tutor: item.tutor,
+        tutorProfile: item.tutorProfile,
+        admin: new mongoose.Types.ObjectId(actor.id),
+        component,
+        decision: "approved",
+        previousStatus,
+        newStatus: "approved",
+      }], { session });
+      await recordStatusEvent({
+        tutorId: item.tutor.toString(),
+        tutorProfileId: item.tutorProfile.toString(),
+        actor: { name: actor.name, role: "admin", id: actor.id },
+        event: `${component.toUpperCase()}_VERIFIED` as StatusEvent,
+        message: `${component.toUpperCase()} approved by admin`,
+        statusAfter: "approved",
+      }, session);
+      await logAudit({
+        action: "verification_component_approved",
+        actor: actor.name,
+        actorId: actor.id,
+        entity: "TutorProfile",
+        targetId: item.tutorProfile.toString(),
+        targetName: tutorUser?.name || "Tutor",
+        metadata: { component },
+      }, session);
+      await cleanupDuplicateQueueItems(item.tutor, item.tutorProfile, component, session);
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  // Notifications are outside the transaction: they are best-effort and must
+  // not roll back committed verification state if the delivery service is down.
   if (tutorUser && io) {
     await sendNotification(io, tutorUser._id.toString(), {
       title: `${component.toUpperCase()} Verified`,
@@ -233,27 +261,6 @@ export async function approveComponent(
       link: "/tutor/application-status",
     });
   }
-
-  await recordStatusEvent({
-    tutorId: item.tutor.toString(),
-    tutorProfileId: item.tutorProfile.toString(),
-    actor: { name: actor.name, role: "admin", id: actor.id },
-    event: `${component.toUpperCase()}_VERIFIED` as StatusEvent,
-    message: `${component.toUpperCase()} approved by admin`,
-    statusAfter: "approved",
-  });
-
-  await logAudit({
-    action: "verification_component_approved",
-    actor: actor.name,
-    actorId: actor.id,
-    entity: "TutorProfile",
-    targetId: item.tutorProfile.toString(),
-    targetName: tutorUser?.name || "Tutor",
-    metadata: { component },
-  });
-
-  await cleanupDuplicateQueueItems(item.tutor, item.tutorProfile, component);
 
   return profile;
 }
@@ -288,25 +295,49 @@ export async function rejectComponent(
   (profile as any)[rejectionField] = rejectionReason.trim();
   (profile as any)[reviewedField] = new Date();
 
-  await profile.save({ validateBeforeSave: false });
-
-  item.status = "rejected";
-  item.rejectionReason = rejectionReason.trim();
-  item.completedAt = new Date();
-  await item.save();
-
-  await AdminVerificationReview.create({
-    tutor: item.tutor,
-    tutorProfile: item.tutorProfile,
-    admin: new mongoose.Types.ObjectId(actor.id),
-    component,
-    decision: "rejected",
-    previousStatus,
-    newStatus: "rejected",
-    rejectionReason: rejectionReason.trim(),
-  });
-
   const tutorUser = await User.findById(item.tutor).select("name email applicationId");
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await profile.save({ validateBeforeSave: false, session });
+      item.status = "rejected";
+      item.rejectionReason = rejectionReason.trim();
+      item.completedAt = new Date();
+      await item.save({ session });
+      await AdminVerificationReview.create([{
+        tutor: item.tutor,
+        tutorProfile: item.tutorProfile,
+        admin: new mongoose.Types.ObjectId(actor.id),
+        component,
+        decision: "rejected",
+        previousStatus,
+        newStatus: "rejected",
+        rejectionReason: rejectionReason.trim(),
+      }], { session });
+      await recordStatusEvent({
+        tutorId: item.tutor.toString(),
+        tutorProfileId: item.tutorProfile.toString(),
+        actor: { name: actor.name, role: "admin", id: actor.id },
+        event: `${component.toUpperCase()}_REJECTED` as StatusEvent,
+        message: `${component.toUpperCase()} rejected: ${rejectionReason}`,
+        statusAfter: "rejected",
+      }, session);
+      await logAudit({
+        action: "verification_component_rejected",
+        actor: actor.name,
+        actorId: actor.id,
+        entity: "TutorProfile",
+        targetId: item.tutorProfile.toString(),
+        targetName: tutorUser?.name || "Tutor",
+        metadata: { component, reason: rejectionReason },
+      }, session);
+      await cleanupDuplicateQueueItems(item.tutor, item.tutorProfile, component, session);
+    });
+  } finally {
+    await session.endSession();
+  }
+
   if (tutorUser && io) {
     await sendNotification(io, tutorUser._id.toString(), {
       title: `${component.toUpperCase()} Rejected`,
@@ -315,27 +346,6 @@ export async function rejectComponent(
       link: "/tutor/application-status",
     });
   }
-
-  await recordStatusEvent({
-    tutorId: item.tutor.toString(),
-    tutorProfileId: item.tutorProfile.toString(),
-    actor: { name: actor.name, role: "admin", id: actor.id },
-    event: `${component.toUpperCase()}_REJECTED` as StatusEvent,
-    message: `${component.toUpperCase()} rejected: ${rejectionReason}`,
-    statusAfter: "rejected",
-  });
-
-  await logAudit({
-    action: "verification_component_rejected",
-    actor: actor.name,
-    actorId: actor.id,
-    entity: "TutorProfile",
-    targetId: item.tutorProfile.toString(),
-    targetName: tutorUser?.name || "Tutor",
-    metadata: { component, reason: rejectionReason },
-  });
-
-  await cleanupDuplicateQueueItems(item.tutor, item.tutorProfile, component);
 
   return profile;
 }
@@ -401,13 +411,15 @@ export async function getReviewHistory(tutorProfileId: string): Promise<any[]> {
 async function cleanupDuplicateQueueItems(
   tutorId: mongoose.Types.ObjectId,
   tutorProfileId: mongoose.Types.ObjectId,
-  component: string
+  component: string,
+  session?: mongoose.ClientSession
 ): Promise<void> {
+  const opts = session ? { session } : {};
   const current = await TutorDocumentReview.findOne({
     tutor: tutorId,
     tutorProfile: tutorProfileId,
     component: component as any,
-  }).sort({ createdAt: -1 });
+  }, null, opts).sort({ createdAt: -1 });
 
   if (!current) return;
 
@@ -416,7 +428,7 @@ async function cleanupDuplicateQueueItems(
     tutorProfile: tutorProfileId,
     component: component as any,
     _id: { $ne: current._id },
-  });
+  }, opts);
 }
 
 /** Keep the operational review queue aligned when a reviewer acts from the

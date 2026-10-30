@@ -783,22 +783,27 @@ export interface RecordStatusEventInput {
   statusAfter?: string;
 }
 
-export async function recordStatusEvent(input: RecordStatusEventInput): Promise<void> {
-  try {
-    await TutorApplicationStatusHistory.create({
-      tutor: new mongoose.Types.ObjectId(input.tutorId),
-      tutorProfile: input.tutorProfileId ? new mongoose.Types.ObjectId(input.tutorProfileId) : undefined,
-      actor: input.actor.name,
-      actorId: input.actor.id && mongoose.Types.ObjectId.isValid(input.actor.id) ? new mongoose.Types.ObjectId(input.actor.id) : undefined,
-      actorRole: input.actor.role,
-      event: input.event,
-      message: input.message,
-      isPublic: input.isPublic !== false,
-      statusBefore: input.statusBefore,
-      statusAfter: input.statusAfter,
-    });
-  } catch (err) {
-    console.error("[TrackingService] Failed to record status event:", err);
+export async function recordStatusEvent(input: RecordStatusEventInput, session?: mongoose.ClientSession): Promise<void> {
+  const doc = [{
+    tutor: new mongoose.Types.ObjectId(input.tutorId),
+    tutorProfile: input.tutorProfileId ? new mongoose.Types.ObjectId(input.tutorProfileId) : undefined,
+    actor: input.actor.name,
+    actorId: input.actor.id && mongoose.Types.ObjectId.isValid(input.actor.id) ? new mongoose.Types.ObjectId(input.actor.id) : undefined,
+    actorRole: input.actor.role,
+    event: input.event,
+    message: input.message,
+    isPublic: input.isPublic !== false,
+    statusBefore: input.statusBefore,
+    statusAfter: input.statusAfter,
+  }];
+  if (session) {
+    await TutorApplicationStatusHistory.create(doc, { session });
+  } else {
+    try {
+      await TutorApplicationStatusHistory.create(doc);
+    } catch (err) {
+      console.error("[TrackingService] Failed to record status event:", err);
+    }
   }
 }
 

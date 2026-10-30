@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import AuditLog from "../models/AuditLog.model";
 
 interface AuditParams {
@@ -11,22 +12,28 @@ interface AuditParams {
 }
 
 /**
- * Log an audit event. Never throws — audit logging must never break
- * core functionality if it fails (e.g. DB connection issue).
+ * Log an audit event. When called without a session, errors are swallowed so
+ * audit logging never breaks core functionality. When called with a session the
+ * write participates in the caller's transaction and errors propagate so the
+ * transaction can roll back — the caller owns the invariant guarantee.
  */
-export const logAudit = async (params: AuditParams): Promise<void> => {
-  try {
-    await AuditLog.create({
-      action:     params.action,
-      actor:      params.actor || "System",
-      actorId:    params.actorId,
-      entity:     params.entity,
-      targetId:   params.targetId,
-      targetName: params.targetName,
-      metadata:   params.metadata,
-    });
-  } catch (err) {
-    // Log to console but never propagate — audit failures are non-critical
-    console.error("[AuditLog] Failed to write audit log:", err);
+export const logAudit = async (params: AuditParams, session?: mongoose.ClientSession): Promise<void> => {
+  const doc = [{
+    action:     params.action,
+    actor:      params.actor || "System",
+    actorId:    params.actorId,
+    entity:     params.entity,
+    targetId:   params.targetId,
+    targetName: params.targetName,
+    metadata:   params.metadata,
+  }];
+  if (session) {
+    await AuditLog.create(doc, { session });
+  } else {
+    try {
+      await AuditLog.create(doc);
+    } catch (err) {
+      console.error("[AuditLog] Failed to write audit log:", err);
+    }
   }
 };

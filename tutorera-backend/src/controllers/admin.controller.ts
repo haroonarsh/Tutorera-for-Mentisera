@@ -5,7 +5,7 @@ import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeR
 import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import Booking from "../models/Booking.model";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
@@ -17,6 +17,7 @@ import Request from "../models/Request.model";
 import Review from "../models/Review.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 import { logAudit } from "../utils/logAudit";
+import logger from "../config/logger";
 import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
 import EmailOutbox from "../models/EmailOutbox.model";
@@ -174,50 +175,67 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   if (profile.policeVerificationStatus !== "not_required") {
     component("police");
   }
-
   profile.verificationStatus = status;
   profile.isVerified = status === "approved";
   profile.rejectionReason = status === "rejected" ? (reason || "") : "";
   profile.lastStatusChangeAt = now;
-  // Some applications pre-date the expanded level enum (for example
-  // "Matric" and "O-Level"). A verification decision must not revalidate and
-  // reject unrelated legacy application data. The decision fields are
-  // explicitly validated above, so persist this administrative state change
-  // without running whole-document validation.
-  await profile.save({ validateBeforeSave: false });
 
-  if (status === "approved") {
-    const activeAgreement = await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } });
-    if (!activeAgreement) {
-      profile.agreementAcceptanceRequired = true;
-      profile.agreementAcceptedAt = undefined;
-      profile.agreementVersion = "TTA-2026.1";
-      await profile.save({ validateBeforeSave: false });
-      await TutorAgreement.create({
-        tutor: tutorUser._id,
-        tutorProfile: profile._id,
-        approvedHourlyRate: profile.hourlyRate,
-        currency: profile.currency || "USD",
-        version: "TTA-2026.1",
-        approvedBy: req.user?._id,
-        approvedAt: now,
-      });
-      agreementCreated = true;
-    }
+  // Check for an existing agreement before starting the transaction to avoid
+  // a read inside the write path. The agreement creation is idempotent so a
+  // race between concurrent verifications is handled by the unique index.
+  const activeAgreement = status === "approved"
+    ? await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } })
+    : null;
+
+  // Atomically commit: profile status + optional agreement + status history + audit log.
+  // Some applications pre-date the expanded level enum ("Matric", "O-Level"); a
+  // verification decision must not revalidate unrelated legacy data.
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await profile.save({ validateBeforeSave: false, session });
+      if (status === "approved" && !activeAgreement) {
+        profile.agreementAcceptanceRequired = true;
+        profile.agreementAcceptedAt = undefined;
+        profile.agreementVersion = "TTA-2026.1";
+        await profile.save({ validateBeforeSave: false, session });
+        await TutorAgreement.create([{
+          tutor: tutorUser._id,
+          tutorProfile: profile._id,
+          approvedHourlyRate: profile.hourlyRate,
+          currency: profile.currency || "USD",
+          version: "TTA-2026.1",
+          approvedBy: req.user?._id,
+          approvedAt: now,
+        }], { session });
+        agreementCreated = true;
+      }
+      await recordStatusEvent({
+        tutorId: tutorUser._id.toString(),
+        tutorProfileId: profile._id.toString(),
+        actor,
+        event: status === "approved" ? "PROFILE_APPROVED" : "PROFILE_REJECTED",
+        message: status === "approved"
+          ? "Tutor profile approved (bulk verify)"
+          : `Tutor profile rejected (bulk verify)${reason ? `: ${reason}` : ""}`,
+        statusAfter: status,
+      }, session);
+      await logAudit({
+        action: status === "approved" ? "tutor_approved" : "tutor_rejected",
+        actor: actor.name,
+        actorId: actor.id,
+        entity: "TutorProfile",
+        targetId: profile._id.toString(),
+        targetName: tutorUser.name,
+        metadata: status === "rejected" ? { reason } : undefined,
+      }, session);
+    });
+  } finally {
+    await session.endSession();
   }
 
-  await recordStatusEvent({
-    tutorId: tutorUser._id.toString(),
-    tutorProfileId: profile._id.toString(),
-    actor,
-    event: status === "approved" ? "PROFILE_APPROVED" : "PROFILE_REJECTED",
-    message:
-      status === "approved"
-        ? "Tutor profile approved (bulk verify)"
-        : `Tutor profile rejected (bulk verify)${reason ? `: ${reason}` : ""}`,
-    statusAfter: status,
-  });
-
+  // Notifications are best-effort and run after the transaction so their
+  // failure cannot roll back the committed verification decision.
   try {
     if (status === "approved" && agreementCreated) {
       await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency, ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
@@ -225,18 +243,8 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
       await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
     }
   } catch (err) {
-    console.error("Failed to send tutor verification email:", err);
+    logger.error({ err, tutorId: tutorUser._id }, "Failed to send tutor verification email");
   }
-
-  await logAudit({
-    action: status === "approved" ? "tutor_approved" : "tutor_rejected",
-    actor: actor.name,
-    actorId: actor.id,
-    entity: "TutorProfile",
-    targetId: profile._id.toString(),
-    targetName: tutorUser.name,
-    metadata: status === "rejected" ? { reason } : undefined,
-  });
 
   await sendNotification(io, tutorUser._id.toString(), {
     title: status === "approved" ? "🎉 Application Approved — Agreement Pending" : "❌ Profile Rejected",
