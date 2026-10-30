@@ -1,17 +1,20 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tutorera-frontend",
+  "workers_dev": false,
+  "preview_urls": false,
+  "account_id": "e0f40de5e1f6ab0e29c9b1cb3f9a7102",
   "compatibility_date": "2026-09-15",
   "compatibility_flags": ["nodejs_compat"],
   "main": ".open-next/worker.js",
   "routes": [
     {
-      "pattern": "tutorera.ac.pk/*",
-      "zone_name": "tutorera.ac.pk"
+      "pattern": "tutorera.ac.pk",
+      "custom_domain": true
     },
     {
-      "pattern": "www.tutorera.ac.pk/*",
-      "zone_name": "tutorera.ac.pk"
+      "pattern": "www.tutorera.ac.pk",
+      "custom_domain": true
     }
   ],
   "assets": {

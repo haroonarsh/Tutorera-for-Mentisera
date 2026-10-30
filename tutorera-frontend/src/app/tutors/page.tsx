@@ -43,6 +43,7 @@ export default async function TutorsPage({ searchParams }: Props) {
   if (subject && !initialFilters.search) initialFilters.search = subject;
 
   const result = await fetchTutors({
+    schoolOfferingId: value(params.schoolOfferingId),
     search: initialFilters.search,
     city: initialFilters.city,
     countryCode: value(params.countryCode),

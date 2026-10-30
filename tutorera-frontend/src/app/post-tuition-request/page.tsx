@@ -9,16 +9,18 @@ export default function PostTuitionRequestPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const countryCode = params.get("country")?.toUpperCase();
+    const subject = params.get("subject")?.trim();
+    const selection = { ...(countryCode && /^[A-Z]{2}$/.test(countryCode) ? { countryCode } : {}), ...(subject && subject.length <= 120 ? { subject } : {}) };
     try {
       const stored = sessionStorage.getItem("tutorera_quick_request");
-      const countryCode = new URLSearchParams(window.location.search).get("country")?.toUpperCase();
       if (stored) {
-        setPrefill({ ...JSON.parse(stored), ...(countryCode && /^[A-Z]{2}$/.test(countryCode) ? { countryCode } : {}) });
-      } else if (countryCode && /^[A-Z]{2}$/.test(countryCode)) {
-        setPrefill({ countryCode });
-      }
+        setPrefill({ ...JSON.parse(stored), ...selection });
+      } else setPrefill(selection);
     } catch {
       // A malformed or unavailable saved draft must not block request creation.
+      setPrefill(selection);
     } finally {
       setReady(true);
     }

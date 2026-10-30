@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "preview": "opennextjs-cloudflare build && node --env-file-if-exists=../.env.cloudflare.local ./node_modules/@opennextjs/cloudflare/dist/cli/index.js preview",
+    "deploy": "opennextjs-cloudflare build && node --env-file-if-exists=../.env.cloudflare.local ./node_modules/@opennextjs/cloudflare/dist/cli/index.js deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "cf": "node --env-file-if-exists=../.env.cloudflare.local ./node_modules/wrangler/bin/wrangler.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import type { FiltersState, PaginationMeta, TutorProfile } from "@/types/tutor";
 import { INITIAL_FILTERS, SORT_OPTIONS } from "@/types/tutor";
+import SchoolOfferingSelector from "@/components/marketplace/SchoolOfferingSelector";
 import TutorCard from "./TutorCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
@@ -22,17 +23,19 @@ interface Props {
   marketCountryCode?: string;
 }
 
-function query(filters: FiltersState, page: number, matchRequestId?: string|null) {
+function query(filters: FiltersState, page: number, matchRequestId?: string|null, schoolOfferingId?: string|null) {
   const params = new URLSearchParams({ page: String(page), limit: "12" });
   Object.entries(filters).forEach(([key, value]) => value && key !== "sortBy" && params.set(key, value));
   if (filters.sortBy) params.set("sortBy", filters.sortBy);
   if (matchRequestId) params.set("matchRequestId", matchRequestId);
+  if (schoolOfferingId) params.set("schoolOfferingId", schoolOfferingId);
   return params.toString();
 }
 
 export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {}, title, subtitle, marketCountryCode }: Props) {
   const searchParams = useSearchParams();
   const matchRequestId = searchParams.get("matchRequestId");
+  const [schoolOfferingId, setSchoolOfferingId] = useState(searchParams.get("schoolOfferingId") || "");
   const [tutors, setTutors] = useState(initialTutors);
   const [pagination, setPagination] = useState(initialPagination);
   const [filters, setFilters] = useState<FiltersState>({ ...INITIAL_FILTERS, ...initialFilters });
@@ -55,15 +58,15 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
     return () => { if (cityTimer.current) clearTimeout(cityTimer.current); };
   }, [filters.city]);
 
-  const load = useCallback(async (page: number, next: FiltersState) => {
+  const load = useCallback(async (page: number, next: FiltersState, selectedOffering = schoolOfferingId) => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/tutors?${query(next, page, matchRequestId)}`);
+      const { data } = await api.get(`/tutors?${query(next, page, matchRequestId, selectedOffering)}`);
       const list = data.tutors ?? [];
       setTutors(list);
       setPagination({ total: data.total ?? list.length, page: data.page ?? page, pages: data.pages ?? 1, limit: 12 });
     } finally { setLoading(false); }
-  }, [matchRequestId]);
+  }, [matchRequestId, schoolOfferingId]);
 
   useEffect(() => {
     if (matchRequestId) load(1, filters);
@@ -76,7 +79,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       timer.current = setTimeout(() => load(1, next), 450);
     } else load(1, next);
   }
-  function reset() { setFilters(INITIAL_FILTERS); load(1, INITIAL_FILTERS); }
+  function reset() { setFilters(INITIAL_FILTERS); setSchoolOfferingId(""); load(1, INITIAL_FILTERS, ""); }
   // Spec §31: an explicit action the user has to click; never a silent mode swap.
   const includeOnline = () => {
     const next = { ...filters, teachingMode: "online" as const };
@@ -114,6 +117,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       <aside className={styles.sidebar} aria-label="Filter tutors"><FilterSidebar {...sidebarProps} /></aside>
       <MobileFilterSidebar {...sidebarProps} isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <section className={styles.main} aria-label="Tutor search results">
+        <SchoolOfferingSelector onSelect={offering => { const id = offering?._id || ""; setSchoolOfferingId(id); void load(1, filters, id); }} />
         <div style={{
           background: "linear-gradient(135deg, #eef5ff 0%, #ffffff 100%)",
           border: "1.5px solid #bfdbfe",
@@ -162,7 +166,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
           </div>
         </div>
         {loading ? <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div> : tutors.length ? <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} matchScore={tutor.matchScore} />)}</div> : <EmptyState onReset={reset} onIncludeOnline={canIncludeOnline ? includeOnline : undefined} postRequirementHref={postRequirementHref} />}
-        {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} hrefBuilder={(page) => `/tutors?${query(filters, page, matchRequestId)}`} /></div>}
+        {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && <div className={styles.paginationWrap}><Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} hrefBuilder={(page) => `/tutors?${query(filters, page, matchRequestId, schoolOfferingId)}`} /></div>}
       </section>
     </div>
   </div>;

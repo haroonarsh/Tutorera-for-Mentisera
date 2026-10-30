@@ -1,0 +1,56 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tutorera-backend-preview",
+  "account_id": "e0f40de5e1f6ab0e29c9b1cb3f9a7102",
+  "main": "dist/worker.mjs",
+  "build": { "command": "npm run build" },
+  "compatibility_date": "2026-10-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [{ "pattern": "api-preview.tutorera.ac.pk", "custom_domain": true }],
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "TutoreraBackend" }] },
+  "migrations": [{ "tag": "native-free-v1", "new_sqlite_classes": ["TutoreraBackend"] }],
+  "vars": {
+    "NODE_ENV": "production",
+    "PORT": "8080",
+    "CLIENT_URL": "https://tutorera.ac.pk",
+    "PUBLIC_API_URL": "https://api.tutorera.ac.pk",
+    "JWT_EXPIRES_IN": "7d",
+    "USD_PKR_RATE": "276.60",
+    "PAYMENT_PROVIDER": "rapidpay",
+    "SWICH_CHECKOUT_MODE": "session",
+    "SWICH_MODE": "live",
+    "SWICH_SUPPORTED_CURRENCIES": "USD,PKR",
+    "SCHEDULER_MODE": "disabled",
+    "CLOUDFLARE_NATIVE_RUNTIME": "true",
+    "ENABLE_SCHEDULED_JOBS": "false",
+    "PREVIEW_READ_ONLY": "true"
+  },
+  "env": {
+    "production": {
+      "name": "tutorera-backend",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "api.tutorera.ac.pk", "custom_domain": true }],
+      "durable_objects": { "bindings": [{ "name": "BACKEND", "class_name": "TutoreraBackend" }] },
+      "vars": {
+        "NODE_ENV": "production",
+        "PORT": "8080",
+        "CLIENT_URL": "https://tutorera.ac.pk",
+        "PUBLIC_API_URL": "https://api.tutorera.ac.pk",
+        "JWT_EXPIRES_IN": "7d",
+        "USD_PKR_RATE": "276.60",
+        "PAYMENT_PROVIDER": "rapidpay",
+        "SWICH_CHECKOUT_MODE": "session",
+        "SWICH_MODE": "live",
+        "SWICH_SUPPORTED_CURRENCIES": "USD,PKR",
+        "SCHEDULER_MODE": "disabled",
+        "CLOUDFLARE_NATIVE_RUNTIME": "true",
+        "ENABLE_SCHEDULED_JOBS": "true"
+      },
+      "triggers": { "crons": ["*/5 * * * *", "*/10 * * * *", "*/15 * * * *", "0 * * * *", "0 4 * * *"] }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "tutorera-cloudflare-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build-native.mjs",
+    "smoke:native": "node scripts/smoke-native.mjs",
+    "test:native-alarms": "node scripts/test-native-alarms.mjs",
+    "test:native-db": "wrangler deploy --dry-run --outdir .wrangler/native-test && node scripts/test-native-database.mjs",
+    "verify:native-readonly": "node --env-file-if-exists=../../.env.cloudflare.local scripts/verify-native-production-readonly.mjs",
+    "provision:preview": "node --env-file-if-exists=../../.env.cloudflare.local scripts/provision-preview.mjs",
+    "verify:preview-live": "node --env-file-if-exists=../../.env.cloudflare.local scripts/verify-preview-live.mjs",
+    "test": "node --import tsx --test test/*.test.ts",
+    "check": "npm run typecheck && npm test",
+    "cf": "node --env-file-if-exists=../../.env.cloudflare.local node_modules/wrangler/bin/wrangler.js",
+    "verify:credentials": "node --env-file-if-exists=../../.env.cloudflare.local scripts/verify-credentials.mjs",
+    "verify:r2": "node --env-file-if-exists=../../.env.r2.local scripts/verify-r2.mjs",
+    "preflight": "node --env-file-if-exists=../../.env.cloudflare.local scripts/preflight.mjs",
+    "deploy:preview": "npm run preflight && npm run cf -- deploy",
+    "deploy:production": "npm run preflight -- --production && npm run cf -- deploy --env production"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261023.3-beta",
+    "@cloudflare/workers-types": "5.20261030.1",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3",
+    "wrangler": "4.156.0"
+  }
+}

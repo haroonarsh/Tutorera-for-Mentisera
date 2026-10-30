@@ -38,6 +38,13 @@ interface RecentJobFailure {
 }
 
 interface HealthData {
+  nativeQueue?: {
+    observedAt: string; limit: number;
+    pending: { id: string; name: string; attempts: number; nextAttempt: number }[];
+    failed: { id: string; name: string; attempts: number; nextAttempt: number }[];
+    pendingTruncated: boolean; failedTruncated: boolean;
+  } | null;
+  scheduler?: { engine: string; enabled: boolean; mode: string; queueVisibility: string };
   api: string;
   database: string;
   uptimeSeconds: number;
@@ -53,6 +60,15 @@ interface HealthData {
 }
 
 const JOB_DESCRIPTIONS: Record<string, string> = {
+  "email-outbox-delivery": "Deliver queued transactional emails",
+  "swich-checkout-reconciliation": "Reconcile historical Swich checkout transactions",
+  "offer-expiry-processing": "Expire offers and send expiry notifications",
+  "request-lifecycle-processing": "Process request expiry and lifecycle transitions",
+  "abandoned-journey-recovery": "Send eligible unfinished-application and request reminders",
+  "pending-payout-processing": "Process eligible pending tutor payouts",
+  "exchange-rate-refresh": "Refresh informational exchange rates",
+  "agreement-reminder-delivery": "Remind tutors about unsigned agreements",
+  "missing-document-reminder-delivery": "Remind tutors about missing verification information",
   request_lifecycle_worker: "Transition 7-day expired requests to archival state; preserve historical offers",
   day_5_liquidity_escalation: "Flag zero-offer requests on Day 5 and dispatch proactive tutor push notifications",
   "24h_expiry_warning_worker": "Alert students 24 hours prior to tuition request automatic expiration",
@@ -265,6 +281,34 @@ export default function SystemHealthPage() {
           </div>
         </div>
 
+        <p style={{ padding: "0 1.25rem", color: TEXT_COLORS.muted }}>
+          {health?.scheduler
+            ? `Scheduler: ${health.scheduler.engine}; dispatch ${health.scheduler.enabled ? "enabled" : "disabled"}.`
+            : "Scheduler configuration has not been reported by this backend."}
+          {["not-reported", "unavailable"].includes(health?.scheduler?.queueVisibility || "") && " Cloudflare queue inspection is unavailable; the table below shows MongoDB run history only."}
+        </p>
+
+        {health?.nativeQueue && (
+          <section aria-label="Cloudflare dispatch queue" style={{ padding: "0 1.25rem 1rem" }}>
+            <h3>Cloudflare dispatch queue</h3>
+            <p>
+              Pending: {health.nativeQueue.pending.length}{health.nativeQueue.pendingTruncated ? "+" : ""}.
+              {" "}Held after failure: {health.nativeQueue.failed.length}{health.nativeQueue.failedTruncated ? "+" : ""}.
+              {" "}Observed <time dateTime={health.nativeQueue.observedAt}>{new Date(health.nativeQueue.observedAt).toLocaleString()}</time>.
+            </p>
+            {(health.nativeQueue.pendingTruncated || health.nativeQueue.failedTruncated) && <p>Showing the first {health.nativeQueue.limit} entries per state; these are not total queue counts.</p>}
+            <ul>
+              {health.nativeQueue.pending.map((job) => <li key={`pending-${job.id}`}>
+                {job.name}: pending, {job.attempts} failed attempts; eligible for retry {new Date(job.nextAttempt).toLocaleString()}.
+              </li>)}
+              {health.nativeQueue.failed.map((job) => <li key={`failed-${job.id}`}>
+                {job.name}: held after {job.attempts} failed attempts. Requires operator review; automatic retries stopped.
+              </li>)}
+            </ul>
+            {!health.nativeQueue.pending.length && !health.nativeQueue.failed.length && <p>No pending or held jobs.</p>}
+          </section>
+        )}
+
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
             <thead>
@@ -355,7 +399,7 @@ export default function SystemHealthPage() {
 
         {health?.degradedJobs?.length ? (
           <div role="alert" style={{ background: STATUS_COLORS.danger.bg, border: `1px solid ${STATUS_COLORS.danger.border}`, color: STATUS_COLORS.danger.color, borderRadius: "0.75rem", padding: "1rem 1.25rem", marginTop: "1.25rem", fontWeight: 600 }}>
-            Failing on consecutive runs: {health.degradedJobs.join(", ")}. The lease is released and retried on the next tick, but no run has succeeded since the last failure.
+            Failing on consecutive runs: {health.degradedJobs.join(", ")}. No run has succeeded since the last failure. Check scheduler state and the dispatch queue before retrying; Cloudflare jobs stop automatic retries after three failures.
           </div>
         ) : null}
 

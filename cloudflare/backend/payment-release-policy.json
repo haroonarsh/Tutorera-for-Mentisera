@@ -1,0 +1,6 @@
+{
+  "requestedProvider": "rapidpay",
+  "implementedProvider": "swich",
+  "contractVerified": false,
+  "reason": "RapidPay selected by owner; historical adapter has an unconfirmed live endpoint and current authoritative configuration lacks live merchant/OAuth settings. Production cutover is blocked pending verified replacement."
+}

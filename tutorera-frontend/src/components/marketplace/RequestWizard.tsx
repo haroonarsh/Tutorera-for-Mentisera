@@ -19,8 +19,9 @@ import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/lib/toast";
 import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import SchoolOfferingSelector from "@/components/marketplace/SchoolOfferingSelector";
 import RateRangeHint from "@/components/marketplace/RateRangeHint";
-import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
+import { Country } from "@/lib/location";
 import { useGeoData, convertToPKR } from "@/lib/geoService";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -78,6 +79,7 @@ export default function RequestWizard({
   };
 
   const [form, setForm] = useState<PostRequestPayload>({
+    schoolOfferingId: prefill.schoolOfferingId || "",
     subject: prefill.subject || "",
     level: prefill.level || "",
     description: prefill.description || "",
@@ -196,6 +198,7 @@ export default function RequestWizard({
   const handleNext = () => {
     if (step === 1) {
       if (!form.subject) return showError("Please select a subject.");
+      if (!geo.subjects.includes(form.subject)) return showError("Please select a subject from the current catalogue.");
       if (!form.level) return showError("Please select your academic level / class.");
     }
     if (step === 2) {
@@ -546,9 +549,12 @@ export default function RequestWizard({
                 <option value="regular_tuition">Regular tuition</option><option value="concept_improvement">Concept improvement</option><option value="exam_preparation">Exam preparation</option><option value="past_papers">Past papers</option><option value="homework_support">Homework support</option><option value="revision">Revision</option><option value="test_preparation">Test preparation</option><option value="language_practice">Language practice</option><option value="skill_development">Skill development</option><option value="other">Other</option>
               </select>
             </div>
+            <SchoolOfferingSelector onSelect={(offering) => setForm(current => ({ ...current, schoolOfferingId: offering?._id || "", ...(offering ? { subject: offering.subject, level: offering.approvalLevel, curriculum: offering.boardName + " ? " + offering.qualificationName, classGrade: offering.classLevel || "" } : { subject: "", level: "", curriculum: "", classGrade: "" }) }))} />
             <div>
-              <label style={labelStyle}>Select Subject *</label>
+              <label htmlFor="request-subject" style={labelStyle}>Select Subject *</label>
               <select 
+                id="request-subject"
+                disabled={!!form.schoolOfferingId}
                 value={form.subject} 
                 onChange={(e) => update("subject", e.target.value)}
                 style={inputStyle}
@@ -561,8 +567,10 @@ export default function RequestWizard({
             </div>
 
             <div>
-              <label style={labelStyle}>Academic Level / Class *</label>
+              <label htmlFor="request-level" style={labelStyle}>Academic Level / Class *</label>
               <select 
+                id="request-level"
+                disabled={!!form.schoolOfferingId}
                 value={form.level} 
                 onChange={(e) => update("level", e.target.value)}
                 style={inputStyle}
@@ -580,6 +588,7 @@ export default function RequestWizard({
                 <input 
                   type="text" 
                   list="curriculum-suggestions"
+                  disabled={!!form.schoolOfferingId}
                   value={form.curriculum} 
                   onChange={(e) => update("curriculum", e.target.value)} 
                   placeholder="e.g. Cambridge, FBISE, Punjab Board, Edexcel"

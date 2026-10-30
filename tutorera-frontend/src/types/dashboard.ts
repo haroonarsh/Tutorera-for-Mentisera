@@ -180,6 +180,7 @@ export interface TutorProfile {
 export type TutorProfileData = TutorProfile;
 
 export interface PostRequestPayload {
+  schoolOfferingId?: string;
   subject: string;
   level: string;
   description: string;

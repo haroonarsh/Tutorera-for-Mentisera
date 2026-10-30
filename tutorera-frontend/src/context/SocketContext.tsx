@@ -1,6 +1,7 @@
 "use client";
 import { createContext,ReactNode,useContext,useEffect,useState } from "react";
 import { io } from "socket.io-client";
+import { socketTransportOptions } from "@/lib/socket-options";
 import { useAuth } from "./AuthContext";
 
 interface Notification {
@@ -58,7 +59,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     const newSocket = io(socketBaseUrl, {
       auth: { token: token2 },
-      transports: ["websocket"],
+      ...socketTransportOptions(),
     });
 
     newSocket.on("connect", () => {

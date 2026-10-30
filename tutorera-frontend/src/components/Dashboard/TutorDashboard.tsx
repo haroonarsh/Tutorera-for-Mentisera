@@ -453,9 +453,9 @@ function DirectRequestCard({
     if (!request.bid) return;
     setActioning("accept");
     try {
-      await axiosInstance.patch(`/requests/${request._id}/bids/${request.bid._id}/accept`);
+      const response = await axiosInstance.patch(`/requests/${request._id}/bids/${request.bid._id}/accept`);
       onActioned();
-      showSuccess("Direct booking accepted successfully.");
+      showSuccess(response.data?.message || "Request accepted. The student can continue the booking process.");
     } catch (err) {
       console.error("Failed to accept direct booking:", err);
       showError(err, "Failed to accept. Please try again.");
@@ -785,6 +785,7 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
       </div>
 
       <div className={s.content}>
+        <Link href="/tutor/school-offerings" className="inline-flex rounded-lg bg-white px-4 py-3 font-semibold text-blue-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-700">Manage school subjects and boards ?</Link>
         {/* MY TUTOR APPLICATION — live status from /tutor/application-status */}
         <TutorApplicationStatusCard />
 

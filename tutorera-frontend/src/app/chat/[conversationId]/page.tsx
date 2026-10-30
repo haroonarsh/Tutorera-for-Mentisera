@@ -7,6 +7,7 @@ import { Send, ArrowLeft, Shield, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { io, Socket } from "socket.io-client";
+import { socketTransportOptions } from "@/lib/socket-options";
 import { formatPKR } from "@/lib/site";
 
 const C = UI_COLORS;
@@ -59,7 +60,7 @@ export default function ChatPage() {
     const token = localStorage.getItem("token");
     const newSocket = io(
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "https://tutorera-backend.onrender.com",
-      { auth: { token }, transports: ["websocket"] }
+      { auth: { token }, ...socketTransportOptions() }
     );
 
     newSocket.on("connect", () => {
