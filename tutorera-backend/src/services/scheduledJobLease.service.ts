@@ -1,7 +1,13 @@
 import crypto from "crypto";
 import ScheduledJobLease from "../models/ScheduledJobLease.model";
 import ScheduledJobRun from "../models/ScheduledJobRun.model";
+import type { ScheduledJobRunTrigger } from "../models/ScheduledJobRun.model";
 import logger from "../config/logger";
+
+export interface ReplayMeta {
+  triggeredBy: "manual_replay";
+  reason: string;
+}
 
 const PROCESS_HOLDER_ID = `${process.env.RENDER_INSTANCE_ID || process.env.HOSTNAME || "local"}:${process.pid}:${crypto.randomUUID()}`;
 
@@ -12,7 +18,9 @@ async function recordRun(
   durationMs: number,
   error: string | undefined,
   holderId: string,
+  replayMeta?: ReplayMeta,
 ): Promise<void> {
+  const triggeredBy: ScheduledJobRunTrigger = replayMeta?.triggeredBy ?? "cron";
   try {
     await ScheduledJobRun.create({
       jobName: name,
@@ -21,6 +29,8 @@ async function recordRun(
       startedAt,
       finishedAt: new Date(),
       durationMs,
+      triggeredBy,
+      ...(replayMeta ? { replayReason: replayMeta.reason.slice(0, 500) } : {}),
       ...(error ? { error: error.slice(0, 2000) } : {}),
     });
   } catch (runError) {
@@ -43,6 +53,7 @@ export async function runWithJobLease<T>(
   name: string,
   leaseMs: number,
   work: () => Promise<T>,
+  replayMeta?: ReplayMeta,
 ): Promise<{ acquired: boolean; value?: T }> {
   if (!Number.isSafeInteger(leaseMs) || leaseMs <= 0) throw new Error("Invalid scheduled job lease duration");
   // An invocation owns the lease, not the process. Timers/alarms in the same
@@ -109,7 +120,7 @@ export async function runWithJobLease<T>(
       },
     );
     if (completed.matchedCount !== 1) throw new Error("Scheduled job lease lost during execution");
-    await recordRun(name, now, "succeeded", durationMs, undefined, holderId);
+    await recordRun(name, now, "succeeded", durationMs, undefined, holderId, replayMeta);
     return { acquired: true, value };
   } catch (error) {
     await stopHeartbeat();
@@ -122,7 +133,7 @@ export async function runWithJobLease<T>(
         $inc: { totalRuns: 1, totalFailures: 1, consecutiveFailures: 1 },
       },
     ).catch((leaseError) => logger.error({ err: leaseError, job: name }, "Failed to record scheduled job failure"));
-    await recordRun(name, now, "failed", durationMs, message, holderId);
+    await recordRun(name, now, "failed", durationMs, message, holderId, replayMeta);
     throw error;
   }
 }

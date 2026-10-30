@@ -1,6 +1,6 @@
 import type { Server } from "socket.io";
 import { JOB_SCHEDULES, ScheduledJobName } from "../config/scheduledJobs";
-import { runWithJobLease } from "./scheduledJobLease.service";
+import { runWithJobLease, ReplayMeta } from "./scheduledJobLease.service";
 import { processOfferExpirations } from "../utils/offerExpiry";
 import { processAbandonedJourneyRecovery } from "../utils/abandonedJourneyRecovery";
 import { processRequestLifecycle } from "./requestLifecycle.service";
@@ -12,7 +12,7 @@ import { processPendingSwichCheckouts } from "./paymentReconciliation.service";
 import { processEmailOutbox } from "./emailOutbox.service";
 import logger from "../config/logger";
 
-export function runScheduledJob(name: ScheduledJobName, io?: Server) {
+export function runScheduledJob(name: ScheduledJobName, io?: Server, replayMeta?: ReplayMeta) {
   const work: Record<ScheduledJobName, () => Promise<unknown>> = {
     "email-outbox-delivery": () => processEmailOutbox(),
     "swich-checkout-reconciliation": () => processPendingSwichCheckouts(io),
@@ -26,7 +26,7 @@ export function runScheduledJob(name: ScheduledJobName, io?: Server) {
   };
   const schedule = JOB_SCHEDULES.find((job) => job.name === name);
   if (!schedule) throw new Error("Unknown scheduled job");
-  return runWithJobLease(name, schedule.leaseMs, work[name]);
+  return runWithJobLease(name, schedule.leaseMs, work[name], replayMeta);
 }
 
 /** Render retains timers; Cloudflare dispatches explicitly instead. */

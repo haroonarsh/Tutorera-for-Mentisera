@@ -21,7 +21,7 @@ describe("scheduler deployment modes", () => {
     const stop = startProcessScheduler();
     expect(jest.getTimerCount()).toBe(JOB_SCHEDULES.length * 2);
     await jest.advanceTimersByTimeAsync(5000);
-    expect(runWithJobLease).toHaveBeenCalledWith("exchange-rate-refresh", 59 * 60_000, expect.any(Function));
+    expect(runWithJobLease).toHaveBeenCalledWith("exchange-rate-refresh", 59 * 60_000, expect.any(Function), undefined);
     stop();
     expect(jest.getTimerCount()).toBe(0);
   });
@@ -32,7 +32,7 @@ describe("scheduler deployment modes", () => {
   it("preserves lease-based dispatch for every allowlisted task", async () => {
     for (const job of JOB_SCHEDULES) {
       await runScheduledJob(job.name);
-      expect(runWithJobLease).toHaveBeenCalledWith(job.name, job.leaseMs, expect.any(Function));
+      expect(runWithJobLease).toHaveBeenCalledWith(job.name, job.leaseMs, expect.any(Function), undefined);
     }
   });
 });

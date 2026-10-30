@@ -1,11 +1,14 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export type ScheduledJobRunStatus = "succeeded" | "failed";
+export type ScheduledJobRunTrigger = "cron" | "manual_replay";
 
 /**
  * One durable row per job execution. The ScheduledJobLease holds only the
  * latest state; this keeps the history an operator needs to answer "did this
  * job fail repeatedly, and when did it last succeed?" after a restart.
+ * `triggeredBy` and `replayReason` are set for operator-initiated replays so
+ * the audit trail distinguishes manual interventions from normal cron runs.
  */
 export interface IScheduledJobRun extends Document {
   jobName: string;
@@ -15,6 +18,8 @@ export interface IScheduledJobRun extends Document {
   finishedAt: Date;
   durationMs: number;
   error?: string;
+  triggeredBy: ScheduledJobRunTrigger;
+  replayReason?: string;
   createdAt: Date;
 }
 
@@ -26,6 +31,8 @@ const scheduledJobRunSchema = new Schema<IScheduledJobRun>({
   finishedAt: { type: Date, required: true },
   durationMs: { type: Number, required: true, min: 0 },
   error: { type: String, maxlength: 2000 },
+  triggeredBy: { type: String, enum: ["cron", "manual_replay"], required: true, default: "cron" },
+  replayReason: { type: String, maxlength: 500 },
 }, { timestamps: true });
 
 scheduledJobRunSchema.index({ jobName: 1, startedAt: -1 });
