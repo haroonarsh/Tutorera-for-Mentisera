@@ -103,6 +103,36 @@ export default async function CountryTutorsPage({ params, searchParams }: Props)
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+      {/* Market status banner — explicit discovery/transactional label so users
+          in non-live markets are never misled about booking availability. */}
+      {country.launchStatus === "coming_soon" && (
+        <div role="status" style={{
+          background: "#f59e0b", color: "#1c1917",
+          textAlign: "center", padding: "0.65rem 1rem",
+          fontSize: "0.85rem", fontWeight: 700
+        }}>
+          TUTORERA is coming to {country.name} — you can browse profiles but booking is not yet available.
+        </div>
+      )}
+      {country.launchStatus === "beta" && (
+        <div role="status" style={{
+          background: "#0284c7", color: "white",
+          textAlign: "center", padding: "0.65rem 1rem",
+          fontSize: "0.85rem", fontWeight: 700
+        }}>
+          TUTORERA {country.name} is in beta
+          {country.paymentsEnabled === false && " · Online payment is not yet enabled in this market"}
+        </div>
+      )}
+      {country.launchStatus !== "coming_soon" && country.launchStatus !== "beta" && country.paymentsEnabled === false && (
+        <div role="status" style={{
+          background: "#021550", color: "white",
+          textAlign: "center", padding: "0.65rem 1rem",
+          fontSize: "0.85rem", fontWeight: 700
+        }}>
+          Online payment isn&apos;t live in {country.name} yet
+        </div>
+      )}
       <div style={{ background: "#f8fafc", padding: "2rem 1.5rem", textAlign: "center", borderBottom: "1px solid #e2e8f0" }}>
         <h1 style={{ fontSize: "2.5rem", fontWeight: 900, color: "#021550", margin: 0 }}>
           Tutors in {country.name}

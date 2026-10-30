@@ -89,19 +89,36 @@ export default async function CountryLandingPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
-      <div style={{
-        background: "#021550",
-        color: "white",
-        textAlign: "center",
-        padding: "0.75rem",
-        fontSize: "0.85rem",
-        fontWeight: 700
-      }}>
-        You are viewing TUTORERA for {country.name} · {country.currency} ({country.currencySymbol})
-        {/* Never let a market page imply checkout works before it actually
-            does - only say so when paymentsEnabled is actually true. */}
-        {country.paymentsEnabled === false && " · Online payment isn't live in this market yet"}
-      </div>
+      {/* Market status banner — explicit discovery/transactional label per
+          P2 readiness requirement. Never let a non-live market page imply
+          that booking or payment is available when it isn't. */}
+      {country.launchStatus === "coming_soon" ? (
+        <div role="status" style={{
+          background: "#f59e0b", color: "#1c1917",
+          textAlign: "center", padding: "0.75rem",
+          fontSize: "0.85rem", fontWeight: 700
+        }}>
+          TUTORERA is coming to {country.name} — browse profiles and register your interest. Booking is not yet available.
+        </div>
+      ) : country.launchStatus === "beta" ? (
+        <div role="status" style={{
+          background: "#0284c7", color: "white",
+          textAlign: "center", padding: "0.75rem",
+          fontSize: "0.85rem", fontWeight: 700
+        }}>
+          TUTORERA {country.name} is in beta · {country.currency} ({country.currencySymbol})
+          {country.paymentsEnabled === false && " · Online payment is not yet enabled in this market"}
+        </div>
+      ) : (
+        <div style={{
+          background: "#021550", color: "white",
+          textAlign: "center", padding: "0.75rem",
+          fontSize: "0.85rem", fontWeight: 700
+        }}>
+          You are viewing TUTORERA for {country.name} · {country.currency} ({country.currencySymbol})
+          {country.paymentsEnabled === false && " · Online payment isn't live in this market yet"}
+        </div>
+      )}
 
       <HeroMarketplace countryCode={country.code} />
       

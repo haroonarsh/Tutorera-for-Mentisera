@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, GraduationCap } from "lucide-react";
 import { getSubjectCatalogue, SUBJECT_GUIDES } from "@/lib/subject-catalogue";
+import { SITE_URL } from "@/lib/site";
 import styles from "../subjects.module.css";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -32,7 +33,31 @@ export default async function SubjectPage({ params }: Props) {
   const guide = SUBJECT_GUIDES[subject.name];
   const requestUrl = `/post-tuition-request?subject=${encodeURIComponent(subject.name)}`;
   const browseUrl = `/tutors?subject=${encodeURIComponent(subject.name)}`;
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOccupationalProgram",
+    name: `${subject.name} Tutoring`,
+    description: guide?.summary || `Find personalised support for ${subject.name}, matched to your learning goals.`,
+    url: `${SITE_URL}/subjects/${subject.slug}`,
+    provider: {
+      "@type": "Organization",
+      name: "TUTORERA",
+      url: SITE_URL,
+    },
+    educationalCredentialAwarded: "Not applicable — marketplace tutoring, not a qualification-awarding programme",
+    occupationalCategory: subject.name,
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: "Subjects", item: `${SITE_URL}/subjects` },
+        { "@type": "ListItem", position: 3, name: subject.name, item: `${SITE_URL}/subjects/${subject.slug}` },
+      ],
+    },
+  };
+
   return <main className={styles.page}>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
     <section className={styles.hero}><div className={styles.wrap}>
       <Link className={styles.back} href="/subjects"><ArrowLeft size={16} aria-hidden="true" /> All subjects</Link>
       <p className={styles.eyebrow}><GraduationCap size={16} aria-hidden="true" /> SUBJECT GUIDE</p>
