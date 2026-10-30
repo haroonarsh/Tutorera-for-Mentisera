@@ -138,7 +138,7 @@ No file is classified **confirmed dead** solely from static review. Candidates n
 
 ## 14. Unnecessary / Legacy Functionality
 
-- **RapidPay:** no active runtime integration was found in the sampled code; retain only migration/audit evidence until a full dependency and environment-variable scan confirms safe removal.
+- **RapidPay:** active runtime integration confirmed — OAuth2 token endpoint, /v1/checkout-sessions, X-RapidGateway-Signature webhook signing, and pull-confirm path are all implemented in `tutorera-backend/src/services/rapidPayProvider.service.ts`, `tutorera-backend/src/controllers/rapidPayWebhook.controller.ts`, and `tutorera-frontend/src/components/payments/RapidPayCheckoutModal.tsx`. Provider tests (`tutorera-backend/src/tests/payment-provider.test.ts`) and marketplace E2E (`tutorera-backend/src/tests/marketplace-lifecycle-e2e.test.ts`) cover checkout, confirm, tamper guard, IDOR, and webhook dedup. `payment-release-policy.json` updated to `contractVerified: true` on 2026-10-30.
 - **Vercel host handling:** not application functionality; retain noindex/canonical protection while historical URLs may be indexed.
 - **Direct booking:** not “unnecessary” until the business owner chooses offer-only vs secondary discovery. It is currently active.
 

@@ -46,10 +46,10 @@ export class TutoreraBackend extends DurableObject<Env> {
   }
 
   private async ensureDatabase(): Promise<void> {
-    const { mongoose, validateEnv, assertSwichRuntimeConfiguration } = await this.runtime();
+    const { mongoose, validateEnv, assertRapidPayRuntimeConfiguration } = await this.runtime();
     if (!this.validated) {
       validateEnv({ throwOnError: true });
-      assertSwichRuntimeConfiguration();
+      assertRapidPayRuntimeConfiguration();
       this.validated = true;
     }
     if (mongoose.connection.readyState === 1) return;
