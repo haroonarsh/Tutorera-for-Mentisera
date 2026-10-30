@@ -26,6 +26,7 @@ import { syncReviewQueueForProfile } from "../services/verification.service";
 import { syncMarketplaceAndHomeTuition } from "./tracking.controller";
 import { calculateMarketplaceFees } from "../services/pricing.service";
 import { requestSubjectEligibility, syncApprovedSubjects } from "../services/subjectEligibility.service";
+import SchoolOffering from "../models/SchoolOffering.model";
 import { assignUniqueTutorSlug } from "../services/tutorSlug.service";
 import { logAudit } from "../utils/logAudit";
 import { persistTutorEducationEdit } from "../services/educationEditPersistence.service";
@@ -364,6 +365,7 @@ export const getAllTutors = async (
     limit = "10",
     sort = "-averageRating",
     matchRequestId,
+    schoolOfferingId,
   } = req.query;
 
   // Build filter object: Strictly gate search results to active tutors who
@@ -415,6 +417,12 @@ export const getAllTutors = async (
 
   if (level) {
     filter.subjectEligibility = { $elemMatch: { status: "approved", levels: String(level) } };
+  }
+  if (schoolOfferingId) {
+    const offering = typeof schoolOfferingId === "string" && schoolOfferingId.length <= 200 ? await SchoolOffering.findOne({ _id: schoolOfferingId, status: "active" }).lean() : null;
+    if (!offering) { res.json({ success: true, tutors: [], total: 0, page: 1, pages: 0 }); return; }
+    filter.schoolOfferingIds = offering._id;
+    filter.subjectEligibility = { $elemMatch: { status: "approved", subject: new RegExp(`^${escapeRegex(offering.subject)}$`, "i"), levels: offering.approvalLevel } };
   }
 
   const selectedCountry = countryCode || country;

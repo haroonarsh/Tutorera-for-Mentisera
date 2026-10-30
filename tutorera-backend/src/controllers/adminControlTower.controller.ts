@@ -486,31 +486,42 @@ export const getFinanceReconciliation = async (req: AuthRequest, res: Response):
 
 // ─── 5. System Health & Jobs ─────────────────────────────────────────────────
 
-export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise<void> => {
+export const getSystemHealth = async (req: AuthRequest, res: Response): Promise<void> => {
   const dbStatus = mongoose.connection.readyState === 1 ? "healthy" : "degraded";
   const memoryUsage = process.memoryUsage();
   const uptimeSeconds = Math.floor(process.uptime());
 
-  const [leases, recentJobFailures, recentSuccesses] = await Promise.all([
+  const [leases, recentJobFailures] = await Promise.all([
     ScheduledJobLease.find().sort({ name: 1 }).lean(),
     ScheduledJobRun.find({ status: "failed" }).sort({ startedAt: -1 }).limit(10).lean(),
-    ScheduledJobRun.find({ status: "succeeded" }).sort({ startedAt: -1 }).limit(200).lean(),
   ]);
 
   // A job that has failed on consecutive runs needs a human even when its
   // lease has since been released, so the alert is derived from the durable
   // counters rather than from "is a lease held right now".
-  const lastSuccessByJob = new Map<string, Date>();
-  for (const run of recentSuccesses) {
-    if (!lastSuccessByJob.has(run.jobName)) lastSuccessByJob.set(run.jobName, run.startedAt);
-  }
   const degradedJobNames = leases.filter((lease) => (lease.consecutiveFailures || 0) > 0).map((lease) => lease.name);
+  const native = process.env.CLOUDFLARE_NATIVE_RUNTIME === "true";
+  const schedulerMode = process.env.SCHEDULER_MODE || "process";
+  let nativeQueue = null;
+  const inspectQueue = req.app.get("nativeJobQueueInspector");
+  if (native && typeof inspectQueue === "function") {
+    try { nativeQueue = await inspectQueue(); }
+    catch { logger.warn("Native job queue inspection unavailable"); }
+  }
 
   res.json({
     success: true,
     health: {
       api: "healthy",
       database: dbStatus,
+      scheduler: {
+        engine: native ? "cloudflare-alarms" : schedulerMode === "process" ? "process-timers" : "external-dispatch",
+        enabled: native ? process.env.ENABLE_SCHEDULED_JOBS === "true" : schedulerMode !== "disabled",
+        mode: schedulerMode,
+        // Lease/run history does not establish the state of the durable queue.
+        queueVisibility: native ? nativeQueue ? "available" : "unavailable" : "not-applicable",
+      },
+      nativeQueue,
       uptimeSeconds,
       uptimeFormatted: `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m`,
       memory: {
@@ -533,7 +544,7 @@ export const getSystemHealth = async (_req: AuthRequest, res: Response): Promise
           totalRuns: lease.totalRuns || 0,
           totalFailures: lease.totalFailures || 0,
           lastDurationMs: lease.lastDurationMs ?? null,
-          lastSucceededAt: lastSuccessByJob.get(lease.name) || null,
+          lastSucceededAt: lease.lastCompletedAt || null,
         };
       }),
       recentJobFailures: recentJobFailures.map((run) => ({

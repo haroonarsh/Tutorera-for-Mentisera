@@ -41,8 +41,14 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     },
 ];
 
-export function validateEnv(): void {
+export function validateEnv(options: { throwOnError?: boolean } = {}): void {
     const errors: string[] = [];
+    if (!["process", "external", "disabled"].includes(process.env.SCHEDULER_MODE || "process")) {
+        errors.push("  - SCHEDULER_MODE must be process, external, or disabled");
+    }
+    if (process.env.SCHEDULER_MODE === "external" && (process.env.INTERNAL_JOB_TOKEN || "").length < 32) {
+        errors.push("  - INTERNAL_JOB_TOKEN must be at least 32 characters for external scheduling");
+    }
 
     for (const { key, validate } of REQUIRED_ENV_VARS) {
         const value = process.env[key];
@@ -92,6 +98,7 @@ export function validateEnv(): void {
     }
 
     if (errors.length > 0) {
+        if (options.throwOnError) throw new Error("Backend environment validation failed: " + errors.join("; "));
         console.error("Environment validation failed:\n" + errors.join("\n"));
         console.error("\nFix the environment variables before starting the server.");
         process.exit(1);

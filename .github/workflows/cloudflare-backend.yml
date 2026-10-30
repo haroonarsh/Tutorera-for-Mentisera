@@ -1,0 +1,88 @@
+name: Cloudflare Backend Migration
+
+on:
+  pull_request:
+    paths:
+      - 'cloudflare/backend/**'
+      - 'tutorera-backend/**'
+      - '.github/workflows/cloudflare-backend.yml'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target (production changes the API route)
+        type: choice
+        default: validate-only
+        options: [validate-only, preview, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-backend-${{ inputs.target || 'validate-only' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            tutorera-backend/package-lock.json
+            cloudflare/backend/package-lock.json
+      - run: npm ci
+        working-directory: tutorera-backend
+      - run: npm run build
+        working-directory: tutorera-backend
+      - name: Backend migration regression tests
+        run: npm test -- --runTestsByPath src/tests/health-readiness.test.ts src/tests/internal-jobs.test.ts src/tests/scheduler-runtime.test.ts src/tests/scheduled-job-observability.test.ts src/tests/socket-auth.test.ts src/tests/socket-polling.test.ts src/tests/geo-read-only.test.ts src/tests/logger-redaction.test.ts
+        working-directory: tutorera-backend
+      - run: npm ci
+        working-directory: cloudflare/backend
+      - run: npm run check
+        working-directory: cloudflare/backend
+      - name: Native alarm persistence and recovery fixtures (no external services)
+        run: npm run test:native-alarms
+        working-directory: cloudflare/backend
+      - name: Native MongoDB and authentication fixture (no production credentials)
+        run: npm run test:native-db
+        working-directory: cloudflare/backend
+      - name: Exercise actual Workers runtime without a production database
+        run: npm run smoke:native
+        working-directory: cloudflare/backend
+      - name: Validate production Wrangler bundle without deploying
+        run: npx wrangler deploy --env production --dry-run --outdir .wrangler/release-check
+        working-directory: cloudflare/backend
+
+  deploy:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && inputs.target != 'validate-only' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: cloudflare-backend-${{ inputs.target }}
+    env:
+      CLOUDFLARE_ACCOUNT_ID: e0f40de5e1f6ab0e29c9b1cb3f9a7102
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WRANGLER_SEND_METRICS: false
+    defaults:
+      run:
+        working-directory: cloudflare/backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cloudflare/backend/package-lock.json
+      - run: npm ci
+      - name: Deploy preview (no production DNS change)
+        if: inputs.target == 'preview'
+        run: npm run deploy:preview
+      - name: Deploy approved production API route
+        if: inputs.target == 'production'
+        run: npm run deploy:production
+      - name: Production database-readiness smoke check
+        if: inputs.target == 'production'
+        run: curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 10 https://api.tutorera.ac.pk/health/ready

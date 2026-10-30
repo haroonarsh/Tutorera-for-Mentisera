@@ -29,8 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      # The frontend has no committed lockfile yet; retain reproducible backend
-      # installs and avoid pretending npm ci can operate without one.
-      - run: npm install --ignore-scripts
+      - run: npm ci
+      - run: node --test ../scripts/ci/release-checks.test.mjs
       - run: npm run lint
       - run: npm run build

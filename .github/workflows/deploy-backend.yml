@@ -3,115 +3,54 @@ name: Deploy Backend to Render
 on:
   push:
     branches: [main]
-    paths:
-      - 'tutorera-backend/**'
-      - '.github/workflows/deploy-backend.yml'
+    paths: ['tutorera-backend/**', 'scripts/ci/**', 'cloudflare/backend/payment-release-policy.json', '.github/workflows/deploy-backend.yml']
   workflow_dispatch:
 
-env:
-  RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-  RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-  SLACK_WEBHOOK_DEPLOY: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+permissions:
+  contents: read
+concurrency:
+  group: backend-production-release
+  cancel-in-progress: false
 
 jobs:
-  build-and-test:
+  release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tutorera-backend
+    timeout-minutes: 30
+    environment: backend-production
+    env:
+      RENDER_SERVICE_ID: srv-d82n6thkh4rs73fef0mg
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      SLACK_WEBHOOK_DEPLOY: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: tutorera-backend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Run tests
-        run: npm test -- --passWithNoTests
-
-      - name: TypeScript check
-        run: npx tsc --noEmit
-
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Deploy to Render
-        if: env.RENDER_SERVICE_ID != ''
+      - name: Require deployment settings and completed payment migration
         run: |
-          curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "gitCommitSha": "${{ github.sha }}"
-            }'
-
-      - name: Health check
-        if: env.RENDER_SERVICE_ID != ''
-        run: |
-          BACKEND_URL="https://api.tutorera.ac.pk/health"
-          for i in {1..30}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL" || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "✅ Backend is live at $BACKEND_URL"
-              exit 0
-            fi
-            echo "Attempt $i: Status $STATUS, retrying..."
-            sleep 20
-          done
-          echo "⏱️ Deployment timed out after 10 minutes"
-          exit 1
-
-      - name: Slack notification - Success
+          node --input-type=module -e "import {requireSettings} from './scripts/ci/release-checks.mjs'; requireSettings(process.env,['RENDER_SERVICE_ID','RENDER_API_KEY','GITHUB_SHA']);"
+          node --input-type=module -e "import fs from 'node:fs'; import {checkPaymentRelease} from './cloudflare/backend/scripts/payment-release-policy.mjs'; checkPaymentRelease(JSON.parse(fs.readFileSync('cloudflare/backend/wrangler.jsonc','utf8')).env.production.vars);"
+      - run: npm ci
+        working-directory: tutorera-backend
+      - run: npm run build
+        working-directory: tutorera-backend
+      - run: npm test
+        working-directory: tutorera-backend
+      - run: node --test scripts/ci/release-checks.test.mjs
+      - name: Deploy exact commit, wait for live state, verify database readiness
+        run: node scripts/ci/deploy-render.mjs
+      - name: Existing deployment success notification
         if: success() && env.SLACK_WEBHOOK_DEPLOY != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
-          payload: |
-            {
-              "text": "✅ Backend deployed to Render successfully",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*✅ Backend Deployment Success*\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*Branch:* main"
-                  }
-                }
-              ]
-            }
-
-      - name: Slack notification - Failure
+          payload: '{"text":"Backend deployed successfully to Render. Commit: ${{ github.sha }}"}'
+      - name: Existing deployment failure notification
         if: failure() && env.SLACK_WEBHOOK_DEPLOY != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
-          payload: |
-            {
-              "text": "❌ Backend deployed to Render failed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*❌ Backend Deployment Failed*\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*Branch:* main\n*Details:* Check GitHub Actions logs"
-                  }
-                }
-              ]
-            }
+          payload: '{"text":"Backend deployment failed. Commit: ${{ github.sha }}. Check GitHub Actions logs."}'

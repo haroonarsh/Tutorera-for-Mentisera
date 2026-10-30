@@ -22,6 +22,7 @@ import {
 import { convertCurrencyRate } from "../config/countries";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "./tracking.service";
 import { checkSubjectEligibility } from "./subjectEligibility.service";
+import { schoolOfferingIsActive } from "./schoolOfferingAvailability.service";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 
@@ -176,6 +177,7 @@ export class MatchingService {
     request: IRequest,
     options: { limit?: number; skip?: number } = {}
   ): Promise<ITutorProfile[]> {
+    if (!(await schoolOfferingIsActive(request.schoolOfferingId))) return [];
     const isOnline = request.teachingMode === "online";
     const isHome = request.teachingMode === "in-person"; // home tuition uses "in-person" enum value
 
@@ -189,6 +191,7 @@ export class MatchingService {
       suspendedAt: { $exists: false },
       reVerificationRequired: { $exists: false },
     };
+    if (request.schoolOfferingId) query.schoolOfferingIds = request.schoolOfferingId;
 
     // Teaching Mode & Safety Filter
     if (isOnline) {
@@ -277,6 +280,7 @@ export class MatchingService {
     config?: MatchingConfigData
   ): Promise<MatchScoreResult | null> {
     const cfg = config || (await this.getActiveConfig());
+    if (request.schoolOfferingId && !(tutor.schoolOfferingIds || []).includes(request.schoolOfferingId)) return null;
     const subjectEligibility = checkSubjectEligibility(tutor, request.subject, request.level);
     if (!subjectEligibility.eligible) {
       return {

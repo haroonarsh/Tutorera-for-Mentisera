@@ -16,6 +16,7 @@ export const createRequestSchema = z.object({
     pricingUnit: z.enum(["hour", "session", "month", "course"]).default("hour"),
     allowCounterOffers: z.boolean().default(true),
     classGrade: z.string().max(100).optional(), curriculum: z.string().max(100).optional(), examType: z.string().max(100).optional(), studentLevel: z.string().max(100).optional(),
+    schoolOfferingId: z.string().max(200).optional(),
     learningObjectives: z.string().max(1000).optional(), area: z.string().max(100).optional(), travelRadiusKm: z.number().min(0).max(100).optional(),
     learnerType: z.enum(["self", "child", "other"]).default("self"),
     learnerId: objectId.optional(),
