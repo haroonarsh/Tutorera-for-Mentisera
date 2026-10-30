@@ -1,6 +1,6 @@
 {
   "requestedProvider": "rapidpay",
-  "implementedProvider": "swich",
+  "implementedProvider": "rapidpay",
   "contractVerified": false,
-  "reason": "RapidPay selected by owner; historical adapter has an unconfirmed live endpoint and current authoritative configuration lacks live merchant/OAuth settings. Production cutover is blocked pending verified replacement."
+  "reason": "RapidPay provider skeleton wired as active gateway. Env vars: RAPIDPAY_API_KEY, RAPIDPAY_MERCHANT_ID, RAPIDPAY_BASE_URL. Endpoint paths, request/response shapes and webhook signing are marked CONFIRM_WITH_DOCS in rapidPayProvider.service.ts — fill these in from merchant documentation and set contractVerified: true only after end-to-end checkout and confirmation are tested."
 }

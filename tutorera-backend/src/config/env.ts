@@ -27,18 +27,8 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
     { key: "GROQ_API_KEY" },
     { key: "GOOGLE_CLIENT_ID" },
     { key: "GOOGLE_CLIENT_SECRET" },
-    {
-        // Swich charges in PKR only; the platform prices in USD. This is the
-        // USD->PKR rate applied at checkout (e.g. 280). Update it as the
-        // market moves — students are shown the converted rupee amount.
-        key: "USD_PKR_RATE",
-        validate: (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? null : "must be a positive number, e.g. 280"),
-    },
-    { key: "SWICH_CLIENT_ID" },
-    {
-        key: "SWICH_CLIENT_SECRET",
-        validate: (v) => (v.length < 12 ? "appears too short for a client secret" : null),
-    },
+    { key: "RAPIDPAY_API_KEY" },
+    { key: "RAPIDPAY_MERCHANT_ID" },
 ];
 
 export function validateEnv(options: { throwOnError?: boolean } = {}): void {
@@ -66,34 +56,15 @@ export function validateEnv(options: { throwOnError?: boolean } = {}): void {
         }
     }
 
-    // Payment and webhook configuration must fail closed in production. The
-    // non-production sandbox defaults deliberately remain available for the
-    // isolated provider tests, but production must never silently use them.
+    // Payment gateway configuration must fail closed in production.
     if (process.env.NODE_ENV === "production") {
-        const checkoutMode = (process.env.SWICH_CHECKOUT_MODE || "session").trim().toLowerCase();
-        if (!["session", "pwa"].includes(checkoutMode)) errors.push("  - SWICH_CHECKOUT_MODE must be session or pwa");
-
-        // Both modes need the Swich hosts. Session mode (the default) talks to
-        // the Payment Session API and confirms payment by POLLING Swich from
-        // our own backend (POST /payments/swich/confirm) — Swich's Payment
-        // Session product has no push webhook, so no callback URL or callback
-        // secret exists for it. Those two are only used by PWA checkout
-        // (checksum signing), so they are required only in that mode.
-        const productionKeys = ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "RESEND_WEBHOOK_SECRET"];
-        if (checkoutMode === "pwa") productionKeys.push("SWICH_CALLBACK_URL", "SWICH_CALLBACK_SECRET", "SWICH_PWA_BASE_URL");
-
+        const productionKeys = ["RAPIDPAY_BASE_URL", "RESEND_WEBHOOK_SECRET"];
         for (const key of productionKeys) {
             if (!process.env[key]?.trim()) errors.push(`  - ${key} is required in production`);
         }
-        for (const key of ["SWICH_AUTH_BASE_URL", "SWICH_API_BASE_URL", "SWICH_CALLBACK_URL"]) {
-            const value = process.env[key]?.trim();
-            if (value && (!value.startsWith("https://") || /sandbox/i.test(value))) {
-                errors.push(`  - ${key} must be a non-sandbox HTTPS endpoint in production`);
-            }
-        }
-        const swichMode = (process.env.SWICH_MODE || process.env.SWICH_ENV || process.env.SWICH_ENVIRONMENT || "live").trim().toLowerCase();
-        if (swichMode === "sandbox") {
-            errors.push("  - SWICH_MODE cannot be set to sandbox in production");
+        const rapidPayBaseUrl = process.env.RAPIDPAY_BASE_URL?.trim();
+        if (rapidPayBaseUrl && (!rapidPayBaseUrl.startsWith("https://") || /sandbox|test/i.test(rapidPayBaseUrl))) {
+            errors.push("  - RAPIDPAY_BASE_URL must be a non-sandbox HTTPS endpoint in production");
         }
     }
 

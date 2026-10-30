@@ -1,56 +1,65 @@
-import { assertSwichRuntimeConfiguration } from "../services/swichProvider.service";
+import { assertRapidPayRuntimeConfiguration } from "../services/rapidPayProvider.service";
 
-describe("Switch production runtime configuration", () => {
+describe("RapidPay production runtime configuration", () => {
   const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.RAPIDPAY_API_KEY = "test_key_placeholder";
+    process.env.RAPIDPAY_MERCHANT_ID = "0000";
+  });
 
   afterEach(() => {
     process.env = { ...originalEnv };
   });
 
-  it("rejects an implicit sandbox configuration in production", () => {
+  it("accepts a valid non-sandbox HTTPS production base URL", () => {
     process.env.NODE_ENV = "production";
-    delete process.env.SWICH_AUTH_BASE_URL;
-    delete process.env.SWICH_API_BASE_URL;
+    process.env.RAPIDPAY_BASE_URL = "https://api.rapidpay.co";
 
-    expect(() => assertSwichRuntimeConfiguration()).toThrow("SWICH_AUTH_BASE_URL must be configured");
+    expect(() => assertRapidPayRuntimeConfiguration()).not.toThrow();
   });
 
-  it("rejects an explicitly configured sandbox host in production", () => {
+  it("rejects a missing base URL in production", () => {
     process.env.NODE_ENV = "production";
-    process.env.SWICH_AUTH_BASE_URL = "https://sandbox-auth.swichnow.com";
-    process.env.SWICH_API_BASE_URL = "https://sandbox-api.swichnow.com";
+    delete process.env.RAPIDPAY_BASE_URL;
 
-    expect(() => assertSwichRuntimeConfiguration()).toThrow("SWICH_AUTH_BASE_URL must be a non-sandbox HTTPS endpoint");
+    expect(() => assertRapidPayRuntimeConfiguration()).toThrow("RAPIDPAY_BASE_URL must be configured");
   });
 
-  it("rejects explicitly configured sandbox mode in production", () => {
+  it("rejects an invalid base URL", () => {
     process.env.NODE_ENV = "production";
-    process.env.SWICH_MODE = "sandbox";
-    process.env.SWICH_CLIENT_ID = "client_prod_id";
-    process.env.SWICH_CLIENT_SECRET = "client_prod_secret";
-    process.env.SWICH_AUTH_BASE_URL = "https://auth.payments.example";
-    process.env.SWICH_API_BASE_URL = "https://api.payments.example";
+    process.env.RAPIDPAY_BASE_URL = "not-a-url";
 
-    expect(() => assertSwichRuntimeConfiguration()).toThrow("SWICH_MODE cannot be set to sandbox");
+    expect(() => assertRapidPayRuntimeConfiguration()).toThrow("valid HTTPS URL");
   });
 
-  it("rejects missing credentials in production", () => {
+  it("rejects an http (non-HTTPS) base URL", () => {
     process.env.NODE_ENV = "production";
-    delete process.env.SWICH_CLIENT_ID;
-    process.env.SWICH_AUTH_BASE_URL = "https://auth.payments.example";
-    process.env.SWICH_API_BASE_URL = "https://api.payments.example";
+    process.env.RAPIDPAY_BASE_URL = "http://api.rapidpay.co";
 
-    expect(() => assertSwichRuntimeConfiguration()).toThrow("SWICH_CLIENT_ID is not configured");
+    expect(() => assertRapidPayRuntimeConfiguration()).toThrow("must be HTTPS");
   });
 
-  it("accepts explicit HTTPS production hosts and credentials", () => {
+  it("rejects a missing API key", () => {
     process.env.NODE_ENV = "production";
-    process.env.SWICH_MODE = "live";
-    process.env.SWICH_CLIENT_ID = "client_prod_id";
-    process.env.SWICH_CLIENT_SECRET = "client_prod_secret";
-    process.env.SWICH_AUTH_BASE_URL = "https://auth.payments.example";
-    process.env.SWICH_API_BASE_URL = "https://api.payments.example";
+    process.env.RAPIDPAY_BASE_URL = "https://api.rapidpay.co";
+    delete process.env.RAPIDPAY_API_KEY;
 
-    expect(() => assertSwichRuntimeConfiguration()).not.toThrow();
+    expect(() => assertRapidPayRuntimeConfiguration()).toThrow("RAPIDPAY_API_KEY is not configured");
+  });
+
+  it("rejects a missing merchant ID", () => {
+    process.env.NODE_ENV = "production";
+    process.env.RAPIDPAY_BASE_URL = "https://api.rapidpay.co";
+    delete process.env.RAPIDPAY_MERCHANT_ID;
+
+    expect(() => assertRapidPayRuntimeConfiguration()).toThrow("RAPIDPAY_MERCHANT_ID is not configured");
+  });
+
+  it("accepts non-production without base URL (sandbox fallback)", () => {
+    process.env.NODE_ENV = "development";
+    delete process.env.RAPIDPAY_BASE_URL;
+
+    expect(() => assertRapidPayRuntimeConfiguration()).not.toThrow();
   });
 });

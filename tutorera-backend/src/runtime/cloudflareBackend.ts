@@ -3,5 +3,5 @@ export { default as mongoose } from "mongoose";
 export { default as app } from "../app";
 export { initSocket } from "../utils/socket";
 export { validateEnv } from "../config/env";
-export { assertSwichRuntimeConfiguration } from "../services/swichProvider.service";
+export { assertRapidPayRuntimeConfiguration } from "../services/rapidPayProvider.service";
 export { runScheduledJob } from "../services/schedulerRuntime.service";

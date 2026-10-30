@@ -28,7 +28,7 @@ import { convertAmount } from "../services/exchangeRate.service";
 import { checkSubjectEligibility } from "../services/subjectEligibility.service";
 import { assertSchoolOfferingActive } from "../services/schoolOfferingAvailability.service";
 import StudentProfile from "../models/StudentProfile.model";
-import { normalizeCnic, normalizePkMobile } from "../services/swichProvider.service";
+import { normalizeCnic, normalizePkMobile } from "../services/rapidPayProvider.service";
 import { isMarketplaceEligible, isHomeTuitionEligible } from "../services/tracking.service";
 import { reserveOffer, releaseFailedOfferReservation } from "../services/offerReservation.service";
 

@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
-import { swichProvider } from "./swichProvider.service";
+import { rapidPayProvider } from "./rapidPayProvider.service";
 import { httpError } from "../utils/httpError";
 import { withCheckoutGuard } from "./checkoutGuard.service";
 
@@ -18,53 +18,8 @@ function readLedgerNumber(metadata: unknown, key: string): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-/**
- * Swich charges in PKR only (its docs: amount is "1 to 10,000,000 PKR"), but
- * the platform prices, fees and pays tutors in USD. The conversion happens
- * ONLY here, at the gateway boundary: everything in our database stays in the
- * platform currency, and the PKR figure actually charged is recorded in the
- * ledger next to the rate used, so it can be audited and verified later.
- *
- * Rounds UP to a whole rupee so rounding can never under-collect.
- */
-function decimalRatio(value: number): { numerator: bigint; denominator: bigint } {
-  const [coefficient, exponent = "0"] = value.toString().toLowerCase().split("e");
-  const scale = (coefficient.split(".")[1]?.length || 0) - Number(exponent);
-  const digits = BigInt(coefficient.replace(".", ""));
-  return scale >= 0
-    ? { numerator: digits, denominator: 10n ** BigInt(scale) }
-    : { numerator: digits * 10n ** BigInt(-scale), denominator: 1n };
-}
-
-/** Preserve whole-rupee ceiling without binary floating-point overcharges. */
-function exactGatewayCeiling(amount: number, rate: number): number {
-  const a = decimalRatio(amount);
-  const b = decimalRatio(rate);
-  const numerator = a.numerator * b.numerator;
-  const denominator = a.denominator * b.denominator;
-  const rounded = (numerator + denominator - 1n) / denominator;
-  if (rounded < 1n || rounded > 10_000_000n) {
-    throw httpError("Payment exceeds the supported gateway amount range.", 400, "GATEWAY_AMOUNT_OUT_OF_RANGE");
-  }
-  return Number(rounded);
-}
-
-export function toGatewayAmount(amount: number, platformCurrency: string): { gatewayAmount: number; gatewayCurrency: "PKR"; fxRate: number } {
-  if (!Number.isFinite(amount) || amount <= 0) throw httpError("Payment amount must be a positive number", 400, "INVALID_PAYMENT_AMOUNT");
-  if (platformCurrency === "PKR") return { gatewayAmount: exactGatewayCeiling(amount, 1), gatewayCurrency: "PKR", fxRate: 1 };
-  if (platformCurrency !== "USD") {
-    throw httpError(`Swich checkout does not support ${platformCurrency}.`, 409, "SWICH_CURRENCY_UNSUPPORTED");
-  }
-  const fxRate = Number(process.env.USD_PKR_RATE);
-  if (!Number.isFinite(fxRate) || fxRate <= 0) {
-    // Fail closed: charging with a missing/garbage rate would mis-price real money.
-    throw httpError("USD_PKR_RATE is not configured", 503, "FX_RATE_MISSING");
-  }
-  return { gatewayAmount: exactGatewayCeiling(amount, fxRate), gatewayCurrency: "PKR", fxRate };
-}
-
-export type PaymentProviderName = "swich";
-export type LedgerProviderName = PaymentProviderName | "manual";
+export type PaymentProviderName = "rapidpay";
+export type LedgerProviderName = PaymentProviderName | "swich" | "manual";
 export type FeeSnapshot = {
   subtotal: number; studentFee: number; tutorFee: number; tax: number;
   studentTotal: number; tutorNet: number; platformFee: number;
@@ -98,7 +53,7 @@ export interface CheckoutParams {
 }
 
 export const paymentProvider = {
-  name: "swich" as PaymentProviderName,
+  name: "rapidpay" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
     return withCheckoutGuard(params.basketId, (markDispatched) => paymentProvider.createCheckoutLocked(params, markDispatched));
@@ -106,47 +61,44 @@ export const paymentProvider = {
 
   async createCheckoutLocked(params: CheckoutParams, markDispatched: () => void): Promise<string> {
     const platformCurrency = (params.currency || "USD").toUpperCase();
-    const { gatewayAmount, gatewayCurrency, fxRate } = toGatewayAmount(params.amount, platformCurrency);
 
-    // A retry reuses the same basket. Before opening a NEW Swich session, deal
-    // with the previous one so the student can never pay for the same order
-    // twice: if it already succeeded, refuse; if still open, cancellation
-    // must be confirmed before another session may be created.
+    if (!Number.isFinite(params.amount) || params.amount <= 0) {
+      throw httpError("Payment amount must be a positive number", 400, "INVALID_PAYMENT_AMOUNT");
+    }
+
+    // Idempotency guard: if a previous session for this basket is still open
+    // or succeeded, block a new one. If confirmed paid, refuse. If still live,
+    // the student must be shown the existing checkout URL rather than a new one.
     const previousCheckout = await PaymentLedger.findOne({ providerTransactionId: params.basketId, eventType: "checkout.created" }).sort("-createdAt");
-    const previousGuid = readLedgerString(previousCheckout?.metadata, "paymentSessionGuid");
-    if (previousCheckout && !previousGuid) throw httpError("The previous payment session needs review before retrying.", 409, "PAYMENT_RETRY_UNVERIFIED");
-    if (previousGuid) {
+    const previousSessionId = readLedgerString(previousCheckout?.metadata, "sessionId");
+    if (previousCheckout && !previousSessionId) {
+      throw httpError("The previous payment session needs review before retrying.", 409, "PAYMENT_RETRY_UNVERIFIED");
+    }
+    if (previousSessionId) {
       let previousStatus: string | undefined;
       try {
-        previousStatus = (await swichProvider.getPaymentSessionStatus(previousGuid)).sessionStatus;
+        previousStatus = (await rapidPayProvider.getSessionStatus(previousSessionId)).status;
       } catch {
         throw httpError("Unable to verify the previous payment session. Please try later or contact support.", 503, "PAYMENT_RETRY_UNVERIFIED");
       }
-      if (previousStatus === "Success") {
+      if (previousStatus === "success") {
         throw httpError("A previous payment for this offer already went through. Refresh to confirm your booking.", 409, "PAYMENT_ALREADY_COMPLETED");
       }
-      if (previousStatus === "Pending") {
-        try {
-          await swichProvider.cancelPaymentSession(previousGuid);
-          previousStatus = (await swichProvider.getPaymentSessionStatus(previousGuid)).sessionStatus;
-        } catch {
-          throw httpError("Unable to verify cancellation of the previous payment session. Contact support.", 503, "PAYMENT_RETRY_UNVERIFIED");
-        }
+      if (!["failed", "expired", "cancelled"].includes(previousStatus || "")) {
+        throw httpError("The previous payment session is not safely closed. Contact support.", 409, "PAYMENT_RETRY_UNVERIFIED");
       }
-      if (previousStatus === "Success") throw httpError("A previous payment for this offer already went through. Refresh to confirm your booking.", 409, "PAYMENT_ALREADY_COMPLETED");
-      if (!["Failed", "Expired", "Cancelled"].includes(previousStatus || "")) throw httpError("The previous payment session is not safely closed. Contact support.", 409, "PAYMENT_RETRY_UNVERIFIED");
     }
 
     markDispatched();
-    const { checkoutUrl, paymentSessionGuid, mode } = await swichProvider.createCheckout({
-      amount: gatewayAmount,
-      currency: gatewayCurrency,
+    const { checkoutUrl, sessionId } = await rapidPayProvider.createCheckout({
+      amount: params.amount,
+      currency: platformCurrency,
       marketCountryCode: params.marketCountryCode,
       reference: params.basketId,
       metadata: {
         studentMobileNo: params.customerMobileNo,
         studentEmail: params.customerEmail,
-        customerCnic: params.customerCnic,
+        customerName: params.customerEmail,
         description: params.description,
         successUrl: params.successUrl,
         failureUrl: params.failureUrl,
@@ -155,19 +107,12 @@ export const paymentProvider = {
         bookingId: params.bookingId,
         bidId: params.bidId,
         feeSnapshot: params.feeSnapshot,
-      }
+      },
     });
 
-    // Everything needed to confirm later lives on this ledger row: the
-    // session GUID, and what we ASKED Swich to charge (PKR amount + the rate),
-    // so confirmCheckout can verify Swich's own record against it.
     const ledgerMetadata = {
       checkoutUrl,
-      paymentSessionGuid,
-      checkoutMode: mode,
-      gatewayAmount,
-      gatewayCurrency,
-      fxRate,
+      sessionId,
       platformAmount: params.amount,
       platformCurrency,
       ...(params.metadata || {}),
@@ -187,11 +132,7 @@ export const paymentProvider = {
       metadata: ledgerMetadata,
     });
 
-    // recordPaymentLedger only writes on INSERT ($setOnInsert). A payment
-    // retry reuses the same basketId, so without this the ledger row would
-    // keep the FIRST attempt's (possibly expired) session GUID and amount, and
-    // confirmation would poll the wrong session. Refresh them on every
-    // checkout creation.
+    // Refresh metadata on retries so confirmCheckout always polls the latest session.
     await PaymentLedger.updateOne(
       { providerTransactionId: params.basketId, eventType: "checkout.created" },
       { $set: { metadata: ledgerMetadata, grossAmount: params.amount, currency: platformCurrency, status: "pending" } }
@@ -201,53 +142,37 @@ export const paymentProvider = {
   },
 
   /**
-   * Pull-based confirmation — Swich's Payment Session product has no
-   * documented push webhook, so this is called from the confirm endpoint hit
-   * on the frontend's successURL/failureURL return, not from a webhook route.
+   * Pull-based confirmation — called from the confirm endpoint hit on the
+   * frontend's successUrl/failedUrl return.
    *
-   * Returns the amount/currency in PLATFORM terms (USD) so the caller's
-   * existing integrity check against the offer/booking keeps working. Before
-   * returning, it verifies Swich's own record (PKR) against what we asked it
-   * to charge.
+   * Returns amount/currency in platform terms (USD) so the caller's existing
+   * integrity check against the offer/booking is unaffected.
    */
   async confirmCheckout(basketId: string): Promise<{ confirmed: boolean; sessionStatus: string; amount: number; currency: string }> {
     const ledgerEntry = await PaymentLedger.findOne({ providerTransactionId: basketId, eventType: "checkout.created" }).sort("-createdAt");
-    const paymentSessionGuid = readLedgerString(ledgerEntry?.metadata, "paymentSessionGuid");
-    const mode = readLedgerString(ledgerEntry?.metadata, "checkoutMode");
-    if (mode === "pwa" && !paymentSessionGuid) {
-      // PWA settlement is callback-driven. The browser return only indicates
-      // that the customer left the hosted page; it is never payment proof.
-      return { confirmed: false, sessionStatus: "CallbackPending", amount: ledgerEntry?.grossAmount || 0, currency: ledgerEntry?.currency || "USD" };
-    }
-    if (!paymentSessionGuid) {
+    const sessionId = readLedgerString(ledgerEntry?.metadata, "sessionId");
+
+    if (!sessionId) {
       throw httpError("No payment session found for this transaction", 404, "PAYMENT_SESSION_MISSING");
     }
 
-    const session = await swichProvider.getPaymentSessionStatus(paymentSessionGuid);
-    const confirmed = session.sessionStatus === "Success";
+    const session = await rapidPayProvider.getSessionStatus(sessionId);
+    const confirmed = session.status === "success";
 
-    const gatewayAmount = readLedgerNumber(ledgerEntry?.metadata, "gatewayAmount");
-    const gatewayCurrency = readLedgerString(ledgerEntry?.metadata, "gatewayCurrency");
+    const expectedAmount = readLedgerNumber(ledgerEntry?.metadata, "platformAmount");
+    const expectedCurrency = readLedgerString(ledgerEntry?.metadata, "platformCurrency");
 
-    if (gatewayAmount !== undefined && gatewayCurrency) {
-      if (confirmed && (session.amount !== gatewayAmount || String(session.currency || "").toUpperCase() !== gatewayCurrency.toUpperCase())) {
-        throw httpError("Swich session amount does not match the amount requested", 422, "SWICH_SESSION_MISMATCH");
+    if (confirmed && expectedAmount !== undefined && expectedCurrency) {
+      if (session.amount !== expectedAmount || session.currency.toUpperCase() !== expectedCurrency.toUpperCase()) {
+        throw httpError("RapidPay session amount does not match the amount requested", 422, "RAPIDPAY_SESSION_MISMATCH");
       }
-      return {
-        confirmed,
-        sessionStatus: session.sessionStatus,
-        amount: ledgerEntry?.grossAmount || 0,
-        currency: ledgerEntry?.currency || "USD",
-      };
     }
 
-    // Ledger rows created before the PKR conversion existed have no gateway
-    // fields; keep their original behaviour.
     return {
       confirmed,
-      sessionStatus: session.sessionStatus,
-      amount: session.amount,
-      currency: session.currency,
+      sessionStatus: session.status,
+      amount: ledgerEntry?.grossAmount || session.amount,
+      currency: ledgerEntry?.currency || session.currency,
     };
   },
 };

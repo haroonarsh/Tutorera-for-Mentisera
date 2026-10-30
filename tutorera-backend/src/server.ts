@@ -8,7 +8,7 @@ import app from "./app";
 import logger from "./config/logger";
 import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
 import { ensureLaunchMarkets } from "./services/market.service";
-import { assertSwichRuntimeConfiguration } from "./services/swichProvider.service";
+import { assertRapidPayRuntimeConfiguration } from "./services/rapidPayProvider.service";
 import { startProcessScheduler } from "./services/schedulerRuntime.service";
 
 dotenv.config();
@@ -17,7 +17,7 @@ dotenv.config();
 // If this fails, the process exits immediately (see config/env.ts) instead
 // of starting in a broken state and failing confusingly later.
 validateEnv();
-assertSwichRuntimeConfiguration();
+assertRapidPayRuntimeConfiguration();
 
 const httpServer = http.createServer(app);
 

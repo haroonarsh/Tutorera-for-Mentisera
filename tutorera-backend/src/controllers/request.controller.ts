@@ -26,7 +26,7 @@ import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequ
 import { convertToPKR } from "../config/countries";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { reserveOffer, releaseFailedOfferReservation } from "../services/offerReservation.service";
-import { normalizeCnic, normalizePkMobile } from "../services/swichProvider.service";
+import { normalizeCnic, normalizePkMobile } from "../services/rapidPayProvider.service";
 import { previewPromoDiscount, getAppliedPromoForBasket, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import AuditLog from "../models/AuditLog.model";

@@ -156,7 +156,7 @@ function OffersContent() {
         if (cancelled) return;
         attempt += 1;
         try {
-          const res = await api.post("/payments/swich/confirm", { basketId });
+          const res = await api.post("/payments/confirm", { basketId });
           if (res.data?.confirmed) {
             showSuccess("Booking confirmed!");
             load();

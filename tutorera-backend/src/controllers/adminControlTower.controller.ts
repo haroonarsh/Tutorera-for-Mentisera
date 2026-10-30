@@ -24,7 +24,7 @@ import mongoose from "mongoose";
 import logger from "../config/logger";
 import { logAudit } from "../utils/logAudit";
 import { computeCanonicalStatus } from "../services/tracking.service";
-import { getSwichCapabilities } from "../services/swichProvider.service";
+import { getRapidPayCapabilities } from "../services/rapidPayProvider.service";
 
 // ─── Onboarding operations ────────────────────────────────────────────────
 
@@ -715,12 +715,12 @@ export const updateMarketConfig = async (req: AuthRequest, res: Response): Promi
   // Payment activation is code/provider gated, but is not Pakistan-only.
   // A country can use checkout only when it is part of the explicit Switch
   // capability configuration and settles in an approved currency.
-  const capabilities = getSwichCapabilities();
+  const capabilities = getRapidPayCapabilities();
   const checkoutAvailable = capabilities.markets.has(current.countryCode) && capabilities.currencies.has(current.currency);
   Object.assign(changes, {
     paymentsEnabled: checkoutAvailable,
     payoutsEnabled: false,
-    paymentProvider: checkoutAvailable ? "swich" : "none",
+    paymentProvider: checkoutAvailable ? "rapidpay" : "none",
     "featureFlags.acceptance": checkoutAvailable,
   });
   const updated = await MarketConfig.findByIdAndUpdate(id, { $set: changes }, { returnDocument: "after", runValidators: true });

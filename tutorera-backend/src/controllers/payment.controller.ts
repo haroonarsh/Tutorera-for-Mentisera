@@ -214,15 +214,13 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response): Pr
   });
 };
 
-// @desc    Confirm a Swich payment session's real outcome, server-side.
+// @desc    Confirm a payment session's real outcome, server-side.
 //          Called by the frontend when the customer returns to
-//          successURL/failedURL — Swich's Payment Session product has no
-//          push webhook, so THIS endpoint (not a webhook route) is what
-//          actually finalizes the booking. Safe to call more than once:
+//          successURL/failedURL — RapidPay uses a pull-confirm flow, so THIS
+//          endpoint finalizes the booking. Safe to call more than once:
 //          finalizeBidAcceptance's own atomic guard (status:
-//          "payment_pending" -> "accepted") already makes a second call a
-//          no-op, exactly as it did for the old webhook-driven flow.
-// @route   POST /api/v1/payments/swich/confirm
+//          "payment_pending" -> "accepted") already makes a second call a no-op.
+// @route   POST /api/v1/payments/confirm  (also /payments/swich/confirm for legacy in-flight sessions)
 // @access  Private (student who initiated the checkout)
 export const confirmSwichPayment = async (req: AuthRequest, res: Response): Promise<void> => {
   const { basketId } = req.body as { basketId?: string };

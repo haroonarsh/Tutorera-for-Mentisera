@@ -1,51 +1,51 @@
 import MarketConfig, { IMarketConfig } from "../models/MarketConfig.model";
 import { seedTaxConfigs } from "./pricing.service";
-import { getSwichCapabilities } from "./swichProvider.service";
+import { getRapidPayCapabilities } from "./rapidPayProvider.service";
 import { httpError } from "../utils/httpError";
 
 export const LAUNCH_MARKETS = {
   PK: {
     countryName: "Pakistan", iso3: "PAK", dialCode: "+92", currency: "USD", currencySymbol: "$",
-    timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "swich",
+    timezone: "Asia/Karachi", timezones: ["Asia/Karachi"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   AE: {
     countryName: "United Arab Emirates", iso3: "ARE", dialCode: "+971", currency: "USD", currencySymbol: "$",
-    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "swich",
+    timezone: "Asia/Dubai", timezones: ["Asia/Dubai"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   GB: {
     countryName: "United Kingdom", iso3: "GBR", dialCode: "+44", currency: "USD", currencySymbol: "$",
-    timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "live", paymentProvider: "swich",
+    timezone: "Europe/London", timezones: ["Europe/London"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   US: {
     countryName: "United States", iso3: "USA", dialCode: "+1", currency: "USD", currencySymbol: "$",
-    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "swich",
+    timezone: "America/New_York", timezones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   SA: {
     countryName: "Saudi Arabia", iso3: "SAU", dialCode: "+966", currency: "USD", currencySymbol: "$",
-    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "swich",
+    timezone: "Asia/Riyadh", timezones: ["Asia/Riyadh"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
   IN: {
     countryName: "India", iso3: "IND", dialCode: "+91", currency: "USD", currencySymbol: "$",
-    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "swich",
+    timezone: "Asia/Kolkata", timezones: ["Asia/Kolkata"], launchStatus: "live", paymentProvider: "rapidpay",
     paymentsEnabled: true, payoutsEnabled: false, onlineEnabled: true, homeTuitionEnabled: true,
     featureFlags: { profiles: true, requests: true, offers: true, negotiation: true, acceptance: true },
   },
 } as const;
 
 export async function ensureLaunchMarkets(): Promise<void> {
-  const swichCapabilities = getSwichCapabilities();
+  const rapidPayCapabilities = getRapidPayCapabilities();
   await Promise.all(Object.entries(LAUNCH_MARKETS).map(([countryCode, config]) => {
-    // Switch settles the configured launch markets in USD.  Historical
+    // RapidPay settles the configured launch markets in USD. Historical
     // requests, bookings and ledger rows retain their own currency snapshot;
     // this configuration affects newly created marketplace activity only.
     //
@@ -56,11 +56,11 @@ export async function ensureLaunchMarkets(): Promise<void> {
     // deliberate admin change - e.g. pausing a market during an incident, or
     // disabling a feature flag - back to the hardcoded default within
     // seconds of it being made.
-    const switchApproved = swichCapabilities.markets.has(countryCode) && swichCapabilities.currencies.has(config.currency);
-    const marketSafety = switchApproved
+    const rapidPayApproved = rapidPayCapabilities.markets.has(countryCode) && rapidPayCapabilities.currencies.has(config.currency);
+    const marketSafety = rapidPayApproved
       ? {
           currency: config.currency, currencySymbol: config.currencySymbol,
-          paymentProvider: "swich", paymentsEnabled: true, payoutsEnabled: false,
+          paymentProvider: "rapidpay", paymentsEnabled: true, payoutsEnabled: false,
           launchStatus: "live", onlineEnabled: config.onlineEnabled, homeTuitionEnabled: config.homeTuitionEnabled,
           "featureFlags.profiles": true, "featureFlags.requests": true, "featureFlags.offers": true,
           "featureFlags.negotiation": true, "featureFlags.acceptance": true,
@@ -138,12 +138,12 @@ export async function assertAcceptanceAvailable(countryCode?: string): Promise<I
 if (!market || market.launchStatus !== "live" || !market.paymentsEnabled || !marketFeatureEnabled(market, "acceptance")) {
     throw httpError("Offer acceptance and payment are not available in this discovery-beta market yet.", 409, "MARKET_DISCOVERY_ONLY");
   }
-if (market.paymentProvider !== "swich") {
+if (market.paymentProvider !== "rapidpay") {
     throw httpError("No compliant payment provider is configured for this market.", 409, "PAYMENT_PROVIDER_UNAVAILABLE");
   }
-  const capabilities = getSwichCapabilities();
+  const capabilities = getRapidPayCapabilities();
 if (!capabilities.markets.has(market.countryCode) || !capabilities.currencies.has(market.currency)) {
-    throw httpError("Switch is not approved for this market and currency yet.", 409, "SWICH_MARKET_OR_CURRENCY_UNSUPPORTED");
+    throw httpError("RapidPay is not approved for this market and currency yet.", 409, "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED");
   }
   return market;
 }
