@@ -1,13 +1,13 @@
 // Computes real, concrete calendar dates from a Booking's structured
 // recurrence fields (preferredDays, preferredStartTime, sessionDurationMinutes,
-// expectedStartDate). This is what lets the dashboard show "Wed, 24 Sept,
-// 12:00 PM" instead of the raw recurring pattern string ("Mon: 12pm, Wed:
-// 12pm, Fri: 4pm") that gave no way to know which actual date is next.
+// expectedStartDate, scheduleTimezone). This is what lets the dashboard show
+// "Wed, 24 Sept, 12:00 PM" instead of the raw recurring pattern string.
 //
 // Deliberately has NO knowledge of Booking, Session, or any Mongoose model —
 // pure date math, easy to unit test, reusable by both the dashboard
-// serializer and (later) the Session-generation job and Google Calendar
-// event creation.
+// serializer and the Session-generation job.
+
+import { isValidIanaTimezone, zonedDateTimeToUtc } from "./timezone";
 
 const DAY_NAME_TO_INDEX: Record<string, number> = {
     sun: 0, sunday: 0,
@@ -72,44 +72,56 @@ export function computeUpcomingOccurrences(
 
     const durationMinutes = input.sessionDurationMinutes && input.sessionDurationMinutes > 0 ? input.sessionDurationMinutes : 60;
     const earliestDate = input.expectedStartDate ? new Date(input.expectedStartDate) : null;
+    const tz = input.scheduleTimezone && isValidIanaTimezone(input.scheduleTimezone) ? input.scheduleTimezone : null;
+    const labelOpts = tz ? { timeZone: tz } : {};
 
-  // Timezone handling note: this computes occurrences using the SERVER's
-  // interpretation of preferredStartTime as a wall-clock time, then treats
-  // the constructed Date as that wall-clock time. For full correctness
-  // across timezones (a tutor and student may be in different ones — see
-  // scheduleTimezone on the booking), this should be extended to use the
-  // same zonedDateTimeToUtc() helper already used in request.controller.ts
-  // for scheduledStartAt/scheduledEndAt, rather than the naive Date
-  // construction below. Flagged here rather than silently guessed at.
     const occurrences: SessionOccurrence[] = [];
     const cursor = new Date(from);
     cursor.setHours(0, 0, 0, 0);
 
-  // Search forward day-by-day until we have `count` matching occurrences.
-  // Capped at 60 days out as a sanity bound (covers any weekly pattern).
+    // Search forward day-by-day until we have `count` matching occurrences.
+    // Capped at 60 days out as a sanity bound (covers any weekly pattern).
     for (let dayOffset = 0; dayOffset < 60 && occurrences.length < count; dayOffset++) {
-    const candidate = new Date(cursor);
-    candidate.setDate(candidate.getDate() + dayOffset);
+      const candidate = new Date(cursor);
+      candidate.setDate(candidate.getDate() + dayOffset);
 
-    if (!dayIndices.includes(candidate.getDay())) continue;
-    if (earliestDate && candidate < new Date(earliestDate.getFullYear(), earliestDate.getMonth(), earliestDate.getDate())) continue;
+      if (!dayIndices.includes(candidate.getDay())) continue;
+      if (earliestDate && candidate < new Date(earliestDate.getFullYear(), earliestDate.getMonth(), earliestDate.getDate())) continue;
 
-    const startAt = new Date(candidate);
-    startAt.setHours(time.hours, time.minutes, 0, 0);
+      // Build the UTC instant for this wall-clock slot.  When a booking
+      // timezone is stored, run through zonedDateTimeToUtc so DST transitions
+      // are handled correctly (e.g. a 17:00 slot in Europe/London falls on
+      // different UTC hours in winter vs. summer).  Without a timezone, fall
+      // back to treating the time as server-local (UTC on most deployments).
+      let startAt: Date;
+      if (tz) {
+        const mm = String(candidate.getMonth() + 1).padStart(2, "0");
+        const dd = String(candidate.getDate()).padStart(2, "0");
+        const dateStr = `${candidate.getFullYear()}-${mm}-${dd}`;
+        const timeStr = `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`;
+        try {
+          startAt = zonedDateTimeToUtc(dateStr, timeStr, tz);
+        } catch {
+          // timezone conversion failed for this slot — skip rather than emit wrong time
+          continue;
+        }
+      } else {
+        startAt = new Date(candidate);
+        startAt.setHours(time.hours, time.minutes, 0, 0);
+      }
 
-    // Skip occurrences already in the past today (e.g. it's 3pm and this
-    // slot was 12pm today — that one's gone, find the next one).
-    if (startAt < from) continue;
+      // Skip occurrences already in the past today.
+      if (startAt < from) continue;
 
-    const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
+      const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
 
-    occurrences.push({
+      occurrences.push({
         startAt,
         endAt,
-        dayLabel: startAt.toLocaleDateString("en-US", { weekday: "short" }),
-        dateLabel: startAt.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }),
-        timeLabel: startAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
-        });
+        dayLabel: startAt.toLocaleDateString("en-US", { weekday: "short", ...labelOpts }),
+        dateLabel: startAt.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", ...labelOpts }),
+        timeLabel: startAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, ...labelOpts }),
+      });
     }
 
     return occurrences;

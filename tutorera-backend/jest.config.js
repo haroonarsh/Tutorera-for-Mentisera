@@ -1,14 +1,35 @@
 // jest.config.js
 /** @type {import('jest').Config} */
+
+const transform = { "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.jest.json" }] };
+
+// Pure unit-test files: no Mongoose, no mongodb-memory-server needed.
+// Naming convention: *.unit.test.ts  OR  files explicitly listed here.
+const UNIT_TEST_PATTERN = [
+  "<rootDir>/src/tests/verification-atomicity.test.ts",
+  "<rootDir>/src/tests/scheduleOccurrences.test.ts",
+];
+
 module.exports = {
-    preset: "ts-jest",
-    testEnvironment: "node",
-    testMatch: ["<rootDir>/src/tests/**/*.test.ts"],
-    setupFilesAfterEnv: ["<rootDir>/src/tests/setup.ts"],
-    transform: {
-        "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.jest.json" }],
+  projects: [
+    {
+      displayName: "unit",
+      preset: "ts-jest",
+      testEnvironment: "node",
+      testMatch: UNIT_TEST_PATTERN,
+      transform,
+      testTimeout: 30000,
     },
-    // Booking-acceptance tests use real MongoDB transactions (session.withTransaction),
-    // which take longer against the in-memory replica set than a plain query would.
-    testTimeout: 120000,
+    {
+      displayName: "integration",
+      preset: "ts-jest",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/src/tests/**/*.test.ts"],
+      testPathIgnorePatterns: UNIT_TEST_PATTERN,
+      setupFilesAfterEnv: ["<rootDir>/src/tests/setup.ts"],
+      transform,
+      // Transactions against the in-memory replica set take longer than plain queries.
+      testTimeout: 120000,
+    },
+  ],
 };
