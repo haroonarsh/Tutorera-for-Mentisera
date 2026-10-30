@@ -44,6 +44,7 @@ import featureFlagRoutes from "./routes/featureFlag.routes";
 import legalAgreementRoutes from "./routes/legalAgreement.routes";
 import { createHealthRouter } from "./routes/health.routes";
 import { createInternalJobsRouter } from "./routes/internalJobs.routes";
+import { handleRapidPayWebhook } from "./controllers/rapidPayWebhook.controller";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -151,6 +152,10 @@ apiRouter.use("/matching", matchingRoutes);
 apiRouter.use("/pricing", pricingRoutes);
 apiRouter.use("/feature-flags", featureFlagRoutes);
 apiRouter.use("/", legalAgreementRoutes);
+
+// RapidPay webhook — mounted at the non-versioned path registered in the
+// RapidPay merchant dashboard: https://tutorera.ac.pk/api/payments/rapidpay/webhook
+app.post("/api/payments/rapidpay/webhook", handleRapidPayWebhook);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
