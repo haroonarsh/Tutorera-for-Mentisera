@@ -1,7 +1,8 @@
 import axios from "axios";
 import crypto from "crypto";
 import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
-import { paymentProvider } from "../services/paymentProvider.service";
+import { paymentProvider, toGatewayAmount } from "../services/paymentProvider.service";
+import PaymentLedger from "../models/PaymentLedger.model";
 import { swichProvider } from "../services/swichProvider.service";
 
 describe("Swich Payment Session integration", () => {
@@ -9,7 +10,8 @@ describe("Swich Payment Session integration", () => {
     process.env.SWICH_CLIENT_ID = "swich_test_client_id";
     process.env.SWICH_CLIENT_SECRET = "swich_test_client_secret_123456";
     process.env.SWICH_SUPPORTED_MARKETS = "PK,AE,GB,US,SA,IN";
-    process.env.SWICH_SUPPORTED_CURRENCIES = "USD";
+    process.env.SWICH_SUPPORTED_CURRENCIES = "USD,PKR";
+    process.env.USD_PKR_RATE = "276.60";
     process.env.SWICH_CHECKOUT_MODE = "session";
   });
 
@@ -20,6 +22,7 @@ describe("Swich Payment Session integration", () => {
     delete process.env.SWICH_SUPPORTED_MARKETS;
     delete process.env.SWICH_SUPPORTED_CURRENCIES;
     delete process.env.SWICH_CHECKOUT_MODE;
+    delete process.env.USD_PKR_RATE;
     delete process.env.SWICH_PWA_BASE_URL;
     delete process.env.SWICH_CALLBACK_SECRET;
   });
@@ -68,6 +71,9 @@ describe("Swich Payment Session integration", () => {
     });
 
     expect(checkoutUrl).toBe("https://paymentsession.swichnow.com/PaymentSession?Id=test-session-guid-123");
+    const ledger = await PaymentLedger.findOne({ providerTransactionId: "BID-test1001" }).lean();
+    expect(ledger).toMatchObject({ grossAmount: 100, currency: "USD" });
+    expect(ledger?.metadata).toMatchObject({ platformAmount: 100, platformCurrency: "USD", gatewayAmount: 27660, gatewayCurrency: "PKR", fxRate: 276.6 });
 
     // Swich's documented OAuth contract is form-urlencoded and uses the
     // separate auth host rather than the main API host.
@@ -85,8 +91,8 @@ describe("Swich Payment Session integration", () => {
     expect(post).toHaveBeenCalledWith(
       "https://sandbox-api.swichnow.com/gateway/paymentsession/initiate",
       expect.objectContaining({
-        amount: 100,
-        currency: "USD",
+        amount: 27660,
+        currency: "PKR",
         billReferenceNo: "BID-test1001",
         successURL: "https://example.test/success",
         failedURL: "https://example.test/failure",
@@ -106,13 +112,35 @@ describe("Swich Payment Session integration", () => {
     );
   });
 
-  it("rejects unsupported non-USD checkout before contacting Swich", async () => {
+  it.each([[100, 27660], [0.01, 3], [0.03, 9], [1e-7, 1]])("converts USD %s with exact whole-rupee ceiling", (amount, expected) => {
+    expect(toGatewayAmount(amount, "USD").gatewayAmount).toBe(expected);
+  });
+
+  it.each([0, -1, NaN, Infinity])("rejects invalid amounts before contacting the gateway", (amount) => {
+    expect(() => toGatewayAmount(amount, "USD")).toThrow("positive number");
+  });
+
+  it("fails closed for a missing rate and unsupported gateway amounts", () => {
+    delete process.env.USD_PKR_RATE;
+    expect(() => toGatewayAmount(100, "USD")).toThrow("USD_PKR_RATE is not configured");
+    process.env.USD_PKR_RATE = "276.60";
+    expect(() => toGatewayAmount(100000, "USD")).toThrow("gateway amount range");
+  });
+
+  it("confirms existing checkouts against their stored rate, not today's rate", async () => {
+    await PaymentLedger.create({ provider: "swich", providerTransactionId: "old-rate", eventType: "checkout.created", status: "pending", grossAmount: 100, currency: "USD", metadata: { paymentSessionGuid: "old-guid", gatewayAmount: 28000, gatewayCurrency: "PKR", fxRate: 280, platformAmount: 100, platformCurrency: "USD" } });
+    jest.spyOn(swichProvider, "getPaymentSessionStatus").mockResolvedValue({ status: "SUCCESS", paymentSessionGuid: "old-guid", billReferenceNo: "old-rate", sessionStatus: "Success", amount: 28000, currency: "PKR", remainingAttempts: 0, remainingSeconds: 0, createdAt: "2026-10-30T00:00:00Z", expiryAt: "2026-10-30T01:00:00Z" });
+    expect(await paymentProvider.confirmCheckout("old-rate")).toMatchObject({ confirmed: true, amount: 100, currency: "USD" });
+    expect((await PaymentLedger.findOne({ providerTransactionId: "old-rate" }).lean())?.metadata).toMatchObject({ gatewayAmount: 28000, fxRate: 280 });
+  });
+
+  it("rejects unsupported gateway currency before contacting Swich", async () => {
     const post = jest.spyOn(axios, "post");
 
     await expect(
       swichProvider.createCheckout({
         amount: 100,
-        currency: "PKR",
+        currency: "EUR",
         reference: "BID-pkr-1",
         metadata: {
           studentMobileNo: "+971500000000",
@@ -133,7 +161,7 @@ describe("Swich Payment Session integration", () => {
 
     const result = await swichProvider.createCheckout({
       amount: 125,
-      currency: "USD",
+      currency: "PKR",
       reference: "BID-pwa-1001",
       metadata: {
         studentMobileNo: "03001234567",
@@ -149,7 +177,7 @@ describe("Swich Payment Session integration", () => {
     expect(result).toMatchObject({ paymentSessionGuid: "", mode: "pwa" });
     expect(url.origin).toBe("https://payin-pwa.swichnow.com");
     expect(url.searchParams.get("customerTransactionId")).toBe("BID-pwa-1001");
-    expect(url.searchParams.get("currency")).toBe("USD");
+    expect(url.searchParams.get("currency")).toBe("PKR");
     expect(url.searchParams.get("checksum")).toBe(expectedChecksum);
     expect(post).not.toHaveBeenCalled();
   });

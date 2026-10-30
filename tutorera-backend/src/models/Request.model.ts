@@ -14,6 +14,7 @@ export interface IRequest extends Document {
   currency: string;
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string;
+  schoolOfferingId?: string; schoolBoard?: string; schoolQualification?: string; schoolClass?: string; schoolSubject?: string;
   learningObjectives?: string;
   learnerType?: "self" | "child" | "other";
   learningNeed?: "regular_tuition" | "concept_improvement" | "exam_preparation" | "past_papers" | "homework_support" | "revision" | "test_preparation" | "language_practice" | "skill_development" | "other";
@@ -91,6 +92,7 @@ const requestSchema = new Schema<IRequest>(
     currency: { type: String, uppercase: true, trim: true },
     allowCounterOffers: { type: Boolean, default: true },
     classGrade: { type: String, trim: true }, curriculum: { type: String, trim: true }, examType: { type: String, trim: true }, studentLevel: { type: String, trim: true },
+    schoolOfferingId: { type: String, index: true }, schoolBoard: { type: String }, schoolQualification: { type: String }, schoolClass: { type: String }, schoolSubject: { type: String },
     learningObjectives: { type: String, trim: true }, 
     learnerType: { type: String, enum: ["self", "child", "other"], default: "self" },
     learningNeed: { type: String, enum: ["regular_tuition", "concept_improvement", "exam_preparation", "past_papers", "homework_support", "revision", "test_preparation", "language_practice", "skill_development", "other"] },

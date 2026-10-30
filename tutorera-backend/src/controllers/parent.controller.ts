@@ -14,11 +14,12 @@ import { escapeHtml } from "../utils/escapeHtml";
 import { logAudit } from "../utils/logAudit";
 import { assertAcceptanceAvailable, resolveMarket } from "../services/market.service";
 import { resolveLocationReferences } from "../services/locationReference.service";
-import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
-import { paymentProvider } from "../services/paymentProvider.service";
-import { previewPromoDiscount } from "../services/promoCode.service";
+import TutorProfile from "../models/TutorProfile.model";
+import { checkSubjectEligibility } from "../services/subjectEligibility.service";
+import { assertSchoolOfferingActive } from "../services/schoolOfferingAvailability.service";
+import { sendNotification } from "../utils/socket";
 
 const LINK_CODE_TTL_MS = 15 * 60 * 1000;
 const MAX_LINK_ATTEMPTS = 5;
@@ -317,13 +318,26 @@ export const cancelChildLinkRequest = async (req: AuthRequest, res: Response): P
 
 export const decideBookingApproval = async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== "parent") { res.status(403).json({ success: false, message: "Access denied." }); return; }
+  if (!mongoose.isValidObjectId(req.params.requestId) || !["approve", "decline"].includes(req.body?.decision)) { res.status(400).json({ success: false, message: "Select approve or decline for a valid request." }); return; }
   const request = await Request.findOne({ _id: req.params.requestId, status: "awaiting_parent_approval" });
   if (!request || !request.acceptedOffer) { res.status(404).json({ success: false, message: "No pending booking approval was found." }); return; }
   const linked = await ParentProfile.exists({ user: req.user._id, "children.studentUser": request.student, approvalRequiredForBookings: true });
   if (!linked) { res.status(403).json({ success: false, message: "You are not authorized for this learner." }); return; }
   if (req.body?.decision === "decline") {
-    await Request.updateOne({ _id: request._id, status: "awaiting_parent_approval" }, { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "" } });
+    const declineSession = await mongoose.startSession();
+    try {
+      await declineSession.withTransaction(async () => {
+        const stillLinked = await ParentProfile.exists({ user: req.user!._id, "children.studentUser": request.student, approvalRequiredForBookings: true }).session(declineSession);
+        if (!stillLinked) throw Object.assign(new Error("You are not authorized for this learner."), { statusCode: 403 });
+        const changed = await Request.updateOne({ _id: request._id, status: "awaiting_parent_approval", acceptedOffer: request.acceptedOffer }, { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "", pendingPromoCode: "" } }, { session: declineSession });
+        if (!changed.matchedCount) throw Object.assign(new Error("This approval was already processed."), { statusCode: 409 });
+      });
+    } catch (error) {
+      const e = error as { statusCode?: number; message?: string };
+      res.status(e.statusCode || 500).json({ success: false, message: e.statusCode ? e.message : "Unable to process the decision." }); return;
+    } finally { await declineSession.endSession(); }
     await logAudit({ action: "parent_booking_approval_declined", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString() });
+    await sendNotification(req.app.get("io"), request.student.toString(), { title: "Booking approval declined", message: "Your parent declined the selected offer. Review your offers again.", type: "booking", link: "/dashboard" }).catch(() => logger.warn({ requestId: request._id }, "Parent decision notification failed"));
     res.json({ success: true, message: "Approval declined. The request is open for the student to review offers again." }); return;
   }
   const bid = await Bid.findOne({ _id: request.acceptedOffer, request: request._id, status: { $in: ["submitted", "viewed", "countered", "pending"] } });
@@ -336,54 +350,32 @@ export const decideBookingApproval = async (req: AuthRequest, res: Response): Pr
     return;
   }
   const expiry = new Date(Date.now() + PAYMENT_HOLD_MS);
+  const reservationId = crypto.randomUUID();
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      const reserved = await Request.findOneAndUpdate({ _id: request._id, status: "awaiting_parent_approval" }, { status: "awaiting_payment" }, { returnDocument: "after", session });
-      if (!reserved) throw Object.assign(new Error("This approval was already processed."), { statusCode: 409 });
-      await Bid.updateOne({ _id: bid._id }, { status: "payment_pending", paymentPendingExpiresAt: expiry }, { session });
+      const stillLinked = await ParentProfile.exists({ user: req.user!._id, "children.studentUser": request.student, approvalRequiredForBookings: true }).session(session);
+      if (!stillLinked) throw Object.assign(new Error("You are not authorized for this learner."), { statusCode: 403 });
+      await assertSchoolOfferingActive(request.schoolOfferingId, session);
+      const tutorProfile = await TutorProfile.findOne({ user: bid.tutor }).select("subjectEligibility schoolOfferingIds").session(session).lean();
+      const eligibility = tutorProfile ? checkSubjectEligibility(tutorProfile, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
+      if (!eligibility.eligible) throw Object.assign(new Error(eligibility.message), { statusCode: 403, code: "SUBJECT_NOT_APPROVED" });
+      if (request.schoolOfferingId && !(tutorProfile?.schoolOfferingIds || []).includes(request.schoolOfferingId)) throw Object.assign(new Error("The tutor no longer teaches the selected board and qualification."), { statusCode: 403, code: "SCHOOL_OFFERING_NOT_SELECTED" });
+      const reserved = await Request.updateOne({ _id: request._id, status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount }, { $set: { status: "awaiting_payment" } }, { session });
+      if (!reserved.matchedCount) throw Object.assign(new Error("This approval was already processed or the offer changed."), { statusCode: 409 });
+      const updated = await Bid.updateOne({ _id: bid._id, request: request._id, status: { $in: ["submitted", "viewed", "countered", "pending"] }, amount: bid.amount, expiresAt: { $eq: bid.expiresAt, $gt: new Date() } }, { $set: { status: "payment_pending", paymentPendingExpiresAt: expiry, paymentReservationId: reservationId } }, { session });
+      if (!updated.matchedCount) throw Object.assign(new Error("The selected offer is no longer available."), { statusCode: 409 });
     });
   } catch (txError) {
-    const te = txError as { statusCode?: number; message?: string };
-    if (te.statusCode === 409) { res.status(409).json({ success: false, message: te.message }); return; }
+    const te = txError as { statusCode?: number; message?: string; code?: string };
+    if (te.statusCode) { res.status(te.statusCode).json({ success: false, code: te.code, message: te.message }); return; }
     res.status(500).json({ success: false, message: "Unable to process approval. Please try again." }); return;
   } finally {
     await session.endSession();
   }
-  const student = await User.findById(request.student).select("email phone");
-  let checkoutUrl: string;
-  try {
-    const fees = await calculateMarketplaceFees(bid.amount, {
-      currency: bid.currency || request.currency,
-      countryCode: request.countryCode,
-      teachingMode: request.teachingMode as "online" | "in-person" | "both" | undefined,
-    });
-
-    // A promo code the student entered when they originally selected this
-    // offer (before being redirected into parent approval) was stashed on
-    // the Request document since no checkout existed yet to attach it to -
-    // apply it now that the parent has approved and a checkout is created.
-    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
-    const originalStudentTotal = fees.studentTotal;
-    if (request.pendingPromoCode) {
-      try {
-        appliedPromo = await previewPromoDiscount(request.student.toString(), "student", request.pendingPromoCode, fees.studentTotal);
-        fees.studentFee = Math.max(0, fees.studentFee - appliedPromo.discountAmount);
-        fees.studentTotal = fees.subtotal + fees.studentFee;
-        recomputeGatewayFee(fees);
-      } catch (promoErr) {
-        logger.warn({ requestId: request._id, promoCode: request.pendingPromoCode, err: promoErr }, "Pending promo code no longer valid on parent approval — proceeding at full price");
-      }
-    }
-
-    checkoutUrl = await paymentProvider.createCheckout({ amount: fees.studentTotal, currency: bid.currency || request.currency || "USD", marketCountryCode: request.countryCode, customerMobileNo: student?.phone || "03000000000", customerEmail: student?.email || "", basketId: `BID-${bid._id}`, bidId: bid._id.toString(), studentId: request.student.toString(), tutorId: bid.tutor.toString(), feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax }, description: `TUTORERA offer approval ${bid._id}`, successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`, failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`, checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`, ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }) });
-  } catch {
-    await Promise.all([Request.updateOne({ _id: request._id, status: "awaiting_payment" }, { status: "awaiting_parent_approval" }), Bid.updateOne({ _id: bid._id, status: "payment_pending" }, { status: bid.status, $unset: { paymentPendingExpiresAt: "" } })]);
-    await logAudit({ action: "parent_booking_checkout_failed", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });
-    res.status(502).json({ success: false, message: "Unable to start payment. The approval is still awaiting your action." }); return;
-  }
   await logAudit({ action: "parent_booking_approval_approved", actor: req.user.name, actorId: req.user._id.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString() } });
-  res.json({ success: true, message: "Approved. Continue to secure payment.", checkoutUrl });
+  await sendNotification(req.app.get("io"), request.student.toString(), { title: "Booking approved", message: "Your parent approved the selected offer. Complete payment to confirm your booking.", type: "booking", link: "/dashboard" }).catch(() => logger.warn({ requestId: request._id }, "Parent decision notification failed"));
+  res.json({ success: true, message: "Approved. The student can now complete payment." });
 };
 
 export const updateParentSettings = async (req: AuthRequest, res: Response): Promise<void> => {

@@ -65,6 +65,7 @@ describe("acceptOffer race safety — concurrent accepts on the same request", (
       email: "offer-race-student@test.com",
       password: "password123",
       role: "student",
+      phone: "03001234567",
     });
     const tutorA = await User.create({
       name: "Tutor A",
@@ -123,10 +124,12 @@ describe("acceptOffer race safety — concurrent accepts on the same request", (
 
     const req1 = mockAuthRequest({
       params: { id: (offerA._id as Types.ObjectId).toString() },
+      body: { cnic: "4210112345671" },
       user: { _id: student._id, role: "student" } as unknown as AuthRequest["user"],
     });
     const req2 = mockAuthRequest({
       params: { id: (offerB._id as Types.ObjectId).toString() },
+      body: { cnic: "4210112345671" },
       user: { _id: student._id, role: "student" } as unknown as AuthRequest["user"],
     });
 

@@ -23,6 +23,7 @@ export interface IBid extends Document {
   expiryReminderSentAt?: Date;
   status: "pending" | "submitted" | "viewed" | "countered" | "payment_pending" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
   paymentPendingExpiresAt?: Date;
+  paymentReservationId?: string;
   isDirect: boolean;
   createdAt: Date;
 }
@@ -58,6 +59,7 @@ const bidSchema = new Schema<IBid>(
       default: "submitted",
     },
     paymentPendingExpiresAt: { type: Date },
+    paymentReservationId: { type: String },
     isDirect: { type: Boolean, default: false },
   },
   { timestamps: true }

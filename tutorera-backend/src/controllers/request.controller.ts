@@ -6,8 +6,12 @@ import { AuthRequest, IUser } from "../types";
 import Request from "../models/Request.model";
 import { ITutorProfile } from "../models/TutorProfile.model";
 import Bid from "../models/Bid.model";
+import CheckoutGuard from "../models/CheckoutGuard.model";
+import PaymentLedger from "../models/PaymentLedger.model";
+import SchoolOffering from "../models/SchoolOffering.model";
 import Booking, { IBooking } from "../models/Booking.model";
 import ParentProfile from "../models/ParentProfile.model";
+import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
 import { sendNotification } from "../utils/socket";
 import { calculateMarketplaceFees, recomputeGatewayFee } from "../services/pricing.service";
@@ -21,6 +25,8 @@ import sendEmail from "../utils/sendEmail";
 import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequestEmail, directBookingDeclinedEmail, adminNewTuitionRequestEmail } from "../utils/emailTemplates";
 import { convertToPKR } from "../config/countries";
 import { paymentProvider } from "../services/paymentProvider.service";
+import { reserveOffer, releaseFailedOfferReservation } from "../services/offerReservation.service";
+import { normalizeCnic, normalizePkMobile } from "../services/swichProvider.service";
 import { previewPromoDiscount, getAppliedPromoForBasket, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import AuditLog from "../models/AuditLog.model";
@@ -141,6 +147,11 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
     return;
   }
   const createData = { ...req.body };
+  if (createData.schoolOfferingId) {
+    const offering = await SchoolOffering.findOne({ _id: createData.schoolOfferingId, status: "active" }).lean();
+    if (!offering) { res.status(422).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school subject is unavailable. Select an active offering." }); return; }
+    Object.assign(createData, { subject: offering.subject, level: offering.approvalLevel, curriculum: offering.boardName, classGrade: offering.classLevel || "", schoolBoard: offering.boardName, schoolQualification: offering.qualificationName, schoolClass: offering.classLevel || "", schoolSubject: offering.subjectDisplay });
+  }
   // learnerId is an authorization input, not a free-form persisted field.
   delete createData.learnerId;
   if (typeof createData.lat === "number" && typeof createData.lng === "number") {
@@ -304,7 +315,12 @@ export const getAllRequests = async (req: AuthRequest, res: Response): Promise<v
       res.status(200).json({ success: true, total: 0, page: 1, requests: [] });
       return;
     }
-    filter.$and = [...((filter.$and as Record<string, unknown>[]) || []), { $or: eligibility }];
+    // School requests are shown only for active, explicitly selected offerings
+    // whose underlying subject and level have already been approved. Legacy
+    // requests retain their existing browsing behavior.
+    const schoolOfferings = await SchoolOffering.find({ _id: { $in: tutorProfile.schoolOfferingIds || [] }, status: "active" }).select("_id subject approvalLevel").lean();
+    const allowedSchoolIds = schoolOfferings.filter((offering) => checkSubjectEligibility(tutorProfile!, offering.subject, offering.approvalLevel).eligible).map((offering) => offering._id);
+    filter.$and = [...((filter.$and as Record<string, unknown>[]) || []), { $or: eligibility }, { $or: [{ schoolOfferingId: { $exists: false } }, { schoolOfferingId: null }, { schoolOfferingId: "" }, { schoolOfferingId: { $in: allowedSchoolIds } }] }];
   }
 
   const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
@@ -478,10 +494,14 @@ export const placeBid = async (req: AuthRequest, res: Response): Promise<void> =
     return;
   }
 
-  const requested = await Request.findById(req.params.id).select("student subject level teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible expiresAt");
+  const requested = await Request.findById(req.params.id).select("student subject level schoolOfferingId teachingMode city countryCode countryName currency status budget pricingUnit allowCounterOffers isDirect targetTutor preferredTutorCountries isWorldwideEligible expiresAt");
   if (!requested) {
     res.status(404).json({ success: false, message: "Request not found." });
     return;
+  }
+  if (requested.schoolOfferingId && !(await SchoolOffering.exists({ _id: requested.schoolOfferingId, status: "active" }))) { res.status(409).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school offering is no longer active." }); return; }
+  if (requested.schoolOfferingId && !(tutorProfile.schoolOfferingIds || []).includes(requested.schoolOfferingId)) {
+    res.status(403).json({ success: false, code: "SCHOOL_OFFERING_NOT_SELECTED", message: "Add this board, qualification and subject to your teaching preferences before offering." }); return;
   }
   try { await assertMarketFeature(requested.countryCode, "offers"); } catch (error) { const e = error as { statusCode?: number; code?: string; message?: string };
     res.status(e.statusCode || 422).json({ success: false, code: e.code, message: e.message }); return;
@@ -702,28 +722,43 @@ export const getBidsForRequest = async (req: AuthRequest, res: Response): Promis
 // so the bid isn't stuck in limbo forever. Called defensively at the start
 // of the accept flow.
 export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<void> {
-  const staleBid = await Bid.findOne({
-    request: requestId,
-    status: "payment_pending",
-    paymentPendingExpiresAt: { $lte: new Date() },
-  });
-
-  if (!staleBid) return;
-
-  // Best-effort revert — not wrapped in the caller's transaction since this
-  // is cleanup for a PAST abandoned attempt, not part of the current one.
-  await Bid.updateOne(
-    { _id: staleBid._id, status: "payment_pending" },
-    { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-  );
-  await Request.updateOne(
-    { _id: requestId, status: "awaiting_payment" },
-    { status: "open" }
-  );
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const now = new Date();
+      const request = await Request.findOne({ _id: requestId, status: "awaiting_payment" }).session(session);
+      if (!request) return;
+      const bids = await Bid.find({ request: requestId, status: "payment_pending" }).limit(2).session(session);
+      // Legacy reservations may not have acceptedOffer; ambiguous records are
+      // left for reconciliation rather than releasing the wrong payment.
+      const staleBid = request.acceptedOffer
+        ? bids.find((bid) => bid._id.toString() === request.acceptedOffer!.toString())
+        : bids.length === 1 ? bids[0] : undefined;
+      if (!staleBid?.paymentPendingExpiresAt || staleBid.paymentPendingExpiresAt > now) return;
+      const guard = await CheckoutGuard.findById(`BID-${staleBid._id.toString()}`).session(session).lean();
+      if (guard && guard.state !== "idle") return;
+      if (guard) {
+        // Conflict with a concurrent checkout claim rather than releasing a
+        // request from a stale snapshot while a provider call starts.
+        const lockedGuard = await CheckoutGuard.updateOne({ _id: guard._id, state: "idle" }, { $inc: { __v: 1 } }, { session });
+        if (!lockedGuard.matchedCount) return;
+      }
+      const unresolvedCheckout = await PaymentLedger.exists({ providerTransactionId: `BID-${staleBid._id.toString()}`, $or: [{ eventType: "checkout.created", status: { $ne: "failed" } }, { eventType: "payment.succeeded", status: "succeeded" }] }).session(session);
+      if (unresolvedCheckout) return;
+      const changed = await Bid.updateOne(
+        { _id: staleBid._id, status: "payment_pending", paymentPendingExpiresAt: { $lte: now } },
+        { $set: { status: "submitted" }, $unset: { paymentPendingExpiresAt: "", paymentReservationId: "" } }, { session },
+      );
+      if (!changed.matchedCount) return;
+      const updated = await Request.updateOne(
+        { _id: requestId, status: "awaiting_payment", acceptedOffer: request.acceptedOffer ?? null },
+        { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "", pendingPromoCode: "" } }, { session },
+      );
+      if (!updated.matchedCount) throw new Error("Payment reservation changed during expiry cleanup");
+    });
+  } finally { await session.endSession(); }
 }
 
-
-const PAYMENT_HOLD_MINUTES = 30;
 
 // @desc    Accept an offer — reserves it and starts payment checkout.
 //          The booking is NOT created here; it's created by
@@ -771,12 +806,14 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   // submitted).
   {
     const TutorProfile = (await import("../models/TutorProfile.model")).default;
-    const bidTutorProfile = await TutorProfile.findOne({ user: bid.tutor }).select("subjectEligibility").lean();
+    if (request.schoolOfferingId && !(await SchoolOffering.exists({ _id: request.schoolOfferingId, status: "active" }))) { res.status(409).json({ success: false, code: "SCHOOL_OFFERING_UNAVAILABLE", message: "This school offering is no longer available." }); return; }
+    const bidTutorProfile = await TutorProfile.findOne({ user: bid.tutor }).select("subjectEligibility schoolOfferingIds").lean();
     const eligibility = bidTutorProfile ? checkSubjectEligibility(bidTutorProfile, request.subject, request.level) : { eligible: false, message: "Tutor profile not found." };
     if (!eligibility.eligible) {
       res.status(403).json({ success: false, code: "SUBJECT_NOT_APPROVED", message: eligibility.message });
       return;
     }
+    if (request.schoolOfferingId && !(bidTutorProfile?.schoolOfferingIds || []).includes(request.schoolOfferingId)) { res.status(403).json({ success: false, code: "SCHOOL_OFFERING_NOT_SELECTED", message: "The tutor no longer teaches the selected board and qualification." }); return; }
   }
 
   const isOwner = request.student.toString() === req.user?._id?.toString();
@@ -789,8 +826,8 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   if (isOwner && !isDirectTutorAccept) {
     const approvalProfile = await ParentProfile.findOne({ "children.studentUser": request.student, approvalRequiredForBookings: true }).select("user").lean();
     if (approvalProfile) {
-      const reserved = await Request.findOneAndUpdate({ _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }, { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount, ...(req.body?.promoCode && { pendingPromoCode: req.body.promoCode }) }, { returnDocument: "after" });
-      if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
+      try { await reserveOffer(requestId, bid, true, req.body?.promoCode); }
+      catch (error) { const e = error as { statusCode?: number; message?: string }; res.status(e.statusCode || 500).json({ success: false, message: e.statusCode ? e.message : "Unable to reserve this offer." }); return; }
       await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor offer before payment can begin.`, type: "booking", link: "/dashboard" });
       await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString() } });
       res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "Your selected offer is awaiting parent approval before payment." });
@@ -807,12 +844,8 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       approvalRequiredForBookings: true,
     }).select("user").lean();
     if (approvalProfile) {
-      const reserved = await Request.findOneAndUpdate(
-        { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-        { status: "awaiting_parent_approval", acceptedOffer: bid._id, finalAgreedRate: bid.amount },
-        { returnDocument: "after" }
-      );
-      if (!reserved) { res.status(409).json({ success: false, message: "This request is no longer available." }); return; }
+      try { await reserveOffer(requestId, bid, true); }
+      catch (error) { const e = error as { statusCode?: number; message?: string }; res.status(e.statusCode || 500).json({ success: false, message: e.statusCode ? e.message : "Unable to reserve this offer." }); return; }
       await sendNotification(req.app.get("io"), approvalProfile.user.toString(), { title: "Booking approval needed", message: `Review the selected ${request.subject} tutor booking before payment can begin.`, type: "booking", link: "/dashboard" });
       await logAudit({ action: "parent_booking_approval_requested", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Request", targetId: request._id.toString(), metadata: { offerId: bid._id.toString(), parentId: approvalProfile.user.toString(), directBooking: true } });
       res.status(202).json({ success: true, code: "PARENT_APPROVAL_REQUIRED", message: "This booking is awaiting parent approval before payment." });
@@ -820,46 +853,31 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     }
   }
 
-  // Atomic guard — only one accept attempt can win this transition
-  const session = await mongoose.startSession();
+  let payerPhone: string | undefined;
+  let payerCnic: string | undefined;
+  if (isOwner) {
+    const studentUser = await User.findById(request.student).select("phone");
+    const studentProfile = await StudentProfile.findOne({ user: request.student }).select("phone").lean();
+    payerPhone = normalizePkMobile(studentUser?.phone || studentProfile?.phone);
+    if (!payerPhone) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Please add a valid Pakistani mobile number to your profile before paying." }); return; }
+    payerCnic = normalizeCnic(req.body?.cnic);
+    if (!payerCnic) { res.status(422).json({ success: false, code: "CNIC_REQUIRED", message: "Enter the 13-digit identity number of the person paying." }); return; }
+  }
+  let reservationId: string;
   try {
-    await session.withTransaction(async () => {
-      const reservedRequest = await Request.findOneAndUpdate(
-        { _id: requestId, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } },
-        { status: "awaiting_payment" },
-        { returnDocument: "after", session }
-      );
-
-      if (!reservedRequest) {
-        throw Object.assign(new Error("This request was just accepted or is no longer available."), { statusCode: 409 });
-      }
-
-      const paymentPendingExpiresAt = new Date(Date.now() + PAYMENT_HOLD_MINUTES * 60 * 1000);
-      await Bid.findOneAndUpdate(
-        { _id: bid._id, status: { $in: ["pending", "submitted", "viewed", "countered"] } },
-        { status: "payment_pending", paymentPendingExpiresAt },
-        { returnDocument: "after", session }
-      );
-    });
+    const reserved = await reserveOffer(requestId, bid, false);
+    if (!reserved) throw new Error("Payment reservation was not created");
+    reservationId = reserved;
   } catch (txError) {
     const te = txError as { statusCode?: number; message?: string };
-    if (te.statusCode === 409) {
-      res.status(409).json({ success: false, message: te.message });
-      await session.endSession();
-      return;
-    }
-    console.error("Failed to reserve request/bid for payment:", txError);
-    res.status(500).json({ success: false, message: "Unable to process acceptance. Please try again." });
-    await session.endSession();
+    res.status(te.statusCode || 500).json({ success: false, message: te.statusCode ? te.message : "Unable to process acceptance. Please try again." });
     return;
-  } finally {
-    await session.endSession();
   }
 
-  // Reload bid to get updated status
-  const updatedBid = await Bid.findById(bid._id);
-  if (!updatedBid || updatedBid.status !== "payment_pending") {
-    res.status(409).json({ success: false, message: "This offer was already processed." });
+  if (isDirectTutorAccept) {
+    await sendNotification(req.app.get("io"), request.student.toString(), { title: "Tutor accepted your request", message: "Your tutor accepted. Complete payment to confirm your booking.", type: "booking", link: "/dashboard" });
+    await logAudit({ action: "tutor_accepted_direct_request", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "Bid", targetId: bid.id });
+    res.status(200).json({ success: true, message: "Request accepted. The student can now complete payment." });
     return;
   }
 
@@ -887,8 +905,9 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       amount: fees.studentTotal,
       currency: bid.currency || "USD",
       marketCountryCode: request.countryCode,
-      customerMobileNo: student?.phone || "03000000000",
+      customerMobileNo: payerPhone!,
       customerEmail: student?.email || "",
+      customerCnic: payerCnic,
       basketId: `BID-${bid._id.toString()}`,
       bidId: bid._id.toString(),
       studentId: request.student.toString(),
@@ -901,17 +920,23 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
+    const [currentRequest, currentOffer] = await Promise.all([
+      Request.exists({ _id: requestId, status: "awaiting_payment", acceptedOffer: bid._id }),
+      Bid.exists({ _id: bid._id, status: "payment_pending", paymentReservationId: reservationId, paymentPendingExpiresAt: { $gt: new Date() } }),
+    ]);
+    if (!currentRequest || !currentOffer) { res.status(409).json({ success: false, message: "This payment reservation changed. Refresh before paying." }); return; }
     res.status(200).json({
       success: true,
       message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
       checkoutUrl,
     });
   } catch (err) {
-    await Request.updateOne({ _id: requestId, status: "awaiting_payment" }, { status: "open" });
-    await Bid.updateOne(
-      { _id: bid._id, status: "payment_pending" },
-      { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-    );
+    const paymentError = err as { code?: string; message?: string; statusCode?: number };
+    if (["PAYMENT_OUTCOME_UNKNOWN", "PAYMENT_ATTEMPT_BLOCKED", "PAYMENT_RETRY_UNVERIFIED", "PAYMENT_ALREADY_COMPLETED"].includes(paymentError.code || "")) {
+      res.status(paymentError.statusCode || 409).json({ success: false, code: paymentError.code, message: paymentError.message });
+      return;
+    }
+    await releaseFailedOfferReservation(requestId, bid._id as Types.ObjectId, reservationId);
 
     if (err instanceof PromoCodeError) {
       res.status(err.statusCode).json({ success: false, message: err.message });

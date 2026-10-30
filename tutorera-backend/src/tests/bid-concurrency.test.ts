@@ -53,7 +53,7 @@ function mockResponse(): Response {
 function mockAuthRequest(overrides: Partial<AuthRequest>): AuthRequest {
   return {
     params: {},
-    body: {},
+    body: { cnic: "4210112345671" },
     user: undefined,
     app: { get: () => ({ to: () => ({ emit: jest.fn() }) }) },
     ...overrides,
@@ -62,7 +62,7 @@ function mockAuthRequest(overrides: Partial<AuthRequest>): AuthRequest {
 
 describe("BE-07: concurrent bid acceptance is race-safe", () => {
   it("firing two simultaneous accept calls on the same bid creates exactly one booking", async () => {
-    const student = await User.create({ name: "Student", email: "race-student@test.com", password: "password123", role: "student" });
+    const student = await User.create({ name: "Student", email: "race-student@test.com", password: "password123", role: "student", phone: "03001234567" });
     const tutor = await User.create({ name: "Tutor", email: "race-tutor@test.com", password: "password123", role: "tutor" });
     await TutorProfile.create({
       user: tutor._id,
@@ -133,7 +133,7 @@ describe("BE-07: concurrent bid acceptance is race-safe", () => {
     // request both get accepted "at once" (e.g. two browser tabs, or a
     // double-click). Only one bid should end up accepted; the request can
     // only close once.
-    const student = await User.create({ name: "Student2", email: "race-student2@test.com", password: "password123", role: "student" });
+    const student = await User.create({ name: "Student2", email: "race-student2@test.com", password: "password123", role: "student", phone: "03001234567" });
     const tutorA = await User.create({ name: "TutorA", email: "race-tutorA@test.com", password: "password123", role: "tutor" });
     const tutorB = await User.create({ name: "TutorB", email: "race-tutorB@test.com", password: "password123", role: "tutor" });
     await TutorProfile.create({

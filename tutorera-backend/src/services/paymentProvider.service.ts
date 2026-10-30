@@ -3,6 +3,7 @@ import { calculateMarketplaceFees } from "./pricing.service";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { swichProvider } from "./swichProvider.service";
 import { httpError } from "../utils/httpError";
+import { withCheckoutGuard } from "./checkoutGuard.service";
 
 /** PaymentLedger.metadata is Mixed; read it without casting the document. */
 function readLedgerString(metadata: unknown, key: string): string | undefined {
@@ -26,8 +27,31 @@ function readLedgerNumber(metadata: unknown, key: string): number | undefined {
  *
  * Rounds UP to a whole rupee so rounding can never under-collect.
  */
-function toGatewayAmount(amount: number, platformCurrency: string): { gatewayAmount: number; gatewayCurrency: "PKR"; fxRate: number } {
-  if (platformCurrency === "PKR") return { gatewayAmount: Math.ceil(amount), gatewayCurrency: "PKR", fxRate: 1 };
+function decimalRatio(value: number): { numerator: bigint; denominator: bigint } {
+  const [coefficient, exponent = "0"] = value.toString().toLowerCase().split("e");
+  const scale = (coefficient.split(".")[1]?.length || 0) - Number(exponent);
+  const digits = BigInt(coefficient.replace(".", ""));
+  return scale >= 0
+    ? { numerator: digits, denominator: 10n ** BigInt(scale) }
+    : { numerator: digits * 10n ** BigInt(-scale), denominator: 1n };
+}
+
+/** Preserve whole-rupee ceiling without binary floating-point overcharges. */
+function exactGatewayCeiling(amount: number, rate: number): number {
+  const a = decimalRatio(amount);
+  const b = decimalRatio(rate);
+  const numerator = a.numerator * b.numerator;
+  const denominator = a.denominator * b.denominator;
+  const rounded = (numerator + denominator - 1n) / denominator;
+  if (rounded < 1n || rounded > 10_000_000n) {
+    throw httpError("Payment exceeds the supported gateway amount range.", 400, "GATEWAY_AMOUNT_OUT_OF_RANGE");
+  }
+  return Number(rounded);
+}
+
+export function toGatewayAmount(amount: number, platformCurrency: string): { gatewayAmount: number; gatewayCurrency: "PKR"; fxRate: number } {
+  if (!Number.isFinite(amount) || amount <= 0) throw httpError("Payment amount must be a positive number", 400, "INVALID_PAYMENT_AMOUNT");
+  if (platformCurrency === "PKR") return { gatewayAmount: exactGatewayCeiling(amount, 1), gatewayCurrency: "PKR", fxRate: 1 };
   if (platformCurrency !== "USD") {
     throw httpError(`Swich checkout does not support ${platformCurrency}.`, 409, "SWICH_CURRENCY_UNSUPPORTED");
   }
@@ -36,7 +60,7 @@ function toGatewayAmount(amount: number, platformCurrency: string): { gatewayAmo
     // Fail closed: charging with a missing/garbage rate would mis-price real money.
     throw httpError("USD_PKR_RATE is not configured", 503, "FX_RATE_MISSING");
   }
-  return { gatewayAmount: Math.ceil(amount * fxRate), gatewayCurrency: "PKR", fxRate };
+  return { gatewayAmount: exactGatewayCeiling(amount, fxRate), gatewayCurrency: "PKR", fxRate };
 }
 
 export type PaymentProviderName = "swich";
@@ -77,31 +101,43 @@ export const paymentProvider = {
   name: "swich" as PaymentProviderName,
 
   async createCheckout(params: CheckoutParams): Promise<string> {
+    return withCheckoutGuard(params.basketId, (markDispatched) => paymentProvider.createCheckoutLocked(params, markDispatched));
+  },
+
+  async createCheckoutLocked(params: CheckoutParams, markDispatched: () => void): Promise<string> {
     const platformCurrency = (params.currency || "USD").toUpperCase();
     const { gatewayAmount, gatewayCurrency, fxRate } = toGatewayAmount(params.amount, platformCurrency);
 
     // A retry reuses the same basket. Before opening a NEW Swich session, deal
     // with the previous one so the student can never pay for the same order
-    // twice: if it already succeeded, refuse (the booking just needs
-    // confirming); if it is still open, cancel it. Cancel is best-effort — an
-    // expired or finished session is fine to leave alone.
+    // twice: if it already succeeded, refuse; if still open, cancellation
+    // must be confirmed before another session may be created.
     const previousCheckout = await PaymentLedger.findOne({ providerTransactionId: params.basketId, eventType: "checkout.created" }).sort("-createdAt");
     const previousGuid = readLedgerString(previousCheckout?.metadata, "paymentSessionGuid");
+    if (previousCheckout && !previousGuid) throw httpError("The previous payment session needs review before retrying.", 409, "PAYMENT_RETRY_UNVERIFIED");
     if (previousGuid) {
       let previousStatus: string | undefined;
       try {
         previousStatus = (await swichProvider.getPaymentSessionStatus(previousGuid)).sessionStatus;
       } catch {
-        previousStatus = undefined;
+        throw httpError("Unable to verify the previous payment session. Please try later or contact support.", 503, "PAYMENT_RETRY_UNVERIFIED");
       }
       if (previousStatus === "Success") {
         throw httpError("A previous payment for this offer already went through. Refresh to confirm your booking.", 409, "PAYMENT_ALREADY_COMPLETED");
       }
       if (previousStatus === "Pending") {
-        await swichProvider.cancelPaymentSession(previousGuid).catch(() => undefined);
+        try {
+          await swichProvider.cancelPaymentSession(previousGuid);
+          previousStatus = (await swichProvider.getPaymentSessionStatus(previousGuid)).sessionStatus;
+        } catch {
+          throw httpError("Unable to verify cancellation of the previous payment session. Contact support.", 503, "PAYMENT_RETRY_UNVERIFIED");
+        }
       }
+      if (previousStatus === "Success") throw httpError("A previous payment for this offer already went through. Refresh to confirm your booking.", 409, "PAYMENT_ALREADY_COMPLETED");
+      if (!["Failed", "Expired", "Cancelled"].includes(previousStatus || "")) throw httpError("The previous payment session is not safely closed. Contact support.", 409, "PAYMENT_RETRY_UNVERIFIED");
     }
 
+    markDispatched();
     const { checkoutUrl, paymentSessionGuid, mode } = await swichProvider.createCheckout({
       amount: gatewayAmount,
       currency: gatewayCurrency,
@@ -158,7 +194,7 @@ export const paymentProvider = {
     // checkout creation.
     await PaymentLedger.updateOne(
       { providerTransactionId: params.basketId, eventType: "checkout.created" },
-      { $set: { metadata: ledgerMetadata, grossAmount: params.amount, currency: platformCurrency } }
+      { $set: { metadata: ledgerMetadata, grossAmount: params.amount, currency: platformCurrency, status: "pending" } }
     );
 
     return checkoutUrl;
