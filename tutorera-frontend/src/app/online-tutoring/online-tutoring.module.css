@@ -1,0 +1,72 @@
+.page { background: #f5f7ff; color: #021550; min-height: 100vh; }
+.wrap { width: min(100% - 2.5rem, 1120px); margin-inline: auto; }
+.hero { background: linear-gradient(125deg, #021550, #0329b2 62%, #016ef8); color: white; padding: clamp(3.5rem, 8vw, 6.5rem) 0; }
+.heroGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); align-items: center; gap: clamp(2rem, 6vw, 6rem); }
+.eyebrow, .kicker { display: flex; align-items: center; gap: .5rem; color: #bcecff; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.hero h1 { max-width: 760px; margin: 1rem 0; font-size: clamp(2.35rem, 5vw, 4.25rem); letter-spacing: -.04em; line-height: 1.05; }
+.lead { max-width: 680px; color: #e2eaff; font-size: 1.15rem; line-height: 1.7; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+.primaryLight, .secondaryLight, .primaryDark { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; min-height: 48px; padding: .75rem 1.25rem; border-radius: .75rem; font-weight: 750; text-decoration: none; }
+.primaryLight { background: white; color: #0329b2; }
+.secondaryLight { color: white; border: 1px solid #b7caff; }
+.trustLine { display: flex; align-items: center; gap: .5rem; margin-top: 1.25rem; color: #c5d5ff; font-size: .9rem; }
+.heroCard { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); border-radius: 1.25rem; padding: 1.5rem; box-shadow: 0 20px 50px #010b2c40; }
+.heroCardIcon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: .8rem; background: #7eb4ff33; color: #bcecff; margin-bottom: 1rem; }
+.heroCard strong { display: block; font-size: 1.1rem; margin-bottom: 1rem; }
+.heroCard ol { display: grid; gap: .9rem; list-style: none; padding: 0; margin: 0; color: #e2eaff; line-height: 1.45; }
+.heroCard li { display: flex; gap: .7rem; align-items: center; }
+.heroCard li span { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: white; color: #0329b2; font-weight: 800; font-size: .85rem; }
+.benefitSection, .catalogue, .faqSection { padding: 5rem 0; }
+.benefitSection { background: white; }
+.kicker { color: #0329b2; }
+.page h2 { font-size: clamp(1.6rem, 3vw, 2.25rem); line-height: 1.2; margin: .5rem 0 2rem; }
+.benefitGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.benefitCard { border: 1px solid #dce5f4; border-radius: 1rem; padding: 1.4rem; }
+.benefitCard > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: .7rem; color: #0329b2; background: #e7efff; }
+.benefitCard h3 { font-size: 1rem; margin: 1rem 0 .45rem; }
+.benefitCard p, .sectionHead p, .categoryIntro p, .levelSection p, .faqItem p { color: #425575; line-height: 1.65; margin: 0; font-size: .94rem; }
+.sectionHead { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 2.5rem; }
+.sectionHead h2 { margin-bottom: .6rem; }
+.count { background: #e7efff; border-radius: 999px; padding: .6rem .9rem; font-size: .85rem; font-weight: 800; white-space: nowrap; }
+.notice { background: #fff9e6; border: 1px solid #e9c76a; color: #624900; border-radius: .75rem; padding: 1rem; margin-bottom: 1.5rem; }
+.category { margin-top: 2.75rem; }
+.categoryIntro { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; border-bottom: 2px solid #dce5f4; padding-bottom: .7rem; margin-bottom: 1rem; }
+.categoryIntro h3 { font-size: 1.1rem; margin: 0; }
+.categoryIntro p { max-width: 570px; text-align: right; }
+.subjectGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.subjectCard { display: flex; flex-direction: column; gap: .55rem; min-height: 155px; padding: 1.25rem; border: 1px solid #dce5f4; border-radius: 1rem; background: white; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.subjectCard strong { font-size: 1.05rem; }
+.subjectCard > span:not(.cardLink) { color: #425575; font-size: .88rem; line-height: 1.5; }
+.cardLink { display: inline-flex; align-items: center; gap: .35rem; color: #0329b2; font-size: .85rem; font-weight: 750; margin-top: auto; }
+.levelSection { background: #e8f2ff; padding: 5rem 0; }
+.levelSection > .wrap { display: grid; grid-template-columns: .9fr 1.1fr; gap: 3rem; align-items: center; }
+.levelSection h2 { margin-bottom: .75rem; }
+.levelGrid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.levelCard { display: flex; align-items: center; justify-content: space-between; gap: .5rem; background: white; border: 1px solid #c5d9f8; border-radius: .8rem; padding: 1.1rem; color: #021550; font-weight: 700; text-decoration: none; }
+.levelCard svg { color: #0329b2; flex: none; }
+.faqSection { background: white; }
+.faqList { display: grid; gap: .8rem; max-width: 850px; }
+.faqItem { border: 1px solid #dce5f4; border-radius: .8rem; padding: 1.15rem 1.25rem; }
+.faqItem summary { cursor: pointer; font-weight: 750; }
+.faqItem p { margin-top: .75rem; }
+.bottomCta { background: linear-gradient(135deg, #021550, #0329b2); color: white; text-align: center; padding: 5rem 0; }
+.bottomCta h2 { margin-bottom: .65rem; }
+.bottomCta p { color: #c5d5ff; margin: 0 auto 1.75rem; }
+.primaryDark { background: white; color: #0329b2; }
+.page a:focus-visible { outline: 3px solid #fcaf17; outline-offset: 4px; }
+@media (hover: hover) and (pointer: fine) {
+  .subjectCard:hover { border-color: #0329b2; box-shadow: 0 8px 24px #02155018; }
+  .primaryLight:hover, .primaryDark:hover { opacity: .9; }
+}
+@media (max-width: 850px) {
+  .heroGrid, .levelSection > .wrap { grid-template-columns: 1fr; }
+  .benefitGrid { grid-template-columns: repeat(2, 1fr); }
+  .subjectGrid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .wrap { width: min(100% - 2rem, 1120px); }
+  .benefitGrid, .subjectGrid, .levelGrid { grid-template-columns: 1fr; }
+  .sectionHead, .categoryIntro { display: block; }
+  .count { display: inline-block; margin-top: 1rem; }
+  .categoryIntro p { text-align: left; margin-top: .5rem; }
+}
