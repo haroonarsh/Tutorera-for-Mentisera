@@ -1,6 +1,6 @@
 // src/routes/geo.routes.ts
 import { Router } from "express";
-import { getCities, getCountries, getCountryCities, getCurrencies, getGlobalSearch, getLocalities, getRegions, postalLookup } from "../controllers/geo.controller";
+import { getCities, getCountries, getCountryCities, getCurrencies, getGlobalSearch, getLocalities, getRegions, getSubjects, getSchoolOfferings, postalLookup } from "../controllers/geo.controller";
 import { cachePublic } from "../middlewares/cacheControl.middleware";
 
 const router = Router();
@@ -10,6 +10,8 @@ const router = Router();
 // /postal-lookup are excluded: they're per-query lookups with a low cache
 // hit rate, not content a crawler or repeated SSR fetch would reuse.
 router.get("/countries", cachePublic(600), getCountries);
+router.get("/subjects", cachePublic(300), getSubjects);
+router.get("/school-offerings", cachePublic(300), getSchoolOfferings);
 router.get("/regions", cachePublic(300), getRegions);
 router.get("/cities", cachePublic(300), getCities);
 router.get("/localities", cachePublic(300), getLocalities);

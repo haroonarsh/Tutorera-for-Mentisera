@@ -9,12 +9,15 @@ import {
   updateTeachingEligibilityRule,
 } from "../../controllers/academicFramework.controller";
 import { commitAcademicImport, downloadAcademicTemplate, exportAcademicDataset, listAcademicImportHistory, previewAcademicImport } from "../../controllers/academicImportExport.controller";
+import { listAdminSchoolOfferings, updateAdminSchoolOffering } from "../../controllers/schoolOffering.controller";
 
 const router = Router();
 const uploadCsv = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
 router.use(protect, authorize("admin"), requirePermission("market.configure"));
 
 router.get("/overview", getAcademicFrameworkOverview);
+router.get("/school-offerings", listAdminSchoolOfferings);
+router.patch("/school-offerings/:id", updateAdminSchoolOffering);
 router.get("/tutor-approvals", listTutorSubjectApprovals);
 router.route("/categories").get(listAcademicCategories).post(createAcademicCategory);
 router.patch("/categories/:id", updateAcademicCategory);

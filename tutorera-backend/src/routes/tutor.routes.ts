@@ -21,6 +21,7 @@ import { validate as validateAvailability, saveAvailabilitySchema } from "../val
 import { uploadDocument, uploadVerification } from "../middlewares/upload.middleware";
 import { cachePublic } from "../middlewares/cacheControl.middleware";
 import { listActiveDisciplineSubjectMaps } from "../controllers/disciplineSubjectMap.controller";
+import { getMySchoolOfferings, updateMySchoolOfferings } from "../controllers/schoolOffering.controller";
 
 const router = Router();
 
@@ -30,6 +31,8 @@ const router = Router();
 router.get("/", cachePublic(60), getAllTutors);
 // Must come before the `/:id` wildcard below.
 router.get("/disciplines", protect, listActiveDisciplineSubjectMaps);
+router.get("/school-offerings/me", protect, authorize("tutor"), getMySchoolOfferings);
+router.put("/school-offerings/me", protect, authorize("tutor"), updateMySchoolOfferings);
 // Canonical SEO-friendly profile lookup - no ObjectId in the URL. Kept
 // distinct from `/:id` below (legacy lookups/backlinks/admin tooling).
 router.get("/slug/:country/:slug", cachePublic(60), getTutorBySlug);

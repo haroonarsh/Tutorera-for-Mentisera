@@ -7,8 +7,8 @@ import Locality from "../models/Locality.model";
 import MarketConfig from "../models/MarketConfig.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { SUPPORTED_CURRENCIES, getCountryByCode, getCitiesForCountry, MASTER_SUBJECTS, MASTER_LEVELS, EDUCATION_LEVELS_BY_COUNTRY } from "../config/geo/location";
-import { ensureLaunchMarkets } from "../services/market.service";
 import Subject from "../models/Subject.model";
+import SchoolOffering from "../models/SchoolOffering.model";
 
 // Returns the canonical active subject names from the Subject catalogue,
 // falling back to the static MASTER_SUBJECTS array until the DB is seeded.
@@ -18,11 +18,28 @@ async function getActiveSubjectNames(): Promise<string[]> {
   return MASTER_SUBJECTS;
 }
 
+/** Public, read-only catalogue for subject landing pages. */
+export const getSubjects = async (_req: Request, res: Response): Promise<void> => {
+  const rows = await Subject.find({ status: "active" }).select("name slug category").sort({ displayOrder: 1, name: 1 }).lean();
+  const subjects = rows.map((row) => ({ name: row.name, slug: row.slug, category: row.category }));
+  res.json({ success: true, count: subjects.length, subjects });
+};
+
+export const getSchoolOfferings = async (req: Request, res: Response): Promise<void> => {
+  const filter: Record<string, unknown> = { status: "active" };
+  for (const key of ["boardCode", "qualificationCode", "classLevel"]) {
+    if (typeof req.query[key] === "string" && String(req.query[key]).length <= 80) filter[key] = req.query[key];
+  }
+  const offerings = await SchoolOffering.find(filter).select("boardCode boardName qualificationCode qualificationName classLevel subject subjectDisplay aliases approvalLevel verificationNote").sort({ boardName: 1, qualificationName: 1, classLevel: 1, subjectDisplay: 1 }).lean();
+  res.json({ success: true, count: offerings.length, offerings });
+};
+
 const pageSize = (value: unknown) => Math.min(Math.max(Number(value) || 25, 1), 100);
 const safeSearch = (value: unknown) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 80);
 
 export const getCountries = async (_req: Request, res: Response): Promise<void> => {
-  await ensureLaunchMarkets();
+  // Public reads must not seed or overwrite administrator market/tax settings.
+  // Provision markets through explicit migration/bootstrap operations instead.
   const markets = await MarketConfig.find({ isActive: true, launchStatus: { $in: ["live", "beta"] } }).sort({ launchStatus: 1, countryName: 1 }).lean();
   const countries = await Country.find({ iso2: { $in: markets.map((m) => m.countryCode) } }).lean();
   const normalized = new Map(countries.map((country) => [country.iso2, country]));

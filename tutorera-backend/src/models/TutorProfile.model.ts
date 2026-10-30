@@ -89,6 +89,7 @@ export interface ITutorProfile extends Document {
   subjects: string[];
   levels: string[];
   curricula?: string[];
+  schoolOfferingIds?: string[];
   // One entry per subject the tutor has ever requested (via onboarding or
   // a later "request additional subject" action). This is the actual
   // source of truth for what a tutor may bid/accept/book - see
@@ -329,6 +330,7 @@ const tutorProfileSchema = new Schema<ITutorProfile>(
     }],
     approvedSubjects: [{ type: String, trim: true }],
     curricula: [{ type: String, trim: true }],
+    schoolOfferingIds: [{ type: String, trim: true }],
 
     // Step 4
     bio: { type: String, trim: true, default: "" },
@@ -592,5 +594,7 @@ tutorProfileSchema.pre("save", function () {
     p.tutorStatus = "rejected";
   }
 });
+
+tutorProfileSchema.index({ schoolOfferingIds: 1 });
 
 export default mongoose.model<ITutorProfile>("TutorProfile", tutorProfileSchema);
