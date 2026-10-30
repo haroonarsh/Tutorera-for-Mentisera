@@ -73,6 +73,7 @@ import disciplineSubjectMapRoutes from "./admin/disciplineSubjectMap.routes";
 import academicFrameworkRoutes from "./admin/academicFramework.routes";
 import emailTemplateRoutes from "./admin/emailTemplate.routes";
 import promoCodeRoutes from "./admin/promoCode.routes";
+import payoutAdminRoutes from "./admin/payout.routes";
 import { enforceAccountAction, getAccountEnforcementHistory } from "../controllers/accountModeration.controller";
 import { moderateRequest, getRequestModerationHistory } from "../controllers/requestModeration.controller";
 
@@ -110,6 +111,7 @@ router.use("/tax-config", taxConfigRoutes);
 router.use("/exchange-rates", exchangeRateAdminRoutes);
 router.use("/geography", geographyAdminRoutes);
 router.use("/verification", verificationRoutes);
+router.use("/payouts", payoutAdminRoutes);
 router.use("/subjects", subjectRoutes);
 router.use("/discipline-subject-maps", disciplineSubjectMapRoutes);
 // Canonical, normalized academic administration. Legacy subject and map routes
