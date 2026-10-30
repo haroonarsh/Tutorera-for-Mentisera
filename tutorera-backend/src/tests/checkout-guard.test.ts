@@ -9,11 +9,10 @@ import { releaseExpiredPaymentHold } from "../controllers/request.controller";
 
 const checkout = {
   amount: 100, currency: "PKR", basketId: "BID-guard-fixture", customerMobileNo: "03001234567",
-  customerEmail: "student@example.test", description: "Fixture", successUrl: "https://example.test/success",
-  failureUrl: "https://example.test/failure", checkoutUrl: "https://example.test/processing",
+  customerEmail: "student@example.test", description: "Fixture",
   feeSnapshot: { subtotal: 100, studentFee: 0, tutorFee: 20, tax: 3, studentTotal: 100, tutorNet: 77, platformFee: 23 },
 };
-const created = { checkoutUrl: "https://checkout.test/1", sessionId: "fixture-session" } as never;
+const created = { sessionId: "cs_fixture-session", clientSecret: "cs_fixture-session_secret_xyz", publishableKey: "pk_test_0000" } as never;
 async function previous() {
   await PaymentLedger.create({ provider: "rapidpay", providerTransactionId: checkout.basketId, eventType: "checkout.created", status: "pending", grossAmount: 100, currency: "USD", metadata: { sessionId: "old-session" } });
 }
@@ -30,7 +29,8 @@ describe("checkout creation safety", () => {
     try {
       await expect(paymentProvider.createCheckout(checkout)).rejects.toMatchObject({ code: "PAYMENT_ATTEMPT_BLOCKED" });
     } finally { finish(created); }
-    expect(await first).toBe("https://checkout.test/1");
+    const result = await first;
+    expect(result).toMatchObject({ sessionId: "cs_fixture-session" });
     expect(create).toHaveBeenCalledTimes(1);
     expect((await CheckoutGuard.findById(checkout.basketId))?.state).toBe("idle");
   });
@@ -57,7 +57,8 @@ describe("checkout creation safety", () => {
     await PaymentLedger.updateOne({ providerTransactionId: checkout.basketId, eventType: "checkout.created" }, { $set: { status: "failed" } });
     jest.spyOn(rapidPayProvider, "getSessionStatus").mockResolvedValueOnce({ status: "cancelled" } as never);
     const create = jest.spyOn(rapidPayProvider, "createCheckout").mockResolvedValue(created);
-    await expect(paymentProvider.createCheckout(checkout)).resolves.toBe("https://checkout.test/1");
+    const result = await paymentProvider.createCheckout(checkout);
+    expect(result).toMatchObject({ sessionId: "cs_fixture-session" });
     expect(create).toHaveBeenCalledTimes(1);
     expect((await PaymentLedger.findOne({ providerTransactionId: checkout.basketId, eventType: "checkout.created" }))?.status).toBe("pending");
   });

@@ -282,26 +282,12 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
       }
     }
 
-    // Swich needs a valid payer phone (MSISDN) and CNIC on every session. Check
-    // both BEFORE reserving anything, so a missing value is a cheap 422 and not
-    // a reserve-then-rollback. Only the paying student needs them — a tutor
-    // accepting a counter-offer never starts a checkout. The CNIC arrives in the
-    // request body, is passed straight to Swich, and is never stored or logged.
+    // Look up the payer's phone to pass to RapidPay for customer identification.
     let payerPhone: string | undefined;
-    let payerCnic: string | undefined;
     if (isStudentOwner) {
       const studentUser = await User.findById(request.student).select("phone");
       const studentProfile = await StudentProfile.findOne({ user: request.student }).select("phone").lean();
       payerPhone = normalizePkMobile(studentUser?.phone || studentProfile?.phone);
-      if (!payerPhone) {
-        res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Please add a valid Pakistani mobile number (e.g. 03001234567) to your profile before paying." });
-        return;
-      }
-      payerCnic = normalizeCnic(req.body?.cnic);
-      if (!payerCnic) {
-        res.status(422).json({ success: false, code: "CNIC_REQUIRED", message: "Enter the 13-digit CNIC of the person paying (e.g. 4210112345671)." });
-        return;
-      }
     }
 
     const reservationId = await reserveOffer(request._id as Types.ObjectId, offer, false);
@@ -350,16 +336,15 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         recomputeGatewayFee(fees);
       }
 
-      const checkoutUrl = await paymentProvider.createCheckout({
+      const session = await paymentProvider.createCheckout({
         amount: fees.studentTotal,
         currency: offer.currency || request.currency || "USD",
         marketCountryCode: request.countryCode,
-        customerMobileNo: payerPhone || "",  // validated above; never a made-up fallback number
+        customerMobileNo: payerPhone,
         customerEmail: student?.email || "",
-        customerCnic: payerCnic,
-        // "BID-" prefix — confirmSwichPayment (payment.controller.ts)
-        // branches on this same prefix to tell an accept-offer checkout
-        // apart from an existing-booking checkout (createBookingCheckout).
+        // "BID-" prefix — confirmCheckout (payment.controller.ts) branches on
+        // this prefix to tell an accept-offer checkout apart from an
+        // existing-booking checkout (createBookingCheckout).
         // Offer and Bid are the same collection, so this is fully
         // compatible with that logic.
         basketId: `BID-${offer._id.toString()}`,
@@ -368,9 +353,6 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         tutorId: offer.tutor.toString(),
         feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
         description: `TUTORERA offer acceptance ${offer._id.toString()}`,
-        successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
-        failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
-        checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
         ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
       });
 
@@ -394,8 +376,10 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
 
       res.status(200).json({
         success: true,
-        message: "Redirecting to payment. Your booking will be created once payment completes.",
-        checkoutUrl,
+        message: "Complete your payment to confirm the booking.",
+        sessionId: session.sessionId,
+        clientSecret: session.clientSecret,
+        publishableKey: session.publishableKey,
       });
     } catch (err) {
       const paymentError = err as { code?: string; message?: string; statusCode?: number };
@@ -412,7 +396,7 @@ export const acceptOffer = async (req: AuthRequest, res: Response): Promise<void
         return;
       }
 
-      console.error("Failed to create Swich checkout for offer acceptance:", err);
+      console.error("Failed to create RapidPay checkout for offer acceptance:", err);
       res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
     }
   } catch (error) {
@@ -455,19 +439,9 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Same payer checks as acceptOffer: Swich requires a valid phone and CNIC.
   const retryStudentUser = await User.findById(request.student).select("phone");
   const retryStudentProfile = await StudentProfile.findOne({ user: request.student }).select("phone").lean();
   const payerPhone = normalizePkMobile(retryStudentUser?.phone || retryStudentProfile?.phone);
-  if (!payerPhone) {
-    res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Please add a valid Pakistani mobile number (e.g. 03001234567) to your profile before paying." });
-    return;
-  }
-  const payerCnic = normalizeCnic(req.body?.cnic);
-  if (!payerCnic) {
-    res.status(422).json({ success: false, code: "CNIC_REQUIRED", message: "Enter the 13-digit CNIC of the person paying (e.g. 4210112345671)." });
-    return;
-  }
 
   // Extend the hold from this retry attempt, so the student gets a full
   // fresh window instead of racing whatever was left of the original one.
@@ -505,33 +479,29 @@ export const retryOfferPayment = async (req: AuthRequest, res: Response): Promis
       }
     }
 
-    const checkoutUrl = await paymentProvider.createCheckout({
+    const session = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
       currency: offer.currency || request.currency || "USD",
       marketCountryCode: request.countryCode,
       customerMobileNo: payerPhone,
       customerEmail: student?.email || "",
-      customerCnic: payerCnic,
       basketId: `BID-${offer._id.toString()}`,
       bidId: offer._id.toString(),
       studentId: request.student.toString(),
       tutorId: offer.tutor.toString(),
       feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
       description: `TUTORERA offer acceptance ${offer._id.toString()} (retry)`,
-      successUrl: `${process.env.CLIENT_URL}/offers?payment=success&offer=${offer._id}`,
-      failureUrl: `${process.env.CLIENT_URL}/offers?payment=failed&offer=${offer._id}`,
-      checkoutUrl: `${process.env.CLIENT_URL}/offers?payment=processing&offer=${offer._id}`,
       ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
-    res.status(200).json({ success: true, message: "Redirecting to payment.", checkoutUrl });
+    res.status(200).json({ success: true, message: "Complete your payment to confirm the booking.", sessionId: session.sessionId, clientSecret: session.clientSecret, publishableKey: session.publishableKey });
   } catch (err) {
     const retryErr = err as { code?: string; message?: string };
     if (["PAYMENT_ALREADY_COMPLETED", "PAYMENT_OUTCOME_UNKNOWN", "PAYMENT_ATTEMPT_BLOCKED", "PAYMENT_RETRY_UNVERIFIED"].includes(retryErr.code || "")) {
       res.status((retryErr as { statusCode?: number }).statusCode || 409).json({ success: false, code: retryErr.code, message: retryErr.message });
       return;
     }
-    console.error("Failed to create Swich retry checkout:", err);
+    console.error("Failed to create RapidPay retry checkout:", err);
     res.status(502).json({ success: false, message: "Unable to start payment. Please try again." });
   }
 };

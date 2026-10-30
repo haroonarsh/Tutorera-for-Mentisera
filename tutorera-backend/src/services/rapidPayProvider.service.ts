@@ -12,8 +12,8 @@ export function normalizeCnic(raw: string | undefined | null): string | undefine
 
 /**
  * Normalise a Pakistani mobile number to the "03XXXXXXXXX" format RapidPay
- * and Swich both accept. Returns undefined for anything that can't be normalised
- * so the caller omits the field rather than sending a value the gateway rejects.
+ * accepts. Returns undefined for anything that can't be normalised so the
+ * caller omits the field rather than sending a value the gateway rejects.
  */
 export function normalizePkMobile(raw: string | undefined | null): string | undefined {
   let digits = String(raw || "").replace(/\D/g, "");
@@ -23,27 +23,32 @@ export function normalizePkMobile(raw: string | undefined | null): string | unde
   return /^3\d{9}$/.test(digits) ? `0${digits}` : undefined;
 }
 
-// RapidPay integration.
+// RapidPay integration — embedded iframe checkout (no redirect).
 //
 // Credentials are loaded from environment variables:
-//   RAPIDPAY_API_KEY      — API key issued by RapidPay (Bearer token on all requests)
-//   RAPIDPAY_MERCHANT_ID  — Merchant ID (numeric, issued on account approval)
-//   RAPIDPAY_BASE_URL     — Base URL for RapidPay API (defaults to live endpoint in production)
+//   RAPIDPAY_API_KEY      — Client secret issued by RapidPay
+//   RAPIDPAY_MERCHANT_ID  — Merchant ID (numeric), also the OAuth2 client_id
+//   RAPIDPAY_BASE_URL     — Base URL (defaults to https://secure.rapid-gateway.com)
 //
-// The checkout and confirmation flows below are structured to match the Swich
-// interface used by paymentProvider.service.ts, so callers are unaffected.
+// Auth: OAuth2 client credentials. POST /oauth2/token with
+//   Authorization: Basic base64(merchantId:clientSecret)
+//   Content-Type: application/x-www-form-urlencoded; body: grant_type=client_credentials
+// Token expires in ~299 seconds; cached with a 30-second safety buffer.
 //
-// NOTE: Endpoint paths, request/response shapes and webhook signing are marked
-// CONFIRM_WITH_DOCS throughout. Fill them in once you have the merchant docs.
-// The provider is already wired as the active gateway — set contractVerified: true
-// in payment-release-policy.json only after the HTTP contract is confirmed and
-// tested end-to-end.
+// Checkout: POST /v1/checkout-sessions → returns { sessionId, clientSecret, publishableKey }.
+// The clientSecret and publishableKey are passed to the frontend, which mounts
+// the RapidPay JS SDK (https://secure.rapid-gateway.com/sdk/v1/rapidpay.js).
+// The customer never leaves the page; the SDK renders an iframe.
+//
+// Status: GET /v1/checkout-sessions/{sessionId} → SUCCEEDED | FAILED | PROCESSING | EXPIRED
 
 export interface RapidPayCheckoutParams {
   amount: number;
   currency: string;
   marketCountryCode?: string;
   reference: string;
+  customerEmail?: string;
+  customerMobile?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -56,8 +61,9 @@ export interface RapidPaySessionStatus {
 }
 
 export interface RapidPayCheckoutResult {
-  checkoutUrl: string;
   sessionId: string;
+  clientSecret: string;
+  publishableKey: string;
 }
 
 function requireEnv(name: string): string {
@@ -72,8 +78,7 @@ function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
-// CONFIRM_WITH_DOCS: replace with the official live endpoint base URL once confirmed.
-const FALLBACK_BASE_URL = "https://api.rapidpay.co"; // placeholder — verify against merchant docs
+const DEFAULT_BASE_URL = "https://secure.rapid-gateway.com";
 
 function rapidPayBaseUrl(): string {
   const configured = process.env.RAPIDPAY_BASE_URL?.trim();
@@ -89,7 +94,7 @@ function rapidPayBaseUrl(): string {
   if (isProduction()) {
     throw httpError("RAPIDPAY_BASE_URL must be configured in production", 503, "PAYMENT_GATEWAY_NOT_CONFIGURED");
   }
-  return FALLBACK_BASE_URL;
+  return DEFAULT_BASE_URL;
 }
 
 export function assertRapidPayRuntimeConfiguration(): void {
@@ -99,82 +104,110 @@ export function assertRapidPayRuntimeConfiguration(): void {
 }
 
 export function getRapidPayCapabilities() {
-  // RapidPay is authorised for all six launch markets, settling in USD.
-  // The RAPIDPAY_SUPPORTED_MARKETS env var overrides this if needed.
   const configured = process.env.RAPIDPAY_SUPPORTED_MARKETS?.split(",").map((m) => m.trim().toUpperCase()).filter(Boolean);
   const markets = new Set(configured && configured.length > 0 ? configured : ["PK", "AE", "GB", "US", "SA", "IN"]);
-  const currencies = new Set(["USD"]);
+  // RapidPay processes in PKR for PK; other markets use their offer currency.
+  // The gateway accepts whichever currency the session is created with.
+  const currencies = new Set(["PKR", "USD", "GBP", "AED", "SAR", "INR"]);
   return { markets, currencies };
 }
 
 export function assertRapidPayCheckoutCapability(countryCode: string | undefined, currency: string): void {
-  const { markets, currencies } = getRapidPayCapabilities();
-  if (!markets.has((countryCode || "PK").toUpperCase()) || !currencies.has(currency.toUpperCase())) {
+  const { markets } = getRapidPayCapabilities();
+  if (!markets.has((countryCode || "PK").toUpperCase())) {
     throw httpError(
-      "RapidPay checkout is not approved for this market and currency combination.",
+      "RapidPay checkout is not approved for this market.",
       409,
       "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED"
     );
   }
 }
 
+// OAuth2 token cache — avoids fetching a new token on every request.
+// The token expires in ~299 seconds; refresh 30 seconds early.
+interface TokenCache { value: string; expiresAt: number; }
+let cachedToken: TokenCache | null = null;
+
+async function getAccessToken(): Promise<string> {
+  const now = Date.now();
+  if (cachedToken && cachedToken.expiresAt > now + 30_000) return cachedToken.value;
+
+  const merchantId = requireEnv("RAPIDPAY_MERCHANT_ID");
+  const clientSecret = requireEnv("RAPIDPAY_API_KEY");
+  const baseUrl = rapidPayBaseUrl();
+  const credentials = Buffer.from(`${merchantId}:${clientSecret}`).toString("base64");
+
+  try {
+    const res = await axios.post(
+      `${baseUrl}/oauth2/token`,
+      "grant_type=client_credentials",
+      {
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        timeout: 15_000,
+      }
+    );
+    const { access_token, expires_in } = res.data;
+    if (!access_token) throw new Error("access_token missing from token response");
+    cachedToken = { value: access_token, expiresAt: now + (Number(expires_in || 299) * 1000) };
+    return cachedToken.value;
+  } catch (error) {
+    cachedToken = null;
+    const axErr = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = axErr?.response?.data?.message || axErr?.message || "unknown error";
+    throw httpError(`RapidPay token fetch failed: ${msg}`, 502, "RAPIDPAY_AUTH_FAILED");
+  }
+}
+
 export const rapidPayProvider = {
   async createCheckout(params: RapidPayCheckoutParams): Promise<RapidPayCheckoutResult> {
-    assertRapidPayCheckoutCapability(params.marketCountryCode, params.currency || "USD");
+    assertRapidPayCheckoutCapability(params.marketCountryCode, params.currency);
 
-    const apiKey = requireEnv("RAPIDPAY_API_KEY");
     const merchantId = requireEnv("RAPIDPAY_MERCHANT_ID");
     const baseUrl = rapidPayBaseUrl();
+    const token = await getAccessToken();
 
     const metadata = params.metadata || {};
-    const customerEmail = String(metadata.studentEmail || "").trim();
-    const customerName = String(metadata.customerName || "TUTORERA Student").trim();
-    const successUrl = String(metadata.successUrl || "").trim();
-    const failedUrl = String(metadata.failureUrl || successUrl).trim();
-    const description = String(metadata.description || "TUTORERA tutoring session").slice(0, 999);
+    const customerEmail = params.customerEmail || String(metadata.studentEmail || "").trim();
+    const customerMobile = params.customerMobile || String(metadata.studentMobileNo || "").trim();
 
-    if (!successUrl) {
-      throw httpError("RapidPay success URL is missing", 500, "PAYMENT_RETURN_URL_MISSING");
-    }
-
-    // CONFIRM_WITH_DOCS: replace /v1/checkout with the actual initiate endpoint path.
-    // CONFIRM_WITH_DOCS: replace request body fields with the actual RapidPay schema.
-    // CONFIRM_WITH_DOCS: confirm whether RapidPay returns a redirect URL or a session token.
     try {
       const response = await axios.post(
-        `${baseUrl}/v1/checkout`,
+        `${baseUrl}/v1/checkout-sessions`,
         {
-          merchantId,
+          merchantId: Number(merchantId),
           amount: params.amount,
-          currency: (params.currency || "USD").toUpperCase(),
-          reference: params.reference,
-          description,
-          customer: { name: customerName, email: customerEmail },
-          successUrl,
-          failedUrl,
+          currency: params.currency.toUpperCase(),
+          basketId: params.reference,
+          customerEmail: customerEmail || undefined,
+          customerMobile: customerMobile || undefined,
         },
         {
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
+            "X-Environment": isProduction() ? "LIVE" : "TEST",
           },
           timeout: 15_000,
         }
       );
 
-      // CONFIRM_WITH_DOCS: adjust field names to match the real RapidPay response.
-      const checkoutUrl = response.data?.checkoutUrl || response.data?.url || response.data?.redirectUrl;
-      const sessionId = response.data?.sessionId || response.data?.id || response.data?.transactionId || "";
+      const sessionId: string = response.data?.sessionId || "";
+      const clientSecret: string = response.data?.clientSecret || "";
+      const publishableKey: string = response.data?.publishableKey || "";
 
-      if (!checkoutUrl || typeof checkoutUrl !== "string") {
-        throw new Error("RapidPay returned no checkout URL");
-      }
+      if (!sessionId) throw new Error("RapidPay returned no sessionId");
+      if (!clientSecret) throw new Error("RapidPay returned no clientSecret");
 
-      return { checkoutUrl, sessionId };
+      return { sessionId, clientSecret, publishableKey };
     } catch (error) {
       const axErr = error as { statusCode?: number; response?: { status?: number; data?: { message?: string } }; message?: string };
       if (axErr?.statusCode) throw error;
+      // Re-acquire the token on next attempt if this was an auth error.
+      if (axErr?.response?.status === 401) cachedToken = null;
       const status = axErr?.response?.status;
       const gatewayMessage = axErr?.response?.data?.message;
       throw httpError(
@@ -186,29 +219,39 @@ export const rapidPayProvider = {
   },
 
   async getSessionStatus(sessionId: string): Promise<RapidPaySessionStatus> {
-    const apiKey = requireEnv("RAPIDPAY_API_KEY");
     const baseUrl = rapidPayBaseUrl();
+    const token = await getAccessToken();
 
-    // CONFIRM_WITH_DOCS: replace /v1/checkout/{id} with the actual status endpoint.
-    // CONFIRM_WITH_DOCS: adjust response field mapping to match real RapidPay schema.
     try {
-      const response = await axios.get(`${baseUrl}/v1/checkout/${encodeURIComponent(sessionId)}`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          Accept: "application/json",
-        },
-        timeout: 15_000,
-      });
+      const response = await axios.get(
+        `${baseUrl}/v1/checkout-sessions/${encodeURIComponent(sessionId)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          timeout: 15_000,
+        }
+      );
+
+      // Map RapidPay uppercase statuses to the lowercase values used internally.
+      const rawStatus = String(response.data?.status || "").toUpperCase();
+      let status: RapidPaySessionStatus["status"] = "pending";
+      if (rawStatus === "SUCCEEDED") status = "success";
+      else if (rawStatus === "FAILED") status = "failed";
+      else if (rawStatus === "EXPIRED") status = "expired";
+      else if (rawStatus === "PROCESSING") status = "pending";
 
       return {
-        sessionId: response.data?.sessionId || response.data?.id || sessionId,
-        status: (response.data?.status || "pending").toLowerCase(),
+        sessionId: response.data?.sessionId || sessionId,
+        status,
         amount: Number(response.data?.amount) || 0,
-        currency: String(response.data?.currency || "USD").toUpperCase(),
-        reference: String(response.data?.reference || ""),
+        currency: String(response.data?.currency || "").toUpperCase(),
+        reference: String(response.data?.basketId || response.data?.reference || ""),
       };
     } catch (error) {
       const axErr = error as { response?: { status?: number }; message?: string };
+      if (axErr?.response?.status === 401) cachedToken = null;
       const status = axErr?.response?.status;
       throw httpError(
         `RapidPay session status check failed${axErr?.message ? `: ${axErr.message}` : ""}`,

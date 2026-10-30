@@ -27,23 +27,22 @@ export type FeeSnapshot = {
   feeConfig?: Record<string, unknown>;
 };
 
+export interface CheckoutSession {
+  sessionId: string;
+  clientSecret: string;
+  publishableKey: string;
+}
+
 export interface CheckoutParams {
   amount: number;
   currency?: string;
   marketCountryCode?: string;
-  customerMobileNo: string;
+  customerMobileNo?: string;
   customerEmail: string;
-  /**
-   * Payer's 13-digit CNIC, required by Swich on every payment session. Passed
-   * straight through to Swich for this one request — deliberately NOT written
-   * to the ledger, logs, or any model.
-   */
-  customerCnic?: string;
   basketId: string;
   description: string;
-  successUrl: string;
-  failureUrl: string;
-  checkoutUrl: string;
+  successUrl?: string;
+  failureUrl?: string;
   bookingId?: string;
   bidId?: string;
   studentId?: string;
@@ -55,11 +54,11 @@ export interface CheckoutParams {
 export const paymentProvider = {
   name: "rapidpay" as PaymentProviderName,
 
-  async createCheckout(params: CheckoutParams): Promise<string> {
+  async createCheckout(params: CheckoutParams): Promise<CheckoutSession> {
     return withCheckoutGuard(params.basketId, (markDispatched) => paymentProvider.createCheckoutLocked(params, markDispatched));
   },
 
-  async createCheckoutLocked(params: CheckoutParams, markDispatched: () => void): Promise<string> {
+  async createCheckoutLocked(params: CheckoutParams, markDispatched: () => void): Promise<CheckoutSession> {
     const platformCurrency = (params.currency || "USD").toUpperCase();
 
     if (!Number.isFinite(params.amount) || params.amount <= 0) {
@@ -90,29 +89,19 @@ export const paymentProvider = {
     }
 
     markDispatched();
-    const { checkoutUrl, sessionId } = await rapidPayProvider.createCheckout({
+    const { sessionId, clientSecret, publishableKey } = await rapidPayProvider.createCheckout({
       amount: params.amount,
       currency: platformCurrency,
       marketCountryCode: params.marketCountryCode,
       reference: params.basketId,
-      metadata: {
-        studentMobileNo: params.customerMobileNo,
-        studentEmail: params.customerEmail,
-        customerName: params.customerEmail,
-        description: params.description,
-        successUrl: params.successUrl,
-        failureUrl: params.failureUrl,
-        checkoutUrl: params.checkoutUrl,
-        studentId: params.studentId,
-        bookingId: params.bookingId,
-        bidId: params.bidId,
-        feeSnapshot: params.feeSnapshot,
-      },
+      customerEmail: params.customerEmail,
+      customerMobile: params.customerMobileNo,
     });
 
     const ledgerMetadata = {
-      checkoutUrl,
       sessionId,
+      clientSecret,
+      publishableKey,
       platformAmount: params.amount,
       platformCurrency,
       ...(params.metadata || {}),
@@ -138,7 +127,7 @@ export const paymentProvider = {
       { $set: { metadata: ledgerMetadata, grossAmount: params.amount, currency: platformCurrency, status: "pending" } }
     );
 
-    return checkoutUrl;
+    return { sessionId, clientSecret, publishableKey };
   },
 
   /**

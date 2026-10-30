@@ -142,8 +142,8 @@ if (market.paymentProvider !== "rapidpay") {
     throw httpError("No compliant payment provider is configured for this market.", 409, "PAYMENT_PROVIDER_UNAVAILABLE");
   }
   const capabilities = getRapidPayCapabilities();
-if (!capabilities.markets.has(market.countryCode) || !capabilities.currencies.has(market.currency)) {
-    throw httpError("RapidPay is not approved for this market and currency yet.", 409, "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED");
+  if (!capabilities.markets.has(market.countryCode)) {
+    throw httpError("RapidPay is not approved for this market yet.", 409, "RAPIDPAY_MARKET_OR_CURRENCY_UNSUPPORTED");
   }
   return market;
 }

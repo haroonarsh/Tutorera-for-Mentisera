@@ -26,7 +26,7 @@ import { bookingConfirmedEmail, bidAcceptedEmail, newBidEmail, directBookingRequ
 import { convertToPKR } from "../config/countries";
 import { paymentProvider } from "../services/paymentProvider.service";
 import { reserveOffer, releaseFailedOfferReservation } from "../services/offerReservation.service";
-import { normalizeCnic, normalizePkMobile } from "../services/rapidPayProvider.service";
+import { normalizePkMobile } from "../services/rapidPayProvider.service";
 import { previewPromoDiscount, getAppliedPromoForBasket, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
 import AbandonedJourney from "../models/AbandonedJourney.model";
 import AuditLog from "../models/AuditLog.model";
@@ -854,14 +854,10 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
   }
 
   let payerPhone: string | undefined;
-  let payerCnic: string | undefined;
   if (isOwner) {
     const studentUser = await User.findById(request.student).select("phone");
     const studentProfile = await StudentProfile.findOne({ user: request.student }).select("phone").lean();
     payerPhone = normalizePkMobile(studentUser?.phone || studentProfile?.phone);
-    if (!payerPhone) { res.status(422).json({ success: false, code: "PHONE_REQUIRED", message: "Please add a valid Pakistani mobile number to your profile before paying." }); return; }
-    payerCnic = normalizeCnic(req.body?.cnic);
-    if (!payerCnic) { res.status(422).json({ success: false, code: "CNIC_REQUIRED", message: "Enter the 13-digit identity number of the person paying." }); return; }
   }
   let reservationId: string;
   try {
@@ -901,22 +897,18 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
       recomputeGatewayFee(fees);
     }
 
-    const checkoutUrl = await paymentProvider.createCheckout({
+    const session = await paymentProvider.createCheckout({
       amount: fees.studentTotal,
       currency: bid.currency || "USD",
       marketCountryCode: request.countryCode,
-      customerMobileNo: payerPhone!,
+      customerMobileNo: payerPhone,
       customerEmail: student?.email || "",
-      customerCnic: payerCnic,
       basketId: `BID-${bid._id.toString()}`,
       bidId: bid._id.toString(),
       studentId: request.student.toString(),
       tutorId: bid.tutor.toString(),
       feeSnapshot: { ...fees, platformFee: fees.tutorFee + fees.tax },
       description: `TUTORERA offer acceptance ${bid._id.toString()}`,
-      successUrl: `${process.env.CLIENT_URL}/dashboard?payment=success&bid=${bid._id}`,
-      failureUrl: `${process.env.CLIENT_URL}/dashboard?payment=failed&bid=${bid._id}`,
-      checkoutUrl: `${process.env.CLIENT_URL}/dashboard?payment=processing&bid=${bid._id}`,
       ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
@@ -927,8 +919,10 @@ export const initiateAcceptBid = async (req: AuthRequest, res: Response): Promis
     if (!currentRequest || !currentOffer) { res.status(409).json({ success: false, message: "This payment reservation changed. Refresh before paying." }); return; }
     res.status(200).json({
       success: true,
-      message: "Redirecting to payment. Your offer will be confirmed once payment completes.",
-      checkoutUrl,
+      message: "Complete your payment to confirm the booking.",
+      sessionId: session.sessionId,
+      clientSecret: session.clientSecret,
+      publishableKey: session.publishableKey,
     });
   } catch (err) {
     const paymentError = err as { code?: string; message?: string; statusCode?: number };

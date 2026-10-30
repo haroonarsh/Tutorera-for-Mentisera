@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import OfferComparisonModal from "@/components/marketplace/OfferComparisonModal";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
-import CnicModal from "@/components/payments/CnicModal";
+import RapidPayCheckoutModal from "@/components/payments/RapidPayCheckoutModal";
 
 type History = { 
   _id: string; 
@@ -106,9 +106,7 @@ function OffersContent() {
   const [sortBy, setSortBy] = useState("best_match");
   const [now, setNow] = useState<number | null>(null);
   const [showComparison, setShowComparison] = useState(false);
-  // Swich needs the payer's CNIC before a checkout can start. We ask in a
-  // dialog, hold it in memory only, and send it with the accept/retry request.
-  const [cnicTarget, setCnicTarget] = useState<{ offer: Offer; mode: "accept" | "retry" } | null>(null);
+  const [checkoutSession, setCheckoutSession] = useState<{ offerId: string; sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
   const [startingPayment, setStartingPayment] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -205,11 +203,11 @@ function OffersContent() {
 
   // Returns true when the request was handled (including a redirect to the
   // payment page) and false when it failed, so callers can keep a dialog open.
-  async function action(o: Offer, type: "accept" | "decline" | "withdraw", cnic?: string): Promise<boolean> {
+  async function action(o: Offer, type: "accept" | "decline" | "withdraw"): Promise<boolean> {
     try {
-      const res = await api.post(`/offers/${o._id}/${type}`, type === "accept" && cnic ? { cnic } : undefined);
-      if (type === "accept" && res.data?.checkoutUrl) {
-        window.location.assign(res.data.checkoutUrl);
+      const res = await api.post(`/offers/${o._id}/${type}`);
+      if (type === "accept" && res.data?.sessionId) {
+        setCheckoutSession({ offerId: o._id, sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
         return true;
       }
       showSuccess(type === "accept" ? (res.data?.message || "Rate agreed! Proceeding to booking.") : "Offer updated.");
@@ -221,11 +219,9 @@ function OffersContent() {
     }
   }
 
-  // The paying side (student/parent) must give a CNIC first; a tutor accepting
-  // a student's counter-offer never starts a checkout, so no prompt for them.
   function requestAccept(o: Offer) {
-    if (isRequester) setCnicTarget({ offer: o, mode: "accept" });
-    else void action(o, "accept");
+    setStartingPayment(true);
+    action(o, "accept").finally(() => setStartingPayment(false));
   }
 
   async function toggleShortlist(o: Offer) {
@@ -257,30 +253,20 @@ function OffersContent() {
   // student's earlier attempt failed (declined card, insufficient balance,
   // closed the tab) but the 30-minute hold hasn't expired yet. Without this,
   // there's no visible action for a payment_pending offer at all.
-  async function retryPayment(o: Offer, cnic: string): Promise<boolean> {
+  async function retryPayment(o: Offer): Promise<void> {
+    setStartingPayment(true);
     try {
-      const res = await api.post(`/offers/${o._id}/retry-payment`, { cnic });
-      if (res.data?.checkoutUrl) {
-        window.location.assign(res.data.checkoutUrl);
-        return true;
+      const res = await api.post(`/offers/${o._id}/retry-payment`);
+      if (res.data?.sessionId) {
+        setCheckoutSession({ offerId: o._id, sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
+      } else {
+        showError(new Error("No session"), "Unable to resume payment. Please try again.");
       }
-      showError(new Error("No checkout URL"), "Unable to resume payment. Please try again.");
-      return false;
     } catch (e) {
       showError(e, "Unable to resume payment. Please try again.");
-      return false;
+    } finally {
+      setStartingPayment(false);
     }
-  }
-
-  async function submitCnic(cnic: string) {
-    if (!cnicTarget) return;
-    setStartingPayment(true);
-    const ok = cnicTarget.mode === "accept"
-      ? await action(cnicTarget.offer, "accept", cnic)
-      : await retryPayment(cnicTarget.offer, cnic);
-    setStartingPayment(false);
-    // Keep the dialog open on failure so a mistyped CNIC can be corrected.
-    if (ok) setCnicTarget(null);
   }
 
   // Sorted offers
@@ -613,7 +599,7 @@ function OffersContent() {
 
                 {o.status === "payment_pending" && isRequester && (
                   <button
-                    onClick={() => setCnicTarget({ offer: o, mode: "retry" })}
+                    onClick={() => retryPayment(o)}
                     style={{
                       background: "#10b981",
                       color: "white",
@@ -733,13 +719,44 @@ function OffersContent() {
           }}
         />
       )}
-      <CnicModal
-        isOpen={!!cnicTarget}
-        busy={startingPayment}
-        subtitle={cnicTarget ? `${cnicTarget.offer.request.subject} (${cnicTarget.offer.request.level}) with ${cnicTarget.offer.tutor.name}` : undefined}
-        onSubmit={submitCnic}
-        onClose={() => { if (!startingPayment) setCnicTarget(null); }}
-      />
+      {checkoutSession && (
+        <RapidPayCheckoutModal
+          sessionId={checkoutSession.sessionId}
+          clientSecret={checkoutSession.clientSecret}
+          publishableKey={checkoutSession.publishableKey}
+          onSuccess={() => {
+            setCheckoutSession(null);
+            showSuccess("Payment received! Confirming your booking now…");
+            const basketId = `BID-${checkoutSession.offerId}`;
+            let attempt = 0;
+            let cancelled = false;
+            const poll = async () => {
+              if (cancelled) return;
+              attempt += 1;
+              try {
+                const r = await api.post("/payments/confirm", { basketId });
+                if (r.data?.confirmed) { showSuccess("Booking confirmed!"); load(); return; }
+                if (attempt < 6 && !cancelled) setTimeout(poll, 3000);
+                else { showError(new Error(r.data?.sessionStatus || "pending"), "Payment confirmed but booking finalisation is still in progress. Check back in a moment."); load(); }
+              } catch (e) {
+                if (attempt < 3 && !cancelled) setTimeout(poll, 3000);
+                else { showError(e, "Payment received but we couldn't confirm your booking automatically. Contact support with your offer reference."); load(); }
+              }
+            };
+            poll();
+            return () => { cancelled = true; };
+          }}
+          onPending={() => {
+            setCheckoutSession(null);
+            showSuccess("Payment is awaiting approval. You'll be notified when it completes.");
+            load();
+          }}
+          onError={(e) => {
+            showError(new Error(e?.message || "Payment failed"), "Payment was not completed. You can try again.");
+          }}
+          onClose={() => setCheckoutSession(null)}
+        />
+      )}
     </main>
   );
 }

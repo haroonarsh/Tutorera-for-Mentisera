@@ -98,11 +98,11 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
       (booking.studentTotal || booking.amount) * currentFeeConfig.feeConfig.gatewayFeePercent / 100 + currentFeeConfig.feeConfig.gatewayFixedFee
     );
 
-    const checkoutUrl = await paymentProvider.createCheckout({
+    const session = await paymentProvider.createCheckout({
       amount: booking.studentTotal || booking.amount,
       currency: booking.currency || "USD",
       marketCountryCode: booking.countryCode,
-      customerMobileNo: payer?.phone || "03000000000",
+      customerMobileNo: payer?.phone,
       customerEmail: payer?.email || student.email,
       basketId,
       bookingId: booking._id.toString(),
@@ -120,13 +120,10 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
         feeConfig: booking.feeConfig,
       },
       description: `TUTORERA booking ${basketId}`,
-      successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
-      failureUrl: `${FRONTEND_URL}/dashboard?payment=failed&booking=${basketId}`,
-      checkoutUrl: `${FRONTEND_URL}/dashboard?payment=processing&booking=${basketId}`,
       ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
     });
 
-    res.status(200).json({ success: true, checkoutUrl });
+    res.status(200).json({ success: true, sessionId: session.sessionId, clientSecret: session.clientSecret, publishableKey: session.publishableKey });
   } catch (err: unknown) {
     if (err instanceof PromoCodeError) {
       res.status(err.statusCode).json({ success: false, message: err.message });

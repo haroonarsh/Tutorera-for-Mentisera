@@ -9,67 +9,73 @@ import { finalizePromoRedemption, getAppliedPromoForBasket } from "../services/p
 
 // RapidPay webhook handler.
 //
-// Register the webhook endpoint in RapidPay's merchant dashboard as:
+// Register this URL in the RapidPay merchant dashboard (Settings → Webhooks):
 //   https://tutorera.ac.pk/api/payments/rapidpay/webhook
 //
-// Set RAPIDPAY_WEBHOOK_SECRET in your deployment environment (Render / Cloudflare).
-// Never commit the secret to source.
+// Set RAPIDPAY_WEBHOOK_SECRET in Render / Cloudflare to the signing salt
+// shown on that same settings page. Never commit the secret to source.
 //
-// CONFIRM_WITH_DOCS: RapidPay's signing scheme (header name, algorithm, signed
-// payload shape) is assumed to be HMAC-SHA256 of the raw body, delivered in an
-// X-RapidPay-Signature header. Verify against merchant documentation and update
-// verifyWebhookSignature() and extractWebhookPayload() accordingly before
-// enabling this in production.
+// Signature scheme (from RapidPay docs):
+//   X-RapidGateway-Signature — HMAC-SHA256(secret, timestamp + "." + rawBody), uppercase hex
+//   X-RapidGateway-Timestamp — Unix timestamp (seconds) when the event was sent
+//   X-RapidGateway-Event     — event type string (same as payload eventType)
+//   X-RapidGateway-Delivery  — delivery attempt UUID
+//   Replay window: |now − timestamp| ≤ 300 seconds
 
 function timingSafeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a, "utf8");
   const bb = Buffer.from(b, "utf8");
   if (ba.length !== bb.length) {
-    // Perform a dummy compare to avoid timing leaks on length mismatch.
-    crypto.timingSafeEqual(ba, ba);
+    crypto.timingSafeEqual(ba, ba); // constant-time dummy to avoid length-leak
     return false;
   }
   return crypto.timingSafeEqual(ba, bb);
 }
 
-// CONFIRM_WITH_DOCS: update the header name and signing scheme to match
-// RapidPay's actual webhook documentation.
-function verifyWebhookSignature(rawBody: Buffer, providedSignature: string, secret: string): boolean {
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  return timingSafeEqual(providedSignature, expected);
+function verifyWebhookSignature(
+  rawBody: Buffer,
+  providedSignature: string,
+  timestamp: string,
+  secret: string
+): boolean {
+  // RapidPay signs: HMAC_SHA256(secret, timestamp + "." + rawRequestBody) → uppercase hex
+  const signingInput = `${timestamp}.${rawBody.toString("utf8")}`;
+  const expected = crypto.createHmac("sha256", secret).update(signingInput).digest("hex").toUpperCase();
+  return timingSafeEqual(providedSignature.toUpperCase(), expected);
+}
+
+function isWithinReplayWindow(timestamp: string): boolean {
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts) || ts <= 0) return false;
+  return Math.abs(Date.now() / 1000 - ts) <= 300;
 }
 
 interface RapidPayWebhookPayload {
-  event: string;              // e.g. "payment.success", "payment.failed" — CONFIRM_WITH_DOCS
-  sessionId?: string;         // CONFIRM_WITH_DOCS: may differ in real API
-  reference?: string;         // Our basket ID (BID-... or booking mongo id)
+  eventId?: string;              // de-duplicate on this
+  eventType?: string;            // "transaction.completed" | "transaction.failed" | etc.
+  status?: string;               // "SUCCESS" | "FAILED" | etc.
+  merchantTransactionId?: string;// = the basketId submitted when creating the session
   amount?: number;
   currency?: string;
-  status?: string;
+  gatewayTxnRef?: string;
+  merchantId?: number;
+  environment?: string;
+  occurredAt?: string;
   [key: string]: unknown;
 }
 
-// CONFIRM_WITH_DOCS: replace field names with real RapidPay webhook body fields.
 function extractWebhookPayload(body: unknown): RapidPayWebhookPayload | null {
   if (!body || typeof body !== "object") return null;
-  const b = body as Record<string, unknown>;
-  return {
-    event: String(b.event || b.type || b.eventType || ""),
-    sessionId: b.sessionId as string | undefined ?? b.id as string | undefined ?? b.transactionId as string | undefined,
-    reference: b.reference as string | undefined ?? b.basketId as string | undefined ?? b.billReferenceNo as string | undefined,
-    amount: typeof b.amount === "number" ? b.amount : undefined,
-    currency: typeof b.currency === "string" ? b.currency : undefined,
-    status: typeof b.status === "string" ? b.status : undefined,
-    ...b,
-  };
+  return body as RapidPayWebhookPayload;
 }
 
 /**
  * POST /api/payments/rapidpay/webhook
  *
- * Receives push notifications from RapidPay. Verifies HMAC signature, then
- * finalizes or rejects the corresponding booking. Safe to call more than once:
- * finalizeBidAcceptance's atomic guard makes duplicate events a no-op.
+ * Receives signed notifications from RapidPay. Verifies HMAC signature and
+ * 5-minute replay window, then finalizes or rejects the corresponding booking.
+ * Safe to call more than once: finalizeBidAcceptance's atomic guard and
+ * eventId-based dedup make duplicate deliveries a no-op.
  */
 export const handleRapidPayWebhook = async (req: Request, res: Response): Promise<void> => {
   const secret = process.env.RAPIDPAY_WEBHOOK_SECRET?.trim();
@@ -79,16 +85,22 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
     return;
   }
 
-  // CONFIRM_WITH_DOCS: update the header name to match RapidPay's docs.
-  const providedSignature = (req.headers["x-rapidpay-signature"] || req.headers["x-webhook-signature"] || "") as string;
+  const providedSignature = req.headers["x-rapidgateway-signature"] as string | undefined;
+  const timestamp = req.headers["x-rapidgateway-timestamp"] as string | undefined;
   const rawBody: Buffer | undefined = (req as Request & { rawBody?: Buffer }).rawBody;
 
-  if (!rawBody || !providedSignature) {
-    res.status(400).json({ success: false, message: "Missing signature or body." });
+  if (!rawBody || !providedSignature || !timestamp) {
+    res.status(400).json({ success: false, message: "Missing signature, timestamp, or body." });
     return;
   }
 
-  if (!verifyWebhookSignature(rawBody, providedSignature, secret)) {
+  if (!isWithinReplayWindow(timestamp)) {
+    logger.warn({ timestamp }, "Rejected RapidPay webhook outside the 5-minute replay window");
+    res.status(401).json({ success: false, message: "Webhook timestamp outside replay window." });
+    return;
+  }
+
+  if (!verifyWebhookSignature(rawBody, providedSignature, timestamp, secret)) {
     logger.warn({ headers: req.headers }, "Rejected RapidPay webhook with invalid signature");
     res.status(401).json({ success: false, message: "Invalid webhook signature." });
     return;
@@ -100,22 +112,21 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
     return;
   }
 
-  const { event, sessionId, reference: basketId, amount, currency } = payload;
+  const { eventId, eventType, merchantTransactionId: basketId, amount, currency, status } = payload;
   const requestId = (req as Request & { id?: string }).id;
 
-  logger.info({ requestId, event, basketId, sessionId }, "Received verified RapidPay webhook");
+  logger.info({ requestId, eventId, eventType, basketId, status }, "Received verified RapidPay webhook");
 
-  // Acknowledge immediately — RapidPay may retry if we take too long.
+  // Acknowledge immediately — RapidPay retries on anything other than 2xx.
   res.status(200).json({ success: true, received: true });
 
-  // Async finalization after the 200 is sent.
   setImmediate(async () => {
     try {
-      const isSuccess = /success/i.test(event) || /success/i.test(payload.status as string || "");
-      const isFailure = /fail/i.test(event) || /fail/i.test(payload.status as string || "");
+      const isSuccess = eventType === "transaction.completed" && status === "SUCCESS";
+      const isFailure = eventType === "transaction.failed" || status === "FAILED";
 
       if (!basketId) {
-        logger.warn({ requestId, event, sessionId }, "RapidPay webhook has no basket reference — cannot reconcile");
+        logger.warn({ requestId, eventType, eventId }, "RapidPay webhook has no merchantTransactionId — cannot reconcile");
         return;
       }
 
@@ -126,8 +137,17 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
       }).sort("-createdAt");
 
       if (!checkout) {
-        logger.warn({ requestId, basketId, event }, "RapidPay webhook: no checkout ledger row found for this reference");
+        logger.warn({ requestId, basketId, eventType }, "RapidPay webhook: no checkout ledger row found for this reference");
         return;
+      }
+
+      // Dedup on eventId — same event can arrive more than once.
+      if (eventId) {
+        const alreadyProcessed = await PaymentLedger.exists({ providerEventId: eventId });
+        if (alreadyProcessed) {
+          logger.info({ requestId, basketId, eventId }, "RapidPay webhook: duplicate event — ignoring");
+          return;
+        }
       }
 
       const alreadySettled = await PaymentLedger.exists({
@@ -137,23 +157,25 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
         status: "succeeded",
       });
       if (alreadySettled) {
-        logger.info({ requestId, basketId }, "RapidPay webhook: payment already settled — ignoring duplicate event");
+        logger.info({ requestId, basketId }, "RapidPay webhook: payment already settled — ignoring");
         return;
       }
 
       if (isSuccess) {
         const expectedAmount = checkout.grossAmount;
-        const expectedCurrency = (checkout.currency || "USD").toUpperCase();
+        const expectedCurrency = (checkout.currency || "").toUpperCase();
         const receivedAmount = amount ?? expectedAmount;
         const receivedCurrency = (currency || expectedCurrency).toUpperCase();
 
-        if (receivedAmount !== expectedAmount || receivedCurrency !== expectedCurrency) {
+        if (receivedAmount !== expectedAmount || (expectedCurrency && receivedCurrency !== expectedCurrency)) {
           logger.error(
             { requestId, basketId, expectedAmount, receivedAmount, expectedCurrency, receivedCurrency },
             "RapidPay webhook amount or currency mismatch — refusing to finalize"
           );
           return;
         }
+
+        const sessionId = (checkout.metadata as Record<string, unknown>)?.sessionId as string | undefined;
 
         if (basketId.startsWith("BID-")) {
           const bidId = basketId.slice("BID-".length);
@@ -162,6 +184,7 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
           const appliedPromo = await getAppliedPromoForBasket(basketId);
           await recordPaymentLedger({
             providerTransactionId: basketId,
+            providerEventId: eventId,
             eventType: "payment.succeeded",
             status: "succeeded",
             amount: receivedAmount,
@@ -169,7 +192,7 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
             bidId,
             studentId: checkout.student?.toString(),
             tutorId: checkout.tutor?.toString(),
-            metadata: { sessionId, event, webhookSource: "rapidpay" },
+            metadata: { sessionId, eventType, eventId, webhookSource: "rapidpay" },
           });
           if (appliedPromo && checkout.student) {
             await finalizePromoRedemption(
@@ -194,6 +217,7 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
           }
           await recordPaymentLedger({
             providerTransactionId: basketId,
+            providerEventId: eventId,
             eventType: "payment.succeeded",
             status: "succeeded",
             amount: receivedAmount,
@@ -201,17 +225,18 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
             bookingId: basketId,
             studentId: checkout.student?.toString(),
             tutorId: checkout.tutor?.toString(),
-            metadata: { sessionId, event, webhookSource: "rapidpay" },
+            metadata: { sessionId, eventType, eventId, webhookSource: "rapidpay" },
           });
           logger.info({ requestId, basketId }, "RapidPay webhook: booking payment confirmed");
         }
       } else if (isFailure) {
         await PaymentLedger.updateOne(
           { _id: checkout._id, status: "pending" },
-          { $set: { status: "failed", "metadata.webhookEvent": event } }
+          { $set: { status: "failed", "metadata.webhookEvent": eventType } }
         );
         await recordPaymentLedger({
           providerTransactionId: basketId,
+          providerEventId: eventId,
           eventType: "payment.failed",
           status: "failed",
           amount: checkout.grossAmount,
@@ -220,14 +245,14 @@ export const handleRapidPayWebhook = async (req: Request, res: Response): Promis
           bidId: checkout.bid?.toString(),
           studentId: checkout.student?.toString(),
           tutorId: checkout.tutor?.toString(),
-          metadata: { sessionId, event, webhookSource: "rapidpay" },
+          metadata: { eventType, eventId, webhookSource: "rapidpay" },
         });
-        logger.info({ requestId, basketId, event }, "RapidPay webhook: payment failure recorded");
+        logger.info({ requestId, basketId, eventType }, "RapidPay webhook: payment failure recorded");
       } else {
-        logger.info({ requestId, basketId, event }, "RapidPay webhook: unhandled event type — acknowledged but not acted on");
+        logger.info({ requestId, basketId, eventType, status }, "RapidPay webhook: unhandled event type — acknowledged but not acted on");
       }
     } catch (err) {
-      logger.error({ err, basketId, event }, "RapidPay webhook: unhandled error during async finalization");
+      logger.error({ err, basketId, eventType }, "RapidPay webhook: unhandled error during async finalization");
     }
   });
 };
