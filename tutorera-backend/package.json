@@ -18,6 +18,7 @@
     "migrate:switch-only-payments": "tsx src/scripts/migrateSwitchOnlyPayments.ts",
     "contracts:generate": "tsx src/scripts/generateFrontendContracts.ts",
     "audit:grandfathered-tutors": "tsx src/scripts/auditGrandfatheredTutors.ts",
+    "audit:db-indexes": "tsx src/scripts/auditDatabaseIndexes.ts",
     "academic:reconcile": "tsx src/scripts/reconcileAcademicFramework.ts",
     "academic:seed-school-offerings": "tsx src/scripts/seedSchoolOfferings.ts",
     "academic:reconcile-legacy-approvals": "tsx src/scripts/reconcileLegacySubjectApprovals.ts"

@@ -53,5 +53,29 @@ export function createHealthRouter(checkDatabase: () => Promise<boolean> = async
       res.status(503).json({ error: "unavailable" });
     }
   });
+
+  /** Pool and connection stats for load-test observability. */
+  router.get("/db", (_req, res) => {
+    const client = mongoose.connection.getClient();
+    // topology.s.servers gives per-server pool stats in the Node driver
+    const topology = (client as unknown as { topology?: { s?: { servers?: Map<string, { s?: { pool?: { totalConnectionCount?: number; availableConnectionCount?: number; pendingConnectionCount?: number } } }> } } }).topology;
+    const serverStats: Record<string, unknown>[] = [];
+    topology?.s?.servers?.forEach((srv, addr) => {
+      const pool = srv?.s?.pool;
+      serverStats.push({
+        address: addr,
+        total: pool?.totalConnectionCount ?? null,
+        available: pool?.availableConnectionCount ?? null,
+        pending: pool?.pendingConnectionCount ?? null,
+      });
+    });
+    res.json({
+      readyState: mongoose.connection.readyState,
+      readyStateLabel: ["disconnected", "connected", "connecting", "disconnecting"][mongoose.connection.readyState] ?? "unknown",
+      configuredMaxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE || "5", 10),
+      servers: serverStats,
+    });
+  });
+
   return router;
 }
