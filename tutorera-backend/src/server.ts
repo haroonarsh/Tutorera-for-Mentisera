@@ -6,19 +6,10 @@ import { validateEnv } from "./config/env";
 import { initSocket } from "./utils/socket";
 import app from "./app";
 import logger from "./config/logger";
-import { processOfferExpirations } from "./utils/offerExpiry";
-import { processAbandonedJourneyRecovery } from "./utils/abandonedJourneyRecovery";
-import { processRequestLifecycle } from "./services/requestLifecycle.service";
-import { processPendingPayouts } from "./services/payout.service";
-import { refreshRates } from "./services/exchangeRate.service";
 import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
-import { sendAgreementReminders } from "./services/legalAgreementReminder.service";
-import { sendMissingDocumentsReminders } from "./services/missingDocumentsReminder.service";
 import { ensureLaunchMarkets } from "./services/market.service";
 import { assertSwichRuntimeConfiguration } from "./services/swichProvider.service";
-import { processPendingSwichCheckouts } from "./services/paymentReconciliation.service";
-import { runWithJobLease } from "./services/scheduledJobLease.service";
-import { processEmailOutbox } from "./services/emailOutbox.service";
+import { startProcessScheduler } from "./services/schedulerRuntime.service";
 
 dotenv.config();
 
@@ -38,6 +29,7 @@ app.set("io", io);
 
 // Connect DB & seed legal agreements
 connectDB().then(() => {
+  if (process.env.BOOTSTRAP_DATA === "false") return;
   seedDefaultLegalAgreements().catch(err => logger.error({ err }, "Initial legal agreement seed failed"));
   ensureLaunchMarkets().catch(err => logger.error({ err }, "Initial Switch market configuration failed"));
 });
@@ -46,83 +38,7 @@ const PORT = process.env.PORT || 5000;
 const server = httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-const reconcilePendingSwitchCheckouts = () => runWithJobLease(
-  "swich-checkout-reconciliation",
-  9 * 60 * 1000,
-  () => processPendingSwichCheckouts(io),
-);
-const processExpiringOffers = () => runWithJobLease(
-  "offer-expiry-processing",
-  14 * 60 * 1000,
-  () => processOfferExpirations(io),
-);
-const recoverAbandonedJourneys = () => runWithJobLease(
-  "abandoned-journey-recovery",
-  59 * 60 * 1000,
-  () => processAbandonedJourneyRecovery(),
-);
-const processRequestLifecycles = () => runWithJobLease(
-  "request-lifecycle-processing",
-  14 * 60 * 1000,
-  () => processRequestLifecycle(io),
-);
-const processTutorPayouts = () => runWithJobLease(
-  "pending-payout-processing",
-  59 * 60 * 1000,
-  () => processPendingPayouts(),
-);
-const refreshExchangeRates = () => runWithJobLease(
-  "exchange-rate-refresh",
-  59 * 60 * 1000,
-  () => refreshRates(),
-);
-const remindAgreementSigners = () => runWithJobLease(
-  "agreement-reminder-delivery",
-  23 * 60 * 60 * 1000,
-  () => sendAgreementReminders(io),
-);
-const remindMissingDocuments = () => runWithJobLease(
-  "missing-document-reminder-delivery",
-  23 * 60 * 60 * 1000,
-  () => sendMissingDocumentsReminders(io),
-);
-const retryEmailDelivery = () => runWithJobLease("email-outbox-delivery", 4 * 60 * 1000, () => processEmailOutbox());
-const offerExpiryTimer = setInterval(() => processExpiringOffers().catch(err => logger.error({ err }, "Offer expiry processing failed")), 15 * 60 * 1000);
-offerExpiryTimer.unref();
-const abandonedJourneyTimer = setInterval(() => recoverAbandonedJourneys().catch(err => logger.error({ err }, "Abandoned journey recovery failed")), 60 * 60 * 1000);
-abandonedJourneyTimer.unref();
-const requestLifecycleTimer = setInterval(() => processRequestLifecycles().catch(err => logger.error({ err }, "Request lifecycle processing failed")), 15 * 60 * 1000);
-requestLifecycleTimer.unref();
-const payoutTimer = setInterval(() => processTutorPayouts().catch(err => logger.error({ err }, "Payout processing failed")), 60 * 60 * 1000);
-payoutTimer.unref();
-const paymentReconciliationTimer = setInterval(() => reconcilePendingSwitchCheckouts().catch(err => logger.error({ err }, "Switch checkout reconciliation failed")), 10 * 60 * 1000);
-paymentReconciliationTimer.unref();
-setTimeout(() => processExpiringOffers().catch(err => logger.error({ err }, "Initial offer expiry processing failed")), 10_000).unref();
-setTimeout(() => recoverAbandonedJourneys().catch(err => logger.error({ err }, "Initial abandoned journey recovery failed")), 20_000).unref();
-setTimeout(() => processRequestLifecycles().catch(err => logger.error({ err }, "Initial request lifecycle processing failed")), 15_000).unref();
-setTimeout(() => processTutorPayouts().catch(err => logger.error({ err }, "Initial payout processing failed")), 30_000).unref();
-setTimeout(() => reconcilePendingSwitchCheckouts().catch(err => logger.error({ err }, "Initial Switch checkout reconciliation failed")), 60_000).unref();
-
-// Exchange rate refresh — runs hourly, warm cache on boot after 5 s
-const exchangeRateTimer = setInterval(() => refreshExchangeRates().catch(err => logger.error({ err }, "Exchange rate refresh failed")), 60 * 60 * 1000);
-exchangeRateTimer.unref();
-setTimeout(() => refreshExchangeRates().catch(err => logger.error({ err }, "Initial exchange rate refresh failed")), 5_000).unref();
-
-// Legal agreement reminders — already-activated tutors who still haven't
-// accepted the current Tutor Agreement get emailed once daily (throttled
-// inside the service itself) until they sign; publishAdminAgreement also
-// fires an immediate one when a new version is published, so this daily
-// run is the "keep nudging" half, not the only trigger.
-const agreementReminderTimer = setInterval(() => remindAgreementSigners().catch(err => logger.error({ err }, "Legal agreement reminder run failed")), 24 * 60 * 60 * 1000);
-agreementReminderTimer.unref();
-setTimeout(() => remindAgreementSigners().catch(err => logger.error({ err }, "Initial legal agreement reminder run failed")), 40_000).unref();
-
-const missingDocumentsReminderTimer = setInterval(() => remindMissingDocuments().catch(err => logger.error({ err }, "Missing documents reminder run failed")), 24 * 60 * 60 * 1000);
-missingDocumentsReminderTimer.unref();
-const emailOutboxTimer = setInterval(() => retryEmailDelivery().catch(err => logger.error({ err }, "Email outbox run failed")), 5 * 60 * 1000);
-emailOutboxTimer.unref();
-setTimeout(() => retryEmailDelivery().catch(err => logger.error({ err }, "Initial email outbox run failed")), 25_000).unref();
-setTimeout(() => remindMissingDocuments().catch(err => logger.error({ err }, "Initial missing documents reminder run failed")), 50_000).unref();
+const stopScheduler = startProcessScheduler(io);
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
@@ -138,12 +54,7 @@ let isShuttingDown = false;
 async function gracefulShutdown(signal: string) {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  clearInterval(offerExpiryTimer);
-  clearInterval(abandonedJourneyTimer);
-  clearInterval(requestLifecycleTimer);
-  clearInterval(payoutTimer);
-  clearInterval(paymentReconciliationTimer);
-  clearInterval(emailOutboxTimer);
+  stopScheduler();
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 

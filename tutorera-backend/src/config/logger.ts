@@ -1,5 +1,12 @@
 import pino from "pino";
 
+export const loggerRedactionPaths = [
+  "password", "*.password", "token", "*.token", "*.otp", "otp", "*.jwt",
+  "req.headers.authorization", "req.headers.cookie", "req.body.password", "req.body.token",
+  'req.headers["x-tutorera-preview-token"]', 'req.headers["x-tutorera-job-token"]',
+  'res.headers["set-cookie"]', "res.headers.authorization",
+];
+
 // Structured logger with automatic redaction of sensitive fields. Anything
 // matching these paths is replaced with "[REDACTED]" in the log output —
 // so passwords, tokens, and auth headers never end up in log files or a
@@ -8,19 +15,7 @@ import pino from "pino";
 const logger = pino({
     level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
     redact: {
-        paths: [
-        "password",
-        "*.password",
-        "token",
-        "*.token",
-        "req.headers.authorization",
-        "req.headers.cookie",
-        "*.otp",
-        "otp",
-        "*.jwt",
-        "req.body.password",
-        "req.body.token",
-        ],
+        paths: loggerRedactionPaths,
         censor: "[REDACTED]",
     },
   // In development, pretty-print for readability. In production, emit plain

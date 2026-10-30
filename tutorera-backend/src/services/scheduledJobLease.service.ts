@@ -10,12 +10,13 @@ async function recordRun(
   startedAt: Date,
   status: "succeeded" | "failed",
   durationMs: number,
-  error?: string
+  error: string | undefined,
+  holderId: string,
 ): Promise<void> {
   try {
     await ScheduledJobRun.create({
       jobName: name,
-      holderId: PROCESS_HOLDER_ID,
+      holderId,
       status,
       startedAt,
       finishedAt: new Date(),
@@ -29,9 +30,8 @@ async function recordRun(
 }
 
 /**
- * Runs work only while this process owns a MongoDB-backed lease. This is safe
- * across Render replicas and naturally recovers after a crashed process once
- * the lease expires. Work must remain idempotent: a process can still die
+ * Acquires and renews an invocation-owned MongoDB lease. Lease loss cannot
+ * cancel arbitrary in-flight work: tasks must remain idempotent, since a process can die
  * after completing external work but before recording completion.
  *
  * A process that dies mid-run leaves no run row and no lease update, so the
@@ -44,6 +44,10 @@ export async function runWithJobLease<T>(
   leaseMs: number,
   work: () => Promise<T>,
 ): Promise<{ acquired: boolean; value?: T }> {
+  if (!Number.isSafeInteger(leaseMs) || leaseMs <= 0) throw new Error("Invalid scheduled job lease duration");
+  // An invocation owns the lease, not the process. Timers/alarms in the same
+  // process can overlap, and an expired invocation must not release its successor.
+  const holderId = `${PROCESS_HOLDER_ID}:${crypto.randomUUID()}`;
   const now = new Date();
   const leaseExpiresAt = new Date(now.getTime() + leaseMs);
   let lease;
@@ -51,13 +55,10 @@ export async function runWithJobLease<T>(
     lease = await ScheduledJobLease.findOneAndUpdate(
       {
         name,
-        $or: [
-          { leaseExpiresAt: { $lte: now } },
-          { holderId: PROCESS_HOLDER_ID },
-        ],
+        leaseExpiresAt: { $lte: now },
       },
       {
-        $set: { holderId: PROCESS_HOLDER_ID, leaseExpiresAt, lastStartedAt: now, lastError: "" },
+        $set: { holderId, leaseExpiresAt, lastStartedAt: now, lastError: "" },
         $setOnInsert: { name },
       },
       { returnDocument: "after", upsert: true },
@@ -69,31 +70,59 @@ export async function runWithJobLease<T>(
     throw error;
   }
 
-  if (!lease || lease.holderId !== PROCESS_HOLDER_ID) return { acquired: false };
+  if (!lease || lease.holderId !== holderId) return { acquired: false };
+
+  let renewing: Promise<void> | undefined;
+  let leaseLost = false;
+  const heartbeat = setInterval(() => {
+    if (renewing || leaseLost) return;
+    renewing = (async () => {
+      try {
+        const at = new Date();
+        const renewed = await ScheduledJobLease.updateOne(
+          { name, holderId, leaseExpiresAt: { $gt: at } },
+          { $set: { leaseExpiresAt: new Date(at.getTime() + leaseMs) } },
+        );
+        if (renewed.matchedCount !== 1) leaseLost = true;
+      } catch {
+        leaseLost = true;
+      }
+      if (leaseLost) logger.error({ job: name, holderId }, "Scheduled job lease renewal failed; in-flight work requires reconciliation");
+    })().finally(() => { renewing = undefined; });
+  }, Math.max(1, Math.floor(leaseMs / 3)));
+  heartbeat.unref();
+  const stopHeartbeat = async () => {
+    clearInterval(heartbeat);
+    await renewing;
+  };
 
   try {
     const value = await work();
+    await stopHeartbeat();
+    if (leaseLost) throw new Error("Scheduled job lease lost during execution");
     const durationMs = Date.now() - now.getTime();
-    await ScheduledJobLease.updateOne(
-      { name, holderId: PROCESS_HOLDER_ID },
+    const completed = await ScheduledJobLease.updateOne(
+      { name, holderId, leaseExpiresAt: { $gt: new Date() } },
       {
         $set: { lastCompletedAt: new Date(), leaseExpiresAt: new Date(), lastError: "", lastDurationMs: durationMs, consecutiveFailures: 0 },
         $inc: { totalRuns: 1 },
       },
     );
-    await recordRun(name, now, "succeeded", durationMs);
+    if (completed.matchedCount !== 1) throw new Error("Scheduled job lease lost during execution");
+    await recordRun(name, now, "succeeded", durationMs, undefined, holderId);
     return { acquired: true, value };
   } catch (error) {
+    await stopHeartbeat();
     const durationMs = Date.now() - now.getTime();
     const message = error instanceof Error ? error.message : "Scheduled job failed";
     await ScheduledJobLease.updateOne(
-      { name, holderId: PROCESS_HOLDER_ID },
+      { name, holderId },
       {
         $set: { leaseExpiresAt: new Date(), lastError: message.slice(0, 2000), lastDurationMs: durationMs },
         $inc: { totalRuns: 1, totalFailures: 1, consecutiveFailures: 1 },
       },
     ).catch((leaseError) => logger.error({ err: leaseError, job: name }, "Failed to record scheduled job failure"));
-    await recordRun(name, now, "failed", durationMs, message);
+    await recordRun(name, now, "failed", durationMs, message, holderId);
     throw error;
   }
 }

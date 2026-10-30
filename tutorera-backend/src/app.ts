@@ -42,6 +42,8 @@ import publicRoutes from "./routes/public.routes";
 import pricingRoutes from "./routes/pricing.routes";
 import featureFlagRoutes from "./routes/featureFlag.routes";
 import legalAgreementRoutes from "./routes/legalAgreement.routes";
+import { createHealthRouter } from "./routes/health.routes";
+import { createInternalJobsRouter } from "./routes/internalJobs.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -78,6 +80,7 @@ app.use(
 
 app.use(helmet());
 app.set("trust proxy", 1);
+app.use("/health", createHealthRouter());
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
@@ -114,6 +117,7 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
 app.use(hpp());
+app.use("/internal/jobs", createInternalJobsRouter());
 
 const apiRouter = express.Router();
 apiRouter.use("/auth", authRoutes);

@@ -13,8 +13,9 @@ interface ConnectedUsers {
 const connectedUsers: ConnectedUsers = {};
 export let ioInstance: Server | undefined;
 
-export const initSocket = (httpServer: HttpServer): Server => {
+export const initSocket = (httpServer: HttpServer, options: { pollingOnly?: boolean } = {}): Server => {
   const io = new Server(httpServer, {
+    ...(options.pollingOnly ? { transports: ["polling" as const], allowUpgrades: false } : {}),
     cors: {
       origin: process.env.CLIENT_URL,
       methods: ["GET", "POST"],
