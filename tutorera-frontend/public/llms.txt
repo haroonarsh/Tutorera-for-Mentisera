@@ -17,19 +17,85 @@ TUTORERA enables students and parents to post tuition requirements and receive c
 - Guest checkout for parent accounts — parents can pay for their children's bookings
 - Private requirements, child details, exact addresses, and direct contact information are not public content.
 
+## Active Markets
+TUTORERA operates across six markets. Payment and booking availability varies by market status.
+
+### Pakistan (PK) — tutorera.ac.pk/pk
+Primary market with home tuition and online tuition. Currency: USD (marketplace settlement).
+- /pk — Pakistan market hub
+- /pk/tutors — tutor directory for Pakistan
+
+### United Arab Emirates (AE) — tutorera.ac.pk/ae
+- /ae — UAE market hub
+- /ae/tutors — tutor directory for UAE
+
+### United Kingdom (GB) — tutorera.ac.pk/gb
+- /gb — UK market hub
+- /gb/tutors — tutor directory for UK
+
+### India (IN) — tutorera.ac.pk/in
+- /in — India market hub
+
+### United States (US) — tutorera.ac.pk/us
+- /us — United States market hub
+
+### Saudi Arabia (SA) — tutorera.ac.pk/sa
+- /sa — Saudi Arabia market hub
+
 ## Student-intent Pages
-TUTORERA generates city×subject×curriculum demand pages for organic discovery:
+TUTORERA generates city×intent demand pages for organic discovery. These pages explain how to post a requirement in that city; they do not publish private requests or claim inventory that has not been verified for indexing.
+
+### Pakistan
 - /pk/home-tuition
 - /pk/online-tuition
 - /pk/mathematics-tuition
+- /pk/physics-tuition
+- /pk/chemistry-tuition
 - /pk/o-level-tuition
-- /pk/islamabad/tuition
-- /pk/lahore/home-tuition
-These pages do not publish private requests or claim inventory that has not been verified for indexing.
+- /pk/a-level-tuition
+- /pk/islamabad/tuition, /pk/islamabad/home-tuition, /pk/islamabad/online-tuition
+- /pk/lahore/tuition, /pk/lahore/home-tuition, /pk/lahore/online-tuition
+- /pk/karachi/tuition, /pk/karachi/home-tuition, /pk/karachi/online-tuition
+- /pk/rawalpindi/tuition, /pk/rawalpindi/home-tuition, /pk/rawalpindi/online-tuition
 
-## Tutoring Index
+### UAE
+- /ae/dubai/tuition, /ae/dubai/home-tuition, /ae/dubai/online-tuition
+- /ae/abu-dhabi/tuition, /ae/abu-dhabi/home-tuition, /ae/abu-dhabi/online-tuition
+- /ae/sharjah/tuition, /ae/sharjah/home-tuition, /ae/sharjah/online-tuition
+
+### United Kingdom
+- /gb/london/tuition, /gb/london/home-tuition, /gb/london/online-tuition
+- /gb/manchester/tuition, /gb/manchester/home-tuition, /gb/manchester/online-tuition
+- /gb/birmingham/tuition, /gb/birmingham/home-tuition, /gb/birmingham/online-tuition
+- /gb/leeds/tuition, /gb/leeds/home-tuition, /gb/leeds/online-tuition
+- /gb/edinburgh/tuition, /gb/edinburgh/home-tuition, /gb/edinburgh/online-tuition
+
+### India
+- /in/delhi/tuition, /in/delhi/home-tuition, /in/delhi/online-tuition
+- /in/mumbai/tuition, /in/mumbai/home-tuition, /in/mumbai/online-tuition
+- /in/bangalore/tuition, /in/bangalore/home-tuition, /in/bangalore/online-tuition
+- /in/chennai/tuition, /in/chennai/home-tuition, /in/chennai/online-tuition
+- /in/hyderabad/tuition, /in/hyderabad/home-tuition, /in/hyderabad/online-tuition
+- /in/kolkata/tuition, /in/kolkata/home-tuition, /in/kolkata/online-tuition
+
+### United States
+- /us/new-york/tuition, /us/new-york/home-tuition, /us/new-york/online-tuition
+- /us/los-angeles/tuition, /us/los-angeles/home-tuition, /us/los-angeles/online-tuition
+- /us/chicago/tuition, /us/chicago/home-tuition, /us/chicago/online-tuition
+- /us/houston/tuition, /us/houston/home-tuition, /us/houston/online-tuition
+- /us/miami/tuition, /us/miami/home-tuition, /us/miami/online-tuition
+
+### Saudi Arabia
+- /sa/riyadh/tuition, /sa/riyadh/home-tuition, /sa/riyadh/online-tuition
+- /sa/jeddah/tuition, /sa/jeddah/home-tuition, /sa/jeddah/online-tuition
+- /sa/dammam/tuition, /sa/dammam/home-tuition, /sa/dammam/online-tuition
+
+## Research and Data
 The Tutoring Index at /research/tutoring-index publishes only sufficiently large, anonymised, country- and currency-specific aggregates with its methodology. Absence of a data point does not imply a market result.
 Public aggregate market research at /research/pakistan-tutoring-rates — anonymized data on tutoring rates by city, subject, mode, and trend over 6 months.
+
+## Tutor Directory
+Tutor profiles are inventory-backed and quality-gated before indexing. The sitemap includes only profiles meeting verification, content completeness, and approval thresholds. Subject and city directories appear in the sitemap only when at least three verified tutors are associated with that segment.
 
 ## Contact
 - Website: https://tutorera.ac.pk

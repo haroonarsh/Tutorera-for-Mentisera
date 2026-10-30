@@ -23,13 +23,13 @@ export class SeoEligibilityService {
       }
     }
 
-    // If there is some minor supply, allow browsing but NOINDEX
+    // Minor supply exists — allow browsing but withhold from search indexes.
     if (activeApprovedTutors > 0) {
       return "NOINDEX_FOLLOW";
     }
 
-    // If completely dead zone, do not generate
-    return "NOINDEX_FOLLOW"; // In a full implementation, we might return DO_NOT_GENERATE based on stricter rules
+    // Zero verified supply and zero demand signal — page has no indexable content.
+    return "DO_NOT_GENERATE";
   }
 
   static getRobotsTag(eligibility: "INDEX" | "NOINDEX_FOLLOW" | "DO_NOT_GENERATE"): string {
