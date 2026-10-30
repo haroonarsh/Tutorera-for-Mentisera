@@ -51,6 +51,7 @@ export default function RequestWizard({
   const [freeText, setFreeText] = useState("");
   const [parsingNLP, setParsingNLP] = useState(false);
   const [linkedLearners, setLinkedLearners] = useState<{ _id: string; name: string; level?: string }[]>([]);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const handleNLPParse = async () => {
     if (!freeText.trim()) return;
@@ -194,6 +195,10 @@ export default function RequestWizard({
       update("preferredDays", [...form.preferredDays, day]);
     }
   };
+
+  useEffect(() => {
+    stepHeadingRef.current?.focus();
+  }, [step]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -427,7 +432,7 @@ export default function RequestWizard({
             <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#016ef8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Step {step} of 6
             </span>
-            <h1 style={{ fontSize: isModal ? "1.35rem" : "1.65rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0" }}>
+            <h1 ref={stepHeadingRef} tabIndex={-1} style={{ fontSize: isModal ? "1.35rem" : "1.65rem", fontWeight: 800, color: "#021550", margin: "0.25rem 0 0", outline: "none" }}>
               {step === 1 && "What do you need help with?"}
               {step === 2 && "How do you want to learn?"}
               {step === 3 && "When do you need tutoring?"}
@@ -448,14 +453,21 @@ export default function RequestWizard({
         </div>
 
         {/* Progress Bar */}
-        <div style={{ height: "6px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden", display: "flex" }}>
-          <div 
-            style={{ 
-              width: `${(step / 6) * 100}%`, 
-              background: "linear-gradient(90deg, #0329b2, #016ef8)", 
+        <div
+          role="progressbar"
+          aria-valuenow={step}
+          aria-valuemin={1}
+          aria-valuemax={6}
+          aria-label={`Step ${step} of 6`}
+          style={{ height: "6px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden", display: "flex" }}
+        >
+          <div
+            style={{
+              width: `${(step / 6) * 100}%`,
+              background: "linear-gradient(90deg, #0329b2, #016ef8)",
               transition: "width 0.3s ease",
               borderRadius: "999px"
-            }} 
+            }}
           />
         </div>
       </div>
@@ -468,7 +480,7 @@ export default function RequestWizard({
             <fieldset style={{ border: "1px solid #dbe5f5", borderRadius: "0.75rem", padding: "1rem" }}>
               <legend style={{ fontWeight: 800, color: "#021550" }}>Who needs tutoring?</legend>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                {([ ["self", "Myself"], ["child", "My child"], ["other", "Someone else"] ] as const).map(([value, label]) => <button type="button" key={value} onClick={() => update("learnerType", value)} aria-pressed={form.learnerType === value} style={{ ...inputStyle, width: "auto", background: form.learnerType === value ? "#eaf2ff" : "white", borderColor: form.learnerType === value ? "#0329b2" : "#cbd5e1" }}>{label}</button>)}
+                {([ ["self", "Myself"], ["child", "My child"], ["other", "Someone else"] ] as const).map(([value, label]) => <button type="button" key={value} onClick={() => update("learnerType", value)} aria-pressed={form.learnerType === value} style={{ ...inputStyle, width: "auto", background: form.learnerType === value ? "#eaf2ff" : "white", borderColor: form.learnerType === value ? "#0329b2" : "#cbd5e1", fontWeight: form.learnerType === value ? 700 : 500 }}>{label}</button>)}
               </div>
               {form.learnerType === "child" && <p style={{ margin: "0.65rem 0 0", color: "#52627e", fontSize: "0.8rem" }}>Keep your child&apos;s name, school, phone number, and exact address private. Guardian approval may be required before booking.</p>}
               {user?.role === "parent" && form.learnerType === "child" && (
@@ -495,7 +507,9 @@ export default function RequestWizard({
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <input
+                  id="nlp-describe"
                   type="text"
+                  aria-label="Describe your tuition need in plain language"
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
                   placeholder="e.g. I need a Grade 9 mathematics tutor, available after school"
@@ -544,8 +558,8 @@ export default function RequestWizard({
             </div>
 
             <div>
-              <label style={labelStyle}>What help is needed?</label>
-              <select value={form.learningNeed} onChange={(e) => update("learningNeed", e.target.value)} style={inputStyle}>
+              <label htmlFor="learning-need" style={labelStyle}>What help is needed?</label>
+              <select id="learning-need" value={form.learningNeed} onChange={(e) => update("learningNeed", e.target.value)} style={inputStyle}>
                 <option value="regular_tuition">Regular tuition</option><option value="concept_improvement">Concept improvement</option><option value="exam_preparation">Exam preparation</option><option value="past_papers">Past papers</option><option value="homework_support">Homework support</option><option value="revision">Revision</option><option value="test_preparation">Test preparation</option><option value="language_practice">Language practice</option><option value="skill_development">Skill development</option><option value="other">Other</option>
               </select>
             </div>
@@ -584,9 +598,10 @@ export default function RequestWizard({
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div>
-                <label style={labelStyle}>Curriculum / Board (optional)</label>
-                <input 
-                  type="text" 
+                <label htmlFor="curriculum-input" style={labelStyle}>Curriculum / Board (optional)</label>
+                <input
+                  id="curriculum-input"
+                  type="text"
                   list="curriculum-suggestions"
                   disabled={!!form.schoolOfferingId}
                   value={form.curriculum} 
@@ -601,10 +616,11 @@ export default function RequestWizard({
                 </datalist>
               </div>
               <div>
-                <label style={labelStyle}>Exam / Target (optional)</label>
-                <input 
-                  type="text" 
-                  value={form.examType} 
+                <label htmlFor="exam-type" style={labelStyle}>Exam / Target (optional)</label>
+                <input
+                  id="exam-type"
+                  type="text"
+                  value={form.examType}
                   onChange={(e) => update("examType", e.target.value)} 
                   placeholder="e.g. Board Exam 2026, May/June O-Level"
                   style={inputStyle}
@@ -613,17 +629,18 @@ export default function RequestWizard({
             </div>
 
             <div>
-              <label style={labelStyle}>When would you like to start?</label>
-              <select value={form.urgency} onChange={(e) => update("urgency", e.target.value)} style={inputStyle}>
+              <label htmlFor="urgency-select" style={labelStyle}>When would you like to start?</label>
+              <select id="urgency-select" value={form.urgency} onChange={(e) => update("urgency", e.target.value)} style={inputStyle}>
                 <option value="immediately">Immediately</option><option value="within_3_days">Within 3 days</option><option value="within_week">Within a week</option><option value="flexible">Flexible</option>
               </select>
             </div>
 
             <div>
-              <label style={labelStyle}>What are your main learning goals or weak topics?</label>
-              <textarea 
-                rows={3} 
-                value={form.learningObjectives} 
+              <label htmlFor="learning-objectives" style={labelStyle}>What are your main learning goals or weak topics?</label>
+              <textarea
+                id="learning-objectives"
+                rows={3}
+                value={form.learningObjectives}
                 onChange={(e) => update("learningObjectives", e.target.value)}
                 placeholder="e.g. Needs help with past papers, calculus basics, and weekly test preparation."
                 style={{ ...inputStyle, resize: "vertical" }}
@@ -654,7 +671,8 @@ export default function RequestWizard({
         {/* STEP 2: Mode & Location */}
         {step === 2 && (
           <div style={{ display: "grid", gap: "1.25rem" }}>
-            <label style={labelStyle}>Preferred Learning Mode *</label>
+            <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+            <legend style={{ ...labelStyle, marginBottom: "0.75rem" }}>Preferred Learning Mode *</legend>
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))",
@@ -670,6 +688,7 @@ export default function RequestWizard({
                   <button
                     key={m.id}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => {
                       update("teachingMode", m.id);
                       update("isWorldwideEligible", m.id === "online" || m.id === "both");
@@ -691,6 +710,7 @@ export default function RequestWizard({
                 );
               })}
             </div>
+            </fieldset>
 
             {/* Location Selector */}
             <div style={{ background: "#f8fafc", padding: "1.25rem", borderRadius: "0.875rem", border: "1px solid #e2e8f0", display: "grid", gap: "1rem" }}>
@@ -750,8 +770,8 @@ export default function RequestWizard({
         {/* STEP 3: Schedule */}
         {step === 3 && (
           <div style={{ display: "grid", gap: "1.25rem" }}>
-            <div>
-              <label style={labelStyle}>Preferred Days of the Week</label>
+            <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+              <legend style={labelStyle}>Preferred Days of the Week</legend>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
                 {DAYS.map((day) => {
                   const active = form.preferredDays.includes(day);
@@ -759,6 +779,7 @@ export default function RequestWizard({
                     <button
                       key={day}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => toggleDay(day)}
                       style={{
                         padding: "0.5rem 1rem",
@@ -776,23 +797,25 @@ export default function RequestWizard({
                   );
                 })}
               </div>
-            </div>
+            </fieldset>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div>
-                <label style={labelStyle}>Preferred Start Time</label>
-                <input 
-                  type="text" 
-                  value={form.preferredStartTime} 
+                <label htmlFor="preferred-start-time" style={labelStyle}>Preferred Start Time</label>
+                <input
+                  id="preferred-start-time"
+                  type="text"
+                  value={form.preferredStartTime}
                   onChange={(e) => update("preferredStartTime", e.target.value)}
                   placeholder="e.g. 5:00 PM or Evenings"
                   style={inputStyle}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Sessions per Week</label>
-                <select 
-                  value={form.sessionsPerWeek} 
+                <label htmlFor="sessions-per-week" style={labelStyle}>Sessions per Week</label>
+                <select
+                  id="sessions-per-week"
+                  value={form.sessionsPerWeek}
                   onChange={(e) => update("sessionsPerWeek", e.target.value)}
                   style={inputStyle}
                 >
@@ -807,10 +830,11 @@ export default function RequestWizard({
             </div>
 
             <div>
-              <label style={labelStyle}>Schedule Summary / Flexibility Note</label>
-              <input 
-                type="text" 
-                value={form.schedule} 
+              <label htmlFor="schedule-summary" style={labelStyle}>Schedule Summary / Flexibility Note</label>
+              <input
+                id="schedule-summary"
+                type="text"
+                value={form.schedule}
                 onChange={(e) => update("schedule", e.target.value)}
                 placeholder="e.g. Mon, Wed, Fri after 5 PM (flexible on weekends)"
                 style={inputStyle}
@@ -833,8 +857,9 @@ export default function RequestWizard({
 
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={labelStyle}>Your Proposed Rate ({form.currency || "USD"}) *</label>
+                  <label htmlFor="budget-amount" style={labelStyle}>Your Proposed Rate ({form.currency || "USD"}) *</label>
                   <input
+                    id="budget-amount"
                     type="number"
                     min="1"
                     step="1"
@@ -846,9 +871,10 @@ export default function RequestWizard({
                   <RateRangeHint subject={form.subject} city={form.city} currency={form.currency || "USD"} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Pricing Unit</label>
-                  <select 
-                    value={form.pricingUnit} 
+                  <label htmlFor="pricing-unit" style={labelStyle}>Pricing Unit</label>
+                  <select
+                    id="pricing-unit"
+                    value={form.pricingUnit}
                     onChange={(e) => update("pricingUnit", e.target.value)}
                     style={inputStyle}
                   >
@@ -916,9 +942,10 @@ export default function RequestWizard({
           <div style={{ display: "grid", gap: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div>
-                <label style={labelStyle}>Tutor Gender Preference</label>
-                <select 
-                  value={form.tutorGenderPreference} 
+                <label htmlFor="gender-pref" style={labelStyle}>Tutor Gender Preference</label>
+                <select
+                  id="gender-pref"
+                  value={form.tutorGenderPreference}
                   onChange={(e) => update("tutorGenderPreference", e.target.value)}
                   style={inputStyle}
                 >
@@ -928,9 +955,10 @@ export default function RequestWizard({
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Minimum Teaching Experience</label>
-                <select 
-                  value={form.minimumExperience} 
+                <label htmlFor="min-experience" style={labelStyle}>Minimum Teaching Experience</label>
+                <select
+                  id="min-experience"
+                  value={form.minimumExperience}
                   onChange={(e) => update("minimumExperience", e.target.value)}
                   style={inputStyle}
                 >
@@ -943,10 +971,11 @@ export default function RequestWizard({
             </div>
 
             <div>
-              <label style={labelStyle}>Minimum Qualification</label>
-              <input 
-                type="text" 
-                value={form.minimumQualification} 
+              <label htmlFor="min-qualification" style={labelStyle}>Minimum Qualification</label>
+              <input
+                id="min-qualification"
+                type="text"
+                value={form.minimumQualification}
                 onChange={(e) => update("minimumQualification", e.target.value)}
                 placeholder="e.g. BS Mathematics, Master's, MBBS, Chartered Accountant"
                 style={inputStyle}
@@ -954,10 +983,11 @@ export default function RequestWizard({
             </div>
 
             <div>
-              <label style={labelStyle}>Instruction Medium / Languages</label>
-              <input 
-                type="text" 
-                value={form.preferredLanguage} 
+              <label htmlFor="preferred-language" style={labelStyle}>Instruction Medium / Languages</label>
+              <input
+                id="preferred-language"
+                type="text"
+                value={form.preferredLanguage}
                 onChange={(e) => update("preferredLanguage", e.target.value)}
                 placeholder="e.g. English, Urdu"
                 style={inputStyle}
