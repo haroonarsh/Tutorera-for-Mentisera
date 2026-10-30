@@ -40,14 +40,27 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
     return;
   }
 
+  let market;
   try {
-    await assertAcceptanceAvailable(booking.countryCode);
+    market = await assertAcceptanceAvailable(booking.countryCode);
   } catch (marketError: unknown) {
     res.status(statusCodeOf(marketError, 409)).json({
       success: false,
       code: codeOf(marketError, "MARKET_DISCOVERY_ONLY"),
       message: messageOf(marketError, "Acceptance is not available in this market yet."),
       market: booking.countryCode,
+    });
+    return;
+  }
+
+  // Explicit currency guard: if a legacy booking was created with a different
+  // currency than the market now charges (e.g. PKR booking in a USD-only market),
+  // reject early with a clear message rather than letting Swich emit a cryptic error.
+  if (booking.currency && market.currency && booking.currency.toUpperCase() !== market.currency.toUpperCase()) {
+    res.status(409).json({
+      success: false,
+      code: "BOOKING_CURRENCY_MISMATCH",
+      message: `This booking is in ${booking.currency} but this market processes payments in ${market.currency}. Please contact support to reconcile.`,
     });
     return;
   }
