@@ -1,6 +1,6 @@
 import { expect, Page, test } from "@playwright/test";
 
-const apiPattern = "https://tutorera-backend.onrender.com/api/v1/**";
+const apiPattern = "https://api.tutorera.ac.pk/api/v1/**";
 const pdfBody = Buffer.from("%PDF-1.7\n% TUTORERA payout E2E fixture\n");
 
 async function authenticate(page: Page, user: Record<string, unknown>, options: { pdfFailure?: boolean; onPdfRequest?: () => void } = {}) {

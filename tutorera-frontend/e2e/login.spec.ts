@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const apiBasePattern = "https://tutorera-backend.onrender.com/api/v1/**";
+const apiBasePattern = "https://api.tutorera.ac.pk/api/v1/**";
 
 test.describe("Single Login Page (/login)", () => {
   test.beforeEach(async ({ page }) => {

@@ -7,7 +7,7 @@ export function subjectSlug(name: string): string {
   return name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 
 /** Only use the bundled reference list if the live read-only endpoint is unavailable. */
 export async function getSubjectCatalogue(): Promise<SubjectCatalogue> {

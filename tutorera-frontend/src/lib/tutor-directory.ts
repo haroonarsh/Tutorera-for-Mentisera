@@ -40,7 +40,7 @@ export interface TutorDirectoryResponse {
 
 export interface SeoInventory { countries: { value: string; total: number }[]; cities: { value: string; total: number }[]; subjects: { value: string; total: number }[]; levels: { value: string; total: number }[]; citySubjects: { city: string; subject: string; total: number }[]; }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 
 // Removed in response to the Oct 2026 indexation incident: a hardcoded
 // FALLBACK_TOP_TUTORS array ("Dr. Ayesha Malik", "Engr. Bilal Khan",

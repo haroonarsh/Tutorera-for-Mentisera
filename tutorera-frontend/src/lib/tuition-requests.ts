@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 
 // Shape of the sanitized student embedded in a public preview payload —
 // the backend never sends _id, email, avatar, phone, or exact address on

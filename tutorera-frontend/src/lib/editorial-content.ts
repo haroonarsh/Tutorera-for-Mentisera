@@ -110,7 +110,7 @@ export const STATIC_ARTICLES: EditorialArticle[] = STATIC_ARTICLE_SOURCES.map((a
   ...identity, ...a, metaDescription: a.excerpt, readingTime: estimateReadingTime(a.content),
 }));
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 
 const normalize = (a: Partial<EditorialArticle>): EditorialArticle => ({
   _id: a._id || a.slug || "article",

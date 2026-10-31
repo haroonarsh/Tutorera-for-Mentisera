@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const apiPattern = "https://tutorera-backend.onrender.com/api/v1/**";
+const apiPattern = "https://api.tutorera.ac.pk/api/v1/**";
 const analyst = { _id: "analyst-1", name: "Market Analyst", email: "analyst@example.com", role: "admin", adminRole: "analyst", isVerified: true, isApproved: true, plan: "free" };
 const scores = {
   "Lahore|Mathematics|online": { score: 82, grade: "High", components: { demandScore: 90, supplyScore: 65, fillRateScore: 80, competitionScore: 75 }, meta: { openRequests: 12, eligibleTutors: 8, fillRate: .8, avgOffersPerRequest: 3.2, avgSessionPrice: 2500, sampleSize: 28 } },

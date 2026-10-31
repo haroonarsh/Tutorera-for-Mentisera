@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./TutoringIndex.module.css";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 const path = "/research/tutoring-index";
 
 export const metadata: Metadata = {

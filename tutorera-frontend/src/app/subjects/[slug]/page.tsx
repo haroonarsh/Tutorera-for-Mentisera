@@ -21,8 +21,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${subject.name} Tutoring`,
     description: `Post a ${subject.name} tuition requirement and compare tutor offers on TUTORERA.`,
     alternates: { canonical: `/subjects/${subject.slug}` },
-    // Public tutor availability has not been independently established per subject.
-    robots: { index: false, follow: true },
   };
 }
 

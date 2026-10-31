@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("token", "e2e-token"));
-  await page.route("https://tutorera-backend.onrender.com/api/v1/**", async route => {
+  await page.route("https://api.tutorera.ac.pk/api/v1/**", async route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/auth/me")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user: { _id: "tutor-1", name: "Tutor", email: "tutor@test.com", role: "tutor", isVerified: true, isApproved: true, plan: "free", countryCode: "PK" } }) });
     if (path.endsWith("/tracking/application-status")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ payload: { marketplaceEligibility: { eligible: true } } }) });

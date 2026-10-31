@@ -55,7 +55,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     // /api/... suffix entirely (not just "/api"), so this keeps working
     // whether NEXT_PUBLIC_API_URL is ".../api" or the versioned ".../api/v1".
     const socketBaseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "https://tutorera-backend.onrender.com";
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api(\/.*)?$/, "") || "https://api.tutorera.ac.pk";
 
     const newSocket = io(socketBaseUrl, {
       auth: { token: token2 },

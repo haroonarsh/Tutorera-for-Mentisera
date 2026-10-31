@@ -8,7 +8,7 @@ import { getCountryByCode, COUNTRIES, CountryData, CityData } from "@/lib/locati
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://tutorera-backend.onrender.com/api/v1";
+  "https://api.tutorera.ac.pk/api/v1";
 
 export async function fetchLiveCountries(): Promise<CountryData[]> {
   try {
