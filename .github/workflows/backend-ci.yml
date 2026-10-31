@@ -42,6 +42,8 @@ jobs:
         run: npm ci
 
       - name: Production dependency audit
+        id: production_audit
+        continue-on-error: true
         run: npm audit --omit=dev --audit-level=high
 
       - name: TypeScript build
@@ -52,3 +54,11 @@ jobs:
 
       - name: Marketplace tests
         run: npm run test:marketplace
+
+      # Do not let an audit failure conceal independent compile/test failures.
+      # The final gate still fails the job whenever the security audit fails.
+      - name: Enforce production dependency security gate
+        if: always() && steps.production_audit.outcome == 'failure'
+        run: |
+          echo "::error::Production dependency audit failed. Resolve high/critical advisories before merging."
+          exit 1
