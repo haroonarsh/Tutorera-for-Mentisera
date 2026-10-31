@@ -25,3 +25,25 @@ for (const [path, expected] of [["/health/live", "ok"], ["/health/ready", "ready
     process.exitCode = 1;
   }
 }
+
+const apiBase = new URL("/api/v1/", url);
+for (const path of ["tutors?limit=1&page=1", "tutors/seo-facets"]) {
+  try {
+    const response = await fetch(new URL(path, apiBase), {
+      signal: AbortSignal.timeout(12000),
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json();
+    if (!response.ok) throw Error(`HTTP ${response.status}`);
+    if (path.startsWith("tutors?") && (!Array.isArray(payload.tutors) || !Number.isFinite(payload.total))) {
+      throw Error("invalid tutor directory response schema");
+    }
+    if (path.includes("seo-facets") && !Array.isArray(payload.subjects)) {
+      throw Error("invalid SEO facets response schema");
+    }
+    console.log(`PASS /api/v1/${path}`);
+  } catch (error) {
+    console.error(`FAIL /api/v1/${path}: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
