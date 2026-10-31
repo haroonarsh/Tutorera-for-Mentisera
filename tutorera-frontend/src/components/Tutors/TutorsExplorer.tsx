@@ -68,8 +68,9 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
   }
 
   function reset() {
-    setFilters(INITIAL_FILTERS);
-    load(1, INITIAL_FILTERS);
+    const cleared = { ...INITIAL_FILTERS };
+    setFilters(cleared);
+    load(1, cleared);
   }
 
   const sidebarProps = { filters, onFilterChange: change, onReset: reset, activeFilterCount };
