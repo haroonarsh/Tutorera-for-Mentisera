@@ -51,7 +51,7 @@ router.get("/:id/meeting", protect, async (req: AuthRequest, res: Response): Pro
   const userId = req.user!._id.toString();
   const allowed = req.user!.role === "admin" || booking.student.toString() === userId || booking.tutor.toString() === userId;
   if (!allowed) { res.status(403).json({ success: false, message: "Access denied." }); return; }
-  if (!["upcoming", "ongoing"].includes(booking.status) || booking.paymentStatus !== "confirmed") {
+  if (booking.teachingMode === "in-person" || !["upcoming", "ongoing"].includes(booking.status) || booking.paymentStatus !== "confirmed") {
     res.status(409).json({ success: false, message: "Meeting access is not available for this booking." }); return;
   }
   const Meeting = (await import("../models/BookingMeeting.model")).default;
