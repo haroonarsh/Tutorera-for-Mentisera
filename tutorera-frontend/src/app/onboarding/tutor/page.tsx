@@ -3,6 +3,7 @@ import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
+import { catalogueSubjectNames } from "@/lib/subject-catalogue";
 import { convertToPKR,useGeoData } from "@/lib/geoService";
 import { Country } from "@/lib/location";
 import { AlertTriangle,BookOpen } from "lucide-react";
@@ -50,9 +51,8 @@ export default function TutorOnboardingPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [existingDocs, setExistingDocs] = useState<ExistingDocsState>({});
 
-  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
-    "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"
-  ];
+  // Preserve existing backend-compatible subject labels while exposing additional catalogue options.
+  const subjects = Array.from(new Set([...(geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Other"]), ...catalogueSubjectNames]));
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
     "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"
   ];
