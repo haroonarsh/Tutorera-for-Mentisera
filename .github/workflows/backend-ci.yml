@@ -7,7 +7,7 @@ on:
       - "tutorera-backend/**"
       - ".github/workflows/backend-ci.yml"
   push:
-    branches: [main]
+    branches: [main, chore/unified-tutorera-backend]
     paths:
       - "tutorera-backend/**"
       - ".github/workflows/backend-ci.yml"
