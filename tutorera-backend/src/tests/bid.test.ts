@@ -30,7 +30,7 @@ jest.mock("../services/paymentProvider.service", () => ({
   ...jest.requireActual("../services/paymentProvider.service"),
   paymentProvider: {
     ...jest.requireActual("../services/paymentProvider.service").paymentProvider,
-    createCheckout: jest.fn().mockResolvedValue("https://checkout.test/mock-session"),
+    createCheckout: jest.fn().mockResolvedValue({ sessionId: "checkout-test-session", clientSecret: "cs_test_secret", publishableKey: "pk_test_key" }),
   },
 }));
 
@@ -208,7 +208,7 @@ describe("BE-01: cross-request bid substitution", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true, checkoutUrl: expect.stringContaining("checkout") })
+      expect.objectContaining({ success: true, sessionId: "checkout-test-session", clientSecret: "cs_test_secret", publishableKey: "pk_test_key" })
     );
 
     const reservedBid = await Bid.findById(bid._id);

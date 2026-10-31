@@ -83,13 +83,16 @@ const DEFAULT_BASE_URL = "https://secure.rapid-gateway.com";
 function rapidPayBaseUrl(): string {
   const configured = process.env.RAPIDPAY_BASE_URL?.trim();
   if (configured) {
+    let url: URL;
     try {
-      const url = new URL(configured);
-      if (url.protocol !== "https:") throw new Error("must be HTTPS");
-      return url.origin;
+      url = new URL(configured);
     } catch {
       throw httpError("RAPIDPAY_BASE_URL must be a valid HTTPS URL", 503, "PAYMENT_GATEWAY_URL_INVALID");
     }
+    if (url.protocol !== "https:") {
+      throw httpError("RAPIDPAY_BASE_URL must be HTTPS", 503, "PAYMENT_GATEWAY_URL_INVALID");
+    }
+    return url.origin;
   }
   if (isProduction()) {
     throw httpError("RAPIDPAY_BASE_URL must be configured in production", 503, "PAYMENT_GATEWAY_NOT_CONFIGURED");

@@ -27,7 +27,7 @@ jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
 jest.mock("../utils/socket", () => ({ sendNotification: jest.fn().mockResolvedValue(undefined) }));
 jest.mock("../services/paymentProvider.service", () => ({
   ...jest.requireActual("../services/paymentProvider.service"),
-  paymentProvider: { ...jest.requireActual("../services/paymentProvider.service").paymentProvider, createCheckout: jest.fn().mockResolvedValue("https://checkout.test/session") },
+  paymentProvider: { ...jest.requireActual("../services/paymentProvider.service").paymentProvider, createCheckout: jest.fn().mockResolvedValue({ sessionId: "checkout-test-session", clientSecret: "cs_test_secret", publishableKey: "pk_test_key" }) },
 }));
 
 async function fixture(status: string, approved = true) {
@@ -188,14 +188,14 @@ describe("offer renewal and acceptance integrity", () => {
     jest.mocked(paymentProvider.createCheckout).mockClear();
     const approved = await decide("approve");
     expect(approved.status).toBe(200);
-    expect(approved.body.checkoutUrl).toBeUndefined();
+    expect(approved.body.sessionId).toBeUndefined();
     expect(jest.mocked(paymentProvider.createCheckout)).not.toHaveBeenCalled();
     expect((await Request.findById(f.requirement._id))?.status).toBe("awaiting_payment");
     expect((await Bid.findById(f.offer._id))?.paymentReservationId).toBeTruthy();
     expect((await decide("approve")).status).toBe(404);
     const retry = await request(app).post(`/api/v1/offers/${f.offer.id}/retry-payment`).set("Authorization", `Bearer ${f.studentToken}`).send({ cnic: "4210112345671" });
     expect(retry.status).toBe(200);
-    expect(retry.body.checkoutUrl).toBe("https://checkout.test/session");
+    expect(retry.body.sessionId).toBe("checkout-test-session");
   });
 
   it("does not approve a parent selection after tutor subject approval is revoked", async () => {
@@ -244,7 +244,7 @@ describe("offer renewal and acceptance integrity", () => {
     let started!: () => void;
     let rejectCheckout!: (error: Error) => void;
     const entered = new Promise<void>((resolve) => { started = resolve; });
-    const checkout = new Promise<string>((_resolve, reject) => { rejectCheckout = reject; });
+    const checkout = new Promise<object>((_resolve, reject) => { rejectCheckout = reject; });
     jest.mocked(paymentProvider.createCheckout).mockImplementationOnce(() => { started(); return checkout; });
     const pending = request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({ cnic: "4210112345671" }).then((response) => response);
     await entered;
@@ -277,17 +277,17 @@ describe("offer renewal and acceptance integrity", () => {
   it("does not expose a late checkout URL after a different reservation supersedes it", async () => {
     const f = await fixture("submitted");
     await Bid.updateOne({ _id: f.offer._id }, { $set: { expiresAt: new Date(Date.now() + 86400000) } });
-    let started!: () => void; let resolveCheckout!: (url: string) => void;
+    let started!: () => void; let resolveCheckout!: (result: object) => void;
     const entered = new Promise<void>((resolve) => { started = resolve; });
-    const checkout = new Promise<string>((resolve) => { resolveCheckout = resolve; });
+    const checkout = new Promise<object>((resolve) => { resolveCheckout = resolve; });
     jest.mocked(paymentProvider.createCheckout).mockImplementationOnce(() => { started(); return checkout; });
     const pending = request(app).post(`/api/v1/offers/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.studentToken}`).send({ cnic: "4210112345671" }).then((response) => response);
     await entered;
     await Bid.updateOne({ _id: f.offer._id }, { $set: { paymentReservationId: "new-reservation-fixture" } });
-    resolveCheckout("https://checkout.test/obsolete");
+    resolveCheckout({ sessionId: "obsolete-session", clientSecret: "cs_obsolete", publishableKey: "pk_obsolete" });
     const res = await pending;
     expect(res.status).toBe(409);
-    expect(res.body.checkoutUrl).toBeUndefined();
+    expect(res.body.sessionId).toBeUndefined();
     expect((await Bid.findById(f.offer._id))?.paymentReservationId).toBe("new-reservation-fixture");
   });
 
@@ -323,7 +323,7 @@ describe("offer renewal and acceptance integrity", () => {
     jest.mocked(paymentProvider.createCheckout).mockClear();
     const res = await request(app).patch(`/api/v1/requests/${f.requirement.id}/bids/${f.offer.id}/accept`).set("Authorization", `Bearer ${f.tutorToken}`).send({});
     expect(res.status).toBe(200);
-    expect(res.body.checkoutUrl).toBeUndefined();
+    expect(res.body.sessionId).toBeUndefined();
     expect(jest.mocked(paymentProvider.createCheckout)).not.toHaveBeenCalled();
     const requirement = await Request.findById(f.requirement._id);
     const bid = await Bid.findById(f.offer._id);
