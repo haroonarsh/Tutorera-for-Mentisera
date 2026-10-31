@@ -34,6 +34,11 @@ export async function readAdminAgentSummary(agentId: AdminAgentId): Promise<Agen
     const awaitingPayment = await Request.countDocuments({ status: "awaiting_payment" });
     return { agentId, status: "completed", data: { activeRequests, awaitingPayment } };
   }
+  if (agentId === "finance") {
+    const failedPayments = await Booking.countDocuments({ paymentStatus: "failed" });
+    const heldPayouts = await Booking.countDocuments({ payoutStatus: "held" });
+    return { agentId, status: "completed", data: { failedPayments, heldPayouts } };
+  }
   return {
     agentId,
     status: "not_implemented",
