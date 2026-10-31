@@ -56,7 +56,10 @@ describe("tutor-hosted booking meetings", () => {
     const booking = await makeBooking(student, tutor);
     const path = `/api/v1/bookings/${booking._id}/meeting`;
     for (const url of ["http://meet.google.com/abc-defg-hij", "https://meet.google.com.evil.test/abc-defg-hij",
-      "https://meet.google.com/", "https://teams.microsoft.com/"]) {
+      "https://meet.google.com/", "https://teams.microsoft.com/",
+      "https://meet.google.com/abc-defg-hij?redirect=https://evil.test",
+      "https://teams.microsoft.com/l/meetup-join/invalid",
+      "https://meet.google.com/abc-defg-hij#fragment"]) {
       await request(app).put(path).set(auth(tutor)).send({ url }).expect(400);
     }
   });
@@ -72,6 +75,17 @@ describe("tutor-hosted booking meetings", () => {
     const result = await request(app).get(path).set(auth(admin)).expect(200);
     expect(result.body.meeting.provider).toBe("microsoft_teams");
     expect(result.body.meeting.url).toBe(url);
+  });
+
+  it("rejects meeting submissions for in-person bookings", async () => {
+    const student = await makeUser("meeting-student-inperson", "student");
+    const tutor = await makeUser("meeting-tutor-inperson", "tutor");
+    const booking = await makeBooking(student, tutor);
+    await Booking.updateOne({ _id: booking._id }, { $set: { teachingMode: "in-person" } });
+    const path = `/api/v1/bookings/${booking._id}/meeting`;
+    const url = "https://meet.google.com/abc-defg-hij";
+    await request(app).put(path).set(auth(tutor)).send({ url }).expect(409);
+    await request(app).get(path).set(auth(student)).expect(409);
   });
 
   it("revokes access when the booking is cancelled", async () => {
