@@ -2,6 +2,7 @@
 import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { showSuccess, showError } from "@/lib/toast";
 
 const C = UI_COLORS;
 
@@ -54,9 +55,10 @@ export default function BroadcastsPage() {
   const fetchBroadcasts = async () => {
     try {
       const res = await api.get("/admin/broadcasts");
-      setBroadcasts(res.data.broadcasts);
-    } catch {
-      console.error("Failed to load broadcasts");
+      setBroadcasts(res.data.broadcasts ?? []);
+    } catch (err) {
+      console.error("Failed to load broadcasts", err);
+      showError("Failed to load broadcasts.");
     } finally {
       setLoadingList(false);
     }

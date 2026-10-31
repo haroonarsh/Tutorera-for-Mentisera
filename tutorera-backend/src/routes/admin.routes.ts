@@ -110,6 +110,10 @@ router.get("/markets", requirePermission("market.read"), getMarketConfigs);
 router.put("/markets/:id", requirePermission("market.configure"), updateMarketConfig);
 
 // Tax Configuration & Exchange Rates
+// GET /payouts must be registered before router.use("/payouts", ...) because
+// router.use matches the prefix for ALL methods/sub-paths, which would shadow
+// this exact-path route if it were placed after.
+router.get("/payouts", requirePermission("payout.read"), getPayouts);
 router.use("/tax-config", taxConfigRoutes);
 router.use("/exchange-rates", exchangeRateAdminRoutes);
 router.use("/geography", geographyAdminRoutes);
@@ -147,7 +151,6 @@ router.get("/marketplace/requests/:id/moderation-history", requirePermission("re
 router.get("/marketplace/offers", requirePermission("matching.read"), listMarketplaceOffers);
 router.get("/marketplace/offers/:id", requirePermission("matching.read"), getMarketplaceOfferDetail);
 router.get("/verifications", requirePermission("tutor.read"), getPendingVerifications);
-router.get("/payouts", requirePermission("payout.read"), getPayouts);
 router.get("/audit-logs", requirePermission("audit.read"), getAuditLogs);
 router.get("/email-logs", requirePermission("growth.read"), getEmailLogs);
 router.post("/email-logs/:id/retry", requirePermission("growth.manage"), retryEmailLog);

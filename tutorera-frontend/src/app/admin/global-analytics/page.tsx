@@ -76,9 +76,10 @@ export default function GlobalAnalyticsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const filteredCountries = data?.countries.filter(
+  const countries = data?.countries ?? PLACEHOLDER_COUNTRIES;
+  const filteredCountries = countries.filter(
     c => statusFilter === "all" || c.launchStatus === statusFilter
-  ) || [];
+  );
 
   const cardStyle: React.CSSProperties = { background: UI_COLORS.sidebar, border: `1px solid ${UI_COLORS.sidebarBorder}`, borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 160 };
   const metricLabel: React.CSSProperties = { fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED_ON_DARK, marginBottom: 2 };

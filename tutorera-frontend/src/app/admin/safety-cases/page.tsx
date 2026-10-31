@@ -49,6 +49,7 @@ function SafetyCasesContent() {
       setCases(res.data.cases || []);
     } catch (err) {
       console.error("Failed to load safety cases:", err);
+      showError("Failed to load safety cases.");
     } finally {
       setLoading(false);
     }

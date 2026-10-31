@@ -42,7 +42,7 @@ export default function ContactsPage() {
         setPagination(res.data.pagination || { page: 1, pages: 1, total: 0 });
         setCounts(res.data.counts || { all: 0, support: 0, general: 0 });
       })
-      .catch(console.error)
+      .catch(err => { console.error(err); showError("Failed to load contacts."); })
       .finally(() => setLoading(false));
   };
 

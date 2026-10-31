@@ -29,8 +29,8 @@ export default function GuaranteeClaimsPage() {
 
   useEffect(() => {
     api.get("/admin/guarantee-claims")
-      .then(res => setClaims(res.data.claims))
-      .catch(console.error)
+      .then(res => setClaims(res.data.claims ?? []))
+      .catch(err => { console.error(err); showError("Failed to load guarantee claims."); })
       .finally(() => setLoading(false));
   }, []);
 

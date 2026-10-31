@@ -9,6 +9,7 @@ import {
   FileText, CreditCard
 } from "lucide-react";
 import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface RefundRequestItem {
@@ -76,6 +77,7 @@ function RefundRequestsContent() {
       }
     } catch (err) {
       console.error("Failed to load refund requests:", err);
+      showError("Failed to load refund requests.");
     } finally {
       setLoading(false);
     }

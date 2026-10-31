@@ -774,7 +774,6 @@ export const updatePaymentStatus = async (
   // Handle booking status change from admin
   // Booking lifecycle changes use the dedicated status endpoint.
 
-  // ← ADD: Auto-calculate fees with new 23% when payment confirmed
   await booking.save();
 
   if (paymentStatus === "confirmed") {

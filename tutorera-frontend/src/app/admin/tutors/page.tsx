@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw, Search, X } from "lucide-react";
 import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 import PayoutReportDownload from "@/components/Finance/PayoutReportDownload";
 import { useAuth } from "@/context/AuthContext";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
@@ -70,6 +71,7 @@ export default function TutorsDirectoryPage() {
       setTutors(res.data.users || []);
     } catch (err) {
       console.error("Failed to load tutors:", err);
+      showError("Failed to load tutors.");
     } finally {
       setLoading(false);
     }

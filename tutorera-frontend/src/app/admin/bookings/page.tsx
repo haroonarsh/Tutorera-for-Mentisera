@@ -33,8 +33,8 @@ export default function BookingsPage() {
   useEffect(() => {
     const url = filter === "all" ? "/admin/bookings" : `/admin/bookings?status=${filter}`;
     api.get(url)
-      .then(res => setBookings(res.data.bookings))
-      .catch(console.error)
+      .then(res => setBookings(res.data.bookings ?? []))
+      .catch(err => { console.error(err); showError("Failed to load bookings."); })
       .finally(() => setLoading(false));
   }, [filter]);
 
