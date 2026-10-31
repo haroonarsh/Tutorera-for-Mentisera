@@ -52,7 +52,7 @@ router.get("/:id/meeting", protect, async (req: AuthRequest, res: Response): Pro
     res.status(409).json({ success: false, message: "Meeting access is not available for this booking." }); return;
   }
   const Meeting = (await import("../models/BookingMeeting.model")).default;
-  const meeting = await Meeting.findOne({ booking: booking._id }).select("provider url updatedAt").lean();
+  const meeting = await Meeting.findOne({ booking: booking._id }).select("+url provider updatedAt").lean();
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ success: true, meeting: meeting || null });
 });
