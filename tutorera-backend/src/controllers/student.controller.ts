@@ -15,7 +15,7 @@ export const saveStudentOnboarding = async (
 ): Promise<void> => {
   const {
     fullName, phone, city, gender, dateOfBirth,
-    currentLevel, institution, subjectsNeeded,
+    currentLevel, institution, subjectsNeeded, curriculum,
     budgetRange, teachingModePreference,
   } = req.body;
 
@@ -44,6 +44,7 @@ export const saveStudentOnboarding = async (
       user: req.user?._id,
       fullName, phone, city, gender, dateOfBirth: profileDateOfBirth,
       currentLevel, institution, subjectsNeeded,
+      ...(typeof curriculum === "string" && curriculum.trim() ? { curriculum: curriculum.trim() } : {}),
       budgetRange, teachingModePreference,
       onboardingComplete: true,
     },
