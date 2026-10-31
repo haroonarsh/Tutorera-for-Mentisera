@@ -80,6 +80,24 @@ describe("tutor-hosted booking meetings", () => {
     expect(result.body.meeting.url).toBe(url);
   });
 
+  it("enforces country scope for country administrators", async () => {
+    const student = await makeUser("meeting-country-student", "student");
+    const tutor = await makeUser("meeting-country-tutor", "tutor");
+    const countryAdmin = await makeUser("meeting-country-admin", "admin");
+    countryAdmin.adminRole = "country_admin";
+    countryAdmin.allowedCountryCodes = ["PK"];
+    await countryAdmin.save();
+    const booking = await makeBooking(student, tutor);
+    await Booking.updateOne({ _id: booking._id }, { $set: { countryCode: "AE" } });
+    const path = `/api/v1/bookings/${booking._id}/meeting`;
+    await request(app).put(path).set(auth(tutor)).send({ url: "https://meet.google.com/abc-defg-hij" }).expect(200);
+    await request(app).get(path).set(auth(countryAdmin)).expect(403);
+    await Booking.updateOne({ _id: booking._id }, { $set: { countryCode: "PK" } });
+    await request(app).get(path).set(auth(countryAdmin)).expect(200);
+    await Booking.updateOne({ _id: booking._id }, { $unset: { countryCode: 1 } });
+    await request(app).get(path).set(auth(countryAdmin)).expect(403);
+  });
+
   it("rejects meeting submissions for in-person bookings", async () => {
     const student = await makeUser("meeting-student-inperson", "student");
     const tutor = await makeUser("meeting-tutor-inperson", "tutor");
