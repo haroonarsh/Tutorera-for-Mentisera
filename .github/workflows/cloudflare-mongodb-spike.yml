@@ -1,0 +1,35 @@
+name: Cloudflare MongoDB Compatibility Spike
+
+on:
+  push:
+    branches:
+      - refactor/cloudflare-mongodb-foundation
+    paths:
+      - 'cloudflare-api-spike/**'
+      - '.github/workflows/cloudflare-mongodb-spike.yml'
+  pull_request:
+    paths:
+      - 'cloudflare-api-spike/**'
+      - '.github/workflows/cloudflare-mongodb-spike.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare-api-spike
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (isolated spike)
+        run: npm install --no-audit --no-fund
+      - name: TypeScript validation
+        run: npm run typecheck
+      - name: Cloudflare compatibility dry-run
+        run: npx wrangler deploy --dry-run --outdir /tmp/tutorera-spike-build

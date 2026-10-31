@@ -3,7 +3,7 @@ name: Backend dependency remediation
 on:
   workflow_dispatch:
   push:
-    branches: [chore/unified-tutorera-backend]
+    branches: [refactor/cloudflare-mongodb-foundation]
     paths:
       - ".github/workflows/backend-dependency-remediation.yml"
 
@@ -45,8 +45,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: security/backend-audit-fixes
-          base: chore/unified-tutorera-backend
+          branch: security/backend-audit-fixes-refactor
+          base: refactor/cloudflare-mongodb-foundation
           delete-branch: true
           add-paths: |
             tutorera-backend/package.json

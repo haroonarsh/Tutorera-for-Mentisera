@@ -4,11 +4,13 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy:staging": "wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke:staging": "node scripts/smoke-staging.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "wrangler": "^4.111.0"
+    "wrangler": "^4.111.0",
+    "@types/node": "^22.15.0"
   },
   "dependencies": {
     "mongodb": "^6.21.0"
