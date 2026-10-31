@@ -2,6 +2,7 @@
 import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 
 const C = UI_COLORS;
 
@@ -95,8 +96,9 @@ export default function AuditLogsPage() {
       if (entityFilter !== "all") params.set("entity", entityFilter);
       const res = await api.get(`/admin/audit-logs?${params}`);
       setData(res.data);
-    } catch {
-      console.error("Failed to load audit logs");
+    } catch (err) {
+      console.error("Failed to load audit logs", err);
+      showError("Failed to load audit logs.");
     } finally {
       setLoading(false);
     }

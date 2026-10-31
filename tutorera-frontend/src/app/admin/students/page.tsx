@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, ArrowLeft, RefreshCw, Search, BookOpen, CheckCircle, CreditCard, X } from "lucide-react";
 import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 import { UI_COLORS, STATUS_COLORS, TEXT_COLORS } from "@/lib/brand";
 
 interface StudentItem {
@@ -46,6 +47,7 @@ export default function StudentsDirectoryPage() {
       setStudents(res.data.users || []);
     } catch (err) {
       console.error("Failed to load students:", err);
+      showError("Failed to load students.");
     } finally {
       setLoading(false);
     }
