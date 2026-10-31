@@ -1,6 +1,6 @@
 import BrandLogo from "@/components/BrandLogo";
 import { SUPPORT_EMAIL } from "@/lib/site";
-import { BookOpen,Mail } from "lucide-react";
+import { BookOpen, Mail, Globe } from "lucide-react";
 import Link from "next/link";
 import { FiFacebook } from "react-icons/fi";
 import { RiTwitterLine } from "react-icons/ri";
@@ -8,7 +8,7 @@ import { SiInstagram } from "react-icons/si";
 import { SlSocialLinkedin } from "react-icons/sl";
 import s from "./Footer.module.css";
 
-// Footer grouped by user intent (spec §51). Only real, shipped routes.
+// ─── Navigation columns ───────────────────────────────────────────────────────
 const footerColumns = [
   {
     title: "Students",
@@ -56,6 +56,77 @@ const footerColumns = [
   },
 ];
 
+// ─── Marketplace geography — 5 markets ───────────────────────────────────────
+const markets = [
+  {
+    flag: "🇵🇰",
+    country: "Pakistan",
+    cities: [
+      { label: "Karachi",     href: "/tutors?city=karachi" },
+      { label: "Lahore",      href: "/tutors?city=lahore" },
+      { label: "Islamabad",   href: "/tutors?city=islamabad" },
+      { label: "Rawalpindi",  href: "/tutors?city=rawalpindi" },
+      { label: "Peshawar",    href: "/tutors?city=peshawar" },
+      { label: "Faisalabad",  href: "/tutors?city=faisalabad" },
+      { label: "Multan",      href: "/tutors?city=multan" },
+      { label: "Quetta",      href: "/tutors?city=quetta" },
+      { label: "Sialkot",     href: "/tutors?city=sialkot" },
+      { label: "Hyderabad",   href: "/tutors?city=hyderabad" },
+    ],
+  },
+  {
+    flag: "🇦🇪",
+    country: "United Arab Emirates",
+    cities: [
+      { label: "Dubai",           href: "/tutors?city=dubai" },
+      { label: "Abu Dhabi",       href: "/tutors?city=abu-dhabi" },
+      { label: "Sharjah",         href: "/tutors?city=sharjah" },
+      { label: "Ajman",           href: "/tutors?city=ajman" },
+      { label: "Ras Al Khaimah",  href: "/tutors?city=ras-al-khaimah" },
+      { label: "Fujairah",        href: "/tutors?city=fujairah" },
+    ],
+  },
+  {
+    flag: "🇸🇦",
+    country: "Saudi Arabia",
+    cities: [
+      { label: "Riyadh",   href: "/tutors?city=riyadh" },
+      { label: "Jeddah",   href: "/tutors?city=jeddah" },
+      { label: "Dammam",   href: "/tutors?city=dammam" },
+      { label: "Mecca",    href: "/tutors?city=mecca" },
+      { label: "Medina",   href: "/tutors?city=medina" },
+      { label: "Khobar",   href: "/tutors?city=khobar" },
+      { label: "Tabuk",    href: "/tutors?city=tabuk" },
+    ],
+  },
+  {
+    flag: "🇬🇧",
+    country: "United Kingdom",
+    cities: [
+      { label: "London",       href: "/tutors?city=london" },
+      { label: "Birmingham",   href: "/tutors?city=birmingham" },
+      { label: "Manchester",   href: "/tutors?city=manchester" },
+      { label: "Leeds",        href: "/tutors?city=leeds" },
+      { label: "Glasgow",      href: "/tutors?city=glasgow" },
+      { label: "Edinburgh",    href: "/tutors?city=edinburgh" },
+      { label: "Bradford",     href: "/tutors?city=bradford" },
+    ],
+  },
+  {
+    flag: "🇺🇸",
+    country: "United States",
+    cities: [
+      { label: "New York",     href: "/tutors?city=new-york" },
+      { label: "Los Angeles",  href: "/tutors?city=los-angeles" },
+      { label: "Chicago",      href: "/tutors?city=chicago" },
+      { label: "Houston",      href: "/tutors?city=houston" },
+      { label: "Dallas",       href: "/tutors?city=dallas" },
+      { label: "Washington DC", href: "/tutors?city=washington-dc" },
+      { label: "Atlanta",      href: "/tutors?city=atlanta" },
+    ],
+  },
+];
+
 const socialLinks = [
   { label: "Twitter / X", icon: RiTwitterLine, href: "https://twitter.com/mentiserapk" },
   { label: "Facebook", icon: FiFacebook, href: "https://facebook.com/mentiserapk" },
@@ -67,6 +138,8 @@ export default function Footer() {
   return (
     <footer className={s.footer}>
       <div className={s.container}>
+
+        {/* ── Top: Brand + nav columns ── */}
         <div className={s.top}>
           <div className={s.brand}>
             <BrandLogo className={s.logo} imageClassName={s.logoImage} variant="light" size="lg" />
@@ -74,8 +147,8 @@ export default function Footer() {
               TUTORERA is a student-first tutoring marketplace. Students and parents post their learning requirements and preferred budget; eligible tutors can respond with offers to compare before a tutor is chosen.
             </p>
             <div className={s.contactList} aria-label="Contact information">
-              <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> Email: {SUPPORT_EMAIL}</a>
-              <Link href="/"><BookOpen size={16} aria-hidden="true" /> Website: https://tutorera.ac.pk/</Link>
+              <a href={`mailto:${SUPPORT_EMAIL}`}><Mail size={16} aria-hidden="true" /> {SUPPORT_EMAIL}</a>
+              <Link href="/"><BookOpen size={16} aria-hidden="true" /> tutorera.ac.pk</Link>
               <Link href="/contact"><Mail size={16} aria-hidden="true" /> Contact support</Link>
             </div>
             <div className={s.socials} aria-label="Social links">
@@ -106,10 +179,37 @@ export default function Footer() {
           </nav>
         </div>
 
+        {/* ── Marketplace geography ── */}
+        <div className={s.markets}>
+          <p className={s.marketsHeading}>
+            <Globe size={14} aria-hidden="true" />
+            Find Tutors Near You — Global Marketplace
+          </p>
+          <div className={s.marketsGrid}>
+            {markets.map((market) => (
+              <div key={market.country} className={s.marketCol}>
+                <h3>
+                  <span aria-hidden="true">{market.flag}</span>
+                  {market.country}
+                </h3>
+                <ul>
+                  {market.cities.map((city) => (
+                    <li key={city.href}>
+                      <Link href={city.href}>{city.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Bottom bar ── */}
         <div className={s.bottom}>
-          <p>TUTORERA is a student-first tutoring marketplace.</p>
+          <p>TUTORERA® — a student-first tutoring marketplace. Serving Pakistan, UAE, Saudi Arabia, UK &amp; USA.</p>
           <p>© 2026 TUTORERA®. All rights reserved.</p>
         </div>
+
       </div>
     </footer>
   );
