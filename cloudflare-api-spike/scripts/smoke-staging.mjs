@@ -27,7 +27,9 @@ try {
   const result = await check("/test/mongodb", "POST", true, 200);
   const body = await result.json();
   if (body.readWrite !== true) throw new Error("Read/write verification failed");
-  console.log("Isolated MongoDB read/write compatibility smoke test passed.");
+  const transaction = await check("/test/transaction", "POST", true, 200);
+  if ((await transaction.json()).rollback !== true) throw new Error("Transaction rollback verification failed");
+  console.log("Isolated MongoDB read/write and rollback smoke tests passed.");
 } catch (error) {
   console.error("Staging smoke test failed:", error instanceof Error ? error.message : "unknown error");
   process.exitCode = 1;
