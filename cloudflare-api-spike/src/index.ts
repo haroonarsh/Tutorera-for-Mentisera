@@ -57,7 +57,7 @@ export default {
       if (!env.MONGO_TEST_DB || !/^tutorera_spike_[a-z0-9_]+$/.test(env.MONGO_TEST_DB))
         return json({ error: "Dedicated test database not configured" }, 503);
       const result = await withMongo(env, async (client) => {
-        const collection = client.db(env.MONGO_TEST_DB!).collection("compatibility_checks");
+        const collection = client.db(env.MONGO_TEST_DB!).collection<{ _id: string; createdAt: Date; purpose: string }>("compatibility_checks");
         const id = crypto.randomUUID();
         const document = { _id: id, createdAt: new Date(), purpose: "worker-compatibility" };
         try {
