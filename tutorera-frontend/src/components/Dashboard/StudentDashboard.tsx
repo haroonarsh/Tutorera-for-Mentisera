@@ -14,6 +14,7 @@ import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award, Rotat
 import { TutorProfile } from "@/types/tutor";
 import RatingModal from "./RatingModal";
 import CnicModal from "@/components/payments/CnicModal";
+import RapidPayCheckoutModal from "@/components/payments/RapidPayCheckoutModal";
 import { showSuccess, showError } from "@/lib/toast";
 import { SUPPORT_EMAIL, formatMoney } from "@/lib/site";
 import { tutorProfileHref } from "@/lib/tutor-directory";
@@ -131,6 +132,7 @@ function BookingCard({
   const [alreadyRated, setAlreadyRated] = useState(false);
   const router = useRouter();
   const [paying, setPaying] = useState(false);
+  const [checkoutSession, setCheckoutSession] = useState<{ sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
   const [rebooking, setRebooking] = useState(false);
   const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "USD", unit);
 
@@ -138,8 +140,8 @@ function BookingCard({
     setPaying(true);
     try {
       const res = await axiosInstance.post(`/payments/booking/${booking._id}/checkout`);
-      if (res.data?.checkoutUrl) {
-        window.location.assign(res.data.checkoutUrl);
+      if (res.data?.sessionId) {
+        setCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
       } else {
         showError("Unable to initiate checkout session. Please try again.");
       }
@@ -464,6 +466,18 @@ function BookingCard({
           onClose={() => setShowRatingModal(false)}
         />
       )}
+
+      {checkoutSession && (
+        <RapidPayCheckoutModal
+          sessionId={checkoutSession.sessionId}
+          clientSecret={checkoutSession.clientSecret}
+          publishableKey={checkoutSession.publishableKey}
+          onSuccess={() => { setCheckoutSession(null); window.location.reload(); }}
+          onPending={() => { setCheckoutSession(null); showSuccess("Payment is being processed. You will be notified once confirmed."); }}
+          onError={() => { setCheckoutSession(null); showError("Payment could not be completed. Please try again."); }}
+          onClose={() => setCheckoutSession(null)}
+        />
+      )}
     </>
   );
 }
@@ -539,9 +553,10 @@ function RequestCard({
   const [selectedBids, setSelectedBids] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
-  // Swich requires the payer's CNIC on every checkout. We ask in a dialog,
+  // RapidPay may require the payer's CNIC on checkout. We ask in a dialog,
   // keep it in memory only, and send it with the accept/retry request.
   const [cnicTarget, setCnicTarget] = useState<{ bidId: string; mode: "accept" | "retry" | "compare" } | null>(null);
+  const [offerCheckoutSession, setOfferCheckoutSession] = useState<{ sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timeline, setTimeline] = useState<{ id: string; action: string; actor: string; createdAt: string }[]>([]);
@@ -626,11 +641,11 @@ function RequestCard({
         ...(promoCodeToApply && { promoCode: promoCodeToApply }),
         ...(cnic && { cnic }),
       });
-      const checkoutUrl = res.data?.checkoutUrl;
-      if (checkoutUrl) {
-        window.location.assign(checkoutUrl);
+      if (res.data?.sessionId) {
+        setOfferCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
+        setAccepting(null);
       } else {
-        console.error("Accept-offer response had no checkoutUrl:", res.data);
+        showError("Unable to initiate checkout session. Please try again.");
         setAccepting(null);
       }
     } catch (err: any) {
@@ -659,11 +674,10 @@ function RequestCard({
     setAccepting(bidId);
     try {
       const res = await axiosInstance.post(`/offers/${bidId}/retry-payment`, cnic ? { cnic } : undefined);
-      const checkoutUrl = res.data?.checkoutUrl;
-      if (checkoutUrl) {
-        window.location.assign(checkoutUrl); // reuses the same useEffect-based redirect from acceptBid
+      if (res.data?.sessionId) {
+        setOfferCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
+        setAccepting(null);
       } else {
-        console.error("Retry-payment response had no checkoutUrl:", res.data);
         showError("Unable to resume checkout. Please try again.");
         setAccepting(null);
       }
@@ -688,9 +702,8 @@ function RequestCard({
     setAcceptingCompare(id);
     try {
       const res = await axiosInstance.post(`/offers/${id}/accept`, { cnic });
-      const checkoutUrl = res.data?.checkoutUrl;
-      if (checkoutUrl) {
-        window.location.assign(checkoutUrl);
+      if (res.data?.sessionId) {
+        setOfferCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
       }
     } catch (err: any) {
       console.error("Failed to accept bid:", err);
@@ -991,6 +1004,18 @@ function RequestCard({
         }}
         onClose={() => setCnicTarget(null)}
       />
+
+      {offerCheckoutSession && (
+        <RapidPayCheckoutModal
+          sessionId={offerCheckoutSession.sessionId}
+          clientSecret={offerCheckoutSession.clientSecret}
+          publishableKey={offerCheckoutSession.publishableKey}
+          onSuccess={() => { setOfferCheckoutSession(null); onBidAccepted(); }}
+          onPending={() => { setOfferCheckoutSession(null); showSuccess("Payment is being processed. You will be notified once confirmed."); }}
+          onError={() => { setOfferCheckoutSession(null); showError("Payment could not be completed. Please try again."); }}
+          onClose={() => setOfferCheckoutSession(null)}
+        />
+      )}
     </div>
   );
 }

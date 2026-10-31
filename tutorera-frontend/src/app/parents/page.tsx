@@ -129,8 +129,11 @@ export default function ParentDashboardPage() {
     }
   };
   const decideApproval = async (requestId: string, decision: "approve" | "decline") => {
-    try { const response = await api.post(`/parent/booking-approvals/${requestId}`, { decision }); if (decision === "approve" && response.data?.checkoutUrl) window.location.assign(response.data.checkoutUrl); else { showSuccess(response.data?.message || "Decision recorded."); fetchProfile(); } }
-    catch (caught: unknown) { showError((caught as { response?: { data?: { message?: string } } })?.response?.data?.message || "Unable to record this decision."); }
+    try {
+      const response = await api.post(`/parent/booking-approvals/${requestId}`, { decision });
+      showSuccess(response.data?.message || "Decision recorded.");
+      fetchProfile();
+    } catch (caught: unknown) { showError((caught as { response?: { data?: { message?: string } } })?.response?.data?.message || "Unable to record this decision."); }
   };
 
   return (

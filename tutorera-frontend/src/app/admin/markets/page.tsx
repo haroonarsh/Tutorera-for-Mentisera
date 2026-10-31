@@ -88,6 +88,7 @@ export default function MarketsPage() {
   const liveCount = markets.filter((m) => m.launchStatus === "live").length;
   const betaCount = markets.filter((m) => m.launchStatus === "beta").length;
   const paymentAvailability = (market: MarketConfig) => {
+    if (market.paymentsEnabled && market.paymentProvider === "rapidpay") return "RapidPay checkout";
     if (market.paymentsEnabled && market.paymentProvider === "swich") return "Switch checkout";
     if (market.paymentsEnabled) return "Configured checkout";
     return "Discovery only — checkout disabled";

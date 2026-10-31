@@ -51,9 +51,7 @@ const marketConfigSchema = new Schema<IMarketConfig>(
     homeTuitionEnabled: { type: Boolean, default: false },
     studentRegistration: { type: Boolean, default: true },
     tutorRegistration: { type: Boolean, default: true },
-    // Switch is the sole supported provider. A market may still be `none`
-    // until Switch has approved its currency, settlement and compliance path.
-    paymentProvider: { type: String, enum: ["swich", "none"], default: "none" },
+    paymentProvider: { type: String, enum: ["swich", "rapidpay", "none"], default: "none" },
     paymentsEnabled: { type: Boolean, default: false },
     payoutsEnabled: { type: Boolean, default: false },
     backgroundCheckRequired: { type: Boolean, default: true },

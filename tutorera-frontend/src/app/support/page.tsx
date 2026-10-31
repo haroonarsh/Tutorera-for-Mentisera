@@ -30,7 +30,7 @@ export default function SupportPage() {
     if (!topic.trim() || !body.trim()) return;
     setBusy(true);
     try {
-      await api.post("/contact", { topic, message: body, name: user?.name ?? "User", email: user?.email ?? "" });
+      await api.post("/contact", { subject: topic, message: body, name: user?.name ?? "User", email: user?.email ?? "" });
       showSuccess("Message sent! We aim to respond within 24 hours.");
       setTopic("");
       setBody("");
