@@ -40,6 +40,7 @@ router.put("/:id/meeting", protect, authorize("tutor"), async (req: AuthRequest,
     { $set: { provider: meeting.provider, url: meeting.url, submittedBy: req.user!._id } },
     { upsert: true, new: true, runValidators: true }
   );
+  if (!saved) { res.status(500).json({ success: false, message: "Could not save meeting details." }); return; }
   await logAudit({ action: "booking_meeting_updated", actor: req.user?.name, actorId: req.user?._id.toString(), entity: "Booking", targetId: booking.id, metadata: { provider: meeting.provider } });
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ success: true, meeting: { provider: saved.provider, updatedAt: saved.updatedAt } });
