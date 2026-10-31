@@ -39,6 +39,7 @@ import liquidityRoutes from "./routes/liquidity.routes";
 import tutoringIndexRoutes from "./routes/tutoringIndex.routes";
 import publicRoutes from "./routes/public.routes";
 import pricingRoutes from "./routes/pricing.routes";
+import meetingRoutes from "./routes/meeting.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -107,6 +108,7 @@ apiRouter.use("/students", studentRoutes);
 apiRouter.use("/requests", requestRoutes);
 apiRouter.use("/offers", offerRoutes);
 apiRouter.use("/bookings", bookingRoutes);
+apiRouter.use("/bookings", meetingRoutes);
 apiRouter.use("/reviews", reviewRoutes);
 apiRouter.use("/blogs", blogRoutes);
 apiRouter.use("/contact", contactRoutes);
