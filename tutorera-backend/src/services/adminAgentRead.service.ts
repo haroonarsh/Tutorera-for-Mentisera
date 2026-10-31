@@ -1,5 +1,7 @@
 import TutorProfile from "../models/TutorProfile.model";
 import Request from "../models/Request.model";
+import Booking from "../models/Booking.model";
+import SafetyCase from "../models/SafetyCase.model";
 import { AdminAgentId } from "./adminAgentSupervisor.service";
 
 export interface AgentReadResult {
