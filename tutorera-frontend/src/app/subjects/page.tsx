@@ -3,6 +3,7 @@ import { UI_COLORS } from "@/lib/brand";
 import { formatPKR } from "@/lib/site";
 import { slugify } from "@/lib/tutor-directory";
 import Link from "next/link";
+import { subjectCatalogue } from "@/lib/subject-catalogue";
 
 const C = UI_COLORS;
 
@@ -91,6 +92,30 @@ export default function SubjectsPage() {
               View Tutoring Services
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="curriculum-heading" style={{ padding: "3rem 1.5rem", background: "#f8fafc" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <h2 id="curriculum-heading" style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: "1rem" }}>Subjects by curriculum</h2>
+          <p style={{ marginBottom: "1.5rem" }}>Explore FBISE, Cambridge and Pearson Edexcel subjects by qualification. Tutor availability varies.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
+            {subjectCatalogue.map(group => (
+              <article key={group.curriculum + group.qualification} style={{ padding: "1.5rem", border: "1px solid #e2e8f0", borderRadius: 12, background: "white" }}>
+                <h3 style={{ fontWeight: 700, marginBottom: "1rem" }}>{group.curriculum} — {group.qualification}</h3>
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                  {group.subjects.map(subject => (
+                    <li key={subject.code ?? subject.name} style={{ padding: "0.4rem 0" }}>
+                      <Link href={`/tutors?subject=${encodeURIComponent(subject.name)}`} style={{ color: "#1d4ed8", textDecoration: "underline" }}>
+                        {subject.name}{subject.code ? ` (${subject.code})` : ""}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+          <p style={{ marginTop: "1rem", fontSize: "0.85rem" }}>Tutoring support does not imply accreditation or examination-board affiliation.</p>
         </div>
       </section>
     </div>
