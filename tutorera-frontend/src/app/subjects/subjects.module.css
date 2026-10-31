@@ -75,6 +75,27 @@
 .bottomCta p { color: #425575; margin: 0 auto 2rem; max-width: 520px; font-size: 1.05rem; }
 .bottomCta .actions { justify-content: center; padding-bottom: 0; }
 
+/* School Offerings section */
+.schoolSection { padding: 5rem 0 4rem; border-top: 1px solid #dce5f4; }
+.schoolSection h2 { font-size: clamp(1.4rem, 2.5vw, 2rem); margin: .4rem 0 .65rem; }
+.sectionLead { color: #425575; line-height: 1.65; margin: 0 0 2rem; max-width: 680px; }
+.outlineBlue { display: inline-flex; align-items: center; gap: .6rem; min-height: 44px; padding: .75rem 1.25rem; border-radius: .75rem; font-weight: 700; text-decoration: none; border: 1.5px solid #0329b2; color: #0329b2; background: white; transition: background .15s; }
+.schoolCta { margin-top: 2.5rem; }
+.boardsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1.25rem; }
+.boardCard { background: white; border: 1px solid #dce5f4; border-radius: 1.25rem; padding: 1.5rem 1.75rem; }
+.boardName { font-size: 1.1rem; font-weight: 800; color: #021550; margin: 0 0 1rem; padding-bottom: .65rem; border-bottom: 2px solid #e2eaff; }
+.qualBlock { margin-bottom: 1.1rem; }
+.qualBlock:last-child { margin-bottom: 0; }
+.qualName { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #0329b2; margin: 0 0 .5rem; }
+.classBlock { margin-bottom: .65rem; }
+.classLabel { display: inline-block; font-size: .75rem; font-weight: 700; background: #f0f4ff; color: #425575; border-radius: .375rem; padding: .15rem .55rem; margin-bottom: .4rem; }
+.subjectChips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.subjectChip { display: inline-flex; align-items: center; padding: .3rem .7rem; border-radius: 999px; border: 1.5px solid #c8d8f8; background: #f5f8ff; color: #0329b2; font-size: .8rem; font-weight: 600; text-decoration: none; transition: background .12s, border-color .12s; }
+@media (hover: hover) and (pointer: fine) {
+  .subjectChip:hover { background: #e8efff; border-color: #0329b2; }
+  .outlineBlue:hover { background: #eef4ff; }
+}
+
 /* Subject detail page */
 .back { display: inline-flex; align-items: center; gap: .45rem; color: white; margin-bottom: 2rem; font-weight: 600; text-decoration: none; }
 .detailGrid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.5rem; padding-top: 2.5rem; padding-bottom: 5rem; }

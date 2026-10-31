@@ -1,9 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, GraduationCap, Search, Users, CheckCircle2, Star, Globe } from "lucide-react";
+import { ArrowRight, BookOpen, Search, Users, CheckCircle2, Star, Globe, School } from "lucide-react";
 import { getSubjectCatalogue, SUBJECT_GUIDES } from "@/lib/subject-catalogue";
 import { SITE_URL } from "@/lib/site";
 import styles from "./subjects.module.css";
+
+type SchoolOffering = {
+  _id: string; boardName: string; boardCode: string;
+  qualificationName: string; classLevel?: string;
+  subjectDisplay: string; subject: string;
+};
+
+async function getSchoolOfferings(): Promise<{ offerings: SchoolOffering[]; live: boolean }> {
+  try {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
+    const res = await fetch(`${API_URL}/geo/school-offerings`, { next: { revalidate: 900 }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const raw: SchoolOffering[] = Array.isArray(data.offerings) ? data.offerings : [];
+    return { offerings: raw, live: true };
+  } catch {
+    return { offerings: [], live: false };
+  }
+}
 
 export const metadata: Metadata = {
   title: "Online Tutoring Subjects | Expert Tutors for Every Subject | TUTORERA",
@@ -49,7 +68,28 @@ const FAQS = [
 ];
 
 export default async function SubjectsPage() {
-  const { subjects, live } = await getSubjectCatalogue();
+  const [{ subjects, live }, { offerings, live: offeringsLive }] = await Promise.all([
+    getSubjectCatalogue(),
+    getSchoolOfferings(),
+  ]);
+
+  // Group offerings by board → qualification → classLevel
+  type BoardGroup = {
+    boardName: string;
+    qualifications: { qualificationName: string; classes: { classLevel: string; subjects: string[] }[] }[];
+  };
+  const boardMap = new Map<string, BoardGroup>();
+  for (const o of offerings) {
+    if (!boardMap.has(o.boardCode)) boardMap.set(o.boardCode, { boardName: o.boardName, qualifications: [] });
+    const board = boardMap.get(o.boardCode)!;
+    let qual = board.qualifications.find((q) => q.qualificationName === o.qualificationName);
+    if (!qual) { qual = { qualificationName: o.qualificationName, classes: [] }; board.qualifications.push(qual); }
+    const cls = o.classLevel || "All levels";
+    let classEntry = qual.classes.find((c) => c.classLevel === cls);
+    if (!classEntry) { classEntry = { classLevel: cls, subjects: [] }; qual.classes.push(classEntry); }
+    if (!classEntry.subjects.includes(o.subjectDisplay)) classEntry.subjects.push(o.subjectDisplay);
+  }
+  const boards = [...boardMap.values()];
 
   const schema = {
     "@context": "https://schema.org",
@@ -173,6 +213,51 @@ export default async function SubjectsPage() {
             })()}
           </>
         )}
+      </section>
+
+      {/* School Offerings — by board */}
+      <section className={styles.schoolSection} aria-labelledby="school-offerings-heading">
+        <div className={styles.wrap}>
+          <p className={styles.kicker}><School size={14} aria-hidden="true" /> SCHOOL PROGRAMMES</p>
+          <h2 id="school-offerings-heading">Subjects by board &amp; qualification</h2>
+          <p className={styles.sectionLead}>All boards and qualifications our approved tutors cover. Pick your board, find your subject, and post a free request.</p>
+          {!offeringsLive && <p className={styles.notice} role="status">Live catalogue temporarily unavailable — showing last known data.</p>}
+          {boards.length === 0 ? (
+            <p className={styles.notice}>Board catalogue loading — check back shortly or post a free request to be matched directly.</p>
+          ) : (
+            <div className={styles.boardsGrid}>
+              {boards.map((board) => (
+                <div key={board.boardName} className={styles.boardCard}>
+                  <h3 className={styles.boardName}>{board.boardName}</h3>
+                  {board.qualifications.map((qual) => (
+                    <div key={qual.qualificationName} className={styles.qualBlock}>
+                      <p className={styles.qualName}>{qual.qualificationName}</p>
+                      {qual.classes.map((cls) => (
+                        <div key={cls.classLevel} className={styles.classBlock}>
+                          {cls.classLevel !== "All levels" && <span className={styles.classLabel}>{cls.classLevel}</span>}
+                          <div className={styles.subjectChips}>
+                            {cls.subjects.sort().map((subj) => (
+                              <Link
+                                key={subj}
+                                href={`/post-tuition-request?subject=${encodeURIComponent(subj)}`}
+                                className={styles.subjectChip}
+                              >
+                                {subj}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className={styles.schoolCta}>
+            <Link className={styles.outlineBlue} href="/post-tuition-request">Post a free requirement <ArrowRight size={16} aria-hidden="true" /></Link>
+          </div>
+        </div>
       </section>
 
       {/* Why TUTORERA */}
