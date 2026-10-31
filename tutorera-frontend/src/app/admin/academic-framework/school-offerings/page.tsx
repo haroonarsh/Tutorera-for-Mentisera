@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
-import type { SchoolOffering } from "@/components/marketplace/SchoolOfferingSelector";
+type SchoolOffering = { _id: string; boardName: string; boardCode: string; qualificationName: string; classLevel?: string; subjectDisplay: string; subject: string; aliases?: string[] };
 type Item = SchoolOffering & {status: "active" | "inactive"; verificationSource?: string; verificationNote?: string; reviewReason?: string};
 export default function AdminSchoolOfferings() {
  const [items,setItems]=useState<Item[]>([]);const [query,setQuery]=useState("");const [reason,setReason]=useState("");const [message,setMessage]=useState("");const [busy,setBusy]=useState(false);

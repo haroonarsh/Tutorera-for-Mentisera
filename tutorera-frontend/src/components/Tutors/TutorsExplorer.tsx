@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import api from "@/lib/axios";
 import type { FiltersState, PaginationMeta, TutorProfile } from "@/types/tutor";
 import { INITIAL_FILTERS, SORT_OPTIONS } from "@/types/tutor";
-import SchoolOfferingSelector from "@/components/marketplace/SchoolOfferingSelector";
 import TutorCard from "./TutorCard";
 import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
@@ -117,7 +116,6 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       <aside className={styles.sidebar} aria-label="Filter tutors"><FilterSidebar {...sidebarProps} /></aside>
       <MobileFilterSidebar {...sidebarProps} isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <section className={styles.main} aria-label="Tutor search results">
-        <SchoolOfferingSelector onSelect={offering => { const id = offering?._id || ""; setSchoolOfferingId(id); void load(1, filters, id); }} />
         <div style={{
           background: "linear-gradient(135deg, #eef5ff 0%, #ffffff 100%)",
           border: "1.5px solid #bfdbfe",
