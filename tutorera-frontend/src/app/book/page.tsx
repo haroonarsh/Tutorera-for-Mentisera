@@ -38,7 +38,7 @@ const TABS: { key: "all" | BookingStatus; label: string }[] = [
 ];
 
 export default function BookingsPage() {
-  useAppGuard({ roles: ["student", "tutor", "parent"] });
+  useAppGuard();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
