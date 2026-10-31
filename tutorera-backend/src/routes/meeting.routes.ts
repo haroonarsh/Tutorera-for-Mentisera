@@ -16,6 +16,8 @@ const parseMeeting = (raw: unknown) => {
     const url = new URL(raw);
     if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash) return null;
     if (url.pathname === "/" || url.pathname.length < 2) return null;
+    if (provider === "google_meet" && !/^\\/[a-z]{3}-[a-z]{4}-[a-z]{3}\\/?$/i.test(url.pathname)) return null;
+    if (provider === "microsoft_teams" && !url.pathname.toLowerCase().startsWith("/l/meetup-join/")) return null;
     const provider = hosts[url.hostname.toLowerCase()];
     if (!provider) return null;
     return { provider, url: url.toString() };
