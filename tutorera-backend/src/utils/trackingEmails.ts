@@ -166,6 +166,57 @@ export const tutorMarketplaceAgreementEmail = (tutorName: string, args: CtaArgs 
   return { subject, html: wrap(innerHtml, subject, "Tutor Agreement", "Your application is approved. Accept the agreement to activate your tutor account.") };
 };
 
+/** Daily nudge for tutors whose admin approval is complete but who have not
+ * yet signed the Tutor Agreement — they are stuck at tutorStatus
+ * "approved_pending_agreement" and invisible on the marketplace.
+ * Subject line and urgency escalate on successive sends (reminderCount > 1). */
+export const pendingAgreementNudgeEmail = (
+  tutorName: string,
+  args: CtaArgs & { hourlyRate?: number; currency?: string; reminderCount: number; version: string }
+) => {
+  const currency = args.currency || "PKR";
+  const rate = args.hourlyRate
+    ? `${currency} ${args.hourlyRate.toLocaleString()} per hour`
+    : "the rate shown on your approved profile";
+  const isFollowUp = args.reminderCount > 1;
+  const subject = isFollowUp
+    ? `Reminder ${args.reminderCount}: sign your TUTORERA Tutor Agreement to go live`
+    : "You're approved — one last step before students can find you";
+
+  const urgencyLine = isFollowUp
+    ? `<div style="background:#fff7ed;border-left:4px solid #f97316;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;">
+        <p style="color:#9a3412;font-weight:700;margin:0 0 4px;">This is reminder ${args.reminderCount}</p>
+        <p style="color:#7c2d12;margin:0;font-size:14px;">Your profile is approved and ready — you just need to sign the agreement. Until you do, you won't appear in search results and students cannot contact you.</p>
+       </div>`
+    : `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;">
+        <p style="color:#14532d;font-weight:700;margin:0 0 4px;">Great news — your application is approved ✅</p>
+        <p style="color:#166534;margin:0;font-size:14px;">Your approved starting rate is <strong>${escapeHtml(rate)}</strong>. You are one step away from appearing on the marketplace.</p>
+       </div>`;
+
+  const innerHtml = `
+    <h2 style="color:#021550;margin:0 0 12px;">${isFollowUp ? "Your Tutor Agreement is still waiting" : "Sign your Tutor Agreement to activate your account"}</h2>
+    <p style="color:#374151;">Hi ${escapeHtml(tutorName)},</p>
+    ${urgencyLine}
+    <p style="color:#374151;">Before you can receive enquiries, bid on tuition requests, or appear in student searches, you need to review and electronically accept the TUTORERA® Tutor Marketplace Agreement (Version ${escapeHtml(args.version)}).</p>
+    <p style="color:#374151;">The agreement covers your independent-contractor status, professional standards, safeguarding responsibilities, booking terms, and how your payouts work.</p>
+    <p style="color:#374151;"><a href="${SITE_URL}/terms/tutors" style="color:#0329B2;font-weight:600;">Read the full agreement →</a></p>
+    <div style="text-align:center;margin:28px 0 8px;">
+      <a href="${SITE_URL}/tutor/accept-agreement"
+        style="display:inline-block;background:#0329B2;color:#ffffff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 32px;border-radius:999px;letter-spacing:0.01em;">
+        Sign My Agreement &amp; Go Live
+      </a>
+    </div>
+    <p style="color:#6b7280;font-size:12px;text-align:center;margin-top:10px;">Takes less than 2 minutes. Your profile goes live immediately after signing.</p>
+    ${trackingCta(args, "View My Application")}
+  `;
+  return {
+    subject,
+    html: wrap(innerHtml, subject, "Tutor Agreement", isFollowUp
+      ? `Reminder ${args.reminderCount}: sign your Tutor Agreement to appear in student searches on TUTORERA®.`
+      : "Your TUTORERA application is approved — sign the agreement to go live on the marketplace."),
+  };
+};
+
 export const marketplaceDeactivatedEmail = (tutorName: string, reason: string, args: CtaArgs) => {
   const subject = "Marketplace visibility paused - TUTORERA";
   const innerHtml = `
