@@ -12,6 +12,8 @@ const UNIT_TEST_PATTERN = [
   "<rootDir>/src/tests/adminAgentSupervisor.test.ts",
   "<rootDir>/src/tests/adminAgentRead.test.ts",
   "<rootDir>/src/tests/adminAgentSupervisorController.test.ts",
+  // Human Approval Workflow — all DB calls are mocked
+  "<rootDir>/src/tests/adminApproval.test.ts",
 ];
 
 module.exports = {

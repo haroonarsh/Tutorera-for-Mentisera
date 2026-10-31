@@ -85,6 +85,11 @@ import {
   executeAdminSupervisorHandler,
   readAdminAgent,
 } from "../controllers/adminAgentSupervisor.controller";
+import {
+  submitApproval,
+  listApprovals,
+  reviewApproval,
+} from "../controllers/adminApproval.controller";
 
 const router = Router();
 
@@ -194,6 +199,11 @@ router.get("/student-ratings", requirePermission("student.read"), getAllStudentR
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
 router.get("/tutor-ratings", requirePermission("tutor.quality_manage"), getAllTutorRatings);
 router.get("/tutor-ratings/:tutorId", requirePermission("tutor.quality_manage"), getTutorRatingsForAdmin);
+
+// Human Approval Workflow
+router.post("/approvals", requirePermission("audit.read"), submitApproval);
+router.get("/approvals", requirePermission("audit.read"), listApprovals);
+router.post("/approvals/:id/review", requirePermission("roles.manage"), reviewApproval);
 
 // AI Supervisor Agent
 router.get("/agents", listAdminAgents);
