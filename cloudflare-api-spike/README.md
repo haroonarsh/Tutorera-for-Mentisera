@@ -32,6 +32,10 @@ Set `MONGO_TEST_DB` as a staging variable in Wrangler or the Cloudflare dashboar
 
 `POST /test/mongodb` requires the same bearer token. It inserts, reads and deletes a temporary record **only** in the configured dedicated test database. It returns `readWrite: true` when successful. Do not use production data.
 
+`POST /test/transaction` requires the same bearer token and verifies that a transaction can insert/read a temporary record and roll back without persisting it. This requires an Atlas deployment that supports multi-document transactions.
+
+Run `npm run smoke:staging` with `SPIKE_BASE_URL` pointing only to the isolated Worker and `SPIKE_TEST_TOKEN` supplied securely. The script checks unauthorized access before running the database tests.
+
 Use a secret injected from a secure shell environment rather than pasting it into scripts or logs. Verify missing/incorrect tokens return 401, missing configuration returns 503, and the staging-only guard prevents non-staging operations.
 
 ## Limitations and next gates
