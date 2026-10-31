@@ -2,6 +2,10 @@ name: Backend dependency remediation
 
 on:
   workflow_dispatch:
+  push:
+    branches: [chore/unified-tutorera-backend]
+    paths:
+      - ".github/workflows/backend-dependency-remediation.yml"
 
 permissions:
   contents: write
