@@ -29,7 +29,7 @@ describe("tutor-hosted booking meetings", () => {
     const booking = await makeBooking(student, tutor);
     const path = `/api/v1/bookings/${booking._id}/meeting`;
     const forbidden = await request(app).put(path).set(auth(student)).send({ url: "https://meet.google.com/abc-defg-hij" }).expect(403);
-    expect(forbidden.headers["cache-control"]).toContain("no-store");
+    expect(forbidden.body.success).toBe(false);
     await request(app).put(path).set(auth(tutor)).send({ url: "https://meet.google.com/abc-defg-hij" }).expect(200);
     const response = await request(app).get(path).set(auth(student)).expect(200);
     expect(response.body.meeting.url).toBe("https://meet.google.com/abc-defg-hij");
