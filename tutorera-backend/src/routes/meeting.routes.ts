@@ -11,14 +11,14 @@ const hosts: Record<string, "google_meet" | "microsoft_teams"> = {
   "teams.microsoft.com": "microsoft_teams",
 };
 const parseMeeting = (raw: unknown) => {
-  if (typeof raw !== "string" || raw.length > 2048) return null;
+  if (typeof raw !== "string" || raw.length > 2048 || raw.trim() !== raw) return null;
   try {
     const url = new URL(raw);
     if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash) return null;
     const provider = hosts[url.hostname.toLowerCase()];
     if (!provider) return null;
     if (provider === "google_meet" && (!/^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url.pathname) || url.search)) return null;
-    if (provider === "microsoft_teams" && !/^\/l\/meetup-join\/.+\/0\/?$/i.test(url.pathname)) return null;
+    if (provider === "microsoft_teams" && !/^\/l\/meetup-join\/[^/]+\/0\/?$/i.test(url.pathname)) return null;
     return { provider, url: url.toString() };
   } catch { return null; }
 };
@@ -26,6 +26,7 @@ const getBooking = async (id: string) => Types.ObjectId.isValid(id) ? Booking.fi
 
 // Meeting URLs are stored separately from public tutor and booking objects.
 router.put("/:id/meeting", protect, authorize("tutor"), async (req: AuthRequest, res: Response): Promise<void> => {
+  res.setHeader("Cache-Control", "private, no-store");
   const meeting = parseMeeting(req.body?.url);
   if (!meeting) { res.status(400).json({ success: false, message: "Use a valid Google Meet or Microsoft Teams HTTPS URL." }); return; }
   const booking = await getBooking(req.params.id);
@@ -47,6 +48,7 @@ router.put("/:id/meeting", protect, authorize("tutor"), async (req: AuthRequest,
 });
 
 router.get("/:id/meeting", protect, async (req: AuthRequest, res: Response): Promise<void> => {
+  res.setHeader("Cache-Control", "private, no-store");
   const booking = await getBooking(req.params.id);
   if (!booking) { res.status(404).json({ success: false, message: "Booking not found." }); return; }
   const userId = req.user!._id.toString();
