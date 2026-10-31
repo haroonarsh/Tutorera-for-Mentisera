@@ -27,7 +27,7 @@ export const getPricingInsight = async (req: AuthRequest, res: Response): Promis
 
   const profileMatch: Record<string, unknown> = {};
   if (city) profileMatch.city = city;
-  if (subject) profileMatch.subjects = { $elemMatch: { $regex: String(subject).replace(/[^a-zA-Z0-9 ]/g, ""), $options: "i" } };
+  if (subject) profileMatch.subjects = { $elemMatch: { $regex: String(subject).split("").map((ch) => /[a-zA-Z0-9 ]/.test(ch) ? ch : String.fromCharCode(92) + ch).join(""), $options: "i" } };
   profileMatch.currency = "PKR";
 
   const profiles = profileMatch.city || profileMatch.subjects
