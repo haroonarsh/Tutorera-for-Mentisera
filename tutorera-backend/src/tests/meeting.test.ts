@@ -66,7 +66,10 @@ describe("tutor-hosted booking meetings", () => {
     const booking = await makeBooking(student, tutor);
     const path = `/api/v1/bookings/${booking._id}/meeting`;
     const url = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_example%40thread.v2/0?context=%7B%7D";
-    await request(app).put(path).set(auth(tutor)).send({ url }).expect(400);
+    await request(app).put(path).set(auth(tutor)).send({ url }).expect(200);
+    const result = await request(app).get(path).set(auth(admin)).expect(200);
+    expect(result.body.meeting.provider).toBe("microsoft_teams");
+    expect(result.body.meeting.url).toBe(url);
   });
 
   it("revokes access when the booking is cancelled", async () => {
