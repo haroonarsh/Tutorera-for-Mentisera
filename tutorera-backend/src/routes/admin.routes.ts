@@ -39,6 +39,8 @@ import { getAllTutorRatings, getTutorRatingsForAdmin } from "../controllers/revi
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
+import { adminAgentLimiter } from "../middlewares/rateLimiters";
+import { validateAgentMessage } from "../middlewares/agentRequest.middleware";
 import { enforceCountryScope } from "../middlewares/countryScope.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 import { validate as validateBooking } from "../validators/booking.validator";
@@ -79,6 +81,18 @@ import promoCodeRoutes from "./admin/promoCode.routes";
 import payoutAdminRoutes from "./admin/payout.routes";
 import { enforceAccountAction, getAccountEnforcementHistory } from "../controllers/accountModeration.controller";
 import { moderateRequest, getRequestModerationHistory } from "../controllers/requestModeration.controller";
+import {
+  listAdminAgents,
+  planAdminSupervisor,
+  executeAdminSupervisorHandler,
+  readAdminAgent,
+} from "../controllers/adminAgentSupervisor.controller";
+import { getInfrastructureHealth } from "../controllers/infraHealth.controller";
+import {
+  submitApproval,
+  listApprovals,
+  reviewApproval,
+} from "../controllers/adminApproval.controller";
 
 const router = Router();
 
@@ -130,6 +144,7 @@ router.use("/promo-codes", promoCodeRoutes);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);
+router.get("/system/infra", requirePermission("system.monitor"), getInfrastructureHealth);
 router.get("/roles/overview", requirePermission("roles.manage"), getAdminRolesOverview);
 router.patch("/roles/users/:userId", requirePermission("roles.manage"), updateAdminUserRole);
 
@@ -191,5 +206,16 @@ router.get("/student-ratings", requirePermission("student.read"), getAllStudentR
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
 router.get("/tutor-ratings", requirePermission("tutor.quality_manage"), getAllTutorRatings);
 router.get("/tutor-ratings/:tutorId", requirePermission("tutor.quality_manage"), getTutorRatingsForAdmin);
+
+// Human Approval Workflow
+router.post("/approvals", requirePermission("audit.read"), submitApproval);
+router.get("/approvals", requirePermission("audit.read"), listApprovals);
+router.post("/approvals/:id/review", requirePermission("roles.manage"), reviewApproval);
+
+// AI Supervisor Agent (rate-limited to 20 req/min per admin)
+router.get("/agents", adminAgentLimiter, listAdminAgents);
+router.post("/agents/supervisor/plan", adminAgentLimiter, validateAgentMessage, planAdminSupervisor);
+router.post("/agents/supervisor/execute", adminAgentLimiter, validateAgentMessage, executeAdminSupervisorHandler);
+router.get("/agents/:agentId/summary", adminAgentLimiter, readAdminAgent);
 
 export default router;

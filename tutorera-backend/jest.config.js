@@ -8,6 +8,18 @@ const transform = { "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.j
 const UNIT_TEST_PATTERN = [
   "<rootDir>/src/tests/verification-atomicity.test.ts",
   "<rootDir>/src/tests/scheduleOccurrences.test.ts",
+  // AI Supervisor Agent — all DB calls are mocked
+  "<rootDir>/src/tests/adminAgentSupervisor.test.ts",
+  "<rootDir>/src/tests/adminAgentRead.test.ts",
+  "<rootDir>/src/tests/adminAgentSupervisorController.test.ts",
+  // Human Approval Workflow — all DB calls are mocked
+  "<rootDir>/src/tests/adminApproval.test.ts",
+  // Infrastructure Probe — all external deps are mocked
+  "<rootDir>/src/tests/infrastructureProbe.test.ts",
+  // Orchestrator — read service mocked
+  "<rootDir>/src/tests/adminAgentOrchestrator.test.ts",
+  // Agent request middleware — pure function tests
+  "<rootDir>/src/tests/agentRequestMiddleware.test.ts",
 ];
 
 module.exports = {

@@ -53,6 +53,7 @@ const navSections: NavSection[] = [
     title: "Control Tower",
     items: [
       { href: "/admin", label: "Control Tower", icon: <LayoutDashboard size={17} />, permission: "system.monitor" },
+      { href: "/admin/supervisor-agent", label: "Supervisor Agent", icon: <Sparkles size={17} />, badge: "AI", permission: "system.monitor" },
       { href: "/admin/marketplace", label: "Marketplace Feed", icon: <ClipboardList size={17} />, permission: "request.read" },
     ],
   },
@@ -143,6 +144,7 @@ const navSections: NavSection[] = [
     items: [
       { href: "/admin/users", label: "Users & Accounts", icon: <Users size={17} />, permission: "users.read" },
       { href: "/admin/roles", label: "Admin Roles (RBAC)", icon: <KeyRound size={17} />, permission: "roles.manage" },
+      { href: "/admin/approvals", label: "Approval Queue", icon: <Shield size={17} />, permission: "roles.manage" },
       { href: "/admin/feature-flags", label: "Feature Flags", icon: <Flag size={17} />, permission: "market.configure" },
       { href: "/admin/audit-logs", label: "Audit Logs", icon: <FileText size={17} />, permission: "audit.read" },
       { href: "/admin/system-health", label: "System Health", icon: <Activity size={17} />, permission: "system.monitor" },

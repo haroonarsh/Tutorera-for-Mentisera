@@ -121,3 +121,25 @@ export const tutorRotateLimiter = rateLimit({
     legacyHeaders: false,
     message: { success: false, message: "You can only rotate your tracking link a few times per hour." },
 });
+
+// Admin Supervisor Agent — authenticated admins, generous window but capped
+// to prevent runaway orchestration loops or accidental fan-out storms.
+export const adminAgentLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "Too many agent requests — please wait a moment." },
+    keyGenerator: (req) => {
+        try {
+            const auth = req.headers.authorization;
+            if (auth?.startsWith("Bearer ")) {
+                const token = auth.slice(7);
+                const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id?: string };
+                if (payload.id) return `admin-agent:${payload.id}`;
+            }
+        } catch { /* fall through */ }
+        const address = req.ip || req.socket.remoteAddress;
+        return address ? `admin-agent-ip:${ipKeyGenerator(address)}` : "admin-agent-ip:unknown";
+    },
+});
