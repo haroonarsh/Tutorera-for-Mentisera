@@ -1,218 +1,229 @@
 "use client";
-// app/book/page.tsx
-// Rebooking page - pre-fills DirectBookingModal with tutor info from query params
-
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import DirectBookingModal from "@/components/Dashboard/DirectBookingModal";
-import { useAuth } from "@/context/AuthContext";
-import axiosInstance from "@/lib/axios";
-import { useRouter,useSearchParams } from "next/navigation";
-import { Suspense,useEffect,useState } from "react";
+import { useAppGuard } from "@/hooks/useAppGuard";
+import api from "@/lib/axios";
+import { UI_COLORS } from "@/lib/brand";
+import { BookOpen, RefreshCw, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
-interface TutorDetails {
+const C = UI_COLORS;
+
+type BookingStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
+
+interface Booking {
   _id: string;
-  user: {
-    _id: string;
-    name: string;
-    avatar?: string;
-  };
-  hourlyRate: number;
-  currency: string;
-  subjects: string[];
-  teachingMode: "online" | "in-person" | "both";
-  city: string;
+  subject: string;
+  studentName?: string;
+  tutorName?: string;
+  status: BookingStatus;
+  amount: number;
+  currency?: string;
+  createdAt: string;
+  scheduledAt?: string;
 }
 
-function LoadingScreen() {
-  return (
-    <DashboardLayout>
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#F5F7FF",
-        gap: 16,
-      }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: "3px solid #e5e7eb",
-          borderTopColor: "#0329B2",
-          borderRadius: "50%",
-          animation: "spin 0.8s linear infinite",
-        }} />
-        <p style={{ color: "#6b7280", fontSize: 14, margin: 0 }}>
-          Loading booking...
-        </p>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    </DashboardLayout>
-  );
-}
+const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
+  upcoming:  { bg: "#EEF5FF", color: "#0329b2", label: "Upcoming" },
+  ongoing:   { bg: "#f0fdf4", color: "#16a34a", label: "Ongoing" },
+  completed: { bg: "#f5f3ff", color: "#7c3aed", label: "Completed" },
+  cancelled: { bg: "#fff1f2", color: "#be123c", label: "Cancelled" },
+};
 
-function BookPageContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [tutor, setTutor] = useState<TutorDetails | null>(null);
+const TABS: { key: "all" | BookingStatus; label: string }[] = [
+  { key: "all",       label: "All" },
+  { key: "upcoming",  label: "Upcoming" },
+  { key: "ongoing",   label: "Ongoing" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+];
+
+export default function BookingsPage() {
+  useAppGuard({ roles: ["student", "tutor", "parent"] });
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showModal, setShowModal] = useState(false);
-
-  const tutorId = searchParams.get("tutor");
-  const subject = searchParams.get("subject") || "";
-  const level = searchParams.get("level") || "";
+  const [tab, setTab] = useState<"all" | BookingStatus>("all");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [refundId, setRefundId] = useState<string | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [message, setMessage] = useState<{ id: string; text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user) {
-      router.replace("/login?redirect=/book");
-      return;
-    }
+    api.get("/bookings")
+      .then(res => setBookings(res.data.bookings ?? []))
+      .catch(() => setBookings([]))
+      .finally(() => setLoading(false));
+  }, []);
 
-    if (!tutorId) {
-      setError("No tutor specified for booking.");
-      setLoading(false);
-      return;
-    }
+  const filtered = tab === "all" ? bookings : bookings.filter(b => b.status === tab);
 
-    async function fetchTutor() {
-      try {
-        const res = await axiosInstance.get(`/tutors/${tutorId}`);
-        const tutorData = res.data?.tutor || res.data;
-        if (!tutorData) {
-          setError("Tutor not found.");
-        } else {
-          setTutor(tutorData);
-          setShowModal(true);
-        }
-      } catch (err) {
-        console.error("Failed to fetch tutor:", err);
-        setError("Unable to load tutor details. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTutor();
-  }, [tutorId, user, authLoading, router]);
-
-  const handleSuccess = () => {
-    router.push("/dashboard?tab=requests");
-  };
-
-  if (authLoading || loading) {
-    return <LoadingScreen />;
+  async function bookAgain(id: string) {
+    setBusy(id);
+    try {
+      await api.post(`/bookings/${id}/book-again`);
+      setMessage({ id, text: "Booking request sent! Check your requests.", ok: true });
+    } catch {
+      setMessage({ id, text: "Could not re-book. Please try again.", ok: false });
+    } finally { setBusy(null); }
   }
 
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div style={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#F5F7FF",
-          padding: "2rem",
-        }}>
-          <div style={{
-            backgroundColor: "white",
-            borderRadius: "1.25rem",
-            border: "1px solid #fecaca",
-            padding: "2.5rem 2rem",
-            maxWidth: "500px",
-            width: "100%",
-            textAlign: "center",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
-          }}>
-            <div style={{
-              width: 72,
-              height: 72,
-              backgroundColor: "#fef2f2",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 1.5rem",
-              fontSize: "2rem",
-            }}>
-              ⚠️
-            </div>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#021550", marginBottom: "0.75rem" }}>
-              Unable to Load Booking
-            </h2>
-            <p style={{ color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
-              {error}
-            </p>
-            <button
-              onClick={() => router.back()}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: "#0329B2",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                fontSize: "0.875rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+  async function cancelBooking(id: string) {
+    if (!confirm("Cancel this booking?")) return;
+    setBusy(id);
+    try {
+      const res = await api.patch(`/bookings/${id}/status`, { status: "cancelled" });
+      setBookings(prev => prev.map(b => b._id === id ? { ...b, status: "cancelled" } : b));
+      setMessage({ id, text: res.data.message ?? "Booking cancelled.", ok: true });
+    } catch {
+      setMessage({ id, text: "Could not cancel. Please try again.", ok: false });
+    } finally { setBusy(null); }
   }
 
-  if (!tutor) {
-    return <LoadingScreen />;
+  async function submitRefund(id: string) {
+    if (!refundReason.trim()) return;
+    setBusy(id);
+    try {
+      await api.post(`/bookings/${id}/refund-request`, { reason: refundReason });
+      setRefundId(null);
+      setRefundReason("");
+      setMessage({ id, text: "Refund request submitted. Our team will review it shortly.", ok: true });
+    } catch {
+      setMessage({ id, text: "Could not submit refund request. Please try again.", ok: false });
+    } finally { setBusy(null); }
   }
 
   return (
     <DashboardLayout>
-      {showModal && tutor && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 1000,
-          background: "rgba(0,0,0,0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "1rem",
-        }}>
-          <DirectBookingModal
-            tutorId={tutor._id}
-            tutorUserId={tutor.user._id}
-            tutorName={tutor.user.name}
-            hourlyRate={tutor.hourlyRate}
-            currency={tutor.currency || "USD"}
-            tutorSubjects={tutor.subjects}
-            tutorTeachingMode={tutor.teachingMode}
-            tutorCity={tutor.city}
-            initialSubject={subject}
-            initialLevel={level}
-            onClose={() => router.back()}
-            onSuccess={handleSuccess}
-          />
-        </div>
-      )}
-    </DashboardLayout>
-  );
-}
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1rem" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: C.primary, margin: "0 0 1.75rem" }}>My Bookings</h1>
 
-export default function BookPage() {
-  return (
-    <Suspense fallback={<LoadingScreen />}>
-      <BookPageContent />
-    </Suspense>
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: "0.45rem 1rem", borderRadius: 999, border: "1.5px solid",
+                borderColor: tab === t.key ? C.accent : "#dce5f4",
+                background: tab === t.key ? C.accent : "white",
+                color: tab === t.key ? "white" : C.primary,
+                fontWeight: 700, fontSize: "0.85rem", cursor: "pointer",
+                minHeight: 44,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "4rem", color: "#888" }}>Loading bookings…</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "4rem", background: "white", borderRadius: "1rem", border: "1px solid #dce5f4" }}>
+            <BookOpen size={40} color="#bcc8e4" style={{ marginBottom: "1rem" }} />
+            <p style={{ color: "#425575", fontSize: "1rem", fontWeight: 600 }}>No {tab === "all" ? "" : tab} bookings found.</p>
+            <p style={{ color: "#8899bb", fontSize: "0.875rem", marginTop: "0.4rem" }}>Post a tuition request to get started.</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {filtered.map(b => {
+              const st = STATUS_STYLES[b.status] ?? STATUS_STYLES.upcoming;
+              const isBusy = busy === b._id;
+              const msg = message?.id === b._id ? message : null;
+              return (
+                <div key={b._id} style={{ background: "white", border: "1px solid #dce5f4", borderRadius: "1rem", padding: "1.25rem 1.5rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                        <span style={{ padding: "0.2rem 0.7rem", borderRadius: 999, fontSize: "0.75rem", fontWeight: 700, background: st.bg, color: st.color }}>{st.label}</span>
+                        <span style={{ fontWeight: 800, fontSize: "1rem", color: C.primary }}>{b.subject}</span>
+                      </div>
+                      {b.studentName && <p style={{ margin: "0 0 2px", fontSize: "0.85rem", color: "#425575" }}>Student: <strong>{b.studentName}</strong></p>}
+                      {b.tutorName   && <p style={{ margin: "0 0 2px", fontSize: "0.85rem", color: "#425575" }}>Tutor: <strong>{b.tutorName}</strong></p>}
+                      <p style={{ margin: 0, fontSize: "0.8rem", color: "#8899bb" }}>
+                        Booked {new Date(b.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                        {b.scheduledAt && ` · Session ${new Date(b.scheduledAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}`}
+                      </p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ fontWeight: 800, fontSize: "1.1rem", color: C.primary, margin: "0 0 0.75rem" }}>
+                        {b.currency ?? "PKR"} {b.amount?.toLocaleString() ?? "—"}
+                      </p>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {b.status === "completed" && (
+                          <>
+                            <button
+                              onClick={() => bookAgain(b._id)}
+                              disabled={isBusy}
+                              style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.45rem 0.9rem", borderRadius: 8, border: `1.5px solid ${C.accent}`, background: "white", color: C.accent, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", minHeight: 44 }}
+                            >
+                              <RefreshCw size={14} /> {isBusy ? "…" : "Book Again"}
+                            </button>
+                            {refundId !== b._id && (
+                              <button
+                                onClick={() => { setRefundId(b._id); setRefundReason(""); }}
+                                style={{ padding: "0.45rem 0.9rem", borderRadius: 8, border: "1.5px solid #be123c", background: "white", color: "#be123c", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", minHeight: 44 }}
+                              >
+                                Request Refund
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {(b.status === "upcoming" || b.status === "ongoing") && (
+                          <button
+                            onClick={() => cancelBooking(b._id)}
+                            disabled={isBusy}
+                            style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.45rem 0.9rem", borderRadius: 8, border: "1.5px solid #be123c", background: "white", color: "#be123c", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", minHeight: 44 }}
+                          >
+                            <XCircle size={14} /> {isBusy ? "…" : "Cancel"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Refund form */}
+                  {refundId === b._id && (
+                    <div style={{ marginTop: "1rem", padding: "1rem", background: "#fff1f2", borderRadius: "0.75rem", border: "1px solid #fecdd3" }}>
+                      <p style={{ fontWeight: 700, color: "#be123c", fontSize: "0.875rem", marginBottom: "0.5rem" }}>Refund request reason</p>
+                      <textarea
+                        value={refundReason}
+                        onChange={e => setRefundReason(e.target.value)}
+                        placeholder="Please describe why you are requesting a refund…"
+                        rows={3}
+                        style={{ width: "100%", borderRadius: "0.5rem", border: "1px solid #fecdd3", padding: "0.6rem", fontSize: "0.875rem", resize: "vertical", boxSizing: "border-box" }}
+                      />
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+                        <button
+                          onClick={() => submitRefund(b._id)}
+                          disabled={isBusy || !refundReason.trim()}
+                          style={{ padding: "0.55rem 1.25rem", borderRadius: 8, background: "#be123c", color: "white", fontWeight: 700, fontSize: "0.85rem", border: "none", cursor: "pointer", minHeight: 44 }}
+                        >
+                          {isBusy ? "Submitting…" : "Submit Request"}
+                        </button>
+                        <button
+                          onClick={() => setRefundId(null)}
+                          style={{ padding: "0.55rem 1rem", borderRadius: 8, background: "white", color: "#425575", border: "1px solid #dce5f4", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer", minHeight: 44 }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline feedback */}
+                  {msg && (
+                    <p role="status" style={{ marginTop: "0.75rem", padding: "0.5rem 0.875rem", borderRadius: "0.5rem", fontSize: "0.825rem", fontWeight: 600, background: msg.ok ? "#f0fdf4" : "#fff1f2", color: msg.ok ? "#16a34a" : "#be123c", border: `1px solid ${msg.ok ? "#bbf7d0" : "#fecdd3"}` }}>
+                      {msg.text}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

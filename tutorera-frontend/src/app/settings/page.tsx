@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import { Camera, Save, Shield, Monitor, Smartphone, Landmark, CreditCard } from "lucide-react";
+import { Camera, Save, Shield, Monitor, Smartphone, Landmark, Users } from "lucide-react";
 import api from "@/lib/axios";
 import { useAppGuard } from "@/hooks/useAppGuard";
 
@@ -24,6 +24,13 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
 
+  const [parentSettings, setParentSettings] = useState({
+    approvalRequiredForBookings: true,
+    spendingLimitMonthly: "" as string | number,
+    notificationsEnabled: true,
+  });
+  const [savingParent, setSavingParent] = useState(false);
+
   const [payoutAccount, setPayoutAccount] = useState({
     method: "bank_transfer",
     accountTitle: "",
@@ -41,6 +48,17 @@ export default function SettingsPage() {
       api.get("/auth/me").then(res => {
         setProfile({ name: res.data.user.name || "", phone: res.data.user.phone || "" });
       }).catch(() => {});
+
+      if (user.role === "parent") {
+        api.get("/parent/profile").then(res => {
+          const p = res.data?.profile;
+          if (p) setParentSettings({
+            approvalRequiredForBookings: !!p.approvalRequiredForBookings,
+            spendingLimitMonthly: p.spendingLimitMonthly ?? "",
+            notificationsEnabled: p.notificationsEnabled !== false,
+          });
+        }).catch(() => {});
+      }
 
       if (user.role === "tutor") {
         api.get("/tutors/profile/me").then(res => {
@@ -90,6 +108,21 @@ export default function SettingsPage() {
     } finally {
       setSavingPayout(false);
     }
+  };
+
+  const handleParentSettingsSave = async () => {
+    setSavingParent(true); setError(""); setSuccess("");
+    try {
+      await api.patch("/parent/settings", {
+        approvalRequiredForBookings: parentSettings.approvalRequiredForBookings,
+        spendingLimitMonthly: parentSettings.spendingLimitMonthly === "" ? undefined : Number(parentSettings.spendingLimitMonthly),
+        notificationsEnabled: parentSettings.notificationsEnabled,
+      });
+      setSuccess("Parent settings saved!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch {
+      setError("Failed to save parent settings.");
+    } finally { setSavingParent(false); }
   };
 
   const handlePasswordChange = async () => {
@@ -267,6 +300,58 @@ export default function SettingsPage() {
               style={{ backgroundColor: savingPayout ? '#93c5fd' : '#0329b2', color: 'white', padding: '0.65rem 1.5rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.875rem', cursor: savingPayout ? 'not-allowed' : 'pointer' }}
             >
               {savingPayout ? "Saving Details..." : "Save Payout Destination"}
+            </button>
+          </div>
+        )}
+
+        {/* Parent Settings — Parents only */}
+        {user.role === "parent" && (
+          <div style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '2rem', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: C.primary, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Users size={18} color="#0329b2" /> Parent Preferences
+            </h2>
+            <p style={{ color: C.gray500, fontSize: '0.8rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Control how your children&apos;s tutoring bookings are managed.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', cursor: 'pointer', fontSize: '0.875rem', color: C.primary, lineHeight: 1.45 }}>
+                <input
+                  type="checkbox"
+                  checked={parentSettings.approvalRequiredForBookings}
+                  onChange={e => setParentSettings({ ...parentSettings, approvalRequiredForBookings: e.target.checked })}
+                  style={{ marginTop: '0.15rem', width: 16, height: 16, flexShrink: 0 }}
+                />
+                <span><strong>Require my approval before a booking is confirmed</strong><br /><span style={{ color: C.gray500, fontSize: '0.78rem' }}>When enabled, linked students must wait for your approval before a session is booked.</span></span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', cursor: 'pointer', fontSize: '0.875rem', color: C.primary, lineHeight: 1.45 }}>
+                <input
+                  type="checkbox"
+                  checked={parentSettings.notificationsEnabled}
+                  onChange={e => setParentSettings({ ...parentSettings, notificationsEnabled: e.target.checked })}
+                  style={{ marginTop: '0.15rem', width: 16, height: 16, flexShrink: 0 }}
+                />
+                <span><strong>Email notifications for bookings and activity</strong></span>
+              </label>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>
+                  Monthly spending limit (optional, in USD equivalent)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={parentSettings.spendingLimitMonthly}
+                  onChange={e => setParentSettings({ ...parentSettings, spendingLimitMonthly: e.target.value })}
+                  placeholder="Leave blank for no limit"
+                  style={{ width: '100%', maxWidth: '220px', padding: '0.7rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', color: C.primary, boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleParentSettingsSave}
+              disabled={savingParent}
+              style={{ backgroundColor: savingParent ? '#93c5fd' : C.accent, color: 'white', padding: '0.65rem 1.5rem', borderRadius: '0.5rem', border: 'none', fontWeight: '700', fontSize: '0.875rem', cursor: savingParent ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Save size={15} /> {savingParent ? "Saving…" : "Save Preferences"}
             </button>
           </div>
         )}
