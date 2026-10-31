@@ -23,6 +23,7 @@ import {
   sendBroadcast,
   getTutorDocumentUrl,
   downloadTutorPayoutReport,
+  uploadTutorDocsAdmin,
 } from "../controllers/admin.controller";
 import {
   getAllClaims,
@@ -36,6 +37,7 @@ import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin } fr
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { getAllTutorRatings, getTutorRatingsForAdmin } from "../controllers/review.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
+import { uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
 import { enforceCountryScope } from "../middlewares/countryScope.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
@@ -69,6 +71,7 @@ import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
 import geographyAdminRoutes from "./admin/geography.routes";
 import verificationRoutes from "./admin/verification.routes";
 import subjectRoutes from "./admin/subject.routes";
+import schoolOfferingRoutes from "./admin/schoolOffering.routes";
 import disciplineSubjectMapRoutes from "./admin/disciplineSubjectMap.routes";
 import academicFrameworkRoutes from "./admin/academicFramework.routes";
 import emailTemplateRoutes from "./admin/emailTemplate.routes";
@@ -114,6 +117,7 @@ router.use("/verification", verificationRoutes);
 router.use("/payouts", payoutAdminRoutes);
 router.use("/subjects", subjectRoutes);
 router.use("/discipline-subject-maps", disciplineSubjectMapRoutes);
+router.use("/school-offerings", schoolOfferingRoutes);
 // Canonical, normalized academic administration. Legacy subject and map routes
 // above remain available until every existing client is migrated.
 router.use("/academic-framework", academicFrameworkRoutes);
@@ -158,7 +162,6 @@ router.get("/users", requirePermission("users.read"), getAllUsers);
 router.patch("/users/:id/status", requirePermission("users.manage"), toggleUserStatus);
 router.post("/users/:id/enforcement", requirePermission("users.read"), enforceAccountAction);
 router.get("/users/:id/enforcement-history", requirePermission("users.read"), getAccountEnforcementHistory);
-import { uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
 const verificationFields = uploadVerificationMulter.fields([
   { name: "cnicFront", maxCount: 1 },
   { name: "cnicBack", maxCount: 1 },
@@ -166,7 +169,6 @@ const verificationFields = uploadVerificationMulter.fields([
   { name: "policeCertificate", maxCount: 1 },
   { name: "videoIntro", maxCount: 1 },
 ]);
-import { uploadTutorDocsAdmin } from "../controllers/admin.controller";
 router.post("/tutors/:id/upload-docs", requirePermission("tutor.verify"), verificationFields, uploadTutorDocsAdmin);
 router.get("/bookings", requirePermission("bookings.read"), getAllBookings);
 router.patch("/bookings/:id/status", requirePermission("bookings.manage"), updateBookingStatus);

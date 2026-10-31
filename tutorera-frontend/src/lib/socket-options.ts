@@ -1,7 +1,11 @@
-/** Native Workers cannot forward node:http upgrade events. Polling still
- * provides Socket.IO messaging; Render keeps WebSockets unless configured. */
+/** Cloudflare Workers cannot upgrade HTTP connections, so only polling works.
+ * Default to polling when NEXT_PUBLIC_SOCKET_TRANSPORT is "polling" or when
+ * the API URL points at our Cloudflare backend (api.tutorera.ac.pk). */
 export function socketTransportOptions() {
-  return process.env.NEXT_PUBLIC_SOCKET_TRANSPORT === "polling"
+  const isPollingOnly =
+    process.env.NEXT_PUBLIC_SOCKET_TRANSPORT === "polling" ||
+    (process.env.NEXT_PUBLIC_API_URL ?? "").includes("tutorera.ac.pk");
+  return isPollingOnly
     ? { transports: ["polling"], upgrade: false }
     : { transports: ["websocket", "polling"] };
 }

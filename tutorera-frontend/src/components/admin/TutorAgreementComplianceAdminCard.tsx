@@ -27,7 +27,7 @@ export default function TutorAgreementComplianceAdminCard({
     let mounted = true;
     (async () => {
       try {
-        const res = await api.get(`/admin/agreements/tutors/${tutorUserId}`);
+        const res = await api.get(`/admin/tutors/${tutorUserId}/agreements`);
         if (mounted) setData(res.data);
       } catch {
         // fail silently or set null
