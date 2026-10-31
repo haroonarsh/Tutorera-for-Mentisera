@@ -52,7 +52,10 @@ router.get("/:id/meeting", protect, async (req: AuthRequest, res: Response): Pro
   const booking = await getBooking(req.params.id);
   if (!booking) { res.status(404).json({ success: false, message: "Booking not found." }); return; }
   const userId = req.user!._id.toString();
-  const allowed = req.user!.role === "admin" || booking.student.toString() === userId || booking.tutor.toString() === userId;
+  const isCountryAdmin = req.user!.role === "admin" && req.user!.adminRole === "country_admin";
+  const permittedCountry = Boolean(booking.countryCode) && (req.user!.allowedCountryCodes || []).includes(booking.countryCode!);
+  const adminAllowed = req.user!.role === "admin" && (!isCountryAdmin || permittedCountry);
+  const allowed = adminAllowed || booking.student.toString() === userId || booking.tutor.toString() === userId;
   if (!allowed) { res.status(403).json({ success: false, message: "Access denied." }); return; }
   if (booking.teachingMode === "in-person" || !["upcoming", "ongoing"].includes(booking.status) || booking.paymentStatus !== "confirmed") {
     res.status(409).json({ success: false, message: "Meeting access is not available for this booking." }); return;
