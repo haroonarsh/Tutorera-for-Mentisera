@@ -353,3 +353,6 @@ export const subjectCatalogue: CatalogueGroup[] = [
     ]
   }
 ];
+
+/** Distinct subject names for the existing onboarding multi-select controls. */
+export const catalogueSubjectNames = Array.from(new Set(subjectCatalogue.flatMap(group => group.subjects.map(subject => subject.name)))).sort((a, b) => a.localeCompare(b));
