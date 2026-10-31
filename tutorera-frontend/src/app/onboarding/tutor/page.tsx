@@ -274,6 +274,7 @@ export default function TutorOnboardingPage() {
           experience: step3.experience,
           previousInstitutions: step3.previousInstitutions.split(",").map(s => s.trim()).filter(Boolean),
           subjects: selectedSubjects,
+          curricula: curriculumSelection ? [curriculumSelection] : [],
           levels: selectedLevels,
         }));
       }
