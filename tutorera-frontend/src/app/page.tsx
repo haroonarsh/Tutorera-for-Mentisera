@@ -98,6 +98,53 @@ export default async function Home() {
       {/* 6b. Payment Trust / How Your Money Is Protected */}
       <PaymentTrustSteps />
 
+      {/* Refer & Earn promo band */}
+      <section style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 60%, #016ef8 100%)", padding: "3.5rem 1.5rem" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "2rem", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Refer &amp; Earn
+            </span>
+            <h2 style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", fontWeight: 900, color: "white", margin: "0.4rem 0 0.75rem", lineHeight: 1.2 }}>
+              Share TUTORERA®.<br />Both of you get rewarded.
+            </h2>
+            <p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.6, margin: 0 }}>
+              Invite a friend — they get <strong style={{ color: "white" }}>PKR 200 off</strong> their first booking, and you earn <strong style={{ color: "white" }}>PKR 200+ credit</strong> once they complete it. Rewards grow as you refer more.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "1.5rem", color: "white" }}>
+              {[
+                { emoji: "🔗", label: "Share your link" },
+                { emoji: "🎁", label: "Friend gets PKR 200 off" },
+                { emoji: "💰", label: "You earn credit" },
+              ].map(item => (
+                <div key={item.label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "1.5rem", marginBottom: "0.3rem" }}>{item.emoji}</div>
+                  <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#cbd5e1", whiteSpace: "nowrap" }}>{item.label}</div>
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/referral"
+              style={{
+                background: "#08bffc",
+                color: "#021550",
+                padding: "0.85rem 1.75rem",
+                borderRadius: "0.75rem",
+                fontWeight: 800,
+                fontSize: "0.95rem",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                boxShadow: "0 6px 20px rgba(8,191,252,0.35)"
+              }}
+            >
+              Get your referral link →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* 6c. Meet Our Top Tutors - the homepage's only links to individual
           tutor profiles; previously this section existed as a component
           but was never actually rendered anywhere on the site. */}
