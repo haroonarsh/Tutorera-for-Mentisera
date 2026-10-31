@@ -49,6 +49,7 @@ export interface TutorProfile {
 
 export interface FiltersState {
   search: string;
+  subject?: string;
   country?: string;
   city: string;
   level: string;
@@ -102,6 +103,7 @@ export const SORT_OPTIONS = [
 
 export const INITIAL_FILTERS: FiltersState = {
   search: "",
+  subject: "",
   country: "",
   city: "",
   level: "",
