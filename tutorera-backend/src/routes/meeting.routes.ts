@@ -18,7 +18,7 @@ const parseMeeting = (raw: unknown) => {
     const provider = hosts[url.hostname.toLowerCase()];
     if (!provider) return null;
     if (provider === "google_meet" && (!/^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url.pathname) || url.search)) return null;
-    if (provider === "microsoft_teams" && !/^\/l\/meetup-join\/[^/]+$/i.test(url.pathname)) return null;
+    if (provider === "microsoft_teams" && !/^\/l\/meetup-join\/.+\/0\/?$/i.test(url.pathname)) return null;
     return { provider, url: url.toString() };
   } catch { return null; }
 };
