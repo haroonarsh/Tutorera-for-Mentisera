@@ -52,14 +52,15 @@ function ReferralConfigPanel() {
   useEffect(() => {
     api.get("/admin/referral-config")
       .then(res => {
-        const c: ReferralConfig = res.data.config;
+        const c: ReferralConfig | null = res.data?.config ?? null;
+        if (!c) return;
         setConfig(c);
         setForm({
-          referrerRewardAmount: c.referrerRewardAmount,
-          referredDiscountAmount: c.referredDiscountAmount,
+          referrerRewardAmount: c.referrerRewardAmount ?? 200,
+          referredDiscountAmount: c.referredDiscountAmount ?? 200,
           currency: c.currency || "PKR",
-          isActive: c.isActive,
-          milestonesEnabled: c.milestonesEnabled,
+          isActive: c.isActive ?? true,
+          milestonesEnabled: c.milestonesEnabled ?? false,
           milestones: c.milestones ?? [],
         });
       })
@@ -205,10 +206,11 @@ export default function AdminReferralsPage() {
       if (status !== "all") params.set("status", status);
       if (fraud) params.set("fraud", "true");
       const res = await api.get(`/admin/referrals?${params}`);
-      setReferrals(res.data.referrals ?? []);
-      setCreditByCurrency(res.data.creditByCurrency ?? []);
-      setTotalPages(res.data.pages ?? 1);
-      setTotal(res.data.total ?? 0);
+      const d = res.data ?? {};
+      setReferrals(Array.isArray(d.referrals) ? d.referrals : []);
+      setCreditByCurrency(Array.isArray(d.creditByCurrency) ? d.creditByCurrency : []);
+      setTotalPages(d.pages ?? 1);
+      setTotal(d.total ?? 0);
     } catch (err) {
       console.error(err);
       showError("Failed to load referrals.");
@@ -319,15 +321,15 @@ export default function AdminReferralsPage() {
                 {referrals.map((r, i) => (
                   <tr key={r._id} style={{ borderBottom: i < referrals.length - 1 ? `1px solid ${C.border}` : "none", backgroundColor: r.fraudFlag ? "#fffbeb" : "white" }}>
                     <td style={{ padding: "1rem 1.25rem" }}>
-                      <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: "0 0 2px" }}>{r.referrer.name}</p>
-                      <p style={{ color: C.gray500, fontSize: "0.75rem", margin: 0 }}>{r.referrer.email}</p>
+                      <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: "0 0 2px" }}>{r.referrer?.name ?? "—"}</p>
+                      <p style={{ color: C.gray500, fontSize: "0.75rem", margin: 0 }}>{r.referrer?.email ?? ""}</p>
                     </td>
                     <td style={{ padding: "1rem 1.25rem" }}>
-                      <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: "0 0 2px" }}>{r.referred.name}</p>
-                      <p style={{ color: C.gray500, fontSize: "0.75rem", margin: 0 }}>{r.referred.email}</p>
+                      <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: "0 0 2px" }}>{r.referred?.name ?? "—"}</p>
+                      <p style={{ color: C.gray500, fontSize: "0.75rem", margin: 0 }}>{r.referred?.email ?? ""}</p>
                     </td>
                     <td style={{ padding: "1rem 1.25rem", color: C.gray500, fontSize: "0.875rem" }}>
-                      {new Date(r.referred.createdAt).toLocaleDateString()}
+                      {r.referred?.createdAt ? new Date(r.referred.createdAt).toLocaleDateString() : "—"}
                     </td>
                     <td style={{ padding: "1rem 1.25rem", fontWeight: 700, color: C.primary, fontSize: "0.875rem" }}>
                       {r.creditCurrency} {r.creditAmount}

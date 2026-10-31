@@ -68,8 +68,8 @@ export default function ReferralPage() {
   useEffect(() => {
     if (!user) return;
     api.get("/referral/my")
-      .then(res => setData(res.data))
-      .catch(err => { console.error(err); showError("Failed to load referral data."); })
+      .then(res => { if (res.data?.referralCode) setData(res.data); })
+      .catch(err => { console.error(err); showError(err, "Failed to load referral data."); })
       .finally(() => setFetching(false));
   }, [user]);
 
@@ -90,7 +90,13 @@ export default function ReferralPage() {
     </div>
   );
 
-  if (!data) return null;
+  if (!data) return (
+    <div style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "3rem 1.5rem", textAlign: "center" }}>
+      <Gift size={40} color="#94a3b8" />
+      <p style={{ color: "#64748b", fontSize: "1rem" }}>Your referral dashboard is not available yet.<br />Make sure you&apos;re logged in, then try again.</p>
+      <a href="/login" style={{ padding: "0.65rem 1.5rem", background: "#0329b2", color: "white", borderRadius: "0.5rem", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>Log in</a>
+    </div>
+  );
 
   const { program, milestoneProgress: mp } = data;
   const nextReward = mp?.nextMilestone?.referrerRewardAmount ?? mp?.currentMilestone?.referrerRewardAmount ?? program.referrerRewardAmount;
@@ -255,8 +261,8 @@ export default function ReferralPage() {
               {data.referrals.map(r => (
                 <div key={r._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.875rem 1rem", backgroundColor: C.gray50, borderRadius: "0.5rem", border: "1px solid #e5e7eb", flexWrap: "wrap", gap: "0.5rem" }}>
                   <div>
-                    <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: "0 0 2px" }}>{r.referred.name}</p>
-                    <p style={{ color: "#9ca3af", fontSize: "0.75rem", margin: 0 }}>Joined {new Date(r.referred.createdAt).toLocaleDateString()}</p>
+                    <p style={{ fontWeight: 600, color: C.primary, fontSize: "0.875rem", margin: "0 0 2px" }}>{r.referred?.name ?? "User"}</p>
+                    <p style={{ color: "#9ca3af", fontSize: "0.75rem", margin: 0 }}>Joined {r.referred?.createdAt ? new Date(r.referred.createdAt).toLocaleDateString() : "—"}</p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     <span style={{ fontSize: "0.8rem", fontWeight: 700, color: r.status === "credited" ? "#16a34a" : r.status === "reversed" ? "#dc2626" : "#d97706" }}>
