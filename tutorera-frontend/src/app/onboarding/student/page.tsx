@@ -129,6 +129,7 @@ export default function StudentOnboardingPage() {
         ...step1,
         ...step2,
         subjectsNeeded,
+        curriculum: curriculumSelection || undefined,
         budgetRange,
         teachingModePreference,
       });
