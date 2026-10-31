@@ -7,7 +7,7 @@ on:
       - "tutorera-backend/**"
       - ".github/workflows/backend-ci.yml"
   push:
-    branches: [main]
+    branches: [main, chore/unified-tutorera-backend]
     paths:
       - "tutorera-backend/**"
       - ".github/workflows/backend-ci.yml"
@@ -44,7 +44,16 @@ jobs:
       - name: Production dependency audit
         id: production_audit
         continue-on-error: true
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=high --json > production-audit.json
+
+      - name: Upload production dependency audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-production-audit
+          path: tutorera-backend/production-audit.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: TypeScript build
         run: npm run build

@@ -15,6 +15,7 @@ import TutorCard from "./TutorCard";
 
 interface Props {
   initialTutors: TutorProfile[];
+  initialError?: boolean;
   initialPagination: PaginationMeta;
   initialFilters?: Partial<FiltersState>;
   title?: string;
@@ -29,24 +30,30 @@ function query(filters: FiltersState, page: number, matchRequestId?: string | nu
   return params.toString();
 }
 
-export default function TutorsExplorer({ initialTutors, initialPagination, initialFilters = {}, title, subtitle }: Props) {
+export default function TutorsExplorer({ initialTutors, initialPagination, initialError = false, initialFilters = {}, title, subtitle }: Props) {
   const searchParams = useSearchParams();
   const matchRequestId = searchParams.get("matchRequestId");
   const [tutors, setTutors] = useState(initialTutors);
   const [pagination, setPagination] = useState(initialPagination);
   const [filters, setFilters] = useState<FiltersState>({ ...INITIAL_FILTERS, ...initialFilters });
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(initialError);
   const [mobileOpen, setMobileOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => !["search", "sortBy"].includes(key) && value).length;
 
   const load = useCallback(async (page: number, next: FiltersState) => {
     setLoading(true);
+    setLoadError(false);
     try {
       const { data } = await api.get(`/tutors?${query(next, page, matchRequestId)}`);
       const list = data.tutors ?? [];
       setTutors(list);
       setPagination({ total: data.total ?? list.length, page: data.page ?? page, pages: data.pages ?? 1, limit: 12 });
+    } catch {
+      setLoadError(true);
+      setTutors([]);
+      setPagination({ total: 0, page: 1, pages: 1, limit: 12 });
     } finally {
       setLoading(false);
     }
@@ -113,7 +120,7 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
           </div>
 
           <div className={styles.resultsHeader}>
-            <p className={styles.resultsCount} aria-live="polite"><span className={styles.resultsCountAccent}>{pagination.total}</span> tutors found</p>
+            <p className={styles.resultsCount} aria-live="polite">{loadError ? "Tutor results unavailable" : <><span className={styles.resultsCountAccent}>{pagination.total}</span> tutors found</>}</p>
             <div className={styles.headerRight}>
               <button className={styles.mobileFilterBtn} onClick={() => setMobileOpen(true)}>Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}</button>
               <div className={styles.sortControl}>
@@ -126,13 +133,18 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
 
           {loading ? (
             <div className={styles.grid} aria-busy="true">{Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}</div>
+          ) : loadError ? (
+            <div role="alert" style={{ padding: "1.5rem", border: "1px solid #fca5a5", borderRadius: "0.75rem" }}>
+              <p>We could not load tutor profiles right now. Please try again.</p>
+              <button type="button" className={styles.searchBtn} onClick={() => load(1, filters)}>Retry loading tutors</button>
+            </div>
           ) : tutors.length ? (
             <div className={styles.grid}>{tutors.map((tutor) => <TutorCard key={tutor._id} tutor={tutor} matchScore={tutor.matchScore} />)}</div>
           ) : (
             <EmptyState onReset={reset} />
           )}
 
-          {!loading && ((pagination.pages || pagination.totalPages || 0) > 1) && (
+          {!loading && !loadError && ((pagination.pages || pagination.totalPages || 0) > 1) && (
             <div className={styles.paginationWrap}>
               <Pagination meta={pagination} onPageChange={(page) => { load(page, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
             </div>

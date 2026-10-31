@@ -46,6 +46,7 @@ export default async function TutorsPage({ searchParams }: Props) {
   return (
     <TutorsExplorer
       initialTutors={result.tutors}
+      initialError={result.error ?? false}
       initialPagination={{ total: result.total, page: result.page, pages: result.pages, limit: 12 }}
       initialFilters={initialFilters}
     />

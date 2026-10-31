@@ -1,5 +1,6 @@
 "use client";
 import api from "@/lib/axios";
+import BookingMeetingPanel from "@/components/Dashboard/BookingMeetingPanel";
 import { UI_COLORS } from "@/lib/brand";
 import { TOTAL_FEE_PERCENT } from "@/lib/site";
 import { showError } from "@/lib/toast";
@@ -102,6 +103,7 @@ export default function BookingsPage() {
             const { platformFee, tutorPayout } = calculateFees(booking.amount);
             return (
               <div key={booking._id} style={{ backgroundColor: 'white', borderRadius: '0.875rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+                <BookingMeetingPanel bookingId={booking._id} role="admin" teachingMode={booking.teachingMode} status={booking.status} paymentStatus={booking.paymentStatus} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'start' }}>
 
                   {/* Student + Tutor */}

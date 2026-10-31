@@ -46,9 +46,10 @@ export interface TutorDirectoryResponse {
   total: number;
   page: number;
   pages: number;
+  error?: boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 
 export async function fetchTutorSeoFacets(): Promise<TutorSeoFacets | null> {
   try {
@@ -84,7 +85,7 @@ export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24):
     return { tutors, total: data.total ?? tutors.length, page: data.page ?? 1, pages: data.pages ?? 1 };
   } catch (error) {
     console.error("Unable to load the public tutor directory", error);
-    return { tutors: [], total: 0, page: 1, pages: 1 };
+    return { tutors: [], total: 0, page: 1, pages: 1, error: true };
   }
 }
 
