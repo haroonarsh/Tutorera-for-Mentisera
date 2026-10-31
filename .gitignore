@@ -9,3 +9,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+
+# Migration/one-off scripts that may contain secrets
+scripts/ci/migrate-render-to-cloudflare.ps1

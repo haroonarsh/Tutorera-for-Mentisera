@@ -36,9 +36,21 @@ export async function updateAdminSchoolOffering(req: AuthRequest, res: Response)
   if (!["active", "inactive"].includes(status) || typeof reason !== "string" || reason.trim().length < 5 || reason.length > 500) { res.status(422).json({ success: false, message: "Provide a status and a reason of at least five characters." }); return; }
   const offering = await SchoolOffering.findById(req.params.id);
   if (!offering) { res.status(404).json({ success: false, message: "Offering not found." }); return; }
-  if (status === "active" && offering.boardCode === "pearson" && !offering.verificationSource) { res.status(409).json({ success: false, message: "A verified Pearson source is required before activation." }); return; }
-  offering.status = status; offering.reviewReason = reason.trim(); offering.reviewedBy = req.user?._id; offering.reviewedAt = new Date();
-  await offering.save();
+  // The Workers bundler tsconfig infers some Mongoose Document fields as Buffer; runtime values
+  // are a string boardCode, ObjectId reviewedBy, and Date reviewedAt. Type the working copy
+  // explicitly so both tsconfigs agree without changing stored values.
+  const doc = offering as unknown as {
+    boardCode: string;
+    status: "active" | "inactive";
+    reviewReason: string;
+    reviewedBy: unknown;
+    reviewedAt: Date;
+    verificationSource?: string;
+    save(): Promise<unknown>;
+  };
+  if (status === "active" && doc.boardCode === "pearson" && !doc.verificationSource) { res.status(409).json({ success: false, message: "A verified Pearson source is required before activation." }); return; }
+  doc.status = status; doc.reviewReason = reason.trim(); doc.reviewedBy = req.user?._id; doc.reviewedAt = new Date();
+  await doc.save();
   await logAudit({ action: "school_offering_reviewed", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "SchoolOffering", targetId: String(offering._id), metadata: { status, reason: reason.trim() } });
   res.json({ success: true, offering });
 }
