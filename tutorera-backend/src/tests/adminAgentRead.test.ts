@@ -23,6 +23,13 @@ jest.mock("../models/SafetyCase.model", () => ({
   __esModule: true,
   default: { countDocuments: jest.fn().mockResolvedValue(0) },
 }));
+jest.mock("../services/infrastructureProbe.service", () => ({
+  runInfrastructureProbes: jest.fn().mockResolvedValue({
+    overallStatus: "healthy",
+    checkedAt: new Date().toISOString(),
+    probes: [{ name: "database", status: "healthy", detail: "readyState=1" }],
+  }),
+}));
 
 import { readAdminAgentSummary } from "../services/adminAgentRead.service";
 
@@ -55,6 +62,7 @@ describe("readAdminAgentSummary", () => {
     expect(result.agentId).toBe("operations");
     expect(result.data).toHaveProperty("openCases");
     expect(result.data).toHaveProperty("criticalCases");
+    expect(result.data).toHaveProperty("infrastructure");
   });
 
   it("throws for an unknown agent id", async () => {

@@ -10,6 +10,7 @@ import TutoringRequest from "../models/Request.model";
 import Booking from "../models/Booking.model";
 import TutorPayout from "../models/TutorPayout.model";
 import SafetyCase from "../models/SafetyCase.model";
+import { runInfrastructureProbes } from "./infrastructureProbe.service";
 
 export type AdminAgentId = "tutor" | "marketplace" | "finance" | "operations";
 
@@ -139,6 +140,7 @@ export async function readAdminAgentSummary(agentId: AdminAgentId): Promise<Agen
         criticalCases,
         newCasesLast7Days,
         resolvedLast7Days,
+        infra,
       ] = await Promise.all([
         SafetyCase.countDocuments({ status: { $in: ["open", "under_investigation"] } }),
         SafetyCase.countDocuments({
@@ -147,6 +149,7 @@ export async function readAdminAgentSummary(agentId: AdminAgentId): Promise<Agen
         }),
         SafetyCase.countDocuments({ createdAt: { $gte: day7 } }),
         SafetyCase.countDocuments({ status: "resolved", updatedAt: { $gte: day7 } }),
+        runInfrastructureProbes(),
       ]);
       return {
         agentId,
@@ -156,6 +159,10 @@ export async function readAdminAgentSummary(agentId: AdminAgentId): Promise<Agen
           criticalCases,
           newCasesLast7Days,
           resolvedLast7Days,
+          infrastructure: {
+            overallStatus: infra.overallStatus,
+            probes: infra.probes.map((p) => ({ name: p.name, status: p.status, detail: p.detail })),
+          },
         },
       };
     }

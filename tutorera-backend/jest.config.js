@@ -14,6 +14,12 @@ const UNIT_TEST_PATTERN = [
   "<rootDir>/src/tests/adminAgentSupervisorController.test.ts",
   // Human Approval Workflow — all DB calls are mocked
   "<rootDir>/src/tests/adminApproval.test.ts",
+  // Infrastructure Probe — all external deps are mocked
+  "<rootDir>/src/tests/infrastructureProbe.test.ts",
+  // Orchestrator — read service mocked
+  "<rootDir>/src/tests/adminAgentOrchestrator.test.ts",
+  // Agent request middleware — pure function tests
+  "<rootDir>/src/tests/agentRequestMiddleware.test.ts",
 ];
 
 module.exports = {
