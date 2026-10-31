@@ -3,6 +3,7 @@ import { UI_COLORS, STATUS_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -94,7 +95,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     api.get("/admin/analytics")
       .then(res => setData(res.data))
-      .catch(console.error)
+      .catch(err => { console.error(err); showError("Failed to load analytics."); })
       .finally(() => setLoading(false));
   }, []);
 

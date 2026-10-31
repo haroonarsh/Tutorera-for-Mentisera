@@ -67,10 +67,11 @@ export default function PayoutsPage() {
     try {
       const params = status === "all" ? "" : `?status=${status}`;
       const res = await api.get(`/admin/payouts${params}`);
-      setBookings(res.data.bookings);
-      setStats(res.data.stats);
-    } catch {
-      console.error("Failed to load payouts");
+      setBookings(res.data.bookings ?? []);
+      setStats(res.data.stats ?? null);
+    } catch (err) {
+      console.error("Failed to load payouts", err);
+      showError("Failed to load payout data.");
     } finally {
       setLoading(false);
     }

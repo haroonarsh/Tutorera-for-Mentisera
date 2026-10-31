@@ -3,6 +3,7 @@ import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import api from "@/lib/axios";
+import { showError } from "@/lib/toast";
 
 const C = UI_COLORS;
 
@@ -33,8 +34,8 @@ export default function TutorRatingsPage() {
 
   useEffect(() => {
     api.get("/admin/tutor-ratings")
-      .then(res => setRatings(res.data.ratings))
-      .catch(console.error)
+      .then(res => setRatings(res.data.ratings ?? []))
+      .catch(err => { console.error(err); showError("Failed to load tutor ratings."); })
       .finally(() => setLoading(false));
   }, []);
 
