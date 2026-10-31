@@ -40,7 +40,7 @@ describe("readAdminAgentSummary", () => {
     const result = await readAdminAgentSummary("marketplace");
     expect(result.agentId).toBe("marketplace");
     expect(result.data).toHaveProperty("openRequests");
-    expect(result.data).toHaveProperty("activeBookings");
+    expect(result.data).toHaveProperty("ongoingBookings");
   });
 
   it("returns finance summary with correct shape", async () => {

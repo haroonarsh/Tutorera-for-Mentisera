@@ -82,6 +82,7 @@ import { moderateRequest, getRequestModerationHistory } from "../controllers/req
 import {
   listAdminAgents,
   planAdminSupervisor,
+  executeAdminSupervisorHandler,
   readAdminAgent,
 } from "../controllers/adminAgentSupervisor.controller";
 
@@ -197,6 +198,7 @@ router.get("/tutor-ratings/:tutorId", requirePermission("tutor.quality_manage"),
 // AI Supervisor Agent
 router.get("/agents", listAdminAgents);
 router.post("/agents/supervisor/plan", planAdminSupervisor);
+router.post("/agents/supervisor/execute", executeAdminSupervisorHandler);
 router.get("/agents/:agentId/summary", readAdminAgent);
 
 export default router;

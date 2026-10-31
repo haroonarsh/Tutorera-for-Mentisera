@@ -53,6 +53,7 @@ const navSections: NavSection[] = [
     title: "Control Tower",
     items: [
       { href: "/admin", label: "Control Tower", icon: <LayoutDashboard size={17} />, permission: "system.monitor" },
+      { href: "/admin/supervisor-agent", label: "Supervisor Agent", icon: <Sparkles size={17} />, badge: "AI", permission: "system.monitor" },
       { href: "/admin/marketplace", label: "Marketplace Feed", icon: <ClipboardList size={17} />, permission: "request.read" },
     ],
   },

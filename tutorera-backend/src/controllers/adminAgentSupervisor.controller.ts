@@ -19,6 +19,7 @@ import {
   type AdminAgentId,
 } from "../services/adminAgentSupervisor.service";
 import { readAdminAgentSummary } from "../services/adminAgentRead.service";
+import { executeAdminSupervisor } from "../services/adminAgentOrchestrator.service";
 import logger from "../config/logger";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -107,6 +108,44 @@ export async function planAdminSupervisor(req: Request, res: Response): Promise<
   }
 
   res.json({ tasks: authorisedTasks });
+}
+
+/**
+ * POST /api/v1/admin/agents/supervisor/execute
+ * Body: { message: string }
+ * Plans + executes all authorised agents for the query and returns a unified result.
+ */
+export async function executeAdminSupervisorHandler(req: Request, res: Response): Promise<void> {
+  const admin = adminInfo(req);
+  const { message } = req.body as { message?: string };
+
+  if (!message || typeof message !== "string" || !message.trim()) {
+    res.status(400).json({ error: "message is required" });
+    return;
+  }
+  if (message.length > 1000) {
+    res.status(400).json({ error: "message too long (max 1000 characters)" });
+    return;
+  }
+
+  // Fail-closed audit log before execution
+  try {
+    await writeAuditLog(admin.id, admin.name, "admin_agent_execute", {
+      message: message.slice(0, 200),
+    });
+  } catch (err) {
+    logger.error({ err }, "[AdminAgentSupervisor] audit log write failed — refusing execute");
+    res.status(500).json({ error: "Audit log unavailable — request cannot proceed" });
+    return;
+  }
+
+  try {
+    const result = await executeAdminSupervisor(message, admin.role, admin.permissions);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "[AdminAgentSupervisor] orchestrator execute failed");
+    res.status(500).json({ error: "Supervisor execution failed" });
+  }
 }
 
 /**
