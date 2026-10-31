@@ -30,7 +30,10 @@ export default function StudentOnboardingPage() {
   const subjects = Array.from(new Set([...(geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Other"]), ...catalogueSubjectNames]));
   const [curriculumSelection, setCurriculumSelection] = useState("");
   const curriculumOptions = Array.from(new Set(subjectCatalogue.map(group => group.curriculum)));
+  const [qualificationSelection, setQualificationSelection] = useState("");
   const selectedCatalogueGroups = subjectCatalogue.filter(group => group.curriculum === curriculumSelection);
+  const qualificationSubjects = subjectCatalogue.find(group => group.curriculum === curriculumSelection && group.qualification === qualificationSelection)?.subjects.map(subject => subject.name) ?? [];
+  const visibleSubjects = qualificationSelection ? Array.from(new Set(qualificationSubjects)) : subjects;
 
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
@@ -292,15 +295,15 @@ export default function StudentOnboardingPage() {
                 <div>
                   <div style={{ marginBottom: "1rem" }}>
                     <label htmlFor="curriculum-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Explore subjects by curriculum (optional)</label>
-                    <select id="curriculum-filter" value={curriculumSelection} onChange={event => setCurriculumSelection(event.target.value)} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, maxWidth: "100%", width: 320 }}>
+                    <select id="curriculum-filter" value={curriculumSelection} onChange={event => { setCurriculumSelection(event.target.value); setQualificationSelection(""); }} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, maxWidth: "100%", width: 320 }}>
                       <option value="">All subjects</option>
                       {curriculumOptions.map(curriculum => <option key={curriculum} value={curriculum}>{curriculum}</option>)}
                     </select>
-                    {curriculumSelection && <p style={{ fontSize: "0.8rem", marginTop: "0.5rem", color: C.gray500 }}>Qualifications: {selectedCatalogueGroups.map(group => group.qualification).join(", ")}</p>}
+                    {curriculumSelection && <div style={{ marginTop: "0.75rem" }}><label htmlFor="qualification-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Qualification (optional)</label><select id="qualification-filter" value={qualificationSelection} onChange={event => setQualificationSelection(event.target.value)} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, width: 320, maxWidth: "100%" }}><option value="">All qualifications</option>{selectedCatalogueGroups.map(group => <option key={group.qualification} value={group.qualification}>{group.qualification}</option>)}</select></div>}
                   </div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Subjects You Need Help With *</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {subjects.map(subject => (
+                    {visibleSubjects.map(subject => (
                       <button key={subject} type="button" onClick={() => toggleSubject(subject)}
                         style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${subjectsNeeded.includes(subject) ? C.accent : '#e5e7eb'}`, backgroundColor: subjectsNeeded.includes(subject) ? C.accentLight : 'white', color: subjectsNeeded.includes(subject) ? C.accent : C.gray500, fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer' }}>
                         {subject}
