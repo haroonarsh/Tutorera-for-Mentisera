@@ -39,6 +39,7 @@ import { getAllTutorRatings, getTutorRatingsForAdmin } from "../controllers/revi
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { uploadVerification as uploadVerificationMulter } from "../middlewares/upload.middleware";
 import { requirePermission } from "../middlewares/rbac.middleware";
+import { adminAgentLimiter } from "../middlewares/rateLimiters";
 import { enforceCountryScope } from "../middlewares/countryScope.middleware";
 import { validate as validateGuarantee, updateClaimStatusSchema } from "../validators/guarantee.validator";
 import { validate as validateBooking } from "../validators/booking.validator";
@@ -205,10 +206,10 @@ router.post("/approvals", requirePermission("audit.read"), submitApproval);
 router.get("/approvals", requirePermission("audit.read"), listApprovals);
 router.post("/approvals/:id/review", requirePermission("roles.manage"), reviewApproval);
 
-// AI Supervisor Agent
-router.get("/agents", listAdminAgents);
-router.post("/agents/supervisor/plan", planAdminSupervisor);
-router.post("/agents/supervisor/execute", executeAdminSupervisorHandler);
-router.get("/agents/:agentId/summary", readAdminAgent);
+// AI Supervisor Agent (rate-limited to 20 req/min per admin)
+router.get("/agents", adminAgentLimiter, listAdminAgents);
+router.post("/agents/supervisor/plan", adminAgentLimiter, planAdminSupervisor);
+router.post("/agents/supervisor/execute", adminAgentLimiter, executeAdminSupervisorHandler);
+router.get("/agents/:agentId/summary", adminAgentLimiter, readAdminAgent);
 
 export default router;
