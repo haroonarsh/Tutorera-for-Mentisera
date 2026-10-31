@@ -14,7 +14,7 @@ export default async function SeoTutorDirectory({ kind, value, filters, title, d
   // ItemList / AggregateOffer / Course JSON-LD. Reuse the same gate the
   // sitemap uses so the two surfaces can never disagree about what counts
   // as indexable supply.
-  const indexableTutors = raw.tutors.filter((tutor) => assessTutorSeoQuality(tutor).indexable);
+  const indexableTutors = raw.tutors.filter(Boolean).filter((tutor) => assessTutorSeoQuality(tutor).indexable);
   const result = { ...raw, tutors: indexableTutors, total: indexableTutors.length };
   const rates = result.tutors.map((tutor) => tutor.hourlyRate).filter(Boolean);
   const averageRate = rates.length ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length) : 0;
