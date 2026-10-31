@@ -6,7 +6,7 @@ import { useState } from "react";
 type Meeting = { provider: "google_meet" | "microsoft_teams"; url: string; updatedAt: string };
 type Props = {
   bookingId: string;
-  role: "student" | "tutor";
+  role: "student" | "tutor" | "admin";
   teachingMode?: string;
   status: string;
   paymentStatus?: string;
