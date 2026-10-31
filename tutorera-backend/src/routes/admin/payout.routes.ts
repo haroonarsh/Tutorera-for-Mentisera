@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { protect, authorize } from "../../middlewares/auth.middleware";
 import { AuthRequest } from "../../types";
+import { requirePermission } from "../../middlewares/rbac.middleware";
 import {
   listPayouts,
   markPayoutComplete,
@@ -9,10 +9,10 @@ import {
 } from "../../services/payout.service";
 
 const router = Router();
-router.use(protect, authorize("admin"));
+// protect + authorize("admin") is already applied by the parent admin router
 
 /** List payout requests, optionally filtered by state or tutorId. */
-router.get("/", async (req, res) => {
+router.get("/", requirePermission("payout.read"), async (req, res) => {
   const { state, tutorId, page = "1", limit = "20" } = req.query as Record<string, string>;
   const result = await listPayouts({ state, tutorId, page: parseInt(page, 10), limit: parseInt(limit, 10) });
   res.json({ success: true, ...result });
@@ -22,7 +22,7 @@ router.get("/", async (req, res) => {
  * Trigger a payout scan manually (same logic as the scheduled job).
  * Dry-run by default: pass ?apply=true to actually create payout requests.
  */
-router.post("/scan", async (req, res) => {
+router.post("/scan", requirePermission("payout.process"), async (req, res) => {
   if (req.query.apply !== "true") {
     res.json({ success: true, message: "Dry-run only. Pass ?apply=true to create payout requests." });
     return;
@@ -35,7 +35,7 @@ router.post("/scan", async (req, res) => {
  * Mark a payout complete after manually completing the bank transfer.
  * Requires an external evidence reference — never marks paid without one.
  */
-router.post("/:transferRef/complete", async (req, res) => {
+router.post("/:transferRef/complete", requirePermission("payout.process"), async (req, res) => {
   const authReq = req as AuthRequest;
   const { evidenceRef, adminNote } = req.body as { evidenceRef?: string; adminNote?: string };
   if (!evidenceRef?.trim()) {
@@ -43,7 +43,7 @@ router.post("/:transferRef/complete", async (req, res) => {
     return;
   }
   await markPayoutComplete({
-    transferRef: req.params.transferRef,
+    transferRef: String(req.params.transferRef),
     evidenceRef: evidenceRef.trim(),
     adminId: authReq.user!._id.toString(),
     adminNote,
@@ -52,7 +52,7 @@ router.post("/:transferRef/complete", async (req, res) => {
 });
 
 /** Mark a payout failed and return the bookings to pending. */
-router.post("/:transferRef/fail", async (req, res) => {
+router.post("/:transferRef/fail", requirePermission("payout.process"), async (req, res) => {
   const authReq = req as AuthRequest;
   const { adminNote } = req.body as { adminNote?: string };
   if (!adminNote?.trim()) {
@@ -60,7 +60,7 @@ router.post("/:transferRef/fail", async (req, res) => {
     return;
   }
   await markPayoutFailed({
-    transferRef: req.params.transferRef,
+    transferRef: String(req.params.transferRef),
     adminId: authReq.user!._id.toString(),
     adminNote: adminNote.trim(),
   });
