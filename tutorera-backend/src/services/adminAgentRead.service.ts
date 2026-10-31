@@ -27,6 +27,11 @@ export async function readAdminAgentSummary(agentId: AdminAgentId): Promise<Agen
       data: { pendingVerifications, approvedTutors, rejectedTutors },
     };
   }
+  if (agentId === "marketplace") {
+    const activeRequests = await Request.countDocuments({ status: { $in: ["open", "published", "receiving_offers", "negotiating"] } });
+    const awaitingPayment = await Request.countDocuments({ status: "awaiting_payment" });
+    return { agentId, status: "completed", data: { activeRequests, awaitingPayment } };
+  }
   return {
     agentId,
     status: "not_implemented",
