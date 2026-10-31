@@ -2,40 +2,52 @@ import { Response } from "express";
 import { AuthRequest } from "../types";
 import User from "../models/User.model";
 import Referral from "../models/Referral.model";
-import Booking from "../models/Booking.model";
-import ReferralConfig from "../models/ReferralConfig.model";
+import ReferralConfig, { IReferralConfig, IReferralMilestone } from "../models/ReferralConfig.model";
 import sendEmail from "../utils/sendEmail";
 import { formatCurrencyAmount, SUPPORTED_CURRENCIES } from "../config/countries";
 import crypto from "crypto";
 
-// Defaults used until an admin saves a ReferralConfig document (or if the
-// config is later deleted) - keeps the reward amounts working out of the box
-// while still being adjustable from /admin/referral-config without a deploy.
-// Amounts are denominated in the config currency, which defaults to the global
-// settlement currency (USD) rather than assuming a Pakistan market.
 const DEFAULT_REFERRAL_CREDIT_AMOUNT = 200;
 const DEFAULT_REFERRED_DISCOUNT_AMOUNT = 200;
-const DEFAULT_REFERRAL_CURRENCY = "USD";
+const DEFAULT_REFERRAL_CURRENCY = "PKR";
 
-async function getReferralConfig(): Promise<{ referrerRewardAmount: number; referredDiscountAmount: number; currency: string; isActive: boolean }> {
-  const config = await ReferralConfig.findOne();
-  if (!config) return { referrerRewardAmount: DEFAULT_REFERRAL_CREDIT_AMOUNT, referredDiscountAmount: DEFAULT_REFERRED_DISCOUNT_AMOUNT, currency: DEFAULT_REFERRAL_CURRENCY, isActive: true };
-  return {
-    referrerRewardAmount: config.referrerRewardAmount,
-    referredDiscountAmount: config.referredDiscountAmount,
-    currency: config.currency || DEFAULT_REFERRAL_CURRENCY,
-    isActive: config.isActive,
-  };
+// ─── config helpers ──────────────────────────────────────────────────────────
+
+async function getOrCreateConfig(): Promise<IReferralConfig> {
+  let config = await ReferralConfig.findOne();
+  if (!config) config = await ReferralConfig.create({});
+  return config;
 }
 
-// Generate a unique referral code
+function resolveMilestoneReward(
+  creditedCount: number,
+  config: IReferralConfig
+): { amount: number; milestoneIndex: number } {
+  if (!config.milestonesEnabled || !config.milestones.length) {
+    return { amount: config.referrerRewardAmount, milestoneIndex: 0 };
+  }
+  const position = creditedCount + 1; // this referral will be the Nth credited one
+  for (let i = 0; i < config.milestones.length; i++) {
+    const m: IReferralMilestone = config.milestones[i];
+    const inRange = position >= m.fromReferral && (m.toReferral === null || position <= m.toReferral);
+    if (inRange) return { amount: m.referrerRewardAmount, milestoneIndex: i + 1 };
+  }
+  // fallback: last milestone
+  const last = config.milestones[config.milestones.length - 1];
+  return { amount: last.referrerRewardAmount, milestoneIndex: config.milestones.length };
+}
+
+// ─── code generation ─────────────────────────────────────────────────────────
+
 function generateReferralCode(name: string): string {
   const base = name.replace(/\s+/g, "").toUpperCase().slice(0, 5);
   const random = crypto.randomBytes(3).toString("hex").toUpperCase();
   return `${base}${random}`;
 }
 
-// @desc    Get my referral info (code + stats + credit balance)
+// ─── public routes ───────────────────────────────────────────────────────────
+
+// @desc    Get my referral info (code + stats + credit balance + milestone progress)
 // @route   GET /api/referral/my
 // @access  Private
 export const getMyReferral = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -45,7 +57,6 @@ export const getMyReferral = async (req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
-  // Auto-generate referral code if not set yet
   if (!user.referralCode) {
     user.referralCode = generateReferralCode(user.name);
     await user.save();
@@ -55,14 +66,40 @@ export const getMyReferral = async (req: AuthRequest, res: Response): Promise<vo
     .populate("referred", "name createdAt")
     .sort("-createdAt");
 
-  const totalReferred   = referrals.length;
   const creditedReferrals = referrals.filter(r => r.status === "credited");
-  const creditedCount   = creditedReferrals.length;
-  const pendingCount    = referrals.filter(r => r.status === "pending").length;
-  // Sum each referral's own recorded creditAmount rather than the current
-  // config value, since the reward may have changed since older referrals
-  // were credited - this keeps historical totals accurate.
-  const totalEarned     = creditedReferrals.reduce((sum, r) => sum + r.creditAmount, 0);
+  const totalEarned = creditedReferrals.reduce((sum, r) => sum + r.creditAmount, 0);
+
+  const config = await getOrCreateConfig();
+
+  // Milestone progress for the UI
+  let milestoneProgress: object | null = null;
+  if (config.milestonesEnabled && config.milestones.length > 0) {
+    const creditedCount = creditedReferrals.length;
+    const position = creditedCount + 1;
+    let currentMilestone: IReferralMilestone | null = null;
+    let nextMilestone: IReferralMilestone | null = null;
+    for (let i = 0; i < config.milestones.length; i++) {
+      const m = config.milestones[i];
+      if (position >= m.fromReferral && (m.toReferral === null || position <= m.toReferral)) {
+        currentMilestone = m;
+        nextMilestone = config.milestones[i + 1] ?? null;
+        break;
+      }
+    }
+    const progressInTier = currentMilestone
+      ? creditedCount - currentMilestone.fromReferral + 1
+      : 0;
+    const tierSize = currentMilestone?.toReferral
+      ? currentMilestone.toReferral - currentMilestone.fromReferral + 1
+      : null;
+    milestoneProgress = {
+      creditedCount,
+      currentMilestone,
+      nextMilestone,
+      progressInTier,
+      tierSize,
+    };
+  }
 
   res.status(200).json({
     success: true,
@@ -70,8 +107,21 @@ export const getMyReferral = async (req: AuthRequest, res: Response): Promise<vo
     referralLink: `${process.env.CLIENT_URL}/register?ref=${user.referralCode}`,
     referralCredit: user.referralCredit,
     referralCreditCurrency: user.referralCreditCurrency || DEFAULT_REFERRAL_CURRENCY,
-    program: await getReferralConfig(),
-    stats: { totalReferred, creditedCount, pendingCount, totalEarned },
+    program: {
+      referrerRewardAmount: config.referrerRewardAmount,
+      referredDiscountAmount: config.referredDiscountAmount,
+      currency: config.currency || DEFAULT_REFERRAL_CURRENCY,
+      isActive: config.isActive,
+      milestonesEnabled: config.milestonesEnabled,
+      milestones: config.milestones,
+    },
+    milestoneProgress,
+    stats: {
+      totalReferred: referrals.length,
+      creditedCount: creditedReferrals.length,
+      pendingCount: referrals.filter(r => r.status === "pending").length,
+      totalEarned,
+    },
     referrals,
   });
 };
@@ -87,7 +137,6 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Can't apply a code if already referred
   const currentUser = await User.findById(req.user?._id);
   if (!currentUser) {
     res.status(404).json({ success: false, message: "User not found" });
@@ -99,29 +148,33 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Find referrer
   const referrer = await User.findOne({ referralCode: code.trim().toUpperCase() });
   if (!referrer) {
     res.status(404).json({ success: false, message: "Invalid referral code." });
     return;
   }
 
-  // Can't refer yourself
   if (referrer._id.toString() === req.user?._id?.toString()) {
     res.status(400).json({ success: false, message: "You can't use your own referral code." });
     return;
   }
 
-  const { referrerRewardAmount, referredDiscountAmount, currency, isActive } = await getReferralConfig();
-  if (!isActive) {
+  // Guard against duplicate referral record (belt-and-suspenders alongside unique index)
+  const existing = await Referral.findOne({ referred: currentUser._id });
+  if (existing) {
+    res.status(400).json({ success: false, message: "You have already applied a referral code." });
+    return;
+  }
+
+  const config = await getOrCreateConfig();
+  if (!config.isActive) {
     res.status(400).json({ success: false, message: "The referral program is currently paused." });
     return;
   }
 
-  // A user carries one referral balance. Crediting a new currency into a
-  // balance that already holds a different one would silently mix units, so an
-  // established balance currency stays authoritative and the new reward is
-  // rejected rather than merged. A zero balance adopts the config currency.
+  const currency = config.currency || DEFAULT_REFERRAL_CURRENCY;
+  const referredDiscountAmount = config.referredDiscountAmount ?? DEFAULT_REFERRED_DISCOUNT_AMOUNT;
+
   const hasBalance = (currentUser.referralCredit || 0) > 0;
   const balanceCurrency = hasBalance ? (currentUser.referralCreditCurrency || DEFAULT_REFERRAL_CURRENCY) : currency;
   if (hasBalance && balanceCurrency !== currency) {
@@ -132,22 +185,21 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
     return;
   }
 
-  // Link the referral
   currentUser.referredBy = referrer._id;
   currentUser.referralCredit = (currentUser.referralCredit || 0) + referredDiscountAmount;
   currentUser.referralCreditCurrency = balanceCurrency;
   await currentUser.save();
 
-  // Create referral record
+  // Store the base flat referrerRewardAmount as a placeholder; the actual
+  // milestone-computed amount will be written when the referral is credited.
   await Referral.create({
     referrer: referrer._id,
     referred: currentUser._id,
     status: "pending",
-    creditAmount: referrerRewardAmount,
+    creditAmount: config.referrerRewardAmount ?? DEFAULT_REFERRAL_CREDIT_AMOUNT,
     creditCurrency: currency,
   });
 
-  // Notify referrer
   await sendEmail({
     to: referrer.email,
     subject: "🎉 Someone used your TUTORERA® referral code!",
@@ -155,7 +207,7 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">Your referral link worked! 🎉</h2>
         <p><strong>${currentUser.name}</strong> just signed up using your referral code.</p>
-        <p>You'll receive <strong>${formatCurrencyAmount(referrerRewardAmount, currency)} credit</strong> once they complete their first booking.</p>
+        <p>You'll receive credit once they complete their first booking.</p>
         <hr />
         <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Referral Program</p>
       </div>
@@ -170,34 +222,38 @@ export const applyReferralCode = async (req: AuthRequest, res: Response): Promis
   });
 };
 
-// @desc    Credit referrer when referred user completes first booking
-//          Called internally from booking completion flow
+// @desc    Credit referrer when referred user completes first booking.
+//          Called internally from booking completion flow.
+//          Uses findOneAndUpdate for atomic pending→credited flip (idempotent).
 export const creditReferrerOnFirstBooking = async (userId: string): Promise<void> => {
   try {
     const user = await User.findById(userId);
     if (!user?.referredBy) return;
 
-    // Check if this user's referral has already been credited
-    const referral = await Referral.findOne({
-      referred: userId,
-      status: "pending",
-    });
-    if (!referral) return;
+    const config = await getOrCreateConfig();
+    const creditCurrency = config.currency || DEFAULT_REFERRAL_CURRENCY;
 
-    // Credit the referrer with the amount locked in when this referral was
-    // created (not the current config value, in case it has since changed).
-    const creditAmount = referral.creditAmount;
-    const creditCurrency = referral.creditCurrency || DEFAULT_REFERRAL_CURRENCY;
+    // Count how many referrals this referrer has already credited
+    const creditedCount = await Referral.countDocuments({
+      referrer: user.referredBy,
+      status: "credited",
+    });
+
+    const { amount: creditAmount, milestoneIndex } = resolveMilestoneReward(creditedCount, config);
+
+    // Atomic flip: only one concurrent call can transition pending→credited
+    const referral = await Referral.findOneAndUpdate(
+      { referred: userId, status: "pending" },
+      { $set: { status: "credited", creditAmount, creditCurrency, milestoneIndex } },
+      { new: true }
+    );
+    if (!referral) return; // already credited or no pending referral
+
     await User.findByIdAndUpdate(user.referredBy, {
       $inc: { referralCredit: creditAmount },
       $set: { referralCreditCurrency: creditCurrency },
     });
 
-    // Mark referral as credited
-    referral.status = "credited";
-    await referral.save();
-
-    // Email referrer
     const referrer = await User.findById(user.referredBy);
     if (referrer) {
       await sendEmail({
@@ -208,7 +264,6 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
             <h2 style="color: #1a1a2e;">${formatCurrencyAmount(creditAmount, creditCurrency)} credit added! 💰</h2>
             <p>Your referral <strong>${user.name}</strong> just completed their first booking.</p>
             <p>We've added <strong>${formatCurrencyAmount(creditAmount, creditCurrency)}</strong> to your TUTORERA® credit balance.</p>
-            <p>Your total credit balance: <strong>${formatCurrencyAmount((referrer.referralCredit || 0) + creditAmount, creditCurrency)}</strong></p>
             <hr />
             <p style="color: #6b7280; font-size: 0.875rem;">Share your referral link to earn more credit.</p>
             <p style="color: #9ca3af; font-size: 0.875rem;">TUTORERA® Referral Program</p>
@@ -221,43 +276,136 @@ export const creditReferrerOnFirstBooking = async (userId: string): Promise<void
   }
 };
 
-// @desc    Get all referrals (admin)
+// @desc    Reverse a credited referral (chargeback / refund scenario).
+//          Deducts the credited amount from the referrer's balance.
+//          Called internally from refund/chargeback flow.
+export const reverseReferralCredit = async (referredUserId: string, reason: string): Promise<void> => {
+  try {
+    const referral = await Referral.findOneAndUpdate(
+      { referred: referredUserId, status: "credited" },
+      { $set: { status: "reversed", reversedAt: new Date(), fraudReason: reason } },
+      { new: true }
+    );
+    if (!referral) return;
+
+    // Deduct the credited amount from referrer; floor at zero
+    const referrer = await User.findById(referral.referrer);
+    if (referrer) {
+      const newBalance = Math.max(0, (referrer.referralCredit || 0) - referral.creditAmount);
+      await User.findByIdAndUpdate(referral.referrer, { $set: { referralCredit: newBalance } });
+    }
+  } catch (err) {
+    console.error("Error reversing referral credit:", err);
+  }
+};
+
+// ─── admin routes ─────────────────────────────────────────────────────────────
+
+// @desc    Get all referrals with pagination + filters
 // @route   GET /api/admin/referrals
 // @access  Private (admin)
 export const getAllReferrals = async (req: AuthRequest, res: Response): Promise<void> => {
-  const referrals = await Referral.find()
-    .populate("referrer", "name email")
-    .populate("referred", "name email createdAt")
-    .sort("-createdAt");
+  const page  = Math.max(1, parseInt(String(req.query.page  ?? "1"), 10));
+  const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10)));
+  const skip  = (page - 1) * limit;
+  const status = req.query.status as string | undefined;
+  const fraud  = req.query.fraud === "true";
 
-  // Credits are issued in the config currency, but a currency change never
-  // rewrites history: totals are grouped per currency so PKR and USD rewards
-  // are never summed into one meaningless number.
-  const creditedByCurrency = referrals
-    .filter(r => r.status === "credited")
-    .reduce((grouped, r) => {
-      const currency = r.creditCurrency || DEFAULT_REFERRAL_CURRENCY;
-      grouped[currency] = (grouped[currency] || 0) + (r.creditAmount || 0);
-      return grouped;
-    }, {} as Record<string, number>);
+  const filter: Record<string, unknown> = {};
+  if (status && ["pending", "credited", "reversed", "fraud_hold"].includes(status)) {
+    filter.status = status;
+  }
+  if (fraud) filter.fraudFlag = true;
+
+  const [referrals, total] = await Promise.all([
+    Referral.find(filter)
+      .populate("referrer", "name email")
+      .populate("referred", "name email createdAt")
+      .sort("-createdAt")
+      .skip(skip)
+      .limit(limit),
+    Referral.countDocuments(filter),
+  ]);
+
+  const allCredited = await Referral.find({ status: "credited" }).select("creditAmount creditCurrency");
+  const creditedByCurrency = allCredited.reduce((grouped, r) => {
+    const cur = r.creditCurrency || DEFAULT_REFERRAL_CURRENCY;
+    grouped[cur] = (grouped[cur] || 0) + (r.creditAmount || 0);
+    return grouped;
+  }, {} as Record<string, number>);
 
   const creditByCurrency = Object.entries(creditedByCurrency).map(([currency, total]) => ({ currency, total }));
 
   res.status(200).json({
     success: true,
-    total: referrals.length,
-    totalCreditIssued: creditByCurrency.length === 1 ? creditByCurrency[0].total : null,
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    limit,
     creditByCurrency,
     referrals,
   });
+};
+
+// @desc    Export referrals as CSV
+// @route   GET /api/admin/referrals/export
+// @access  Private (admin)
+export const exportReferralsAdmin = async (_req: AuthRequest, res: Response): Promise<void> => {
+  const referrals = await Referral.find()
+    .populate("referrer", "name email")
+    .populate("referred", "name email createdAt")
+    .sort("-createdAt");
+
+  const rows = [
+    ["Referrer Name", "Referrer Email", "Referred Name", "Referred Email", "Referred Joined", "Status", "Credit Amount", "Currency", "Milestone Tier", "Fraud Flag", "Created At"],
+    ...referrals.map(r => {
+      const referrer = r.referrer as unknown as { name: string; email: string };
+      const referred = r.referred as unknown as { name: string; email: string; createdAt: string };
+      return [
+        referrer?.name ?? "",
+        referrer?.email ?? "",
+        referred?.name ?? "",
+        referred?.email ?? "",
+        referred?.createdAt ? new Date(referred.createdAt).toISOString().split("T")[0] : "",
+        r.status,
+        String(r.creditAmount),
+        r.creditCurrency || DEFAULT_REFERRAL_CURRENCY,
+        String(r.milestoneIndex ?? ""),
+        r.fraudFlag ? "Yes" : "No",
+        new Date(r.createdAt).toISOString().split("T")[0],
+      ];
+    }),
+  ];
+
+  const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="referrals-${Date.now()}.csv"`);
+  res.status(200).send(csv);
+};
+
+// @desc    Flag / unflag a referral as fraud
+// @route   PATCH /api/admin/referrals/:id/fraud
+// @access  Private (admin)
+export const flagReferralFraud = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { fraudFlag, fraudReason } = req.body;
+  const referral = await Referral.findByIdAndUpdate(
+    req.params.id,
+    { $set: { fraudFlag: Boolean(fraudFlag), fraudReason: fraudReason ?? "", status: fraudFlag ? "fraud_hold" : "pending" } },
+    { new: true }
+  );
+  if (!referral) {
+    res.status(404).json({ success: false, message: "Referral not found" });
+    return;
+  }
+  res.status(200).json({ success: true, referral });
 };
 
 // @desc    Get the current referral reward configuration
 // @route   GET /api/admin/referral-config
 // @access  Private (admin)
 export const getReferralConfigAdmin = async (_req: AuthRequest, res: Response): Promise<void> => {
-  let config = await ReferralConfig.findOne();
-  if (!config) config = await ReferralConfig.create({});
+  const config = await getOrCreateConfig();
   res.status(200).json({ success: true, config });
 };
 
@@ -265,10 +413,9 @@ export const getReferralConfigAdmin = async (_req: AuthRequest, res: Response): 
 // @route   PUT /api/admin/referral-config
 // @access  Private (admin)
 export const updateReferralConfigAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { referrerRewardAmount, referredDiscountAmount, currency, isActive } = req.body;
+  const { referrerRewardAmount, referredDiscountAmount, currency, isActive, milestonesEnabled, milestones } = req.body;
 
-  let config = await ReferralConfig.findOne();
-  if (!config) config = new ReferralConfig({});
+  const config = await getOrCreateConfig();
 
   if (currency !== undefined) {
     const code = String(currency).trim().toUpperCase();
@@ -280,22 +427,35 @@ export const updateReferralConfigAdmin = async (req: AuthRequest, res: Response)
   }
 
   if (referrerRewardAmount !== undefined) {
-    if (referrerRewardAmount < 0) {
-      res.status(400).json({ success: false, message: "Reward amount can't be negative" });
-      return;
-    }
+    if (referrerRewardAmount < 0) { res.status(400).json({ success: false, message: "Reward amount can't be negative" }); return; }
     config.referrerRewardAmount = referrerRewardAmount;
   }
   if (referredDiscountAmount !== undefined) {
-    if (referredDiscountAmount < 0) {
-      res.status(400).json({ success: false, message: "Discount amount can't be negative" });
-      return;
-    }
+    if (referredDiscountAmount < 0) { res.status(400).json({ success: false, message: "Discount amount can't be negative" }); return; }
     config.referredDiscountAmount = referredDiscountAmount;
   }
-  if (isActive !== undefined) config.isActive = isActive;
-  config.updatedBy = req.user?._id;
+  if (isActive !== undefined) config.isActive = Boolean(isActive);
+  if (milestonesEnabled !== undefined) config.milestonesEnabled = Boolean(milestonesEnabled);
 
+  if (milestones !== undefined) {
+    if (!Array.isArray(milestones) || milestones.length === 0) {
+      res.status(400).json({ success: false, message: "milestones must be a non-empty array" });
+      return;
+    }
+    for (const m of milestones) {
+      if (typeof m.fromReferral !== "number" || m.fromReferral < 1) {
+        res.status(400).json({ success: false, message: "Each milestone must have fromReferral >= 1" });
+        return;
+      }
+      if (typeof m.referrerRewardAmount !== "number" || m.referrerRewardAmount < 0) {
+        res.status(400).json({ success: false, message: "Each milestone must have a non-negative referrerRewardAmount" });
+        return;
+      }
+    }
+    config.milestones = milestones;
+  }
+
+  config.updatedBy = req.user?._id;
   await config.save();
   res.status(200).json({ success: true, config });
 };
