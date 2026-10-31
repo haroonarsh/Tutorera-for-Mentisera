@@ -23,6 +23,7 @@ try {
   await check("/health/live", "GET", false, 200);
   await check("/health/ready", "GET", false, 401);
   await check("/test/mongodb", "POST", false, 401);
+  await check("/test/transaction", "POST", false, 401);
   await check("/health/ready", "GET", true, 200);
   const result = await check("/test/mongodb", "POST", true, 200);
   const body = await result.json();
