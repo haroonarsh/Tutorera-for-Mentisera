@@ -1,5 +1,6 @@
 import { Response } from "express";
 import AuditLog from "../models/AuditLog.model";
+import { readAdminAgentSummary } from "../services/adminAgentRead.service";
 import { AuthRequest } from "../types";
 import { hasPermission, AdminRole } from "../config/rbac";
 import { ADMIN_AGENT_REGISTRY, planAdminAgentTasks } from "../services/adminAgentSupervisor.service";
@@ -42,4 +43,28 @@ export const planAdminSupervisor = async (req: AuthRequest, res: Response): Prom
 export const listAdminAgents = (req: AuthRequest, res: Response): void => {
   res.setHeader("Cache-Control", "no-store");
   res.status(200).json({ success: true, mode: "read-only-planning", agents: ADMIN_AGENT_REGISTRY.filter(task => permitted(req, task.permission)) });
+};
+
+/** Explicitly selected, read-only specialist execution; no free-form tool calls. */
+export const readAdminAgent = async (req: AuthRequest, res: Response): Promise<void> => {
+  const agent = ADMIN_AGENT_REGISTRY.find(item => item.id === req.params.agentId);
+  if (!agent) {
+    res.status(404).json({ success: false, message: "Unknown administrative agent." });
+    return;
+  }
+  if (!permitted(req, agent.permission)) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED" });
+    return;
+  }
+  // Record intent before any data access. Do not disclose an unlogged result.
+  const audit = await AuditLog.create({
+    action: "admin_agent_read",
+    actor: req.user?.name || "Administrator",
+    actorId: String(req.user?._id || ""),
+    entity: "AdminAgent",
+    metadata: { agentId: agent.id, mode: "read-only-aggregate" },
+  });
+  const result = await readAdminAgentSummary(agent.id);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).json({ success: true, auditId: String(audit._id), result });
 };
