@@ -33,7 +33,10 @@ export default function StudentOnboardingPage() {
   const [qualificationSelection, setQualificationSelection] = useState("");
   const selectedCatalogueGroups = subjectCatalogue.filter(group => group.curriculum === curriculumSelection);
   const qualificationSubjects = subjectCatalogue.find(group => group.curriculum === curriculumSelection && group.qualification === qualificationSelection)?.subjects.map(subject => subject.name) ?? [];
-  const visibleSubjects = qualificationSelection ? Array.from(new Set(qualificationSubjects)) : subjects;
+  // Keep already selected subjects visible when switching curriculum filters.
+  const visibleSubjects = qualificationSelection
+    ? Array.from(new Set([...qualificationSubjects, ...subjectsNeeded]))
+    : subjects;
 
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
