@@ -3,6 +3,7 @@ import Image from "next/image";
 import { UI_COLORS } from "@/lib/brand";
 // components/dashboard/StudentDashboard.tsx
 import s from "@/app/dashboard/dashboard.module.css";
+import BookingMeetingPanel from "./BookingMeetingPanel";
 import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
@@ -349,6 +350,7 @@ function BookingCard({ booking, onClaimSubmitted }: {
         </div>
       )}
 
+      <BookingMeetingPanel bookingId={booking._id} role="student" teachingMode={booking.teachingMode} status={booking.status} paymentStatus={booking.paymentStatus} />
       <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
 
       {/* Claim submitted confirmation */}
