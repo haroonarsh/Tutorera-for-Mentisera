@@ -28,6 +28,13 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       WRANGLER_SEND_METRICS: false
       SLACK_WEBHOOK_DEPLOY: ${{ secrets.SLACK_WEBHOOK_DEPLOY }}
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -53,6 +60,22 @@ jobs:
       - name: Deploy to Cloudflare Workers (production)
         run: npm run deploy:production
         working-directory: cloudflare/backend
+      - name: Sync secrets to Cloudflare Worker
+        working-directory: cloudflare/backend
+        run: |
+          sync_secret() {
+            local name="$1"; local value="$2"
+            if [ -n "$value" ]; then
+              echo "$value" | npx wrangler secret put "$name" --env production
+            fi
+          }
+          sync_secret MONGO_URI             "$MONGO_URI"
+          sync_secret JWT_SECRET            "$JWT_SECRET"
+          sync_secret CLOUDINARY_CLOUD_NAME "$CLOUDINARY_CLOUD_NAME"
+          sync_secret CLOUDINARY_API_KEY    "$CLOUDINARY_API_KEY"
+          sync_secret CLOUDINARY_API_SECRET "$CLOUDINARY_API_SECRET"
+          sync_secret EMAIL_USER            "$EMAIL_USER"
+          sync_secret EMAIL_PASS            "$EMAIL_PASS"
       - name: Verify production health
         run: curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 10 https://api.tutorera.ac.pk/health/ready
       - name: Deployment success notification
