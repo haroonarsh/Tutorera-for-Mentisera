@@ -15,6 +15,7 @@ const parseMeeting = (raw: unknown) => {
   try {
     const url = new URL(raw);
     if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash) return null;
+    if (url.pathname === "/" || url.pathname.length < 2) return null;
     const provider = hosts[url.hostname.toLowerCase()];
     if (!provider) return null;
     return { provider, url: url.toString() };
@@ -29,7 +30,7 @@ router.put("/:id/meeting", protect, authorize("tutor"), async (req: AuthRequest,
   const booking = await getBooking(req.params.id);
   if (!booking) { res.status(404).json({ success: false, message: "Booking not found." }); return; }
   if (booking.tutor.toString() !== req.user!._id.toString()) { res.status(403).json({ success: false, message: "Not your booking." }); return; }
-  if (booking.teachingMode === "in-person" || booking.status === "cancelled" || booking.status === "completed" || booking.paymentStatus !== "confirmed") {
+  if (booking.teachingMode === "in-person" || !["upcoming", "ongoing"].includes(booking.status) || booking.paymentStatus !== "confirmed") {
     res.status(409).json({ success: false, message: "An active paid online booking is required." }); return;
   }
   const Meeting = (await import("../models/BookingMeeting.model")).default;
@@ -49,7 +50,7 @@ router.get("/:id/meeting", protect, async (req: AuthRequest, res: Response): Pro
   const userId = req.user!._id.toString();
   const allowed = req.user!.role === "admin" || booking.student.toString() === userId || booking.tutor.toString() === userId;
   if (!allowed) { res.status(403).json({ success: false, message: "Access denied." }); return; }
-  if (booking.status === "cancelled" || booking.status === "completed" || booking.paymentStatus !== "confirmed") {
+  if (!["upcoming", "ongoing"].includes(booking.status) || booking.paymentStatus !== "confirmed") {
     res.status(409).json({ success: false, message: "Meeting access is not available for this booking." }); return;
   }
   const Meeting = (await import("../models/BookingMeeting.model")).default;
