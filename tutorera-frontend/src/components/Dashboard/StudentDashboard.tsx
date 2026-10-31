@@ -23,6 +23,7 @@ import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
 import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 import { DashCard, DashButton, StatusBadge, EmptyState, StatTile, statusTone } from "./ui";
+import ReferEarnBanner from "@/components/ReferEarnBanner";
 
 const C = UI_COLORS;
 
@@ -1164,6 +1165,7 @@ const fetchRequests = useCallback(async () => {
       </div>
 
       <div className={s.content}>
+        <ReferEarnBanner variant="strip" />
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: SPACING.space4, marginBottom: SPACING.space6 }}>
           <StatTile icon={<FileText size={20} />} value={requests.length} label="Total Requests" tone="info" />

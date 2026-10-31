@@ -6,6 +6,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import {
   Bell,
+  ChevronDown,
+  Gift,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -19,18 +21,25 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import s from "./Navbar.module.css";
 
-// Flat top-nav aligned with the Student-First Marketplace spec (§5).
-// Supporting depth (Home Tuition / Online Tuition / O Level / A Level / MDCAT /
-// Pricing / Research / Guides) now lives in the footer (§51) and inside the
-// destination pages themselves, not as mega menus off the top nav.
-const primaryLinks = [
-  { label: "Find Tuition", href: "/pk/home-tuition" },
-  { label: "Find Tutors", href: "/tutors" },
-  { label: "Subjects", href: "/subjects" },
-  { label: "How It Works", href: "/how-it-works" },
-  { label: "Safety", href: "/safety" },
-  { label: "Pricing", href: "/pricing" },
-];
+const megaMenus = {
+  tuition: {
+    label: "Find Tuition",
+    featured: { title: "Post Your Requirement", desc: "Tell us what you need — tutors come to you with offers.", href: "/post-tuition-request", cta: "Post for free" },
+    columns: [
+      { heading: "By Format", links: [{ label: "Home Tuition", href: "/pk/home-tuition" }, { label: "Online Tuition", href: "/pk/online-tuition" }] },
+      { heading: "By Level", links: [{ label: "O Level & IGCSE", href: "/subjects?level=o-level" }, { label: "A Level", href: "/subjects?level=a-level" }, { label: "MDCAT Prep", href: "/subjects?level=mdcat" }, { label: "Primary & Middle", href: "/subjects?level=primary" }] },
+      { heading: "Popular Cities", links: [{ label: "Karachi", href: "/tutors?city=karachi" }, { label: "Lahore", href: "/tutors?city=lahore" }, { label: "Islamabad", href: "/tutors?city=islamabad" }, { label: "Rawalpindi", href: "/tutors?city=rawalpindi" }] },
+    ],
+  },
+  tutors: {
+    label: "Find Tutors",
+    featured: { title: "Verified Tutors Only", desc: "Every tutor on TUTORERA® passes identity & qualification checks.", href: "/verification-policy", cta: "Learn how" },
+    columns: [
+      { heading: "By Subject", links: [{ label: "Mathematics", href: "/tutors?subject=mathematics" }, { label: "Physics", href: "/tutors?subject=physics" }, { label: "Chemistry", href: "/tutors?subject=chemistry" }, { label: "English", href: "/tutors?subject=english" }, { label: "Biology", href: "/tutors?subject=biology" }] },
+      { heading: "Resources", links: [{ label: "All Subjects", href: "/subjects" }, { label: "How It Works", href: "/how-it-works" }, { label: "Safety", href: "/safety" }, { label: "Pricing", href: "/pricing" }, { label: "Research", href: "/research" }] },
+    ],
+  },
+};
 
 function notificationIcon(type: string) {
   if (type === "verification") return "🛡️";
@@ -44,6 +53,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [megaOpen, setMegaOpen] = useState<string | null>(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useSocket();
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -75,6 +85,7 @@ export default function Navbar() {
     setShowNotifications(false);
     setShowAccountMenu(false);
     setIsOpen(false);
+    setMegaOpen(null);
   };
 
   const handleLogout = async () => {
@@ -100,13 +111,46 @@ export default function Navbar() {
       <nav id="main-nav" className={s.nav} aria-label="Main navigation">
         <BrandLogo className={s.logo} imageClassName={s.logoImage} priority />
 
-        {/* Desktop main links — flat per spec §5 */}
+        {/* Desktop main links with mega menus */}
         <div className={s.desktopNav}>
-          {primaryLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={s.navLink} onClick={closeMenus}>
-              {link.label}
-            </Link>
+          {(Object.entries(megaMenus) as [string, typeof megaMenus.tuition][]).map(([key, menu]) => (
+            <div
+              key={key}
+              className={s.megaWrap}
+              onMouseEnter={() => setMegaOpen(key)}
+              onMouseLeave={() => setMegaOpen(null)}
+            >
+              <button type="button" className={s.navButton} aria-expanded={megaOpen === key} aria-haspopup="true">
+                {menu.label} <ChevronDown size={13} />
+              </button>
+              {megaOpen === key && (
+                <div className={s.megaPanel} role="dialog" aria-label={`${menu.label} menu`}>
+                  <div className={s.megaFeature}>
+                    <p style={{ fontWeight: 900, fontSize: "0.95rem", margin: "0 0 0.3rem", color: "white" }}>{menu.featured.title}</p>
+                    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.75)", margin: "0 0 0.75rem" }}>{menu.featured.desc}</p>
+                    <Link href={menu.featured.href} onClick={closeMenus} style={{ display: "inline-block", padding: "0.4rem 1rem", background: "rgba(255,255,255,0.15)", borderRadius: "0.375rem", color: "white", fontWeight: 700, fontSize: "0.82rem", textDecoration: "none", border: "1px solid rgba(255,255,255,0.25)" }}>
+                      {menu.featured.cta} →
+                    </Link>
+                  </div>
+                  <div className={s.megaColumns}>
+                    {menu.columns.map((col) => (
+                      <div key={col.heading}>
+                        <p style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#94a3b8", margin: "0 0 0.5rem", padding: "0 0.75rem" }}>{col.heading}</p>
+                        {col.links.map((link) => (
+                          <Link key={link.href} href={link.href} className={s.megaLink} onClick={closeMenus}>{link.label}</Link>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
+          <Link href="/refer-and-earn" className={s.navLink} onClick={closeMenus} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "#0329b2", fontWeight: 800 }}>
+            <Gift size={14} /> Refer &amp; Earn
+          </Link>
+          <Link href="/how-it-works" className={s.navLink} onClick={closeMenus}>How It Works</Link>
+          <Link href="/safety" className={s.navLink} onClick={closeMenus}>Safety</Link>
           <Link href={forTutorsHref} className={s.navLink} onClick={closeMenus}>
             {forTutorsLabel}
           </Link>
@@ -244,6 +288,9 @@ export default function Navbar() {
             <Link href="/how-it-works" onClick={closeMenus}>How It Works</Link>
             <Link href="/safety" onClick={closeMenus}>Safety</Link>
             <Link href={forTutorsHref} onClick={closeMenus}>{forTutorsLabel}</Link>
+            <Link href="/refer-and-earn" onClick={closeMenus} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#0329b2", fontWeight: 800 }}>
+              <Gift size={16} /> Refer &amp; Earn
+            </Link>
           </div>
 
           <div className={s.mobileActions}>

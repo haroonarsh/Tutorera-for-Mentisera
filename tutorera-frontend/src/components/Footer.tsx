@@ -19,6 +19,7 @@ const footerColumns = [
       { label: "Find Tutors", href: "/tutors" },
       { label: "Subjects", href: "/subjects" },
       { label: "Safety", href: "/safety" },
+      { label: "Refer & Earn", href: "/refer-and-earn" },
     ],
   },
   {

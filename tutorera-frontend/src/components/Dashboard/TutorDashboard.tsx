@@ -21,6 +21,7 @@ import { Sparkles, Calculator } from "lucide-react";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
 import { DashCard, DashButton, StatusBadge, EmptyState } from "./ui";
 import TutorAgreementCard from "./TutorAgreementCard";
+import ReferEarnBanner from "@/components/ReferEarnBanner";
 
 const C = UI_COLORS;
 
@@ -839,6 +840,8 @@ export default function TutorDashboard({ userName, userAvatar, userId }: Props) 
             </div>
           </div>
         </div>
+
+        <ReferEarnBanner variant="strip" />
 
         {/* Tabs */}
         {/* Remove role="tablist" — just a nav landmark */}
