@@ -16,6 +16,7 @@ export default async function TutorsPage({ searchParams }: Props) {
   const params = await searchParams;
   const initialFilters: Partial<FiltersState> = {
     search: value(params.search),
+    subject: value(params.subject),
     country: value(params.country || params.countryCode),
     city: value(params.city),
     level: value(params.level),
@@ -27,7 +28,7 @@ export default async function TutorsPage({ searchParams }: Props) {
   } as Partial<FiltersState>;
 
   const subject = value(params.subject);
-  if (subject && !initialFilters.search) initialFilters.search = subject;
+  // Keep the subject as a dedicated filter so client-side pagination retains it.
 
   const result = await fetchTutors({
     search: initialFilters.search,
