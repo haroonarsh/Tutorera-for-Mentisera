@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy:staging": "wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke:staging": "node scripts/smoke-staging.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
