@@ -39,6 +39,10 @@ export async function readAdminAgentSummary(agentId: AdminAgentId): Promise<Agen
     const heldPayouts = await Booking.countDocuments({ payoutStatus: "held" });
     return { agentId, status: "completed", data: { failedPayments, heldPayouts } };
   }
+  if (agentId === "operations") {
+    const openSafetyCases = await SafetyCase.countDocuments({ status: { $in: ["open", "under_investigation"] } });
+    return { agentId, status: "completed", data: { openSafetyCases } };
+  }
   return {
     agentId,
     status: "not_implemented",
