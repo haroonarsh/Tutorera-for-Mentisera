@@ -106,7 +106,7 @@ export default function SubjectsPage() {
                 <ul style={{ listStyle: "none", padding: 0 }}>
                   {group.subjects.map(subject => (
                     <li key={subject.code ?? subject.name} style={{ padding: "0.4rem 0" }}>
-                      <Link href={`/tutors?subject=${encodeURIComponent(subject.name)}`} style={{ color: "#1d4ed8", textDecoration: "underline" }}>
+                      <Link href={`/tutors?subject=${encodeURIComponent(subject.name === "English" ? "English Language" : subject.name === "Urdu" ? "Urdu Language" : subject.name === "Mathematics (Extended)" || subject.name === "Mathematics A" ? "Mathematics" : subject.name === "Business" ? "Business Studies" : subject.name)}`} style={{ color: "#1d4ed8", textDecoration: "underline" }}>
                         {subject.name}{subject.code ? ` (${subject.code})` : ""}
                       </Link>
                     </li>
