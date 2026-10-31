@@ -33,7 +33,7 @@ import {
   getAllRefundRequests,
   updateRefundRequestStatus,
 } from "../controllers/refundRequest.controller";
-import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin } from "../controllers/referral.controller";
+import { getAllReferrals, getReferralConfigAdmin, updateReferralConfigAdmin, exportReferralsAdmin, flagReferralFraud } from "../controllers/referral.controller";
 import { getAllStudentRatings, getStudentRatings } from "../controllers/studentRating.controller";
 import { getAllTutorRatings, getTutorRatingsForAdmin } from "../controllers/review.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
@@ -200,6 +200,8 @@ router.patch("/guarantee-claims/:id", requirePermission("claims.manage"), valida
 router.get("/refund-requests", requirePermission("claims.read"), getAllRefundRequests);
 router.patch("/refund-requests/:id", requirePermission("claims.manage"), updateRefundRequestStatus);
 router.get("/referrals", requirePermission("growth.read"), getAllReferrals);
+router.get("/referrals/export", requirePermission("growth.read"), exportReferralsAdmin);
+router.patch("/referrals/:id/fraud", requirePermission("growth.manage"), flagReferralFraud);
 router.get("/referral-config", requirePermission("growth.manage"), getReferralConfigAdmin);
 router.put("/referral-config", requirePermission("growth.manage"), updateReferralConfigAdmin);
 router.get("/student-ratings", requirePermission("student.read"), getAllStudentRatings);
