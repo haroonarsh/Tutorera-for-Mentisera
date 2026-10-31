@@ -1,7 +1,7 @@
 "use client";
 
 import api from "@/lib/axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Meeting = { provider: "google_meet" | "microsoft_teams"; url: string; updatedAt: string };
 type Props = {
@@ -18,6 +18,13 @@ export default function BookingMeetingPanel({ bookingId, role, teachingMode, sta
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    setMeeting(null);
+    setUrl("");
+    setLoaded(false);
+    setError("");
+  }, [bookingId]);
+
   const eligible = teachingMode !== "in-person" && ["upcoming", "ongoing"].includes(status) && paymentStatus === "confirmed";
   if (!eligible) return null;
 
@@ -42,7 +49,9 @@ export default function BookingMeetingPanel({ bookingId, role, teachingMode, sta
     try {
       await api.put(`/bookings/${bookingId}/meeting`, { url });
       setUrl("");
-      await load();
+      const response = await api.get(`/bookings/${bookingId}/meeting`);
+      setMeeting(response.data.meeting ?? null);
+      setLoaded(true);
     } catch {
       setError("Could not save the meeting link. Check that it is a valid Google Meet or Microsoft Teams URL.");
     } finally {
@@ -68,6 +77,7 @@ export default function BookingMeetingPanel({ bookingId, role, teachingMode, sta
           <button type="submit" disabled={busy || !url.trim()}>{busy ? "Saving…" : "Save meeting link"}</button>
         </form>
       )}
+      {loaded && <button type="button" onClick={load} disabled={busy} style={{ marginTop: 8 }}>{busy ? "Refreshing…" : "Refresh meeting details"}</button>}
       {error && <p role="alert" style={{ color: "#b91c1c", marginTop: 8 }}>{error}</p>}
       <p style={{ fontSize: 12, color: "#475569", margin: "8px 0 0" }}>Only share the class meeting URL. Do not include personal contact details.</p>
     </section>
