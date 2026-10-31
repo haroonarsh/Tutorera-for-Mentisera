@@ -12,12 +12,22 @@ export const SUBJECTS = {
 } as const;
 
 export const CITIES = {
+  // Pakistan
   lahore: "Lahore", karachi: "Karachi", islamabad: "Islamabad", rawalpindi: "Rawalpindi",
   faisalabad: "Faisalabad", multan: "Multan", peshawar: "Peshawar", quetta: "Quetta",
-  sialkot: "Sialkot", gujranwala: "Gujranwala",
+  sialkot: "Sialkot", gujranwala: "Gujranwala", hyderabad: "Hyderabad",
+  // UAE
   dubai: "Dubai", "abu-dhabi": "Abu Dhabi", sharjah: "Sharjah",
+  ajman: "Ajman", "ras-al-khaimah": "Ras Al Khaimah", fujairah: "Fujairah",
+  // Saudi Arabia
   riyadh: "Riyadh", jeddah: "Jeddah", dammam: "Dammam",
+  mecca: "Mecca", medina: "Medina", khobar: "Khobar", tabuk: "Tabuk",
+  // United Kingdom
   london: "London", manchester: "Manchester", birmingham: "Birmingham",
+  leeds: "Leeds", glasgow: "Glasgow", edinburgh: "Edinburgh", bradford: "Bradford",
+  // United States
+  "new-york": "New York", "los-angeles": "Los Angeles", chicago: "Chicago",
+  houston: "Houston", dallas: "Dallas", "washington-dc": "Washington DC", atlanta: "Atlanta",
 } as const;
 
 export const LEVELS = {

@@ -19,12 +19,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const path = `/tutors/subject/${slug}`;
 
   return {
-    title: `${subject} Tutors Online & Locally`,
-    description: `Find verified ${subject} tutors for online worldwide learning and local in-person lessons where available. Compare experience, ratings, availability, and rates.`,
+    title: `${subject} Tutor — Find Verified ${subject} Tutors | TUTORERA`,
+    description: `Find a verified ${subject} tutor for online or in-person lessons. Post your requirement, set a budget, and compare ${subject} tutor offers on TUTORERA — the student-first tutoring marketplace.`,
     alternates: { canonical: path },
     openGraph: {
-      title: `${subject} Tutors Online & Locally | TUTORERA®`,
-      description: `Browse verified ${subject} tutors through TUTORERA's student-led marketplace.`,
+      title: `${subject} Tutor — Verified Tutors | TUTORERA®`,
+      description: `Compare verified ${subject} tutors on TUTORERA. Post your requirement free — eligible tutors send offers you compare before choosing.`,
       url: path,
     },
   };
@@ -36,13 +36,63 @@ export default async function Page({ params }: Props) {
   if (!subject) notFound();
 
   const curriculum = CURRICULUM_CONTENT[slug];
+  const canonical = `https://tutorera.ac.pk/tutors/subject/${slug}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${canonical}#webpage`,
+        name: `${subject} Tutor — Find Verified ${subject} Tutors`,
+        url: canonical,
+        description: `Find a verified ${subject} tutor for online or in-person lessons. Post your requirement and compare offers on TUTORERA.`,
+        isPartOf: { "@id": "https://tutorera.ac.pk/#website" },
+        breadcrumb: { "@id": `${canonical}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${canonical}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://tutorera.ac.pk/" },
+          { "@type": "ListItem", position: 2, name: "Find Tutors", item: "https://tutorera.ac.pk/tutors" },
+          { "@type": "ListItem", position: 3, name: `${subject} Tutor`, item: canonical },
+        ],
+      },
+      {
+        "@type": "Service",
+        name: `${subject} Tutoring`,
+        description: `Personalised ${subject} tutoring sessions delivered online or in person. Students post requirements; verified tutors submit offers to compare.`,
+        provider: { "@type": "Organization", name: "TUTORERA", url: "https://tutorera.ac.pk" },
+        serviceType: "Private tutoring",
+        areaServed: ["PK", "AE", "SA", "GB", "US"],
+        url: canonical,
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: `How do I find a ${subject} tutor on TUTORERA?`,
+            acceptedAnswer: { "@type": "Answer", text: `Post a free ${subject} tuition requirement — include your level, curriculum, schedule and preferred budget. Verified ${subject} tutors can then send offers for you to compare before choosing.` },
+          },
+          {
+            "@type": "Question",
+            name: `Are ${subject} tutors on TUTORERA verified?`,
+            acceptedAnswer: { "@type": "Answer", text: `Yes. Every tutor must submit qualifications and pass TUTORERA's subject-specific approval process before they can respond to ${subject} tuition requirements.` },
+          },
+        ],
+      },
+    ],
+  };
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SeoTutorDirectory
         kind="subject"
         value={subject}
-        title={`${subject} Tutors Online & Locally`}
+        title={`${subject} Tutor — Find Verified ${subject} Tutors`}
         description={`Compare verified ${subject} tutors for online worldwide learning and local in-person lessons where available.`}
         canonicalPath={`/tutors/subject/${slug}`}
       />
