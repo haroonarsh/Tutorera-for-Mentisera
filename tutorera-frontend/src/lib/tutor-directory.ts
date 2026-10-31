@@ -1,12 +1,25 @@
 import type { TutorProfile } from "@/types/tutor";
 
 export const SUBJECTS = {
+  // Core sciences
   mathematics: "Mathematics", physics: "Physics", chemistry: "Chemistry", biology: "Biology",
+  "computer-science": "Computer Science", statistics: "Statistics",
+  "environmental-science": "Environmental Science", "combined-science": "Combined Science",
+  "human-biology": "Human Biology",
+  // Mathematics variants
+  "further-mathematics": "Further Mathematics", "applied-mathematics": "Applied Mathematics",
+  "pure-mathematics": "Pure Mathematics",
+  // Languages
   english: "English Language", urdu: "Urdu Language", arabic: "Arabic Language", persian: "Persian",
-  "computer-science": "Computer Science", statistics: "Statistics", economics: "Economics",
-  accounting: "Accounting", "business-studies": "Business Studies", commerce: "Commerce", history: "History",
-  geography: "Geography", islamiyat: "Islamiyat", "pakistan-studies": "Pakistan Studies", civics: "Civics",
-  mdcat: "MDCAT", ecat: "ECAT", sat: "SAT", ielts: "IELTS", "entry-tests": "Entry Tests",
+  french: "French", german: "German",
+  // Humanities & Business
+  economics: "Economics", accounting: "Accounting", "business-studies": "Business Studies",
+  commerce: "Commerce", history: "History", geography: "Geography", sociology: "Sociology",
+  psychology: "Psychology", islamiyat: "Islamiyat", "pakistan-studies": "Pakistan Studies", civics: "Civics",
+  // Exam prep
+  mdcat: "MDCAT", ecat: "ECAT", sat: "SAT", ielts: "IELTS", toefl: "TOEFL",
+  "entry-tests": "Entry Tests", "o-level": "O Level / IGCSE", "a-level": "A Level",
+  // Tech
   programming: "Programming", "web-development": "Web Development", "data-science": "Data Science",
   "graphic-design": "Graphic Design",
 } as const;
