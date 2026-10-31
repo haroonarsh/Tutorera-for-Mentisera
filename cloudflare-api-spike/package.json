@@ -1,0 +1,13 @@
+{
+  "name": "tutorera-cloudflare-api-spike",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy:staging": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.111.0"
+  }
+}
