@@ -1,6 +1,6 @@
 import BrandLogo from "@/components/BrandLogo";
 import { SUPPORT_EMAIL } from "@/lib/site";
-import { BookOpen, Mail, Globe } from "lucide-react";
+import { BookOpen, Mail, Globe, BookMarked } from "lucide-react";
 import Link from "next/link";
 import { FiFacebook } from "react-icons/fi";
 import { RiTwitterLine } from "react-icons/ri";
@@ -127,6 +127,71 @@ const markets = [
   },
 ];
 
+// ─── Subject offerings — 5 categories ───────────────────────────────────────
+const subjectColumns = [
+  {
+    heading: "Sciences",
+    subjects: [
+      { label: "Physics",                 href: "/tutors?subject=physics" },
+      { label: "Chemistry",               href: "/tutors?subject=chemistry" },
+      { label: "Biology",                 href: "/tutors?subject=biology" },
+      { label: "Computer Science",        href: "/tutors?subject=computer-science" },
+      { label: "Environmental Science",   href: "/tutors?subject=environmental-science" },
+      { label: "Combined Science",        href: "/tutors?subject=combined-science" },
+      { label: "Human Biology",           href: "/tutors?subject=human-biology" },
+    ],
+  },
+  {
+    heading: "Mathematics",
+    subjects: [
+      { label: "Mathematics",             href: "/tutors?subject=mathematics" },
+      { label: "Statistics",              href: "/tutors?subject=statistics" },
+      { label: "Further Mathematics",     href: "/tutors?subject=further-mathematics" },
+      { label: "Applied Mathematics",     href: "/tutors?subject=applied-mathematics" },
+      { label: "Pure Mathematics",        href: "/tutors?subject=pure-mathematics" },
+      { label: "MDCAT Mathematics",       href: "/tutors?subject=mdcat-mathematics" },
+      { label: "ECAT Mathematics",        href: "/tutors?subject=ecat-mathematics" },
+    ],
+  },
+  {
+    heading: "Languages & Arts",
+    subjects: [
+      { label: "English",                 href: "/tutors?subject=english" },
+      { label: "Urdu",                    href: "/tutors?subject=urdu" },
+      { label: "Arabic",                  href: "/tutors?subject=arabic" },
+      { label: "French",                  href: "/tutors?subject=french" },
+      { label: "German",                  href: "/tutors?subject=german" },
+      { label: "Islamiyat",               href: "/tutors?subject=islamiyat" },
+      { label: "Pakistan Studies",        href: "/tutors?subject=pakistan-studies" },
+    ],
+  },
+  {
+    heading: "Business & Humanities",
+    subjects: [
+      { label: "Economics",               href: "/tutors?subject=economics" },
+      { label: "Business Studies",        href: "/tutors?subject=business-studies" },
+      { label: "Accounting",              href: "/tutors?subject=accounting" },
+      { label: "Geography",               href: "/tutors?subject=geography" },
+      { label: "History",                 href: "/tutors?subject=history" },
+      { label: "Sociology",               href: "/tutors?subject=sociology" },
+      { label: "Psychology",              href: "/tutors?subject=psychology" },
+    ],
+  },
+  {
+    heading: "Exam Prep",
+    subjects: [
+      { label: "O Level / IGCSE",         href: "/tutors?subject=o-level" },
+      { label: "A Level",                 href: "/tutors?subject=a-level" },
+      { label: "MDCAT",                   href: "/tutors?subject=mdcat" },
+      { label: "ECAT",                    href: "/tutors?subject=ecat" },
+      { label: "SAT",                     href: "/tutors?subject=sat" },
+      { label: "IELTS",                   href: "/tutors?subject=ielts" },
+      { label: "TOEFL",                   href: "/tutors?subject=toefl" },
+      { label: "Entry Test Prep",         href: "/tutors?subject=entry-test-prep" },
+    ],
+  },
+];
+
 const socialLinks = [
   { label: "Twitter / X", icon: RiTwitterLine, href: "https://twitter.com/mentiserapk" },
   { label: "Facebook", icon: FiFacebook, href: "https://facebook.com/mentiserapk" },
@@ -196,6 +261,28 @@ export default function Footer() {
                   {market.cities.map((city) => (
                     <li key={city.href}>
                       <Link href={city.href}>{city.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Subject offerings ── */}
+        <div className={s.subjects}>
+          <p className={s.subjectsHeading}>
+            <BookMarked size={14} aria-hidden="true" />
+            Browse Subjects — Find a Tutor for Any Topic
+          </p>
+          <div className={s.subjectsGrid}>
+            {subjectColumns.map((col) => (
+              <div key={col.heading} className={s.subjectCol}>
+                <h3>{col.heading}</h3>
+                <ul>
+                  {col.subjects.map((sub) => (
+                    <li key={sub.href}>
+                      <Link href={sub.href}>{sub.label}</Link>
                     </li>
                   ))}
                 </ul>
