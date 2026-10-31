@@ -1,6 +1,7 @@
 // src/app.ts
 import "express-async-errors";
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -134,6 +135,19 @@ apiRouter.use("/pricing", pricingRoutes);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
+
+// Public liveness endpoint: does not disclose infrastructure details.
+app.get("/health/live", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ status: "ok" });
+});
+
+// Readiness endpoint for load balancers and deployment smoke checks.
+app.get("/health/ready", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const ready = mongoose.connection.readyState === 1;
+    res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "unavailable" });
+});
 
 app.get("/", (req, res) => {
     res.json({ message: "Tutorera API is running 🚀" });
