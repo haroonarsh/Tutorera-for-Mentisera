@@ -48,3 +48,17 @@ services:
         sync: false
       - key: FACEBOOK_APP_SECRET
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: RESEND
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RAPID_GATEWAY_MERCHANT_ID
+        sync: false
+      - key: RAPID_GATEWAY_WEBHOOK_SECRET
+        sync: false
