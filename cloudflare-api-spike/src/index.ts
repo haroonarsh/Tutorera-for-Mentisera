@@ -41,7 +41,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (path === "/health/live" && request.method === "GET") return json({ status: "ok" });
-    if (path !== "/health/ready" && path !== "/test/mongodb") return json({ error: "Not found" }, 404);
+    if (path !== "/health/ready" && path !== "/test/mongodb" && path !== "/test/transaction") return json({ error: "Not found" }, 404);
     if (request.method !== (path === "/health/ready" ? "GET" : "POST"))
       return json({ error: "Method not allowed" }, 405);
     // Both DB operations are private to prevent unauthenticated scans and credential abuse.
@@ -56,6 +56,29 @@ export default {
       // Never allow writes to an arbitrary or production database.
       if (!env.MONGO_TEST_DB || !/^tutorera_spike_[a-z0-9_]+$/.test(env.MONGO_TEST_DB))
         return json({ error: "Dedicated test database not configured" }, 503);
+      if (path === "/test/transaction") {
+        const passed = await withMongo(env, async (client) => {
+          const collection = client.db(env.MONGO_TEST_DB!).collection<{ _id: string; purpose: string }>("transaction_checks");
+          const id = crypto.randomUUID();
+          const session = client.startSession();
+          try {
+            await session.withTransaction(async () => {
+              await collection.insertOne({ _id: id, purpose: "transaction-check" }, { session });
+              const found = await collection.findOne({ _id: id }, { session });
+              if (found?.purpose !== "transaction-check") throw new Error("transaction-read-failed");
+              throw new Error("intentional-rollback");
+            });
+            return false;
+          } catch (error) {
+            if (!(error instanceof Error) || error.message !== "intentional-rollback") throw error;
+            return (await collection.findOne({ _id: id })) === null;
+          } finally {
+            await session.endSession();
+            await collection.deleteOne({ _id: id }).catch(() => undefined);
+          }
+        });
+        return json({ status: passed ? "passed" : "failed", rollback: passed }, passed ? 200 : 503);
+      }
       const result = await withMongo(env, async (client) => {
         const collection = client.db(env.MONGO_TEST_DB!).collection<{ _id: string; createdAt: Date; purpose: string }>("compatibility_checks");
         const id = crypto.randomUUID();
