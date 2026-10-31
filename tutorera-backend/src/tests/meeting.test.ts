@@ -28,9 +28,11 @@ describe("tutor-hosted booking meetings", () => {
     const outsider = await makeUser("meeting-outsider", "student");
     const booking = await makeBooking(student, tutor);
     const path = `/api/v1/bookings/${booking._id}/meeting`;
+    await request(app).put(path).set(auth(student)).send({ url: "https://meet.google.com/abc-defg-hij" }).expect(403);
     await request(app).put(path).set(auth(tutor)).send({ url: "https://meet.google.com/abc-defg-hij" }).expect(200);
     const response = await request(app).get(path).set(auth(student)).expect(200);
     expect(response.body.meeting.url).toBe("https://meet.google.com/abc-defg-hij");
+    expect(Object.keys(response.body.meeting).sort()).toEqual(["provider", "updatedAt", "url"]);
     expect(response.headers["cache-control"]).toContain("no-store");
     await request(app).get(path).set(auth(outsider)).expect(403);
     expect(await BookingMeeting.countDocuments({ booking: booking._id })).toBe(1);
