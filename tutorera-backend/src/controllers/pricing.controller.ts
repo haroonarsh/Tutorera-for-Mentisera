@@ -11,26 +11,36 @@ function median(values: number[]): number {
 
 export const getPricingInsight = async (req: AuthRequest, res: Response): Promise<void> => {
   const { city, subject, teachingMode } = req.query;
+  if ([city, subject, teachingMode].some((v) => v !== undefined && (typeof v !== "string" || v.length > 80)) ||
+      (teachingMode && !["online", "in-person", "both"].includes(String(teachingMode)))) {
+    res.status(400).json({ success: false, message: "Invalid pricing filters." });
+    return;
+  }
 
-  const match: Record<string, unknown> = { paymentStatus: "confirmed", status: "completed" };
-  if (city) match["request.city"] = city;
-  if (subject) match["request.subject"] = { $regex: subject, $options: "i" };
+  const match: Record<string, unknown> = { paymentStatus: "confirmed", status: "completed", currency: "PKR" };
   if (teachingMode) match.teachingMode = teachingMode;
 
   const bookings = await Booking.find(match)
     .populate<{ request: { city?: string; subject?: string } }>("request", "city subject")
-    .select("finalAgreedRate pricingUnit teachingMode")
+    .select("finalAgreedRate pricingUnit teachingMode currency request")
     .lean();
 
   const profileMatch: Record<string, unknown> = {};
   if (city) profileMatch.city = city;
-  if (subject) profileMatch.subjects = { $elemMatch: { $regex: subject, $options: "i" } };
+  if (subject) profileMatch.subjects = { $elemMatch: { $regex: String(subject).replace(/[^a-zA-Z0-9 ]/g, ""), $options: "i" } };
+  profileMatch.currency = "PKR";
 
   const profiles = profileMatch.city || profileMatch.subjects
     ? await TutorProfile.find(profileMatch).select("hourlyRate currency").lean()
     : [];
 
   const bookingRates = bookings
+    .filter((b) => {
+      const linked = b.request as unknown as { city?: string; subject?: string } | null;
+      if (city && linked?.city?.toLowerCase() !== String(city).toLowerCase()) return false;
+      if (subject && !linked?.subject?.toLowerCase().includes(String(subject).toLowerCase())) return false;
+      return true;
+    })
     .map((b) => {
       const amount = b.finalAgreedRate || 0;
       if (b.pricingUnit === "hour") return amount;
