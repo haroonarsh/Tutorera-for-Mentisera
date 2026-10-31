@@ -39,6 +39,7 @@ router.put("/:id/meeting", protect, authorize("tutor"), async (req: AuthRequest,
     { upsert: true, new: true, runValidators: true }
   );
   await logAudit({ action: "booking_meeting_updated", actor: req.user?.name, actorId: req.user?._id.toString(), entity: "Booking", targetId: booking.id, metadata: { provider: meeting.provider } });
+  res.setHeader("Cache-Control", "private, no-store");
   res.json({ success: true, meeting: { provider: saved.provider, updatedAt: saved.updatedAt } });
 });
 
@@ -46,7 +47,7 @@ router.get("/:id/meeting", protect, async (req: AuthRequest, res: Response): Pro
   const booking = await getBooking(req.params.id);
   if (!booking) { res.status(404).json({ success: false, message: "Booking not found." }); return; }
   const userId = req.user!._id.toString();
-  const allowed = ["admin", "superadmin"].includes(req.user!.role) || booking.student.toString() === userId || booking.tutor.toString() === userId;
+  const allowed = req.user!.role === "admin" || booking.student.toString() === userId || booking.tutor.toString() === userId;
   if (!allowed) { res.status(403).json({ success: false, message: "Access denied." }); return; }
   if (booking.status === "cancelled" || booking.status === "completed" || booking.paymentStatus !== "confirmed") {
     res.status(409).json({ success: false, message: "Meeting access is not available for this booking." }); return;
