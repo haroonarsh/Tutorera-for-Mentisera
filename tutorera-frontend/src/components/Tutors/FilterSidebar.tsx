@@ -254,7 +254,14 @@ export function MobileFilterSidebar({
 
   return (
     <div className={styles.mobileOverlay} role="dialog" aria-modal="true" aria-label="Filters">
-      <div className={styles.mobileBackdrop} onClick={onClose} />
+      <div
+        className={styles.mobileBackdrop}
+        role="button"
+        tabIndex={0}
+        aria-label="Close filters"
+        onClick={onClose}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClose()}
+      />
       <div ref={modalRef} className={styles.mobilePanel}>
         <div className={styles.mobilePanelHeader}>
           <button

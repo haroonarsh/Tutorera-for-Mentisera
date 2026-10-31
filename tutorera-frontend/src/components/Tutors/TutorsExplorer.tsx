@@ -116,41 +116,14 @@ export default function TutorsExplorer({ initialTutors, initialPagination, initi
       <aside className={styles.sidebar} aria-label="Filter tutors"><FilterSidebar {...sidebarProps} /></aside>
       <MobileFilterSidebar {...sidebarProps} isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <section className={styles.main} aria-label="Tutor search results">
-        <div style={{
-          background: "linear-gradient(135deg, #eef5ff 0%, #ffffff 100%)",
-          border: "1.5px solid #bfdbfe",
-          borderRadius: "0.875rem",
-          padding: "1rem 1.25rem",
-          marginBottom: "1.25rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "0.75rem"
-        }}>
+        <div className={styles.ctaBanner}>
           <div>
-            <strong style={{ color: "#021550", fontSize: "0.95rem", display: "block" }}>
-              Don&apos;t Want to Search Manually?
-            </strong>
-            <span style={{ color: "#64748b", fontSize: "0.82rem" }}>
-              Post your requirement and preferred budget. Let verified matching tutors send offers to you.
-            </span>
+            <strong className={styles.ctaBannerTitle}>Don&apos;t Want to Search Manually?</strong>
+            <span className={styles.ctaBannerSub}>Post your requirement and preferred budget. Let verified matching tutors send offers to you.</span>
           </div>
           <Link
             href={`/post-tuition-request${marketCountryCode ? `?country=${encodeURIComponent(marketCountryCode)}` : ""}`}
-            style={{
-              background: "#0329b2",
-              color: "white",
-              padding: "0.6rem 1.15rem",
-              borderRadius: "0.5rem",
-              fontSize: "0.85rem",
-              fontWeight: 800,
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.35rem",
-              boxShadow: "0 2px 8px rgba(3, 41, 178, 0.25)"
-            }}
+            className={styles.ctaBannerLink}
           >
             + Post Tuition Request
           </Link>

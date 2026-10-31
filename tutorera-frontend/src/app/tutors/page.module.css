@@ -9,7 +9,7 @@
 .page {
   min-height: 100vh;
   background: #F5F7FF;
-  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: inherit;
 }
 
 /* ── Hero banner ── */
@@ -211,7 +211,6 @@
 
 .sortSelect {
   border: none;
-  outline: none;
   font-size: 13px;
   color: #374151;
   background: transparent;
@@ -251,6 +250,57 @@
   line-height: 1;
   display: flex;
   align-items: center;
+}
+
+/* ── Post-requirement CTA banner ── */
+.ctaBanner {
+  background: linear-gradient(135deg, #eef5ff 0%, #ffffff 100%);
+  border: 1.5px solid #bfdbfe;
+  border-radius: 0.875rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ctaBannerTitle {
+  color: #021550;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: block;
+}
+
+.ctaBannerSub {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.ctaBannerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #0329b2;
+  color: white;
+  padding: 0.6rem 1.15rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(3, 41, 178, 0.25);
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.ctaBannerLink:focus-visible {
+  outline: 2px solid #fcb208;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ctaBannerLink:hover { opacity: 0.9; }
 }
 
 /* ── Grid ── */

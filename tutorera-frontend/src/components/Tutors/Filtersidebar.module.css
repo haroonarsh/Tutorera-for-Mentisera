@@ -115,7 +115,6 @@
   color: var(--color-heading);
   background: #ffffff;
   cursor: pointer;
-  outline: none;
   appearance: none;
   transition: border-color 0.15s;
   font-family: inherit;
@@ -123,6 +122,11 @@
 
 .select:focus {
   border-color: var(--color-digital-blue);
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--color-digital-blue);
+  outline-offset: 2px;
 }
 
 .selectPlaceholder {

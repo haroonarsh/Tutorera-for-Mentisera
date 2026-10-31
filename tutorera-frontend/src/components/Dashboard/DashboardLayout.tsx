@@ -201,7 +201,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {mobileOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
           <div style={{ width: '240px', height: '100vh' }}><SidebarContent /></div>
-          <div style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setMobileOpen(false)} />
+          <div
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            role="button"
+            tabIndex={0}
+            aria-label="Close sidebar"
+            onClick={() => setMobileOpen(false)}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setMobileOpen(false)}
+          />
         </div>
       )}
 
