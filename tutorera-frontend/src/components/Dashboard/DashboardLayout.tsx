@@ -200,7 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
-          <div style={{ width: '240px', height: '100vh' }}><SidebarContent /></div>
+          <div id="mobile-nav" style={{ width: '240px', height: '100vh' }}><SidebarContent /></div>
           <div
             style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
             role="button"
@@ -229,10 +229,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           position: 'sticky', top: 0, zIndex: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button title="mobile menu" onClick={() => setMobileOpen(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, display: 'none' }}
+            <button
+              aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav"
+              onClick={() => setMobileOpen(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, display: 'none', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
               className="show-mobile">
-              <Menu size={22} />
+              <Menu size={22} aria-hidden="true" />
             </button>
             <div>
               <p style={{ fontWeight: '700', color: C.primary, fontSize: '1rem', margin: 0 }}>{pageTitle}</p>
