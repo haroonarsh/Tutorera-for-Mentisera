@@ -79,6 +79,11 @@ import promoCodeRoutes from "./admin/promoCode.routes";
 import payoutAdminRoutes from "./admin/payout.routes";
 import { enforceAccountAction, getAccountEnforcementHistory } from "../controllers/accountModeration.controller";
 import { moderateRequest, getRequestModerationHistory } from "../controllers/requestModeration.controller";
+import {
+  listAdminAgents,
+  planAdminSupervisor,
+  readAdminAgent,
+} from "../controllers/adminAgentSupervisor.controller";
 
 const router = Router();
 
@@ -188,5 +193,10 @@ router.get("/student-ratings", requirePermission("student.read"), getAllStudentR
 router.get("/student-ratings/:studentId", requirePermission("student.read"), getStudentRatings);
 router.get("/tutor-ratings", requirePermission("tutor.quality_manage"), getAllTutorRatings);
 router.get("/tutor-ratings/:tutorId", requirePermission("tutor.quality_manage"), getTutorRatingsForAdmin);
+
+// AI Supervisor Agent
+router.get("/agents", listAdminAgents);
+router.post("/agents/supervisor/plan", planAdminSupervisor);
+router.get("/agents/:agentId/summary", readAdminAgent);
 
 export default router;
