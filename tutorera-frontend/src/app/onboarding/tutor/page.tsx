@@ -3,6 +3,7 @@ import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
+import { catalogueSubjectNames, subjectCatalogue } from "@/lib/subject-catalogue";
 import { convertToPKR,useGeoData } from "@/lib/geoService";
 import { Country } from "@/lib/location";
 import { AlertTriangle,BookOpen } from "lucide-react";
@@ -50,9 +51,14 @@ export default function TutorOnboardingPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [existingDocs, setExistingDocs] = useState<ExistingDocsState>({});
 
-  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
-    "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "IELTS", "SAT / ACT", "Other"
-  ];
+  // Preserve existing backend-compatible subject labels while exposing additional catalogue options.
+  const subjects = Array.from(new Set([...(geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Other"]), ...catalogueSubjectNames]));
+  const [curriculumSelection, setCurriculumSelection] = useState("");
+  const curriculumOptions = Array.from(new Set(subjectCatalogue.map(group => group.curriculum)));
+  const [qualificationSelection, setQualificationSelection] = useState("");
+  const selectedCatalogueGroups = subjectCatalogue.filter(group => group.curriculum === curriculumSelection);
+  const qualificationSubjects = subjectCatalogue.find(group => group.curriculum === curriculumSelection && group.qualification === qualificationSelection)?.subjects.map(subject => subject.name) ?? [];
+
   const levels = geo.levels && geo.levels.length > 0 ? geo.levels : [
     "Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"
   ];
@@ -77,6 +83,11 @@ export default function TutorOnboardingPage() {
   // Step 3
   const [step3, setStep3] = useState({ experience: "", previousInstitutions: "" });
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  // Keep already selected subjects visible when switching curriculum filters.
+  const visibleSubjects = qualificationSelection
+    ? Array.from(new Set([...qualificationSubjects, ...selectedSubjects]))
+    : subjects;
+
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
 
   // Step 4
@@ -267,6 +278,7 @@ export default function TutorOnboardingPage() {
           experience: step3.experience,
           previousInstitutions: step3.previousInstitutions.split(",").map(s => s.trim()).filter(Boolean),
           subjects: selectedSubjects,
+          curricula: curriculumSelection ? [curriculumSelection] : [],
           levels: selectedLevels,
         }));
       }
@@ -611,9 +623,17 @@ export default function TutorOnboardingPage() {
                     onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                 </div>
                 <div>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label htmlFor="curriculum-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Explore subjects by curriculum (optional)</label>
+                    <select id="curriculum-filter" value={curriculumSelection} onChange={event => { setCurriculumSelection(event.target.value); setQualificationSelection(""); }} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, maxWidth: "100%", width: 320 }}>
+                      <option value="">All subjects</option>
+                      {curriculumOptions.map(curriculum => <option key={curriculum} value={curriculum}>{curriculum}</option>)}
+                    </select>
+                    {curriculumSelection && <div style={{ marginTop: "0.75rem" }}><label htmlFor="qualification-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Qualification (optional)</label><select id="qualification-filter" value={qualificationSelection} onChange={event => setQualificationSelection(event.target.value)} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, width: 320, maxWidth: "100%" }}><option value="">All qualifications</option>{selectedCatalogueGroups.map(group => <option key={group.qualification} value={group.qualification}>{group.qualification}</option>)}</select></div>}
+                  </div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Subjects You Teach *</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {subjects.map(s => (
+                    {visibleSubjects.map(s => (
                       <button key={s} type="button" onClick={() => toggleItem(selectedSubjects, s, setSelectedSubjects)}
                         style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${selectedSubjects.includes(s) ? C.accent : '#e5e7eb'}`, backgroundColor: selectedSubjects.includes(s) ? C.accentLight : 'white', color: selectedSubjects.includes(s) ? C.accent : C.gray500, fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer' }}>
                         {s}
