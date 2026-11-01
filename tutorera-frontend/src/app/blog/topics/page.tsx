@@ -34,8 +34,9 @@ export default async function BlogTopicsPage() {
             const haystack = [article.title, article.slug, ...article.tags].join(" ").toLowerCase().replaceAll("-", " ");
             return needles.some(needle => {
               const normalized = needle.toLowerCase().replaceAll("-", " ");
-              const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\            return needles.some(needle => haystack.includes(needle.replaceAll("-", " ")));");
-              return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, "i").test(haystack);
+              const words = haystack.split(/[^a-z0-9]+/);
+              const parts = normalized.split(/[^a-z0-9]+/).filter(Boolean);
+              return words.some((word, index) => parts.every((part, offset) => words[index + offset] === part));
             });
           });
           return { topic, matches };
