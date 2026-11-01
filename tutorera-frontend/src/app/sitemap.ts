@@ -1,4 +1,5 @@
 import { MARKETS } from "@/lib/markets";
+import { getEditorialArticles } from "@/lib/editorial-content";
 import { SITE_URL } from "@/lib/site";
 import {
   CITIES,
@@ -15,14 +16,12 @@ import { assessTutorSeoQuality } from "@/lib/tutor-seo";
 import type { MetadataRoute } from "next";
 
 const routes = [
-  "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
+  "", "online-tutors", "about", "become-a-tutor", "blog", "blog/topics", "business-model", "contact", "coverage", "first-session-guarantee", "team",
   "help", "help/for-parents", "help/for-tutors", "how-it-works", "how-tutor-offers-work", "levels", "locations", "pricing",
   "payment-process", "refund-policy", "safety-policy", "services", "student-journey", "subjects", "tutors", "terms", "privacy", "complaint-process", "cancellation-policy",
   "tutor-verification-standards", "in-person-home-tuition-terms", "review-policy", "editorial-policy", "academic-standards",
   "content-review-policy", "research-methodology", "tutor-screening-policy", "governance",
   "tuition-requests",
-  "blog/how-to-find-a-trusted-tutor-in-pakistan", "blog/online-vs-home-tuition-in-pakistan",
-  "blog/what-to-look-for-before-hiring-a-tutor-pakistan",
 ];
 
 const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
@@ -220,6 +219,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   );
 
+  const publishedBlogs = await getEditorialArticles();
+  const blogEntries: MetadataRoute.Sitemap = publishedBlogs.map((article) => ({
+    url: `${SITE_URL}/blog/${encodeURIComponent(article.slug)}`,
+    ...(Number.isFinite(Date.parse(article.updatedAt)) ? { lastModified: new Date(article.updatedAt) } : {}),
+    changeFrequency: "monthly" as const,
+    priority: 0.65,
+  }));
+
   const research: MetadataRoute.Sitemap = [
     ...(pakistanPkrDirectory.total >= 10
       ? [{ url: `${SITE_URL}/research/pakistan-tutoring-rates`, changeFrequency: "weekly" as const, priority: 0.75 }]
@@ -244,6 +251,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...liveOnly(demandCityResults),
     ...liveOnly(demandSubjectResults),
     ...research,
+    ...blogEntries,
     ...profiles,
   ];
 

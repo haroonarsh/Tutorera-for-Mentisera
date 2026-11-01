@@ -6,8 +6,12 @@ import Blog from "../models/Blog.model";
 // @route   POST /api/blogs
 // @access  Private (admin)
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { title, slug, content, excerpt, coverImage, tags } = req.body;
+  const { title, slug, content, excerpt, coverImage, tags, isPublished } = req.body;
 
+  if (typeof title !== "string" || !title.trim() || typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || typeof content !== "string" || !content.trim() || typeof excerpt !== "string" || !excerpt.trim()) {
+    res.status(400).json({ success: false, message: "Valid title, slug, content and excerpt are required" });
+    return;
+  }
   const existing = await Blog.findOne({ slug });
   if (existing) {
     res.status(400).json({ success: false, message: "Slug already exists" });
@@ -16,7 +20,7 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
 
   const blog = await Blog.create({
     title, slug, content, excerpt,
-    coverImage, tags,
+    coverImage, tags, isPublished: isPublished === true,
     author: req.user?._id,
   });
 
@@ -31,8 +35,8 @@ export const getAllBlogs = async (req: Request, res: Response): Promise<void> =>
   const filter: Record<string, unknown> = { isPublished: true };
   if (tag) filter.tags = { $in: [tag] };
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  const pageNum = Math.max(1, Number.parseInt(String(page), 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number.parseInt(String(limit), 10) || 9));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Blog.countDocuments(filter);
@@ -65,9 +69,22 @@ export const getBlogBySlug = async (req: Request, res: Response): Promise<void> 
 // @route   PUT /api/blogs/:id
 // @access  Private (admin)
 export const updateBlog = async (req: AuthRequest, res: Response): Promise<void> => {
+  const allowed = ["title", "slug", "content", "excerpt", "coverImage", "tags", "isPublished"] as const;
+  const changes: Record<string, unknown> = {};
+  for (const field of allowed) {
+    if (Object.prototype.hasOwnProperty.call(req.body, field)) changes[field] = req.body[field];
+  }
+  if (changes.slug !== undefined && (typeof changes.slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(changes.slug))) {
+    res.status(400).json({ success: false, message: "Invalid article slug" });
+    return;
+  }
+  if (changes.isPublished !== undefined && typeof changes.isPublished !== "boolean") {
+    res.status(400).json({ success: false, message: "isPublished must be a boolean" });
+    return;
+  }
   const blog = await Blog.findByIdAndUpdate(
     req.params.id,
-    { ...req.body },
+    { $set: changes },
     { new: true, runValidators: true }
   );
 
@@ -89,4 +106,21 @@ export const deleteBlog = async (req: AuthRequest, res: Response): Promise<void>
     return;
   }
   res.status(200).json({ success: true, message: "Blog deleted" });
+};
+
+// Private editorial listing, including drafts. Public routes remain published-only.
+export const getAdminBlogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number.parseInt(String(req.query.page || "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || "50"), 10) || 50));
+  const total = await Blog.countDocuments({});
+  const blogs = await Blog.find({}).populate("author", "name avatar").sort("-updatedAt").skip((page - 1) * limit).limit(limit).select("-content");
+  res.json({ success: true, blogs, total, page, pages: Math.ceil(total / limit) });
+};
+
+export const getAdminBlogById = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  if (!/^[a-f\d]{24}$/i.test(id)) { res.status(400).json({ success: false, message: "Invalid article ID" }); return; }
+  const blog = await Blog.findById(id).populate("author", "name avatar");
+  if (!blog) { res.status(404).json({ success: false, message: "Blog not found" }); return; }
+  res.json({ success: true, blog });
 };
