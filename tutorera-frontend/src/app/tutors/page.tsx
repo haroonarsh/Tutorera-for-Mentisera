@@ -21,6 +21,15 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     description: "Search verified tutors worldwide and locally by subject, curriculum, country, teaching mode, rating, availability, and transparent hourly rates.",
     alternates: { canonical: page > 1 ? `/tutors?page=${page}` : "/tutors" },
     robots: hasFilters ? { index: false, follow: true } : undefined,
+    openGraph: {
+      title: page > 1 ? `Find Tutors — Page ${page} | TUTORERA` : "Find Verified Tutors Online & In-Person | TUTORERA",
+      description: "Search verified tutors worldwide by subject, curriculum, teaching mode, rating, and rate.",
+      url: page > 1 ? `/tutors?page=${page}` : "/tutors",
+    },
+    twitter: {
+      title: page > 1 ? `Find Tutors — Page ${page} | TUTORERA` : "Find Verified Tutors Online & In-Person | TUTORERA",
+      description: "Search verified tutors worldwide by subject, curriculum, teaching mode, rating, and rate.",
+    },
   };
 }
 
