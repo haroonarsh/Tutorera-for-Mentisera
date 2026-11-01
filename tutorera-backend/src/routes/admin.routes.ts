@@ -66,6 +66,13 @@ import {
 import taxConfigRoutes from "./admin/taxConfig.routes";
 import exchangeRateAdminRoutes from "./admin/exchangeRate.routes";
 import geographyAdminRoutes from "./admin/geography.routes";
+import {
+  listAgents,
+  planAgentExecution,
+  executeAgentQuery,
+  getAgentSummary,
+} from "../controllers/supervisorAgent.controller";
+import { agentRequestMiddleware, adminAgentLimiter } from "../middlewares/agentRequest.middleware";
 
 const router = Router();
 
@@ -105,6 +112,12 @@ router.put("/markets/:id", requirePermission("market.configure"), updateMarketCo
 router.use("/tax-config", taxConfigRoutes);
 router.use("/exchange-rates", exchangeRateAdminRoutes);
 router.use("/geography", geographyAdminRoutes);
+
+// Supervisor Agent — read-only administrative intelligence
+router.get("/agents", adminAgentLimiter, listAgents);
+router.post("/agents/supervisor/plan", adminAgentLimiter, agentRequestMiddleware, planAgentExecution);
+router.post("/agents/supervisor/execute", adminAgentLimiter, agentRequestMiddleware, executeAgentQuery);
+router.get("/agents/:agentId/summary", adminAgentLimiter, getAgentSummary);
 
 // System Health & RBAC Roles
 router.get("/system/health", requirePermission("system.monitor"), getSystemHealth);
