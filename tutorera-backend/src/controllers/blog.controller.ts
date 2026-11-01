@@ -95,3 +95,20 @@ export const deleteBlog = async (req: AuthRequest, res: Response): Promise<void>
   }
   res.status(200).json({ success: true, message: "Blog deleted" });
 };
+
+// Private editorial listing, including drafts. Public routes remain published-only.
+export const getAdminBlogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  const page = Math.max(1, Number.parseInt(String(req.query.page || "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || "50"), 10) || 50));
+  const total = await Blog.countDocuments({});
+  const blogs = await Blog.find({}).populate("author", "name avatar").sort("-updatedAt").skip((page - 1) * limit).limit(limit).select("-content");
+  res.json({ success: true, blogs, total, page, pages: Math.ceil(total / limit) });
+};
+
+export const getAdminBlogById = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  if (!/^[a-f\d]{24}$/i.test(id)) { res.status(400).json({ success: false, message: "Invalid article ID" }); return; }
+  const blog = await Blog.findById(id).populate("author", "name avatar");
+  if (!blog) { res.status(404).json({ success: false, message: "Blog not found" }); return; }
+  res.json({ success: true, blog });
+};
