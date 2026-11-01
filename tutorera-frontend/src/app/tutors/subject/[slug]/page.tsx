@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import SeoTutorDirectory from "@/components/Tutors/SeoTutorDirectory";
 import CurriculumInfo from "@/components/Tutors/CurriculumInfo";
-import { CITIES, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS } from "@/lib/tutor-directory";
+import { CITIES, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS, fetchTutors } from "@/lib/tutor-directory";
+import { SeoEligibilityService } from "@/lib/seo-eligibility";
 import { CURRICULUM_CONTENT } from "@/lib/curriculum-content";
 
 // Cities that have dedicated city-hub pages and can receive cross-links
@@ -27,10 +28,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!subject) return {};
   const path = `/tutors/subject/${slug}`;
 
+  let robotsIndex = false;
+  try {
+    const { total } = await fetchTutors({ subject }, 1);
+    const eligibility = SeoEligibilityService.evaluatePage({ activeApprovedTutors: total, homeTuitionEnabled: true });
+    robotsIndex = eligibility === "INDEX";
+  } catch {
+    robotsIndex = false;
+  }
+
   return {
     title: `${subject} Tutor — Find Verified ${subject} Tutors | TUTORERA`,
     description: `Find a verified ${subject} tutor for online or in-person lessons. Post your requirement, set a budget, and compare ${subject} tutor offers on TUTORERA — the student-first tutoring marketplace.`,
     alternates: { canonical: path },
+    robots: { index: robotsIndex, follow: true },
     openGraph: {
       title: `${subject} Tutor — Verified Tutors | TUTORERA®`,
       description: `Compare verified ${subject} tutors on TUTORERA. Post your requirement free — eligible tutors send offers you compare before choosing.`,
