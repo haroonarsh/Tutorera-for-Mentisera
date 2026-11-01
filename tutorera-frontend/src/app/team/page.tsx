@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Team | TUTORERA by MENTISERA",
+  title: "Team",
   description: "Meet the TUTORERA by MENTISERA leadership and engineering team behind the global student-led tutoring marketplace.",
   alternates: { canonical: "/team" },
 };

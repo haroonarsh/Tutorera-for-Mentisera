@@ -4,7 +4,7 @@ import { fetchRequests } from "@/lib/tuition-requests";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Browse Tuition Requests | TUTORERA",
+  title: "Browse Tuition Requests",
   description: "Browse open tuition requests from students worldwide. Submit your offer and start teaching. Filter by subject, city, level, and teaching mode.",
   alternates: { canonical: "/tuition-requests" },
 };

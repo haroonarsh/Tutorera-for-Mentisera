@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tutor = await fetchTutor(id);
   if (!tutor) {
     return {
-      title: "Tutor Profile | TUTORERA",
+      title: "Tutor Profile",
       robots: { index: false, follow: true },
     };
   }

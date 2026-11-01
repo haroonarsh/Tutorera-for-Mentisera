@@ -11,7 +11,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "For Tutors | Find Real Student Demand & Send Offers | TUTORERA",
+  title: "For Tutors | Find Real Student Demand & Send Offers",
   description: "Join TUTORERA's global network of verified educators. Receive matched student requests, submit transparent offers, and teach online worldwide or in-person locally.",
   alternates: { canonical: "/for-tutors" },
 };

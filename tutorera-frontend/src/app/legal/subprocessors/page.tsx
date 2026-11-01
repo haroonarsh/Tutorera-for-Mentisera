@@ -14,7 +14,7 @@ import Link from "next/link";
 import s from "../../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Authorized Subprocessors Directory | Privacy & Data Processing | TUTORERA",
+  title: "Authorized Subprocessors Directory | Privacy & Data Processing",
   description:
     "Official directory of third-party subprocessors utilized by TUTORERA to process personal data, deliver cloud infrastructure, payments, and messaging.",
   alternates: {
