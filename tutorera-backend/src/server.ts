@@ -6,10 +6,12 @@ import { validateEnv } from "./config/env";
 import { initSocket } from "./utils/socket";
 import app from "./app";
 import logger from "./config/logger";
-import { seedDefaultLegalAgreements } from "./services/legalAgreement.service";
-import { ensureLaunchMarkets } from "./services/market.service";
-import { assertRapidPayRuntimeConfiguration } from "./services/rapidPayProvider.service";
-import { startProcessScheduler } from "./services/schedulerRuntime.service";
+import { processOfferExpirations } from "./utils/offerExpiry";
+import { processAbandonedJourneyRecovery } from "./utils/abandonedJourneyRecovery";
+import { processRequestLifecycle } from "./services/requestLifecycle.service";
+import { processPendingPayouts } from "./services/payout.service";
+import { refreshRates } from "./services/exchangeRate.service";
+import { withDistributedJobLease } from "./services/jobLease.service";
 
 dotenv.config();
 
@@ -17,7 +19,6 @@ dotenv.config();
 // If this fails, the process exits immediately (see config/env.ts) instead
 // of starting in a broken state and failing confusingly later.
 validateEnv();
-assertRapidPayRuntimeConfiguration();
 
 const httpServer = http.createServer(app);
 
@@ -27,18 +28,33 @@ const io = initSocket(httpServer);
 // Make io available in routes
 app.set("io", io);
 
-// Connect DB & seed legal agreements
-connectDB().then(() => {
-  if (process.env.BOOTSTRAP_DATA === "false") return;
-  seedDefaultLegalAgreements().catch(err => logger.error({ err }, "Initial legal agreement seed failed"));
-  ensureLaunchMarkets().catch(err => logger.error({ err }, "Initial Switch market configuration failed"));
-});
+// Connect DB
+connectDB();
 
 const PORT = process.env.PORT || 5000;
 const server = httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-const stopScheduler = startProcessScheduler(io);
+// Lease every repeatable task by name so horizontally scaled Render workers
+// do not concurrently run expiry/recovery/reconciliation for the same period.
+const runLeased = (name: string, work: () => Promise<unknown>) => () =>
+  withDistributedJobLease(name, work).catch(err => logger.error({ err, name }, "Leased background job failed"));
+const runOffers = runLeased("offer-expiration", () => processOfferExpirations(io));
+const runJourney = runLeased("abandoned-journey", () => processAbandonedJourneyRecovery());
+const runRequestLifecycle = runLeased("request-lifecycle", () => processRequestLifecycle(io));
+const runPayoutScan = runLeased("payout-reconciliation-scan", () => processPendingPayouts());
+const runForex = runLeased("exchange-rate-refresh", () => refreshRates());
+const offerExpiryTimer = setInterval(runOffers, 15 * 60 * 1000);
+const abandonedJourneyTimer = setInterval(runJourney, 60 * 60 * 1000);
+const requestLifecycleTimer = setInterval(runRequestLifecycle, 15 * 60 * 1000);
+const payoutTimer = setInterval(runPayoutScan, 60 * 60 * 1000);
+const exchangeRateTimer = setInterval(runForex, 60 * 60 * 1000);
+for (const timer of [offerExpiryTimer, abandonedJourneyTimer, requestLifecycleTimer, payoutTimer, exchangeRateTimer]) timer.unref();
+setTimeout(runOffers, 10_000).unref();
+setTimeout(runJourney, 20_000).unref();
+setTimeout(runRequestLifecycle, 15_000).unref();
+setTimeout(runPayoutScan, 30_000).unref();
+setTimeout(runForex, 5_000).unref();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
@@ -54,7 +70,11 @@ let isShuttingDown = false;
 async function gracefulShutdown(signal: string) {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  stopScheduler();
+  clearInterval(offerExpiryTimer);
+  clearInterval(abandonedJourneyTimer);
+  clearInterval(requestLifecycleTimer);
+  clearInterval(payoutTimer);
+  clearInterval(exchangeRateTimer);
 
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 

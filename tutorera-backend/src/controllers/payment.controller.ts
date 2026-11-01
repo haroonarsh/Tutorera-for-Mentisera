@@ -2,19 +2,19 @@
 import { Response, Request } from "express";
 import { AuthRequest } from "../types";
 import Booking from "../models/Booking.model";
+import ParentProfile from "../models/ParentProfile.model";
+import { assertParentBookingPolicy, ParentBookingPolicyError } from "../services/parentBookingPolicy.service";
 import User from "../models/User.model";
 import Bid from "../models/Bid.model";
 import RequestModel from "../models/Request.model";
-import ParentProfile from "../models/ParentProfile.model";
 import PaymentLedger from "../models/PaymentLedger.model";
 import { paymentProvider, recordPaymentLedger } from "../services/paymentProvider.service";
-import { finalizeBidAcceptance } from "./request.controller";
-import { NotificationService } from "../services/notification.service";
+import { finalizeBidAcceptance, confirmExistingBookingPayment } from "./request.controller";
+import sendEmail from "../utils/sendEmail";
+import { paymentConfirmedEmail, paymentFailedEmail, paymentFailedNotifyTutorEmail } from "../utils/emailTemplates";
+import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
-import { calculateMarketplaceFees } from "../services/pricing.service";
-import { assertAcceptanceAvailable } from "../services/market.service";
-import { getAppliedPromoForBasket, previewPromoDiscount, finalizePromoRedemption, PromoCodeError } from "../services/promoCode.service";
-import { codeOf, messageOf, statusCodeOf } from "../utils/httpError";
+import { isValidObjectId } from "mongoose";
 
 const FRONTEND_URL = process.env.CLIENT_URL as string;
 
@@ -26,43 +26,47 @@ const FRONTEND_URL = process.env.CLIENT_URL as string;
 // @access  Private (student who owns the booking)
 export const createBookingCheckout = async (req: AuthRequest, res: Response): Promise<void> => {
   const isParent = req.user?.role === "parent";
+  // A booking's optional parent field is not reliably set for existing rows.
+  // Use the explicit student-consented ParentProfile link as the authorization
+  // source of truth, and re-check it on every checkout/status request.
   const booking = isParent
-    ? await Booking.findOne({ _id: req.params.bookingId, parent: req.user?._id })
+    ? await Booking.findById(req.params.bookingId)
     : await Booking.findOne({ _id: req.params.bookingId, student: req.user?._id });
+  if (isParent && booking) {
+    const linked = await ParentProfile.exists({ user: req.user?._id, "children.studentUser": booking.student });
+    if (!linked) { res.status(404).json({ success: false, message: "Booking not found" }); return; }
+  }
 
   if (!booking) {
     res.status(404).json({ success: false, message: "Booking not found" });
     return;
   }
 
-  if (booking.paymentStatus === "confirmed") {
-    res.status(400).json({ success: false, message: "This booking has already been paid." });
+  if (booking.status !== "upcoming" || !["pending", "failed"].includes(booking.paymentStatus)) {
+    res.status(409).json({ success: false, code: "BOOKING_NOT_PAYABLE", message: "This booking is cancelled, completed or has already been paid." });
     return;
   }
-
-  let market;
-  try {
-    market = await assertAcceptanceAvailable(booking.countryCode);
-  } catch (marketError: unknown) {
-    res.status(statusCodeOf(marketError, 409)).json({
-      success: false,
-      code: codeOf(marketError, "MARKET_DISCOVERY_ONLY"),
-      message: messageOf(marketError, "Acceptance is not available in this market yet."),
-      market: booking.countryCode,
-    });
-    return;
+  // Direct booking approval is a timed reservation, not a completed lesson.
+  // Do not generate a new checkout after its offer hold has expired.
+  const directRequest = booking.request ? await RequestModel.findById(booking.request).select("isDirect status acceptedOffer") : null;
+  if (directRequest?.isDirect) {
+    const activeBid = await Bid.findOne({ _id: booking.bid, status: "payment_pending", paymentPendingExpiresAt: { $gt: new Date() } }).select("_id");
+    if (!activeBid || directRequest.status !== "awaiting_payment" || directRequest.acceptedOffer?.toString() !== activeBid._id.toString()) {
+      res.status(409).json({ success: false, code: "PAYMENT_HOLD_EXPIRED", message: "This direct-booking reservation expired. Request another tutor confirmation." });
+      return;
+    }
   }
 
-  // Explicit currency guard: if a legacy booking was created with a different
-  // currency than the market now charges (e.g. PKR booking in a USD-only market),
-  // reject early with a clear message rather than letting Swich emit a cryptic error.
-  if (booking.currency && market.currency && booking.currency.toUpperCase() !== market.currency.toUpperCase()) {
-    res.status(409).json({
-      success: false,
-      code: "BOOKING_CURRENCY_MISMATCH",
-      message: `This booking is in ${booking.currency} but this market processes payments in ${market.currency}. Please contact support to reconcile.`,
-    });
-    return;
+  if (booking.bid && booking.request) {
+    try {
+      await assertParentBookingPolicy({
+        student: booking.student, request: booking.request, bid: booking.bid,
+        amount: booking.studentTotal, currency: booking.currency || "PKR", queueApprovals: true,
+      });
+    } catch (err: any) {
+      res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
+      return;
+    }
   }
 
   const student = await User.findById(isParent ? booking.student : req.user?._id).select("name email phone");
@@ -76,62 +80,333 @@ export const createBookingCheckout = async (req: AuthRequest, res: Response): Pr
   const basketId = booking._id.toString();
 
   try {
-    let appliedPromo: { promoCodeId: string; code: string; discountAmount: number } | undefined;
-    const originalStudentTotal = booking.studentTotal || booking.amount;
-    const promoCodeInput = req.body?.promoCode;
-    if (promoCodeInput) {
-      appliedPromo = await previewPromoDiscount(booking.student.toString(), req.user?.role, promoCodeInput, originalStudentTotal);
-      // Persist the discount straight onto the booking - unlike the
-      // bid-acceptance flow, this booking already exists, so there's no
-      // separate finalization step to apply it to later.
-      booking.studentFee = Math.max(0, (booking.studentFee || 0) - appliedPromo.discountAmount);
-      booking.studentTotal = booking.subtotal + booking.studentFee;
-      await booking.save();
-    }
-
-    // This booking's commission/tax were already fixed at creation time, but
-    // gateway fee depends on the amount actually charged right now (which a
-    // promo discount above may have just changed) - look up the current
-    // active gateway rate and compute it fresh rather than assuming 0.
-    const currentFeeConfig = await calculateMarketplaceFees(booking.subtotal, { currency: booking.currency, countryCode: booking.countryCode });
-    const gatewayFee = Math.round(
-      (booking.studentTotal || booking.amount) * currentFeeConfig.feeConfig.gatewayFeePercent / 100 + currentFeeConfig.feeConfig.gatewayFixedFee
-    );
-
-    const session = await paymentProvider.createCheckout({
-      amount: booking.studentTotal || booking.amount,
-      currency: booking.currency || "USD",
-      marketCountryCode: booking.countryCode,
-      customerMobileNo: payer?.phone,
+    const checkoutUrl = await paymentProvider.createCheckout({
+      amount: booking.studentTotal,
+      currency: booking.currency || "",
+      feeSnapshot: { subtotal: booking.subtotal, studentFee: booking.studentFee, tutorFee: booking.tutorFee,
+        tax: booking.tax, studentTotal: booking.studentTotal, tutorNet: booking.tutorNet, feeConfig: booking.feeConfig },
+      customerMobileNo: payer?.phone || "03000000000",
       customerEmail: payer?.email || student.email,
       basketId,
       bookingId: booking._id.toString(),
       studentId: booking.student.toString(),
+      payerId: req.user?._id?.toString(),
       tutorId: booking.tutor.toString(),
-      feeSnapshot: {
-        subtotal: booking.subtotal,
-        studentFee: booking.studentFee,
-        tutorFee: booking.tutorFee,
-        tax: booking.tax,
-        studentTotal: booking.studentTotal,
-        tutorNet: booking.tutorNet,
-        platformFee: booking.platformFee,
-        gatewayFee,
-        feeConfig: booking.feeConfig,
-      },
       description: `TUTORERA booking ${basketId}`,
-      ...(appliedPromo && { metadata: { appliedPromo: { ...appliedPromo, originalAmount: originalStudentTotal } } }),
+      successUrl: `${FRONTEND_URL}/dashboard?payment=success&booking=${basketId}`,
+      failureUrl: `${FRONTEND_URL}/dashboard?payment=failed&booking=${basketId}`,
+      checkoutUrl: `${FRONTEND_URL}/dashboard?payment=processing&booking=${basketId}`,
     });
 
-    res.status(200).json({ success: true, sessionId: session.sessionId, clientSecret: session.clientSecret, publishableKey: session.publishableKey });
-  } catch (err: unknown) {
-    if (err instanceof PromoCodeError) {
-      res.status(err.statusCode).json({ success: false, message: err.message });
-      return;
-    }
+    res.status(200).json({ success: true, checkoutUrl });
+  } catch (err: any) {
     logger.error({ requestId: req.id, err }, "Failed to create payment checkout session");
-    res.status(statusCodeOf(err, 502)).json({ success: false, message: "Unable to start payment. Please try again." });
+    const statusCode = err?.statusCode || 502;
+    res.status(statusCode).json({ success: false, message: "Unable to start payment. Please try again." });
   }
+};
+
+// @desc    Receive payment confirmation webhooks from the authorized payment gateway
+// @route   POST /api/v1/payments/webhook
+// @access  Public (verified via HMAC signature, not auth middleware)
+export const handleRapidGatewayWebhook = async (req: Request, res: Response): Promise<void> => {
+  const rawBody: Buffer | undefined = (req as any).rawBody;
+
+  if (!rawBody) {
+    logger.error({ requestId: (req as any).id }, "Webhook received with no raw body captured");
+    res.status(500).json({ success: false });
+    return;
+  }
+
+  const signature = req.header("X-RapidGateway-Signature");
+  const timestamp = req.header("X-RapidGateway-Timestamp");
+
+  const isValid = paymentProvider.verifyWebhookSignature(rawBody, signature, timestamp);
+  if (!isValid) {
+    logger.warn({ requestId: (req as any).id }, "Rejected payment webhook — invalid or stale signature");
+    res.status(401).json({ success: false, message: "Invalid signature" });
+    return;
+  }
+
+  const event = paymentProvider.normalizeWebhook(req.body as {
+    eventId: string;
+    eventType: string;
+    merchantTransactionId: string; // == our BASKET_ID
+    status: string;
+    amount: number;
+    currency?: string;
+  });
+
+  try {
+    // Match every settlement to an initiated checkout: an authenticated webhook
+    // can still contain the wrong amount, currency or basket ID.
+    if (event.eventType === "transaction.completed") {
+      const quote = await PaymentLedger.findOne({ providerTransactionId: event.merchantTransactionId, eventType: "checkout.created" }).sort("-createdAt");
+      const paidAmount = Number(event.amount);
+      if (!quote || !Number.isFinite(paidAmount) || paidAmount <= 0 || Math.abs(quote.grossAmount - paidAmount) > 0.01 || quote.currency.toUpperCase() !== String(event.currency || "").toUpperCase()) {
+        logger.error({ basketId: event.merchantTransactionId, amount: event.amount, currency: event.currency }, "Payment webhook failed checkout reconciliation");
+        res.status(409).json({ success: false, code: "PAYMENT_RECONCILIATION_FAILED" });
+        return;
+      }
+      // Multiple provider events for one basket must never repeat receipts or
+      // re-apply an already-settled booking state.
+      const previouslySettled = await PaymentLedger.findOne({ providerTransactionId: event.merchantTransactionId, eventType: "payment.succeeded" }).select("settlementStatus").lean();
+      if (previouslySettled) {
+        res.status(200).json({ success: true, code: previouslySettled.settlementStatus === "exception" ? "PAYMENT_RECONCILIATION_REQUIRED" : "ALREADY_CONFIRMED" });
+        return;
+      }
+      if (event.merchantTransactionId.startsWith("BID-")) {
+        const bidId = event.merchantTransactionId.slice("BID-".length);
+        const io = req.app.get("io");
+        try {
+          await finalizeBidAcceptance(bidId, io);
+        } catch (err: any) {
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_REQUEST_UNAVAILABLE"].includes(err?.code) && !(err instanceof ParentBookingPolicyError) && err?.code !== 11000) throw err;
+          logger.error({ err, bidId }, "Paid offer cannot reserve tutor slot; finance reconciliation required");
+        }
+
+        // A late payment can arrive after the 30-minute offer hold expired.
+        // Never send a booking-confirmed receipt when booking creation failed;
+        // preserve the money movement as an exception for finance reconciliation.
+        const completedBooking = await Booking.findOne({ bid: bidId, paymentStatus: "confirmed" });
+        if (!completedBooking) {
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, bidId,
+            metadata: { settlementException: "Gateway settled but booking could not be finalized" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ bidId, providerEventId: event.eventId }, "Payment settled without a completed booking — manual reconciliation required");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          return;
+        }
+
+        const bid = await Bid.findById(bidId);
+        if (bid) {
+          const request = await RequestModel.findById(bid.request).select("student");
+          const student = request ? await User.findById(request.student).select("name email") : null;
+          const tutor = await User.findById(bid.tutor).select("name email");
+          await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.succeeded",
+            status: "succeeded",
+            amount: event.amount,
+            currency: event.currency,
+            bidId,
+            studentId: request?.student?.toString(),
+            tutorId: bid.tutor.toString(),
+            metadata: { gatewayStatus: event.status },
+          });
+          try {
+            if (student && tutor) {
+              const booking = await Booking.findOne({ bid: bid._id }).populate("request");
+              const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount, {
+                bookingId: booking?._id?.toString() || `BID-${bidId}`,
+                subject: (booking?.request as any)?.subject,
+                schedule: booking?.schedule,
+                teachingMode: booking?.teachingMode,
+                sessionCount: booking?.sessionCount,
+              });
+              await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
+            }
+          } catch (err) {
+            logger.error({ err, bidId }, "Failed to send payment receipt email");
+          }
+        }
+      } else {
+        const booking = await Booking.findById(event.merchantTransactionId);
+
+        if (!booking) {
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId, providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, metadata: { reconciliationReason: "BOOKING_NOT_FOUND" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ basketId: event.merchantTransactionId }, "Gateway settled against unknown booking");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          return;
+        }
+
+        let newlyConfirmed = false;
+        try {
+          const finalized = await confirmExistingBookingPayment(booking._id.toString());
+          newlyConfirmed = !finalized.alreadyConfirmed;
+        } catch (err: any) {
+          // The gateway has taken money, but a cancelled/expired or conflicting
+          // booking must NOT be presented as confirmed or reserve an occupied slot.
+          if (!["BOOKING_SLOT_TAKEN", "INVALID_SCHEDULE", "BOOKING_NOT_PAYABLE", "BOOKING_HOLD_EXPIRED", "BOOKING_NOT_FOUND"].includes(err?.code) && !(err instanceof ParentBookingPolicyError) && err?.code !== 11000) throw err;
+          const exception = await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId, providerEventId: event.eventId,
+            eventType: "payment.succeeded", status: "succeeded", amount: event.amount,
+            currency: event.currency, bookingId: booking._id.toString(),
+            studentId: booking.student.toString(), tutorId: booking.tutor.toString(),
+            metadata: { reconciliationReason: err?.code || "BOOKING_CONFLICT" },
+          });
+          await PaymentLedger.updateOne({ _id: exception._id }, { $set: { settlementStatus: "exception" } });
+          logger.error({ err, bookingId: booking._id }, "Gateway settled against unavailable booking");
+          res.status(200).json({ success: true, code: "PAYMENT_RECONCILIATION_REQUIRED" });
+          return;
+        }
+        await recordPaymentLedger({
+          providerTransactionId: event.merchantTransactionId,
+          providerEventId: event.eventId,
+          eventType: "payment.succeeded",
+          status: "succeeded",
+          amount: event.amount,
+          currency: event.currency,
+          bookingId: booking._id.toString(),
+          studentId: booking.student.toString(),
+          tutorId: booking.tutor.toString(),
+          metadata: { gatewayStatus: event.status },
+        });
+
+        try {
+          if (!newlyConfirmed) { res.status(200).json({ success: true, code: "ALREADY_CONFIRMED" }); return; }
+          const student = await User.findById(booking.student).select("name email");
+          const tutor = await User.findById(booking.tutor).select("name email");
+          const populatedBooking = await Booking.findById(booking._id).populate("request");
+          if (student && tutor) {
+            const receipt = paymentConfirmedEmail(student.name, tutor.name, event.amount, {
+              bookingId: booking._id.toString(),
+              subject: (populatedBooking?.request as any)?.subject,
+              schedule: booking.schedule,
+              teachingMode: booking.teachingMode,
+              sessionCount: booking.sessionCount,
+            });
+            await sendEmail({ to: student.email, subject: receipt.subject, html: receipt.html, eventType: "payment_successful" });
+          }
+        } catch (err) {
+          logger.error({ err, bookingId: booking._id }, "Failed to send payment receipt email");
+        }
+      }
+    } else if (event.eventType === "transaction.failed") {
+      logger.info({ requestId: (req as any).id, basketId: event.merchantTransactionId }, "Payment gateway reported a failed transaction");
+
+      if (event.merchantTransactionId.startsWith("BID-")) {
+        const bidId = event.merchantTransactionId.slice("BID-".length);
+        const bid = await Bid.findById(bidId);
+        if (bid) {
+        const request = await RequestModel.findById(bid.request).select("student subject");
+          const student = request ? await User.findById(request.student).select("name email") : null;
+          const tutor = await User.findById(bid.tutor).select("name email");
+          await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.failed",
+            status: "failed",
+            amount: event.amount,
+            currency: event.currency,
+            bidId,
+            studentId: request?.student?.toString(),
+            tutorId: bid.tutor.toString(),
+            metadata: { gatewayStatus: event.status },
+          });
+          const bookingDetails = { bookingId: `BID-${bidId}`, subject: request?.subject };
+          try {
+            if (student) {
+              const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount, bookingDetails);
+              await sendEmail({ to: student.email, subject: failEmail.subject, html: failEmail.html, eventType: "payment_failed" });
+              const io = req.app.get("io");
+              if (io) {
+                await sendNotification(io, student._id.toString(), {
+                  title: "Payment Failed",
+                  message: "Your payment could not be processed. Please try again or contact support.",
+                  type: "general",
+                  link: "/dashboard",
+                });
+              }
+            }
+            if (tutor) {
+              const tutorEmail = paymentFailedNotifyTutorEmail(tutor.name, student?.name || "the student", event.amount, bookingDetails);
+              await sendEmail({ to: tutor.email, subject: tutorEmail.subject, html: tutorEmail.html, eventType: "payment_failed_tutor" });
+            }
+          } catch (err) {
+            logger.error({ err, bidId }, "Failed to send payment failure notification");
+          }
+        }
+      } else {
+        const booking = await Booking.findById(event.merchantTransactionId);
+        if (booking) {
+          await recordPaymentLedger({
+            providerTransactionId: event.merchantTransactionId,
+            providerEventId: event.eventId,
+            eventType: "payment.failed",
+            status: "failed",
+            amount: event.amount,
+            currency: event.currency,
+            bookingId: booking._id.toString(),
+            studentId: booking.student.toString(),
+            tutorId: booking.tutor.toString(),
+            metadata: { gatewayStatus: event.status },
+          });
+          const requestDoc = booking.request ? await RequestModel.findById(booking.request).select("subject") : null;
+          const bookingDetails = { bookingId: booking._id.toString(), subject: requestDoc?.subject, schedule: booking.schedule, teachingMode: booking.teachingMode, sessionCount: booking.sessionCount };
+          const student = await User.findById(booking.student).select("name email");
+          const tutor = await User.findById(booking.tutor).select("name email");
+          try {
+            if (student) {
+              const failEmail = paymentFailedEmail(student.name, tutor?.name || "the tutor", event.amount, bookingDetails);
+              await sendEmail({ to: student.email, subject: failEmail.subject, html: failEmail.html, eventType: "payment_failed" });
+              const io = req.app.get("io");
+              if (io) {
+                await sendNotification(io, student._id.toString(), {
+                  title: "Payment Failed",
+                  message: "Your payment could not be processed. Please try again or contact support.",
+                  type: "general",
+                  link: "/dashboard",
+                });
+              }
+            }
+            if (tutor) {
+              const tutorEmail = paymentFailedNotifyTutorEmail(tutor.name, student?.name || "the student", event.amount, bookingDetails);
+              await sendEmail({ to: tutor.email, subject: tutorEmail.subject, html: tutorEmail.html, eventType: "payment_failed_tutor" });
+            }
+          } catch (err) {
+            logger.error({ err, bookingId: booking._id }, "Failed to send payment failure notification");
+          }
+        }
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    logger.error({ requestId: (req as any).id, err }, "Error processing payment gateway webhook");
+    res.status(500).json({ success: false });
+  }
+};
+
+// A gateway-return URL is NOT evidence of payment. This endpoint reads only
+// server-owned booking state, scoped to the authenticated student or parent.
+export const getVerifiedPaymentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { kind, id } = req.params;
+  if (!isValidObjectId(id) || !["booking", "bid"].includes(String(kind))) {
+    res.status(400).json({ success: false, message: "Invalid payment reference." });
+    return;
+  }
+  const userId = req.user?._id;
+  let booking;
+  if (kind === "booking") {
+    booking = req.user?.role === "parent" ? await Booking.findById(id)
+      : await Booking.findOne({ _id: id, student: userId });
+    if (req.user?.role === "parent" && booking) {
+      const linked = await ParentProfile.exists({ user: userId, "children.studentUser": booking.student });
+      if (!linked) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+    }
+    if (!booking) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+  } else {
+    const bid = await Bid.findById(id).select("request");
+    const request = bid ? await RequestModel.findOne({ _id: bid.request, student: userId }).select("_id") : null;
+    if (!request) { res.status(404).json({ success: false, message: "Payment reference not found." }); return; }
+    booking = await Booking.findOne({ bid: id, student: userId });
+    if (!booking) { res.json({ success: true, verified: false, paymentStatus: "pending", bookingStatus: "pending" }); return; }
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, verified: booking.paymentStatus === "confirmed", paymentStatus: booking.paymentStatus,
+    bookingStatus: booking.status, bookingId: booking._id, currency: booking.currency, amount: booking.studentTotal });
 };
 
 // @desc    Get student's transaction history
@@ -142,12 +417,8 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response): Pr
   const limitNum = 20;
   const skip = (Number(page) - 1) * limitNum;
 
-  const parentBookingIds = req.user?.role === "parent"
-    ? await Booking.find({ parent: req.user._id }).distinct("_id")
-    : [];
   const ledgerFilter: Record<string, unknown> = req.user?.role === "parent"
-    ? { $or: [{ student: req.user._id }, { booking: { $in: parentBookingIds } }] }
-    : { student: req.user?._id };
+    ? { payer: req.user?._id } : { student: req.user?._id };
   if (status) ledgerFilter.status = status;
 
   const [transactions, total] = await Promise.all([
@@ -209,142 +480,4 @@ export const getTransactionHistory = async (req: AuthRequest, res: Response): Pr
     transactions: enriched,
     pagination: { total, page: Number(page), pages: Math.ceil(total / limitNum) },
   });
-};
-
-// @desc    Confirm a payment session's real outcome, server-side.
-//          Called by the frontend when the customer returns to
-//          successURL/failedURL — RapidPay uses a pull-confirm flow, so THIS
-//          endpoint finalizes the booking. Safe to call more than once:
-//          finalizeBidAcceptance's own atomic guard (status:
-//          "payment_pending" -> "accepted") already makes a second call a no-op.
-// @route   POST /api/v1/payments/confirm  (also /payments/swich/confirm for legacy in-flight sessions)
-// @access  Private (student who initiated the checkout)
-export const confirmSwichPayment = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { basketId } = req.body as { basketId?: string };
-
-  if (!basketId) {
-    res.status(400).json({ success: false, message: "basketId is required" });
-    return;
-  }
-
-  try {
-    const result = await paymentProvider.confirmCheckout(basketId);
-
-    if (!result.confirmed) {
-      // Still pending, failed, expired, or cancelled — not an error, just
-      // not a success yet. The frontend decides what to show/do next
-      // (e.g. keep polling if sessionStatus is "Pending").
-      res.status(200).json({ success: true, confirmed: false, sessionStatus: result.sessionStatus });
-      return;
-    }
-
-    if (basketId.startsWith("BID-")) {
-      const bidId = basketId.slice("BID-".length);
-      const bid = await Bid.findById(bidId);
-
-      if (!bid) {
-        res.status(404).json({ success: false, message: "Offer not found for this payment" });
-        return;
-      }
-
-      // Same amount/currency integrity check the old webhook handler did
-      // before ever finalizing — kept identical on purpose, this isn't
-      // Swich-specific, it's a fraud/tampering guard that still applies.
-      const request = await RequestModel.findById(bid.request).select("student currency countryCode teachingMode");
-      const isRequestOwner = request?.student?.toString() === req.user?._id?.toString();
-      const isLinkedParent = !isRequestOwner && req.user?.role === "parent" && request
-        ? Boolean(await ParentProfile.exists({ user: req.user._id, "children.studentUser": request.student }))
-        : false;
-      if (!isRequestOwner && !isLinkedParent) {
-        res.status(403).json({ success: false, message: "You are not authorized to confirm this payment." });
-        return;
-      }
-      const appliedPromo = await getAppliedPromoForBasket(basketId);
-      const baseExpectedAmount = (await calculateMarketplaceFees(bid.amount, {
-        currency: bid.currency || request?.currency,
-        countryCode: request?.countryCode,
-        teachingMode: request?.teachingMode as "online" | "in-person" | "both" | undefined,
-      })).studentTotal;
-      const expectedAmount = appliedPromo
-        ? Math.round((baseExpectedAmount - appliedPromo.discountAmount) * 100) / 100
-        : baseExpectedAmount;
-      const expectedCurrency = (bid.currency || request?.currency || "USD").toUpperCase();
-
-      if (!request || result.amount !== expectedAmount || result.currency.toUpperCase() !== expectedCurrency) {
-        logger.error({ requestId: req.id, bidId, expectedAmount, receivedAmount: result.amount, expectedCurrency, receivedCurrency: result.currency }, "Swich payment confirm amount or currency did not match the accepted offer");
-        res.status(422).json({ success: false, message: "Payment amount or currency mismatch" });
-        return;
-      }
-
-      const io = req.app.get("io");
-      await finalizeBidAcceptance(bidId, io);
-
-      await recordPaymentLedger({
-        providerTransactionId: basketId,
-        eventType: "payment.succeeded",
-        status: "succeeded",
-        amount: result.amount,
-        currency: result.currency,
-        bidId,
-        studentId: request.student.toString(),
-        tutorId: bid.tutor.toString(),
-        metadata: { sessionStatus: result.sessionStatus },
-      });
-
-      res.status(200).json({ success: true, confirmed: true });
-      return;
-    }
-
-    // Non-BID basketId means an existing-booking checkout
-    // (createBookingCheckout's path) rather than an accept-offer flow.
-    const booking = await Booking.findById(basketId);
-    if (!booking) {
-      res.status(404).json({ success: false, message: "Booking not found for this payment" });
-      return;
-    }
-    const isBookingOwner = booking.student.toString() === req.user?._id?.toString()
-      || booking.parent?.toString() === req.user?._id?.toString();
-    if (!isBookingOwner) {
-      res.status(403).json({ success: false, message: "You are not authorized to confirm this payment." });
-      return;
-    }
-
-    const expectedAmount = booking.studentTotal || booking.amount;
-    const expectedCurrency = (booking.currency || "USD").toUpperCase();
-    if (result.amount !== expectedAmount || result.currency.toUpperCase() !== expectedCurrency) {
-      logger.error({ requestId: req.id, bookingId: booking._id, expectedAmount, receivedAmount: result.amount, expectedCurrency, receivedCurrency: result.currency }, "Swich payment confirm amount or currency did not match the booking");
-      res.status(422).json({ success: false, message: "Payment amount or currency mismatch" });
-      return;
-    }
-
-    if (booking.paymentStatus !== "confirmed") {
-      booking.paymentStatus = "confirmed";
-      booking.paymentNote = "Confirmed via Swich payment session status check";
-      await booking.save();
-
-      const appliedPromo = await getAppliedPromoForBasket(basketId);
-      if (appliedPromo) {
-        await finalizePromoRedemption(appliedPromo.promoCodeId, booking.student.toString(), booking._id.toString(), appliedPromo.originalAmount, appliedPromo.discountAmount).catch((err) =>
-          logger.error({ err, bookingId: booking._id }, "Failed to record promo code redemption for booking checkout")
-        );
-      }
-    }
-
-    await recordPaymentLedger({
-      providerTransactionId: basketId,
-      eventType: "payment.succeeded",
-      status: "succeeded",
-      amount: result.amount,
-      currency: result.currency,
-      bookingId: booking._id.toString(),
-      studentId: booking.student.toString(),
-      tutorId: booking.tutor.toString(),
-      metadata: { sessionStatus: result.sessionStatus },
-    });
-
-    res.status(200).json({ success: true, confirmed: true });
-  } catch (err: unknown) {
-    logger.error({ requestId: req.id, err, basketId }, "Failed to confirm Swich payment");
-    res.status(statusCodeOf(err, 500)).json({ success: false, message: "Unable to confirm payment. Please try again." });
-  }
 };

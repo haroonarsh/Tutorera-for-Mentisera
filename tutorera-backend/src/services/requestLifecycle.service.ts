@@ -11,7 +11,7 @@ import Review from "../models/Review.model";
 import { sendNotification } from "../utils/socket";
 import { logAudit } from "../utils/logAudit";
 import sendEmail from "../utils/sendEmail";
-import { requestExpiredEmail, requestExpiringEmail, reviewRequestEmail } from "../utils/emailTemplates";
+import { reviewRequestEmail } from "../utils/emailTemplates";
 import logger from "../config/logger";
 import { classifyRequestLoss } from "./requestLoss.service";
 import {
@@ -41,7 +41,7 @@ export interface LifecycleRunResult {
  * 1. Process 24-Hour Expiry Warnings
  * Notifies students when their active request is 24 hours away from expiry.
  */
-export async function sendExpiryWarnings(io?: import("socket.io").Server): Promise<number> {
+export async function sendExpiryWarnings(io?: any): Promise<number> {
   const now = new Date();
   const warningThreshold = new Date(now.getTime() + EXPIRY_WARNING_HOURS * 60 * 60 * 1000);
 
@@ -72,21 +72,10 @@ export async function sendExpiryWarnings(io?: import("socket.io").Server): Promi
         });
       }
 
-      const requester = await User.findById(reqDoc.student).select("name email").lean();
-      if (requester?.email) {
-        const mail = requestExpiringEmail(requester.name || "there", reqDoc.subject, EXPIRY_WARNING_HOURS);
-        try {
-          await sendEmail({ to: requester.email, subject: mail.subject, html: mail.html, userId: requester._id.toString(), eventType: "request.expiring", relatedEntityType: "Request", relatedEntityId: reqDoc._id.toString() });
-        } catch (err) {
-          // sendEmail records the failure; lifecycle state must remain durable when a provider is unavailable.
-          logger.error({ err, requestId: reqDoc._id }, "Failed to deliver request expiry-warning email");
-        }
-      }
-
       reqDoc.expiryWarningSentAt = now;
       await reqDoc.save();
       sent++;
-    } catch (err) {
+    } catch (err: any) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to send request expiry warning");
     }
   }
@@ -98,7 +87,7 @@ export async function sendExpiryWarnings(io?: import("socket.io").Server): Promi
  * 2. Process Day-5 Supply Escalation
  * If a request reaches 48h before expiry with 0 offers, expand tutor reach and inform student.
  */
-export async function processDay5Escalations(io?: import("socket.io").Server): Promise<number> {
+export async function processDay5Escalations(io?: any): Promise<number> {
   const now = new Date();
   const escalationThreshold = new Date(now.getTime() + DAY_5_INTERVENTION_HOURS * 60 * 60 * 1000);
 
@@ -127,7 +116,7 @@ export async function processDay5Escalations(io?: import("socket.io").Server): P
         await reqDoc.save();
         escalated++;
       }
-    } catch (err) {
+    } catch (err: any) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to process day-5 escalation");
     }
   }
@@ -141,7 +130,7 @@ export async function processDay5Escalations(io?: import("socket.io").Server): P
  * marks unselected offers as closed, preserves active negotiations under grace,
  * and notifies the student.
  */
-export async function expireEligibleRequests(io?: import("socket.io").Server): Promise<{ expiredCount: number; offersClosedCount: number }> {
+export async function expireEligibleRequests(io?: any): Promise<{ expiredCount: number; offersClosedCount: number }> {
   const now = new Date();
   let expiredCount = 0;
   let offersClosedCount = 0;
@@ -204,7 +193,7 @@ export async function expireEligibleRequests(io?: import("socket.io").Server): P
       const activeBidUpdate = await Bid.updateMany(
         {
           request: reqDoc._id,
-          status: { $in: ["pending", "submitted", "viewed", "countered"] },
+          status: { $in: ["pending", "submitted", "viewed"] },
         },
         {
           $set: { status: "expired" },
@@ -238,20 +227,6 @@ export async function expireEligibleRequests(io?: import("socket.io").Server): P
         }
       }
 
-      const [requester, totalBids] = await Promise.all([
-        User.findById(reqDoc.student).select("name email").lean(),
-        Bid.countDocuments({ request: reqDoc._id }),
-      ]);
-      if (requester?.email) {
-        const mail = requestExpiredEmail(requester.name || "there", reqDoc.subject, totalBids > 0);
-        try {
-          await sendEmail({ to: requester.email, subject: mail.subject, html: mail.html, userId: requester._id.toString(), eventType: "request.expired", relatedEntityType: "Request", relatedEntityId: reqDoc._id.toString() });
-        } catch (err) {
-          // The request is already expired and audit processing must still complete.
-          logger.error({ err, requestId: reqDoc._id }, "Failed to deliver request-expired email");
-        }
-      }
-
       await logAudit({
         action: "tuition_request_expired",
         actor: "system",
@@ -264,7 +239,7 @@ export async function expireEligibleRequests(io?: import("socket.io").Server): P
           extensionCount: reqDoc.extensionCount,
         },
       });
-    } catch (err) {
+    } catch (err: any) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to expire request document");
     }
   }
@@ -311,7 +286,7 @@ export async function processRequestArchival(): Promise<number> {
         entity: "Request",
         targetId: reqDoc._id.toString(),
       });
-    } catch (err) {
+    } catch (err: any) {
       logger.error({ err, requestId: reqDoc._id }, "Failed to archive request document");
     }
   }
@@ -324,43 +299,54 @@ export async function processRequestArchival(): Promise<number> {
  * Reverts requests stuck in awaiting_payment beyond the hold window (30 minutes).
  * Prevents orphaned payment_pending bids and stuck request states.
  */
+// Release a stale acceptance only if its bid is still in payment_pending.
+// The bid state is our compare-and-set fence against a racing payment webhook.
+export async function releaseExpiredPaymentHold(requestId: Types.ObjectId): Promise<boolean> {
+  const session = await mongoose.startSession();
+  let released = false;
+  try {
+    await session.withTransaction(async () => {
+      const stale = await Bid.findOneAndUpdate(
+        { request: requestId, status: "payment_pending", paymentPendingExpiresAt: { $lte: new Date() } },
+        { $set: { status: "submitted" }, $unset: { paymentPendingExpiresAt: "" } },
+        { new: true, session }
+      );
+      if (!stale) return;
+      // Direct tutor acceptances have an unpaid booking for the student dashboard.
+      // Never delete these records: late gateway callbacks must reconcile against
+      // a cancelled booking rather than an unrelated newer checkout.
+      await Booking.updateMany(
+        { bid: stale._id, paymentStatus: "pending", status: "upcoming" },
+        { $set: { status: "cancelled", cancelReason: "Payment reservation expired" } },
+        { session }
+      );
+      await Request.updateOne(
+        { _id: requestId, status: "awaiting_payment", $or: [{ acceptedOffer: stale._id }, { acceptedOffer: { $exists: false } }] },
+        { $set: { status: "open" }, $unset: { acceptedOffer: "", finalAgreedRate: "" } },
+        { session }
+      );
+      released = true;
+    });
+  } finally {
+    await session.endSession();
+  }
+  return released;
+}
+
 export async function cleanupStalePaymentHolds(): Promise<{ cleaned: number; errors: string[] }> {
   const result = { cleaned: 0, errors: [] as string[] };
-  const now = new Date();
-  const staleThreshold = new Date(now.getTime() - 30 * 60 * 1000);
-
-  const staleRequests = await Request.find({
-    status: "awaiting_payment",
-    updatedAt: { $lte: staleThreshold },
-  }).limit(50);
-
-  for (const reqDoc of staleRequests) {
+  // Expiry belongs to the BID hold, not Request.updatedAt (which may be
+  // changed by unrelated operations and can expire a valid checkout early).
+  const stale = await Bid.find({ status: "payment_pending", paymentPendingExpiresAt: { $lte: new Date() } })
+    .select("request").limit(50).lean();
+  for (const bid of stale) {
     try {
-      const staleBid = await Bid.findOne({
-        request: reqDoc._id,
-        status: "payment_pending",
-        paymentPendingExpiresAt: { $lte: now },
-      });
-
-      if (staleBid) {
-        await Bid.updateOne(
-          { _id: staleBid._id, status: "payment_pending" },
-          { status: "submitted", $unset: { paymentPendingExpiresAt: "" } }
-        );
-      }
-
-      await Request.updateOne(
-        { _id: reqDoc._id, status: "awaiting_payment" },
-        { status: "open" }
-      );
-
-      result.cleaned++;
-    } catch (err) {
-      result.errors.push(`Failed to cleanup payment hold for request ${reqDoc._id}: ${err instanceof Error ? err.message : String(err)}`);
-      logger.error({ err, requestId: reqDoc._id }, "Failed to cleanup stale payment hold");
+      if (await releaseExpiredPaymentHold(bid.request)) result.cleaned++;
+    } catch (err: any) {
+      result.errors.push(`Failed to clean expired payment hold ${bid._id}: ${err?.message}`);
+      logger.error({ err, bidId: bid._id }, "Payment-hold release failed");
     }
   }
-
   return result;
 }
 
@@ -373,13 +359,14 @@ export async function cleanupStalePaymentHolds(): Promise<{ cleaned: number; err
  * Identifies bookings completed >1 hour ago without a review, sends a
  * review request email to the student.
  */
-export async function sendReviewRequests(io?: import("socket.io").Server): Promise<number> {
+export async function sendReviewRequests(io?: any): Promise<number> {
   const now = new Date();
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
   const eligibleBookings = await Booking.find({
     status: "completed",
     completedAt: { $exists: true, $lte: oneHourAgo },
+    reviewRequestSentAt: { $exists: false },
   }).limit(50);
 
   let sent = 0;
@@ -395,6 +382,14 @@ export async function sendReviewRequests(io?: import("socket.io").Server): Promi
 
       if (!studentUser || !tutorUser) continue;
 
+      // Claim exactly once before emailing: overlapping lifecycle workers must
+      // not send the same review request on every 15-minute polling interval.
+      const claimTime = new Date();
+      const claimed = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: "completed", reviewRequestSentAt: { $exists: false } },
+        { $set: { reviewRequestSentAt: claimTime } }, { new: true }
+      );
+      if (!claimed) continue;
       const request = await (Booking.findById(booking._id).populate("request", "subject") as any);
       const subject = request?.request?.subject || "your session";
 
@@ -418,7 +413,10 @@ export async function sendReviewRequests(io?: import("socket.io").Server): Promi
       }
 
       sent++;
-    } catch (err) {
+    } catch (err: any) {
+      // Retry on a future run if mail delivery fails. A successful send is
+      // never intentionally repeated, even across multiple worker instances.
+      await Booking.updateOne({ _id: booking._id, reviewRequestSentAt: { $exists: true } }, { $unset: { reviewRequestSentAt: "" } });
       logger.error({ err, bookingId: booking._id }, "Failed to send review request");
     }
   }
@@ -426,7 +424,7 @@ export async function sendReviewRequests(io?: import("socket.io").Server): Promi
   return sent;
 }
 
-export async function processRequestLifecycle(io?: import("socket.io").Server): Promise<LifecycleRunResult> {
+export async function processRequestLifecycle(io?: any): Promise<LifecycleRunResult> {
   const result: LifecycleRunResult = {
     scanned: 0,
     warningsSent: 0,
@@ -440,20 +438,30 @@ export async function processRequestLifecycle(io?: import("socket.io").Server): 
   };
 
   if (!REQUEST_EXPIRY_ENABLED) {
+    // Payment-hold cleanup and review invitations are independent of the
+    // request-expiry feature flag; disabling request expiry must not leave
+    // unpaid bookings stuck or suppress completed-session invitations.
+    try {
+      const paymentCleanup = await cleanupStalePaymentHolds();
+      result.paymentHoldsCleaned = paymentCleanup.cleaned;
+      result.errors.push(...paymentCleanup.errors);
+    } catch (err: any) { result.errors.push(`Payment hold cleanup: ${err?.message}`); }
+    try { result.reviewRequestsSent = await sendReviewRequests(io); }
+    catch (err: any) { result.errors.push(`Review invitations: ${err?.message}`); }
     return result;
   }
 
   try {
     result.warningsSent = await sendExpiryWarnings(io);
-  } catch (err) {
-    result.errors.push(`Warnings error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (err: any) {
+    result.errors.push(`Warnings error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: warnings error");
   }
 
   try {
     result.day5EscalationsSent = await processDay5Escalations(io);
-  } catch (err) {
-    result.errors.push(`Escalations error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (err: any) {
+    result.errors.push(`Escalations error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: escalations error");
   }
 
@@ -461,15 +469,15 @@ export async function processRequestLifecycle(io?: import("socket.io").Server): 
     const { expiredCount, offersClosedCount } = await expireEligibleRequests(io);
     result.expiredCount = expiredCount;
     result.offersClosedCount = offersClosedCount;
-  } catch (err) {
-    result.errors.push(`Expiry error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (err: any) {
+    result.errors.push(`Expiry error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: expiry error");
   }
 
   try {
     result.archivedCount = await processRequestArchival();
-  } catch (err) {
-    result.errors.push(`Archival error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (err: any) {
+    result.errors.push(`Archival error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: archival error");
   }
 
@@ -477,15 +485,15 @@ export async function processRequestLifecycle(io?: import("socket.io").Server): 
     const paymentCleanup = await cleanupStalePaymentHolds();
     result.paymentHoldsCleaned = paymentCleanup.cleaned;
     paymentCleanup.errors.forEach((e) => result.errors.push(e));
-  } catch (err) {
-    result.errors.push(`Payment hold cleanup error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (err: any) {
+    result.errors.push(`Payment hold cleanup error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: payment hold cleanup error");
   }
 
   try {
     result.reviewRequestsSent = await sendReviewRequests();
-  } catch (err) {
-    result.errors.push(`Review request error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (err: any) {
+    result.errors.push(`Review request error: ${err?.message}`);
     logger.error({ err }, "Request lifecycle: review request error");
   }
 

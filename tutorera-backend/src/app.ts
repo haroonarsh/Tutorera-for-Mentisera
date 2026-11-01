@@ -1,6 +1,7 @@
 // src/app.ts
 import "express-async-errors";
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -26,7 +27,6 @@ import notificationRoutes from "./routes/notification.routes";
 import chatRoutes from "./routes/chat.routes";
 import guaranteeRoutes from "./routes/guarantee.routes";
 import referralRoutes from "./routes/referral.routes";
-import promoCodeRoutes from "./routes/promoCode.routes";
 import aiRoutes from "./routes/ai.routes";
 import earningsRoutes from "./routes/earnings.routes";
 import parentRoutes from "./routes/parent.routes";
@@ -40,11 +40,7 @@ import liquidityRoutes from "./routes/liquidity.routes";
 import tutoringIndexRoutes from "./routes/tutoringIndex.routes";
 import publicRoutes from "./routes/public.routes";
 import pricingRoutes from "./routes/pricing.routes";
-import featureFlagRoutes from "./routes/featureFlag.routes";
-import legalAgreementRoutes from "./routes/legalAgreement.routes";
-import { createHealthRouter } from "./routes/health.routes";
-import { createInternalJobsRouter } from "./routes/internalJobs.routes";
-import { handleRapidPayWebhook } from "./controllers/rapidPayWebhook.controller";
+import meetingRoutes from "./routes/meeting.routes";
 
 // This file builds the Express app only — no httpServer, no Socket.io, no
 // .listen(). That's what lets tests import the app directly via supertest
@@ -59,18 +55,6 @@ app.use(
     pinoHttp({
         logger,
         genReqId: (req) => (req as any).id,
-        // Callback signatures, password-reset tokens, and other credentials
-        // can be supplied as query parameters. Never serialize a raw query
-        // string into application logs.
-        serializers: {
-            req: (req) => ({
-                id: (req as any).id,
-                method: req.method,
-                url: (req.originalUrl || req.url || "").split("?")[0],
-                remoteAddress: req.socket?.remoteAddress,
-                remotePort: req.socket?.remotePort,
-            }),
-        },
         customLogLevel: (req, res, err) => {
         if (err || res.statusCode >= 500) return "error";
         if (res.statusCode >= 400) return "warn";
@@ -81,7 +65,6 @@ app.use(
 
 app.use(helmet());
 app.set("trust proxy", 1);
-app.use("/health", createHealthRouter());
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
@@ -118,7 +101,6 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
 app.use(hpp());
-app.use("/internal/jobs", createInternalJobsRouter());
 
 const apiRouter = express.Router();
 apiRouter.use("/auth", authRoutes);
@@ -127,6 +109,7 @@ apiRouter.use("/students", studentRoutes);
 apiRouter.use("/requests", requestRoutes);
 apiRouter.use("/offers", offerRoutes);
 apiRouter.use("/bookings", bookingRoutes);
+apiRouter.use("/bookings", meetingRoutes);
 apiRouter.use("/reviews", reviewRoutes);
 apiRouter.use("/blogs", blogRoutes);
 apiRouter.use("/contact", contactRoutes);
@@ -136,7 +119,6 @@ apiRouter.use("/notifications", notificationRoutes);
 apiRouter.use("/chat", chatRoutes);
 apiRouter.use("/guarantee", guaranteeRoutes);
 apiRouter.use("/referral", referralRoutes);
-apiRouter.use("/promo-codes", promoCodeRoutes);
 apiRouter.use("/ai", aiRoutes);
 apiRouter.use("/earnings", earningsRoutes);
 apiRouter.use("/parent", parentRoutes);
@@ -150,15 +132,22 @@ apiRouter.use("/tutoring-index", tutoringIndexRoutes);
 apiRouter.use("/public", publicRoutes);
 apiRouter.use("/matching", matchingRoutes);
 apiRouter.use("/pricing", pricingRoutes);
-apiRouter.use("/feature-flags", featureFlagRoutes);
-apiRouter.use("/", legalAgreementRoutes);
-
-// RapidPay webhook — mounted at the non-versioned path registered in the
-// RapidPay merchant dashboard: https://tutorera.ac.pk/api/payments/rapidpay/webhook
-app.post("/api/payments/rapidpay/webhook", handleRapidPayWebhook);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", apiRouter);
+
+// Public liveness endpoint: does not disclose infrastructure details.
+app.get("/health/live", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ status: "ok" });
+});
+
+// Readiness endpoint for load balancers and deployment smoke checks.
+app.get("/health/ready", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const ready = mongoose.connection.readyState === 1;
+    res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "unavailable" });
+});
 
 app.get("/", (req, res) => {
     res.json({ message: "Tutorera API is running 🚀" });

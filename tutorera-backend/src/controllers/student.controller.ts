@@ -5,8 +5,6 @@ import User from "../models/User.model";
 import TutorProfile from "../models/TutorProfile.model";
 import { advanceAccountStatus } from "../services/accountLifecycle.service";
 import { Types } from "mongoose";
-import { resolveMarket } from "../services/market.service";
-import { resolveLocationReferences } from "../services/locationReference.service";
 
 // @desc    Save student onboarding
 // @route   POST /api/students/onboarding
@@ -17,36 +15,26 @@ export const saveStudentOnboarding = async (
 ): Promise<void> => {
   const {
     fullName, phone, city, gender, dateOfBirth,
-    currentLevel, institution, subjectsNeeded,
+    currentLevel, institution, subjectsNeeded, curriculum,
     budgetRange, teachingModePreference,
-    countryCode, countryName, timezone, currency, country, region, cityRef, locality,
   } = req.body;
 
-  const market = await resolveMarket(countryCode || req.user?.countryCode || "PK");
-  if (!market || !market.isActive || !market.studentRegistration) {
-    res.status(422).json({ success: false, code: "MARKET_UNAVAILABLE", message: "Student onboarding is not available in the selected market." });
+  // Identity/age controls use the immutable User.dateOfBirth established
+  // at signup. A profile-onboarding payload must never rewrite or contradict
+  // that value (including after adult guardian verification).
+  const registeredDateOfBirth = req.user?.dateOfBirth?.toISOString().slice(0, 10);
+  if (registeredDateOfBirth && dateOfBirth && dateOfBirth !== registeredDateOfBirth) {
+    res.status(409).json({ success: false, code: "STUDENT_DOB_MISMATCH",
+      message: "Student date of birth differs from the registered account. Contact support for a verified correction." });
     return;
   }
-  let locationReferences: Record<string, unknown>;
-  try {
-    locationReferences = await resolveLocationReferences({ country, region, cityRef, locality, city }, market.countryCode);
-  } catch (error) {
-    res.status(422).json({ success: false, code: "INVALID_LOCATION_REFERENCE", message: error instanceof Error ? error.message : "Invalid location reference." });
-    return;
-  }
-  const resolvedCity = (locationReferences.city as string | undefined) || city;
-  const resolvedTimezone = timezone || (locationReferences.timezone as string | undefined) || market.timezone;
+  const profileDateOfBirth = registeredDateOfBirth || dateOfBirth;
 
   // Update user name
   await User.findByIdAndUpdate(req.user?._id, {
     name: fullName,
     phone,
-    city: resolvedCity,
-    countryCode: market.countryCode,
-    countryName: market.countryName,
-    timezone: resolvedTimezone,
-    currency: market.currency,
-    ...locationReferences,
+    city,
   });
 
   // Create or update student profile
@@ -54,16 +42,13 @@ export const saveStudentOnboarding = async (
     { user: req.user?._id },
     {
       user: req.user?._id,
-      fullName, phone, city: resolvedCity, gender, dateOfBirth,
-      countryCode: market.countryCode, countryName: market.countryName, timezone: resolvedTimezone, currency: market.currency,
-      ...locationReferences,
+      fullName, phone, city, gender, dateOfBirth: profileDateOfBirth,
       currentLevel, institution, subjectsNeeded,
+      ...(typeof curriculum === "string" && curriculum.trim() ? { curriculum: curriculum.trim() } : {}),
       budgetRange, teachingModePreference,
-      postalCode: req.body.postalCode,
-      location: (typeof req.body.lat === "number" && typeof req.body.lng === "number") ? { type: "Point", coordinates: [req.body.lng, req.body.lat] } : undefined,
       onboardingComplete: true,
     },
-    { upsert: true, returnDocument: "after" }
+    { upsert: true, new: true }
   );
 
   await advanceAccountStatus(req.user!._id.toString(), "profile_complete");
@@ -160,12 +145,13 @@ export const getFavouriteIds = async (req: AuthRequest, res: Response): Promise<
 // @route   POST /api/students/guardians
 // @access  Private (student)
 export const linkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
-  res.status(410).json({
-    success: false,
-    message: "Direct guardian linking is no longer available. Ask the parent to send a consent request from their dashboard.",
-  });
-  return;
-  /* Legacy implementation retained below temporarily for source-history reference.
+  // Underage users cannot link an arbitrary parent account using a known
+  // parent ID/email. Their supervising adult must confirm through the
+  // authenticated parent mailbox/consent workflow.
+  if (req.user?.isMinor) {
+    res.status(403).json({ success: false, code: "MINOR_GUARDIAN_LINK_RESTRICTED",
+      message: "A verified guardian must manage this relationship through guardian consent." }); return;
+  }
   const { parentProfileId, parentUserId, name, email } = req.body;
 
   if (!parentProfileId && !parentUserId && !email) {
@@ -221,13 +207,15 @@ export const linkParentGuardian = async (req: AuthRequest, res: Response): Promi
   });
 
   res.status(200).json({ success: true, message: "Parent guardian linked successfully.", parentProfile });
-  */
 };
 
 // @desc    Remove a parent guardian from my account
 // @route   DELETE /api/students/guardians/:parentProfileId
 // @access  Private (student)
 export const unlinkParentGuardian = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.user?.isMinor) {
+    res.status(403).json({ success: false, code: "GUARDIAN_UNLINK_RESTRICTED", message: "A verified guardian or support must manage this link." }); return;
+  }
   const { parentProfileId } = req.params;
 
   const ParentProfile = (await import("../models/ParentProfile.model")).default;

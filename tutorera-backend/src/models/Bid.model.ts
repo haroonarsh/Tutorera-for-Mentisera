@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import type { MarketplaceFeeQuote } from "../services/pricing.service";
 
 export interface IBid extends Document {
   request: Types.ObjectId;
@@ -15,7 +16,6 @@ export interface IBid extends Document {
   availability?: string;
   expiresAt: Date;
   viewedAt?: Date;
-  shortlistedAt?: Date;
   renewedAt?: Date;
   renewalCount: number;
   flaggedForModeration: boolean;
@@ -23,7 +23,7 @@ export interface IBid extends Document {
   expiryReminderSentAt?: Date;
   status: "pending" | "submitted" | "viewed" | "countered" | "payment_pending" | "accepted" | "rejected" | "withdrawn" | "expired" | "not_selected";
   paymentPendingExpiresAt?: Date;
-  paymentReservationId?: string;
+  feeQuote?: MarketplaceFeeQuote;
   isDirect: boolean;
   createdAt: Date;
 }
@@ -46,7 +46,6 @@ const bidSchema = new Schema<IBid>(
     availability: { type: String, trim: true, maxlength: 300 },
     expiresAt: { type: Date, required: true },
     viewedAt: { type: Date },
-    shortlistedAt: { type: Date },
     renewedAt: { type: Date },
     renewalCount: { type: Number, default: 0, min: 0 },
     flaggedForModeration: { type: Boolean, default: false },
@@ -59,7 +58,7 @@ const bidSchema = new Schema<IBid>(
       default: "submitted",
     },
     paymentPendingExpiresAt: { type: Date },
-    paymentReservationId: { type: String },
+    feeQuote: { type: Schema.Types.Mixed },
     isDirect: { type: Boolean, default: false },
   },
   { timestamps: true }

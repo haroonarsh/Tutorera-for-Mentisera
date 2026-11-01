@@ -1,4 +1,5 @@
 // src/tests/setup.ts
+// CI validation marker: current dependency graph and replica-set harness.
 import { afterAll, afterEach, beforeAll } from "@jest/globals";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
@@ -22,6 +23,7 @@ beforeAll(async () => {
   process.env.MONGOMS_MD5_CHECK = "0";
   process.env.MONGOMS_STARTUP_TIMEOUT = "60000";
   replSet = await MongoMemoryReplSet.create({
+    binary: { version: "8.0.16" },
     replSet: { count: 1 },
     instanceOpts: [{ launchTimeout: 60000 }],
   });

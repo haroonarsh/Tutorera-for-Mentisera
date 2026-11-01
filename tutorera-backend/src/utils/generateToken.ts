@@ -42,6 +42,8 @@ export const sendTokenResponse = (
       isVerified: user.isVerified,
       isApproved: user.isApproved,
       avatar: user.avatar,
+      isMinor: user.isMinor === true,
+      parentConsentVerified: user.parentConsentVerified === true,
     },
   });
 };

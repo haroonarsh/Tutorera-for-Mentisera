@@ -4,13 +4,11 @@ import Booking from "../models/Booking.model";
 import PDFDocument from "pdfkit";
 import User from "../models/User.model";
 import sendEmail from "../utils/sendEmail";
-import { payoutRequestedEmail } from "../utils/emailTemplates";
+import { renderTransactionalEmail } from "../utils/emailBrand";
 import { sendNotification } from "../utils/socket";
 import logger from "../config/logger";
 import StudentTutorRelationship from "../models/StudentTutorRelationship.model";
 import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
-import { logAudit } from "../utils/logAudit";
-import { recordPaymentLedger } from "../services/paymentProvider.service";
 
 // @desc    Get my earnings (tutor) or progress (student)
 // @route   GET /api/earnings
@@ -35,19 +33,13 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       .populate("request", "subject level")
       .sort("-createdAt");
 
-    const currencyTotals = Object.values(completedBookings.reduce((totals, booking) => {
-      const currency = booking.currency || "USD";
-      const current = totals[currency] || { currency, totalEarnings: 0, onHoldAmount: 0 };
-      current.totalEarnings += booking.tutorPayout || 0;
-      if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.onHoldAmount += booking.tutorPayout || 0;
-      totals[currency] = current;
-      return totals;
-    }, {} as Record<string, { currency: string; totalEarnings: number; onHoldAmount: number }>));
+    const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
     const sessionsCount = completedBookings.length;
     const hoursTaught   = sessionsCount; // 1 hr per session
 
     // ── On-hold payments: completed + payment confirmed, but not yet paid out ──
     const onHoldBookings = completedBookings.filter(b => b.payoutStatus === "pending");
+    const onHoldAmount = onHoldBookings.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
     const onHoldCount = onHoldBookings.length;
 
     // Subjects taught breakdown
@@ -85,7 +77,6 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       subject:     (b.request as unknown as { subject?: string } | null)?.subject || "General",
       amount:      b.amount,
       tutorPayout: b.tutorPayout,
-      currency: b.currency || "USD",
       createdAt:   b.createdAt,
     }));
 
@@ -107,10 +98,11 @@ export const getMyEarnings = async (req: AuthRequest, res: Response): Promise<vo
       success: true,
       role: "tutor",
       stats: {
-        currencyTotals,
+        totalEarnings,
         sessionsCount,
         hoursTaught,
         subjectsCount: Object.keys(subjectMap).length,
+        onHoldAmount,
         onHoldCount,
       },
       monthlyData,
@@ -238,7 +230,7 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
   try {
     const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { data: reportData, pdfBuffer } = await generateTutorPayoutReport(userId.toString(), periodStart, periodEnd, { userId: userId.toString(), role: "tutor" }, req.query.currency as string | undefined);
+    const { data: reportData, pdfBuffer } = await generateTutorPayoutReport(userId.toString(), periodStart, periodEnd, { userId: userId.toString(), role: "tutor" });
 
     const filename = `tutorera-payout-report-${reportData.reportId}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
@@ -247,10 +239,9 @@ export const downloadEarningsPDF = async (req: AuthRequest, res: Response): Prom
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Length", pdfBuffer.length.toString());
     res.send(pdfBuffer);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to generate payout report:", error);
-    const statusCode = (error instanceof Error && "statusCode" in error) ? (error as Error & { statusCode: number }).statusCode : undefined;
-    res.status(statusCode || 500).json({ success: false, message: statusCode && error instanceof Error ? error.message : "Failed to generate payout report." });
+    res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
   }
 };
 
@@ -261,75 +252,32 @@ export const requestPayout = async (req: AuthRequest, res: Response): Promise<vo
   const { bookingId } = req.params;
   const tutorId = req.user?._id;
 
-  if (req.user?.role !== "tutor") {
-    res.status(403).json({ success: false, message: "Only tutors can request a payout." });
-    return;
-  }
-
-  const requestedAt = new Date();
-  // Keep the payout pending until finance approves it. This conditional update also
-  // makes duplicate clicks and concurrent requests harmless.
   const booking = await Booking.findOneAndUpdate({
-    _id: bookingId,
-    tutor: tutorId,
-    status: "completed",
-    paymentStatus: "confirmed",
-    payoutStatus: "pending",
-    payoutRequestedAt: { $exists: false },
+    _id: bookingId, tutor: tutorId, status: "completed", paymentStatus: "confirmed",
+    payoutStatus: "pending", payoutRequestedAt: { $exists: false },
   }, {
-    $set: {
-      payoutNote: "Payout requested by tutor",
-      payoutRequestedAt: requestedAt,
-    },
-  }, { returnDocument: "after" });
+    $set: { payoutRequestedAt: new Date(), payoutNote: "Tutor submitted payout request; awaiting finance approval" },
+  }, { new: true });
 
   if (!booking) {
-    res.status(404).json({ success: false, message: "Eligible booking not found for payout request." });
+    res.status(409).json({ success: false, code: "PAYOUT_NOT_ELIGIBLE", message: "Payout was already requested or the session is not eligible." });
     return;
   }
-
-  await logAudit({
-    action: "payout_requested",
-    actor: req.user?.name || "Tutor",
-    actorId: tutorId?.toString(),
-    entity: "Booking",
-    targetId: booking._id.toString(),
-    metadata: { tutorPayout: booking.tutorPayout || booking.tutorNet || 0, currency: booking.currency || "USD" },
-  });
-
-  await recordPaymentLedger({
-    provider: "manual",
-    providerTransactionId: `booking-${booking._id.toString()}`,
-    providerEventId: `payout-requested-${booking._id.toString()}`,
-    eventType: "payout.requested",
-    status: "pending",
-    amount: booking.subtotal || booking.amount,
-    currency: booking.currency || "USD",
-    bookingId: booking._id.toString(),
-    bidId: booking.bid?.toString(),
-    studentId: booking.student.toString(),
-    tutorId: booking.tutor.toString(),
-    feeSnapshot: {
-      subtotal: booking.subtotal,
-      studentFee: booking.studentFee,
-      tutorFee: booking.tutorFee,
-      tax: booking.tax,
-      studentTotal: booking.studentTotal,
-      tutorNet: booking.tutorNet,
-      platformFee: booking.platformFee,
-      feeConfig: booking.feeConfig,
-    },
-    metadata: { payoutStatus: "pending", requestedAt: requestedAt.toISOString() },
-  });
 
   const tutorUser = await User.findById(tutorId).select("name email");
   if (tutorUser) {
     try {
-      const mail = payoutRequestedEmail(tutorUser.name, booking.tutorPayout || 0, booking._id.toString(), booking.currency || "USD");
-      await sendEmail({ to: tutorUser.email, subject: mail.subject, html: mail.html, eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
-    } catch (err) {
-      logger.error({ err, bookingId: booking._id }, "Failed to send payout request email");
-    }
+      const html = renderTransactionalEmail({
+        subject: "TUTORERA® — Payout Request Received", emailCategory: "Payout",
+        emailHeading: "Payout Request Received", emailSubheading: "Awaiting finance review",
+        firstName: tutorUser.name,
+        openingMessage: `We received your payout request for ${booking.currency || "PKR"} ${booking.tutorPayout.toLocaleString()}.`,
+        mainMessage: "No transfer has been initiated or completed. Finance will review your request and confirm settlement separately.",
+        includeSecurityNotice: true,
+      });
+      await sendEmail({ to: tutorUser.email, subject: "TUTORERA® — Payout Request Received", html,
+        eventType: "payout.requested", relatedEntityType: "Booking", relatedEntityId: booking._id.toString() });
+    } catch (err) { logger.error({ err, bookingId: booking._id }, "Failed to send payout request email"); }
   }
 
   res.status(200).json({ success: true, message: "Payout request submitted successfully.", booking });
@@ -343,7 +291,6 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
     res.status(403).json({ success: false, message: "Only tutors can view payout history." });
     return;
   }
-
   const tutorId = req.user?._id;
   const { page = "1", limit = "20", status } = req.query;
   const allowedStatuses = new Set(["all", "pending", "approved", "processing", "paid", "failed", "held"]);
@@ -375,25 +322,20 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
     .skip(skip)
     .limit(limitNum)
     .lean(),
-    Booking.find(filter).select("payoutStatus tutorPayout currency").lean(),
+    Booking.find(filter).select("payoutStatus tutorPayout").lean(),
   ]);
 
-  const currencyTotals = Object.values(summaryRows.reduce((totals, b) => {
-    const currency = b.currency || "USD";
-    const current = totals[currency] || { currency, totalPayoutAmount: 0, pendingAmount: 0, paidAmount: 0 };
-    current.totalPayoutAmount += b.tutorPayout || 0;
-    if (["pending", "approved", "processing", "held"].includes(b.payoutStatus)) current.pendingAmount += b.tutorPayout || 0;
-    if (b.payoutStatus === "paid") current.paidAmount += b.tutorPayout || 0;
-    totals[currency] = current;
-    return totals;
-  }, {} as Record<string, { currency: string; totalPayoutAmount: number; pendingAmount: number; paidAmount: number }>));
+  const totalPayoutAmount = summaryRows.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const pendingAmount = summaryRows.filter(b => ["pending", "approved", "processing", "held"].includes(b.payoutStatus)).reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const paidAmount = summaryRows.filter(b => b.payoutStatus === "paid").reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
 
   res.status(200).json({
     success: true,
     stats: {
       totalPayouts: total,
-      // Never add unlike currencies. Consumers must use currencyTotals.
-      currencyTotals,
+      totalPayoutAmount,
+      pendingAmount,
+      paidAmount,
     },
     pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum), limit: limitNum },
     payouts: payouts.map(p => ({
@@ -401,7 +343,7 @@ export const getMyPayouts = async (req: AuthRequest, res: Response): Promise<voi
       studentName: (p.student as unknown as { name?: string } | null)?.name || "Student",
       subject: (p.request as unknown as { subject?: string } | null)?.subject || "General",
       amount: p.amount,
-      currency: p.currency || "USD",
+      currency: "PKR",
       subtotal: p.subtotal,
       tutorFee: p.tutorFee,
       tax: p.tax,

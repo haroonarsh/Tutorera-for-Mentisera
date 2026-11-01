@@ -1,0 +1,73 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tutorera-backend/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main, chore/unified-tutorera-backend]
+    paths:
+      - "tutorera-backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-validate:
+    name: Backend validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production dependency audit
+        id: production_audit
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high --json > production-audit.json
+
+      - name: Upload production dependency audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-production-audit
+          path: tutorera-backend/production-audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Marketplace tests
+        run: npm run test:marketplace
+
+      # Do not let an audit failure conceal independent compile/test failures.
+      # The final gate still fails the job whenever the security audit fails.
+      - name: Enforce production dependency security gate
+        if: always() && steps.production_audit.outcome == 'failure'
+        run: |
+          echo "::error::Production dependency audit failed. Resolve high/critical advisories before merging."
+          exit 1

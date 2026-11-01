@@ -1,0 +1,59 @@
+name: Backend dependency remediation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [refactor/cloudflare-mongodb-foundation]
+    paths:
+      - ".github/workflows/backend-dependency-remediation.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tutorera-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tutorera-backend/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Apply compatible security updates
+        run: |
+          # npm audit fix may exit nonzero when only non-blocking moderate advisories remain.
+          # Preserve compatible lockfile changes and enforce the high/critical gate below.
+          npm audit fix --omit=dev || echo 'Some advisories require manual review; checking high/critical gate next.'
+      - name: Reinstall and verify lockfile
+        run: npm ci
+      - name: Verify high-severity production audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build
+        run: npm run build
+      - name: Unit and integration tests
+        run: npm test
+      - name: Marketplace tests
+        run: npm run test:marketplace
+      - name: Open reviewable dependency fix PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: security/backend-audit-fixes-refactor
+          base: refactor/cloudflare-mongodb-foundation
+          delete-branch: true
+          add-paths: |
+            tutorera-backend/package.json
+            tutorera-backend/package-lock.json
+          commit-message: "fix(deps): resolve compatible production dependency advisories"
+          title: "fix(deps): remediate backend production security advisories"
+          body: |
+            Automated compatible dependency remediation. No --force upgrades.
+            Verified with npm ci, production audit, TypeScript build, unit/integration and marketplace tests.
+            Review transitive dependency changes and merge only after CI approval.

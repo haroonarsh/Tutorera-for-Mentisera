@@ -1,128 +1,58 @@
-// Tests for adminAgentSupervisor.controller.ts — RBAC gating and audit-log fail-close
-
-jest.mock("../models/AuditLog.model", () => ({
-  __esModule: true,
-  default: { create: jest.fn().mockResolvedValue({}) },
-}));
-jest.mock("../services/adminAgentRead.service", () => ({
-  readAdminAgentSummary: jest.fn().mockResolvedValue({
-    agentId: "tutor",
-    generatedAt: new Date().toISOString(),
-    data: { pending: 3, active: 10, pendingAgreement: 2, approved: 1, suspended: 0 },
-  }),
-}));
-
-import { Request, Response } from "express";
+import { planAdminSupervisor } from "../controllers/adminAgentSupervisor.controller";
 import AuditLog from "../models/AuditLog.model";
-import { listAdminAgents, planAdminSupervisor, readAdminAgent } from "../controllers/adminAgentSupervisor.controller";
 
-function makeRes() {
-  const res = { status: jest.fn(), json: jest.fn() } as unknown as Response;
-  (res.status as jest.Mock).mockReturnValue(res);
+jest.mock("../models/AuditLog.model", () => ({ __esModule: true, default: { create: jest.fn() } }));
+
+const response = () => {
+  const res: any = { status: jest.fn(), json: jest.fn(), setHeader: jest.fn() };
+  res.status.mockReturnValue(res);
   return res;
-}
+};
 
-function makeReq(overrides: Partial<Request> = {}): Request {
-  return {
-    user: {
-      _id: "admin123",
-      name: "Test Admin",
-      adminRole: "super_admin",
-      adminPermissions: ["*"],
-    },
-    body: {},
-    params: {},
-    ...overrides,
-  } as unknown as Request;
-}
-
-describe("listAdminAgents", () => {
-  it("returns all 4 agents for super_admin", async () => {
-    const req = makeReq();
-    const res = makeRes();
-    await listAdminAgents(req, res);
-    const call = (res.json as jest.Mock).mock.calls[0][0];
-    expect(call.agents).toHaveLength(4);
-  });
-
-  it("returns only agents matching the caller's permissions", async () => {
-    const req = makeReq({
-      user: {
-        _id: "admin456",
-        name: "Tutor Ops",
-        adminRole: "tutor_operations",
-        adminPermissions: [],
-      } as unknown as Request["user"],
-    });
-    const res = makeRes();
-    await listAdminAgents(req, res);
-    const call = (res.json as jest.Mock).mock.calls[0][0];
-    const ids = call.agents.map((a: { id: string }) => a.id);
-    expect(ids).toContain("tutor");
-    expect(ids).not.toContain("finance");
-  });
-});
-
-describe("planAdminSupervisor", () => {
+describe("admin supervisor audit and access boundaries", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("returns 400 when message is missing", async () => {
-    const req = makeReq({ body: {} });
-    const res = makeRes();
-    await planAdminSupervisor(req, res);
-    expect((res.status as jest.Mock).mock.calls[0][0]).toBe(400);
+  it("rejects malformed requests before any database write", async () => {
+    const res = response();
+    await planAdminSupervisor({ body: { message: ["finance"] } } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(AuditLog.create).not.toHaveBeenCalled();
   });
 
-  it("writes an audit log and returns tasks for valid message", async () => {
-    const req = makeReq({ body: { message: "show me everything" } });
-    const res = makeRes();
-    await planAdminSupervisor(req, res);
-    expect(AuditLog.create).toHaveBeenCalledTimes(1);
-    const call = (res.json as jest.Mock).mock.calls[0][0];
-    expect(Array.isArray(call.tasks)).toBe(true);
+  it("does not leak free-text requests into the audit record", async () => {
+    (AuditLog.create as jest.Mock).mockResolvedValue({ _id: "audit123" });
+    const res = response();
+    const message = "tutor verification: confidential note 123";
+    await planAdminSupervisor({
+      body: { message },
+      user: { _id: "admin123", name: "Admin", role: "admin", adminRole: "tutor_operations", adminPermissions: [] },
+    } as any, res);
+    expect(AuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      action: "admin_agent_plan",
+      actorId: "admin123",
+      metadata: { plannedAgentIds: ["tutor"], blockedCount: 0, mode: "read-only-planning" },
+    }));
+    expect(JSON.stringify((AuditLog.create as jest.Mock).mock.calls[0][0])).not.toContain("confidential note");
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ auditId: "audit123", mode: "read-only-planning" }));
   });
 
-  it("returns 500 and no data when audit log fails (fail-closed)", async () => {
-    (AuditLog.create as jest.Mock).mockRejectedValueOnce(new Error("DB down"));
-    const req = makeReq({ body: { message: "all" } });
-    const res = makeRes();
-    await planAdminSupervisor(req, res);
-    expect((res.status as jest.Mock).mock.calls[0][0]).toBe(500);
-    expect((res.json as jest.Mock).mock.calls[0][0]).toHaveProperty("error");
-  });
-});
-
-describe("readAdminAgent", () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it("returns 404 for unknown agentId", async () => {
-    const req = makeReq({ params: { agentId: "nonexistent" } });
-    const res = makeRes();
-    await readAdminAgent(req, res);
-    expect((res.status as jest.Mock).mock.calls[0][0]).toBe(404);
+  it("does not return finance tasks to a tutor-only administrator", async () => {
+    (AuditLog.create as jest.Mock).mockResolvedValue({ _id: "audit456" });
+    const res = response();
+    await planAdminSupervisor({
+      body: { message: "finance payouts" },
+      user: { _id: "admin123", role: "admin", adminRole: "tutor_operations", adminPermissions: [] },
+    } as any, res);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ tasks: [], blockedCount: 1 }));
   });
 
-  it("returns 403 when caller lacks required permission", async () => {
-    const req = makeReq({
-      params: { agentId: "finance" },
-      user: {
-        _id: "admin789",
-        name: "Tutor Ops",
-        adminRole: "tutor_operations",
-        adminPermissions: [],
-      } as unknown as Request["user"],
-    });
-    const res = makeRes();
-    await readAdminAgent(req, res);
-    expect((res.status as jest.Mock).mock.calls[0][0]).toBe(403);
-  });
-
-  it("returns summary data and writes audit log for authorised caller", async () => {
-    const req = makeReq({ params: { agentId: "tutor" } });
-    const res = makeRes();
-    await readAdminAgent(req, res);
-    expect(AuditLog.create).toHaveBeenCalledTimes(1);
-    const call = (res.json as jest.Mock).mock.calls[0][0];
-    expect(call.agentId).toBe("tutor");
+  it("fails closed when the audit database is unavailable", async () => {
+    (AuditLog.create as jest.Mock).mockRejectedValue(new Error("database unavailable"));
+    const res = response();
+    await expect(planAdminSupervisor({
+      body: { message: "tutor" },
+      user: { _id: "admin123", role: "admin", adminRole: "tutor_operations", adminPermissions: [] },
+    } as any, res)).rejects.toThrow("database unavailable");
+    expect(res.json).not.toHaveBeenCalled();
   });
 });

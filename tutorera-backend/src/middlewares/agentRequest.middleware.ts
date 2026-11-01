@@ -1,61 +1,73 @@
-// src/middlewares/agentRequest.middleware.ts
-//
-// Input validation and sanitisation for Supervisor Agent endpoints.
-// Runs after authentication, before the controller.
+import { Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
+import jwt from "jsonwebtoken";
+import { ipKeyGenerator } from "express-rate-limit";
 
-import { Response, NextFunction } from "express";
-import { AuthRequest } from "../types";
-
-const MAX_MESSAGE_LENGTH = 1000;
-
-// Reject strings that look like prompt-injection attempts or code execution.
-// These are applied defensively — the planner never passes input to an AI model
-// in Phase 1-7, but this guard future-proofs Phase 8+ model integration.
-const BLOCKED_PATTERNS = [
-  /ignore (all |previous )?instructions/i,
-  /system prompt/i,
-  /you are (now |an? )?/i,
-  /<script[\s>]/i,
-  /\$\{.*\}/,         // template literal injection
-  /`[^`]*`/,          // backtick execution attempt
+// Six injection patterns that cover the most common prompt-injection vectors.
+// These are applied to the natural-language query before it reaches the agents.
+const INJECTION_PATTERNS = [
+  /ignore\s+(previous|prior|all|above)\s+instructions?/i,
+  /system\s*:\s*you\s+are/i,
+  /```[\s\S]*?(drop|delete|update|insert|exec|execute|eval|system|rm\s+-rf)/i,
+  /\bexec(ute)?\s*\(/i,
+  /\bnull\s*byte\b|\x00/,
+  /\{\{.*?\}\}|\$\{.*?\}/,
 ];
 
-export function validateAgentMessage(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): void {
-  const { message } = req.body as { message?: unknown };
+const MAX_QUERY_LENGTH = 1000;
 
-  if (message === undefined || message === null) {
-    // GET endpoints don't have a body — pass through
-    next();
+export function agentRequestMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const body = req.body as Record<string, unknown>;
+  const query = body?.query;
+
+  if (!query || typeof query !== "string") {
+    res.status(400).json({ success: false, message: "query field is required and must be a string." });
     return;
   }
 
-  if (typeof message !== "string") {
-    res.status(400).json({ error: "message must be a string" });
+  // Strip null bytes
+  const sanitized = query.replace(/\x00/g, "").trim();
+
+  if (sanitized.length > MAX_QUERY_LENGTH) {
+    res.status(400).json({
+      success: false,
+      message: `Query exceeds maximum length of ${MAX_QUERY_LENGTH} characters.`,
+    });
     return;
   }
 
-  const trimmed = message.trim();
-  if (!trimmed) {
-    res.status(400).json({ error: "message must not be empty" });
-    return;
-  }
-  if (trimmed.length > MAX_MESSAGE_LENGTH) {
-    res.status(400).json({ error: `message too long (max ${MAX_MESSAGE_LENGTH} characters)` });
-    return;
-  }
-
-  for (const pattern of BLOCKED_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      res.status(400).json({ error: "message contains disallowed content" });
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(sanitized)) {
+      res.status(400).json({
+        success: false,
+        message: "Query contains disallowed patterns and cannot be processed.",
+      });
       return;
     }
   }
 
-  // Sanitise: strip null bytes and control characters (keep printable + common whitespace)
-  req.body.message = trimmed.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, "");
+  // Write sanitized query back so controllers receive the cleaned value
+  body.query = sanitized;
   next();
 }
+
+// Rate limiter: 20 requests per minute per authenticated user JWT id, fallback to IP
+export const adminAgentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many agent requests. Please wait before retrying." },
+  keyGenerator: (req) => {
+    try {
+      const auth = req.headers.authorization;
+      if (auth?.startsWith("Bearer ")) {
+        const token = auth.slice(7);
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id?: string };
+        if (payload.id) return `agent:user:${payload.id}`;
+      }
+    } catch { /* fall through to IP */ }
+    const address = req.ip || req.socket.remoteAddress;
+    return address ? `agent:ip:${ipKeyGenerator(address)}` : "agent:ip:unknown";
+  },
+});

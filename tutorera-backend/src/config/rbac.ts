@@ -148,6 +148,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
   ],
 
   finance: [
+    "claims.read",
     "payment.read",
     "payment.manage",
     "payment.refund",

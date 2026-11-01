@@ -1,14 +1,14 @@
-node_modules/
-.wrangler/
-.next/
-dist/
-.env.local
-.env*.local
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.DS_Store
+# Local environment secrets — never commit
+.env.cloudflare.local
+.env.r2.local
 
-# Migration/one-off scripts that may contain secrets
+# Wrangler local state
+.wrangler/
+
+# Cloudflare build artifacts (no source here — only generated output)
+cloudflare/backend/dist/
+cloudflare/backend/node_modules/
+cloudflare/backend/.wrangler/
+
+# CI migration script contains secrets
 scripts/ci/migrate-render-to-cloudflare.ps1

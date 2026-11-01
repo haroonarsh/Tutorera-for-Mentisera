@@ -1,72 +1,52 @@
-// Tests for adminAgentRead.service.ts — aggregate-only reads, no profile data
+import { readAdminAgentSummary } from "../services/adminAgentRead.service";
+import TutorProfile from "../models/TutorProfile.model";
+import Request from "../models/Request.model";
+import Booking from "../models/Booking.model";
+import SafetyCase from "../models/SafetyCase.model";
 
 jest.mock("../models/TutorProfile.model", () => ({
   __esModule: true,
-  default: { countDocuments: jest.fn().mockResolvedValue(0) },
-}));
-jest.mock("../models/Request.model", () => ({
-  __esModule: true,
-  default: { countDocuments: jest.fn().mockResolvedValue(0) },
-}));
-jest.mock("../models/Booking.model", () => ({
-  __esModule: true,
-  default: { countDocuments: jest.fn().mockResolvedValue(0) },
-}));
-jest.mock("../models/TutorPayout.model", () => ({
-  __esModule: true,
-  default: {
-    countDocuments: jest.fn().mockResolvedValue(0),
-    aggregate: jest.fn().mockResolvedValue([]),
-  },
-}));
-jest.mock("../models/SafetyCase.model", () => ({
-  __esModule: true,
-  default: { countDocuments: jest.fn().mockResolvedValue(0) },
-}));
-jest.mock("../services/infrastructureProbe.service", () => ({
-  runInfrastructureProbes: jest.fn().mockResolvedValue({
-    overallStatus: "healthy",
-    checkedAt: new Date().toISOString(),
-    probes: [{ name: "database", status: "healthy", detail: "readyState=1" }],
-  }),
+  default: { countDocuments: jest.fn() },
 }));
 
-import { readAdminAgentSummary } from "../services/adminAgentRead.service";
+jest.mock("../models/Request.model", () => ({ __esModule: true, default: { countDocuments: jest.fn() } }));
+jest.mock("../models/Booking.model", () => ({ __esModule: true, default: { countDocuments: jest.fn() } }));
+jest.mock("../models/SafetyCase.model", () => ({ __esModule: true, default: { countDocuments: jest.fn() } }));
 
-describe("readAdminAgentSummary", () => {
-  it("returns tutor summary with correct shape", async () => {
+describe("read-only admin specialist", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("returns aggregate tutor verification counts without profile data", async () => {
+    (TutorProfile.countDocuments as jest.Mock)
+      .mockResolvedValueOnce(3).mockResolvedValueOnce(8).mockResolvedValueOnce(2);
     const result = await readAdminAgentSummary("tutor");
-    expect(result.agentId).toBe("tutor");
-    expect(typeof result.generatedAt).toBe("string");
-    expect(result.data).toHaveProperty("pending");
-    expect(result.data).toHaveProperty("active");
-    expect(result.data).toHaveProperty("pendingAgreement");
+    expect(result).toEqual({
+      agentId: "tutor",
+      status: "completed",
+      data: { pendingVerifications: 3, approvedTutors: 8, rejectedTutors: 2 },
+    });
+    expect(TutorProfile.countDocuments).toHaveBeenCalledTimes(3);
+    expect(TutorProfile.countDocuments).toHaveBeenCalledWith({ verificationStatus: "pending" });
   });
 
-  it("returns marketplace summary with correct shape", async () => {
-    const result = await readAdminAgentSummary("marketplace");
-    expect(result.agentId).toBe("marketplace");
-    expect(result.data).toHaveProperty("openRequests");
-    expect(result.data).toHaveProperty("ongoingBookings");
+  it("returns marketplace counts", async () => {
+    (Request.countDocuments as jest.Mock).mockResolvedValueOnce(12).mockResolvedValueOnce(4);
+    expect((await readAdminAgentSummary("marketplace")).data).toEqual({ activeRequests: 12, awaitingPayment: 4 });
   });
 
-  it("returns finance summary with correct shape", async () => {
-    const result = await readAdminAgentSummary("finance");
-    expect(result.agentId).toBe("finance");
-    expect(result.data).toHaveProperty("pendingPayouts");
-    expect(result.data).toHaveProperty("pendingByCurrency");
+  it("returns finance exception counts", async () => {
+    (Booking.countDocuments as jest.Mock).mockResolvedValueOnce(2).mockResolvedValueOnce(1);
+    expect((await readAdminAgentSummary("finance")).data).toEqual({ failedPayments: 2, heldPayouts: 1 });
   });
 
-  it("returns operations summary with correct shape", async () => {
-    const result = await readAdminAgentSummary("operations");
-    expect(result.agentId).toBe("operations");
-    expect(result.data).toHaveProperty("openCases");
-    expect(result.data).toHaveProperty("criticalCases");
-    expect(result.data).toHaveProperty("infrastructure");
+  it("returns open safety case counts", async () => {
+    (SafetyCase.countDocuments as jest.Mock).mockResolvedValueOnce(3);
+    expect((await readAdminAgentSummary("operations")).data).toEqual({ openSafetyCases: 3 });
   });
 
-  it("throws for an unknown agent id", async () => {
-    // @ts-expect-error intentional bad input
-    await expect(readAdminAgentSummary("unknown")).rejects.toThrow("Unknown agent id");
+  it("does not query the database for unimplemented specialists", async () => {
+    const result = await readAdminAgentSummary("unknown" as any);
+    expect(result.status).toBe("not_implemented");
+    expect(TutorProfile.countDocuments).not.toHaveBeenCalled();
   });
 });

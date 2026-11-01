@@ -8,8 +8,7 @@ import User from "../models/User.model";
 import Request from "../models/Request.model";
 import Bid from "../models/Bid.model";
 import Booking from "../models/Booking.model";
-import TutorProfile from "../models/TutorProfile.model";
-import { acceptBid, rejectBid, finalizeBidAcceptance } from "../controllers/request.controller";
+import { acceptBid, rejectBid } from "../controllers/request.controller";
 import { AuthRequest } from "../types";
 import { Response } from "express";
 
@@ -20,17 +19,9 @@ jest.mock("../utils/socket", () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
-// acceptBid/initiateAcceptBid calls out to the payment provider
-// integration to start checkout - that integration requires real
-// Switch credentials (it throws PAYMENT_GATEWAY_NOT_CONFIGURED
-// without them, unlike the old sandbox-mock checkout it replaced) and this
-// test isn't about payment gateway behavior at all, just bid-acceptance
-// authorization/race-safety - stub just the checkout call.
 jest.mock("../services/paymentProvider.service", () => ({
-  ...jest.requireActual("../services/paymentProvider.service"),
   paymentProvider: {
-    ...jest.requireActual("../services/paymentProvider.service").paymentProvider,
-    createCheckout: jest.fn().mockResolvedValue({ sessionId: "checkout-test-session", clientSecret: "cs_test_secret", publishableKey: "pk_test_key" }),
+    createCheckout: jest.fn().mockResolvedValue("https://checkout.test/session"),
   },
 }));
 
@@ -83,7 +74,8 @@ describe("BE-01: cross-request bid substitution", () => {
       tutor: tutor._id,
       amount: 2000,
       initialStudentRate: 2000,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -105,10 +97,9 @@ describe("BE-01: cross-request bid substitution", () => {
     const bookingCount = await Booking.countDocuments({});
     expect(bookingCount).toBe(0);
 
-    // The unrelated bid must remain untouched (still its initial "submitted"
-    // status - Bid.status now defaults to "submitted", not "pending").
+    // The unrelated bid must remain untouched (still pending).
     const unchangedBid = await Bid.findById(otherBid._id);
-    expect(unchangedBid?.status).toBe("submitted");
+    expect(unchangedBid?.status).toBe("pending");
   });
 
   it("rejectBid rejects a bid that belongs to a different request", async () => {
@@ -140,7 +131,8 @@ describe("BE-01: cross-request bid substitution", () => {
       tutor: tutor._id,
       amount: 1800,
       initialStudentRate: 1800,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -158,27 +150,12 @@ describe("BE-01: cross-request bid substitution", () => {
     );
 
     const unchangedBid = await Bid.findById(otherBid._id);
-    expect(unchangedBid?.status).toBe("submitted");
+    expect(unchangedBid?.status).toBe("pending");
   });
 
   it("acceptBid succeeds for a legitimately matching request/bid pair", async () => {
-    // Offer acceptance is now a two-phase, payment-gated flow (see
-    // request.controller.ts): acceptBid/initiateAcceptBid only reserves the
-    // request/bid and returns a payment checkout URL - it no longer creates
-    // a Booking synchronously. The booking is created by
-    // finalizeBidAcceptance(), called only once the payment gateway's
-    // webhook confirms payment. This test drives both phases to cover the
-    // full real acceptance path end to end.
     const student = await User.create({ name: "Student C", email: "c@test.com", password: "password123", role: "student" });
     const tutor = await User.create({ name: "Tutor C", email: "tutorC@test.com", password: "password123", role: "tutor" });
-    // initiateAcceptBid defense-in-depth re-checks subject eligibility at
-    // acceptance time - give this tutor an approved entry for the subject
-    // being tested.
-    await TutorProfile.create({
-      user: tutor._id,
-      subjectEligibility: [{ subject: "English", levels: ["Matric"], status: "approved" }],
-      approvedSubjects: ["English"],
-    });
 
     const request = await Request.create({
       student: student._id,
@@ -194,7 +171,8 @@ describe("BE-01: cross-request bid substitution", () => {
       tutor: tutor._id,
       amount: 1200,
       initialStudentRate: 1200,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      status: "pending",
       message: "I can help",
     });
 
@@ -207,26 +185,17 @@ describe("BE-01: cross-request bid substitution", () => {
     await acceptBid(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true, sessionId: "checkout-test-session", clientSecret: "cs_test_secret", publishableKey: "pk_test_key" })
-    );
+
+    // Accepting a marketplace offer now reserves it for payment; booking
+    // creation happens only after the signed payment webhook succeeds.
+    const booking = await Booking.findOne({ request: request._id });
+    expect(booking).toBeNull();
+
+    const reservedRequest = await Request.findById(request._id);
+    expect(reservedRequest?.status).toBe("awaiting_payment");
 
     const reservedBid = await Bid.findById(bid._id);
     expect(reservedBid?.status).toBe("payment_pending");
-    const reservedRequest = await Request.findById(request._id);
-    expect(reservedRequest?.status).toBe("awaiting_payment");
-    // No booking exists yet - payment hasn't been confirmed.
-    expect(await Booking.countDocuments({ request: request._id })).toBe(0);
-
-    // Simulate the payment gateway's webhook confirming payment.
-    await finalizeBidAcceptance(bid._id.toString(), { to: () => ({ emit: jest.fn() }) });
-
-    const booking = await Booking.findOne({ request: request._id });
-    expect(booking).not.toBeNull();
-    expect(booking?.tutor.toString()).toBe(tutor._id.toString());
-    expect(booking?.amount).toBe(1200);
-
-    const closedRequest = await Request.findById(request._id);
-    expect(closedRequest?.status).toBe("closed");
+    expect(reservedBid?.paymentPendingExpiresAt).toBeDefined();
   });
 });

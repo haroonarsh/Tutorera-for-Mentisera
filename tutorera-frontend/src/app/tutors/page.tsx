@@ -1,43 +1,34 @@
-import type { Metadata } from "next";
 import TutorsExplorer from "@/components/Tutors/TutorsExplorer";
 import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
+import type { Metadata } from "next";
+
+const TUTORS_TITLE = "Find Tutors Online & In-Person";
+const TUTORS_DESCRIPTION = "Search tutor profiles worldwide and locally by subject, curriculum, country, teaching mode, published reviews, availability, verification status, and hourly rates where provided.";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
-const value = (input: string | string[] | undefined) => typeof input === "string" ? input : "";
 
+// Filtered/sorted variants (/tutors?subject=...) duplicate the clean directory
+// routes (/tutors/subject/[slug], /tutors/city/[slug]); keep them out of the index.
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(value(params.page)) || 1);
-  const hasFilters = Object.entries(params).some(([key, rawValue]) => key !== "page" && value(rawValue).trim().length > 0);
-  // Page 1 (and any filter-only query, e.g. ?city=Lahore) canonicalizes to
-  // the clean /tutors URL - filter combinations are near-duplicates of each
-  // other. Page 2+ is genuinely different content (different tutors), so it
-  // self-canonicalizes instead of pointing back to page 1, which previously
-  // told crawlers page 2+ wasn't worth indexing separately even once it
-  // became reachable via a real link (see Pagination.tsx).
+  const hasParams = Object.values(params).some((v) => v !== undefined && v !== "");
   return {
-    title: page > 1 ? `Find Verified Tutors Online & In-Person - Page ${page}` : "Find Verified Tutors Online & In-Person",
-    description: "Search verified tutors worldwide and locally by subject, curriculum, country, teaching mode, rating, availability, and transparent hourly rates.",
-    alternates: { canonical: page > 1 ? `/tutors?page=${page}` : "/tutors" },
-    robots: hasFilters ? { index: false, follow: true } : undefined,
-    openGraph: {
-      title: page > 1 ? `Find Tutors — Page ${page} | TUTORERA` : "Find Verified Tutors Online & In-Person | TUTORERA",
-      description: "Search verified tutors worldwide by subject, curriculum, teaching mode, rating, and rate.",
-      url: page > 1 ? `/tutors?page=${page}` : "/tutors",
-    },
-    twitter: {
-      title: page > 1 ? `Find Tutors — Page ${page} | TUTORERA` : "Find Verified Tutors Online & In-Person | TUTORERA",
-      description: "Search verified tutors worldwide by subject, curriculum, teaching mode, rating, and rate.",
-    },
+    title: TUTORS_TITLE,
+    description: TUTORS_DESCRIPTION,
+    alternates: { canonical: "/tutors" },
+    robots: hasParams ? { index: false, follow: true } : undefined,
+    openGraph: { title: `${TUTORS_TITLE} | TUTORERA`, description: TUTORS_DESCRIPTION, url: "/tutors" },
+    twitter: { title: `${TUTORS_TITLE} | TUTORERA`, description: TUTORS_DESCRIPTION },
   };
 }
+const value = (input: string | string[] | undefined) => typeof input === "string" ? input : "";
 
 export default async function TutorsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(value(params.page)) || 1);
   const initialFilters: Partial<FiltersState> = {
     search: value(params.search),
+    subject: value(params.subject),
     country: value(params.country || params.countryCode),
     city: value(params.city),
     level: value(params.level),
@@ -49,10 +40,9 @@ export default async function TutorsPage({ searchParams }: Props) {
   } as Partial<FiltersState>;
 
   const subject = value(params.subject);
-  if (subject && !initialFilters.search) initialFilters.search = subject;
+  // Keep the subject as a dedicated filter so client-side pagination retains it.
 
   const result = await fetchTutors({
-    schoolOfferingId: value(params.schoolOfferingId),
     search: initialFilters.search,
     city: initialFilters.city,
     countryCode: value(params.countryCode),
@@ -63,11 +53,12 @@ export default async function TutorsPage({ searchParams }: Props) {
     minPrice: initialFilters.minPrice,
     maxPrice: initialFilters.maxPrice,
     minRating: initialFilters.minRating,
-  }, 12, page);
+  }, 12);
 
   return (
     <TutorsExplorer
       initialTutors={result.tutors}
+      initialError={result.error ?? false}
       initialPagination={{ total: result.total, page: result.page, pages: result.pages, limit: 12 }}
       initialFilters={initialFilters}
     />

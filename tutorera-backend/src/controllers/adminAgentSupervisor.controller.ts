@@ -1,186 +1,70 @@
-// src/controllers/adminAgentSupervisor.controller.ts
-//
-// Three admin-only endpoints for the AI Supervisor Agent:
-//   GET  /api/v1/admin/agents                        — list agents visible to caller
-//   POST /api/v1/admin/agents/supervisor/plan        — plan tasks from free-text query
-//   GET  /api/v1/admin/agents/:agentId/summary       — fetch a specific agent's data
-//
-// Authorization is ALWAYS from RBAC — never from AI output.
-// Every data-access call is audit-logged. Fail-closed: if the audit log insert
-// fails the request is rejected rather than returning unaudited data.
-
 import { Response } from "express";
-import { AuthRequest as Request } from "../types";
 import AuditLog from "../models/AuditLog.model";
-import { hasPermission, type AdminRole } from "../config/rbac";
-import {
-  ADMIN_AGENT_REGISTRY,
-  planAdminAgentTasks,
-  type AdminAgentId,
-} from "../services/adminAgentSupervisor.service";
 import { readAdminAgentSummary } from "../services/adminAgentRead.service";
-import { executeAdminSupervisor } from "../services/adminAgentOrchestrator.service";
-import logger from "../config/logger";
+import { AuthRequest } from "../types";
+import { hasPermission, AdminRole } from "../config/rbac";
+import { ADMIN_AGENT_REGISTRY, planAdminAgentTasks } from "../services/adminAgentSupervisor.service";
 
-// ── helpers ─────────────────────────────────────────────────────────────────
-
-function adminInfo(req: Request) {
-  return {
-    id: req.user?._id?.toString() ?? "unknown",
-    name: req.user?.name ?? "Unknown Admin",
-    role: (req.user?.adminRole ?? "") as string,
-    permissions: (req.user?.adminPermissions ?? []) as string[],
-  };
+function permitted(req: AuthRequest, permission: Parameters<typeof hasPermission>[2]): boolean {
+  const role = req.user?.adminRole || "super_admin";
+  const valid: AdminRole[] = ["super_admin", "marketplace_operations", "student_success", "tutor_operations", "verification_officer", "trust_and_safety", "finance", "support", "growth", "content", "analyst", "country_admin"];
+  return valid.includes(role as AdminRole) && hasPermission(role as AdminRole, req.user?.adminPermissions || [], permission);
 }
 
-async function writeAuditLog(
-  actorId: string,
-  actorName: string,
-  action: string,
-  metadata?: Record<string, unknown>
-): Promise<void> {
-  await AuditLog.create({
-    action,
-    actor: actorName,
-    actorId,
+/** Planning only: does not execute tools or expose customer data to a model. */
+export const planAdminSupervisor = async (req: AuthRequest, res: Response): Promise<void> => {
+  const message = req.body?.message;
+  if (typeof message !== "string" || !message.trim() || message.length > 1000) {
+    res.status(400).json({ success: false, message: "A message of 1–1000 characters is required." });
+    return;
+  }
+  const planned = planAdminAgentTasks(message);
+  const tasks = planned.filter(task => permitted(req, task.permission));
+  // Record only agent IDs, not the free-text request or personal data.
+  // Fail closed: no unaudited plan is returned if persistence fails.
+  const audit = await AuditLog.create({
+    action: "admin_agent_plan",
+    actor: req.user?.name || "Administrator",
+    actorId: String(req.user?._id || ""),
     entity: "AdminAgent",
-    metadata,
+    metadata: { plannedAgentIds: tasks.map(task => task.id), blockedCount: planned.length - tasks.length, mode: "read-only-planning" },
   });
-}
-
-// ── controllers ─────────────────────────────────────────────────────────────
-
-/**
- * GET /api/v1/admin/agents
- * Returns the agents the caller is authorised to access.
- */
-export async function listAdminAgents(req: Request, res: Response): Promise<void> {
-  const admin = adminInfo(req);
-  const visible = ADMIN_AGENT_REGISTRY.filter((a) =>
-    hasPermission(admin.role as AdminRole, admin.permissions, a.requiredPermission)
-  );
-  res.json({ agents: visible });
-}
-
-/**
- * POST /api/v1/admin/agents/supervisor/plan
- * Body: { message: string }
- * Plans which agents should handle the query, filtered to those the caller can access.
- */
-export async function planAdminSupervisor(req: Request, res: Response): Promise<void> {
-  const admin = adminInfo(req);
-  const { message } = req.body as { message?: string };
-
-  if (!message || typeof message !== "string" || !message.trim()) {
-    res.status(400).json({ error: "message is required" });
-    return;
-  }
-  if (message.length > 1000) {
-    res.status(400).json({ error: "message too long (max 1000 characters)" });
-    return;
-  }
-
-  let rawTasks;
-  try {
-    rawTasks = planAdminAgentTasks(message);
-  } catch {
-    res.status(400).json({ error: "INVALID_AGENT_REQUEST" });
-    return;
-  }
-
-  // Filter to tasks the caller is authorised for
-  const registry = Object.fromEntries(ADMIN_AGENT_REGISTRY.map((a) => [a.id, a]));
-  const authorisedTasks = rawTasks.filter((t) => {
-    const descriptor = registry[t.agentId];
-    return descriptor && hasPermission(admin.role as AdminRole, admin.permissions, descriptor.requiredPermission);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).json({
+    auditId: String(audit._id),
+    success: true,
+    mode: "read-only-planning",
+    tasks,
+    blockedCount: planned.length - tasks.length,
+    message: tasks.length ? "Authorized agent tasks prepared. Execution is not enabled." : "No authorized agent tasks match this request.",
   });
+};
 
-  // Fail-closed audit log
-  try {
-    await writeAuditLog(admin.id, admin.name, "admin_agent_plan", {
-      message: message.slice(0, 200),
-      tasksPlanned: authorisedTasks.map((t) => t.agentId),
-    });
-  } catch (err) {
-    logger.error({ err }, "[AdminAgentSupervisor] audit log write failed — refusing request");
-    res.status(500).json({ error: "Audit log unavailable — request cannot proceed" });
+export const listAdminAgents = (req: AuthRequest, res: Response): void => {
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).json({ success: true, mode: "read-only-planning", agents: ADMIN_AGENT_REGISTRY.filter(task => permitted(req, task.permission)) });
+};
+
+/** Explicitly selected, read-only specialist execution; no free-form tool calls. */
+export const readAdminAgent = async (req: AuthRequest, res: Response): Promise<void> => {
+  const agent = ADMIN_AGENT_REGISTRY.find(item => item.id === req.params.agentId);
+  if (!agent) {
+    res.status(404).json({ success: false, message: "Unknown administrative agent." });
     return;
   }
-
-  res.json({ tasks: authorisedTasks });
-}
-
-/**
- * POST /api/v1/admin/agents/supervisor/execute
- * Body: { message: string }
- * Plans + executes all authorised agents for the query and returns a unified result.
- */
-export async function executeAdminSupervisorHandler(req: Request, res: Response): Promise<void> {
-  const admin = adminInfo(req);
-  const { message } = req.body as { message?: string };
-
-  if (!message || typeof message !== "string" || !message.trim()) {
-    res.status(400).json({ error: "message is required" });
+  if (!permitted(req, agent.permission)) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED" });
     return;
   }
-  if (message.length > 1000) {
-    res.status(400).json({ error: "message too long (max 1000 characters)" });
-    return;
-  }
-
-  // Fail-closed audit log before execution
-  try {
-    await writeAuditLog(admin.id, admin.name, "admin_agent_execute", {
-      message: message.slice(0, 200),
-    });
-  } catch (err) {
-    logger.error({ err }, "[AdminAgentSupervisor] audit log write failed — refusing execute");
-    res.status(500).json({ error: "Audit log unavailable — request cannot proceed" });
-    return;
-  }
-
-  try {
-    const result = await executeAdminSupervisor(message, admin.role, admin.permissions);
-    res.json(result);
-  } catch (err) {
-    logger.error({ err }, "[AdminAgentSupervisor] orchestrator execute failed");
-    res.status(500).json({ error: "Supervisor execution failed" });
-  }
-}
-
-/**
- * GET /api/v1/admin/agents/:agentId/summary
- * Returns aggregate data for a specific agent.
- */
-export async function readAdminAgent(req: Request, res: Response): Promise<void> {
-  const admin = adminInfo(req);
-  const { agentId } = req.params as { agentId: string };
-
-  const descriptor = ADMIN_AGENT_REGISTRY.find((a) => a.id === agentId);
-  if (!descriptor) {
-    res.status(404).json({ error: "Unknown agent" });
-    return;
-  }
-
-  if (!hasPermission(admin.role as AdminRole, admin.permissions, descriptor.requiredPermission)) {
-    res.status(403).json({ error: "Insufficient permissions" });
-    return;
-  }
-
-  // Fail-closed audit log before data access
-  try {
-    await writeAuditLog(admin.id, admin.name, "admin_agent_read", { agentId });
-  } catch (err) {
-    logger.error({ err }, "[AdminAgentSupervisor] audit log write failed — refusing request");
-    res.status(500).json({ error: "Audit log unavailable — request cannot proceed" });
-    return;
-  }
-
-  try {
-    const summary = await readAdminAgentSummary(agentId as AdminAgentId);
-    res.json(summary);
-  } catch (err) {
-    logger.error({ err, agentId }, "[AdminAgentSupervisor] agent read failed");
-    res.status(500).json({ error: "Failed to retrieve agent summary" });
-  }
-}
+  // Record intent before any data access. Do not disclose an unlogged result.
+  const audit = await AuditLog.create({
+    action: "admin_agent_read",
+    actor: req.user?.name || "Administrator",
+    actorId: String(req.user?._id || ""),
+    entity: "AdminAgent",
+    metadata: { agentId: agent.id, mode: "read-only-aggregate" },
+  });
+  const result = await readAdminAgentSummary(agent.id);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).json({ success: true, auditId: String(audit._id), result });
+};
