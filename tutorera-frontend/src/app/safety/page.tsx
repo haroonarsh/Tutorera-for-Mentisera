@@ -22,7 +22,7 @@ import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Trust & Safety Center | Global Student & Tutor Protection | TUTORERA",
+  title: "Trust & Safety Center | Global Student & Tutor Protection",
   description:
     "TUTORERA's comprehensive Global Trust and Safety Center. Safety guidelines for students, parents, and tutors across online and in-person home tuition worldwide.",
   alternates: {

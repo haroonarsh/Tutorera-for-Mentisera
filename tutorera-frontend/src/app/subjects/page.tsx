@@ -1,9 +1,19 @@
 "use client";
 import { UI_COLORS } from "@/lib/brand";
 import { formatPKR } from "@/lib/site";
-import { slugify } from "@/lib/tutor-directory";
+import { SUBJECTS, slugify } from "@/lib/tutor-directory";
 import Link from "next/link";
 import { subjectCatalogue } from "@/lib/subject-catalogue";
+const normaliseSubject = (name: string) =>
+  name === "English" ? "English Language" : name === "Urdu" ? "Urdu Language" : name === "Mathematics (Extended)" || name === "Mathematics A" ? "Mathematics" : name === "Business" ? "Business Studies" : name;
+
+// Prefer the crawlable /tutors/subject/[slug] route; fall back to the filter URL.
+function subjectHref(name: string) {
+  const subject = normaliseSubject(name);
+  const slug = (Object.keys(SUBJECTS) as Array<keyof typeof SUBJECTS>).find((key) => SUBJECTS[key] === subject);
+  return slug ? `/tutors/subject/${slug}` : `/tutors?subject=${encodeURIComponent(subject)}`;
+}
+
 
 const C = UI_COLORS;
 
@@ -106,7 +116,7 @@ export default function SubjectsPage() {
                 <ul style={{ listStyle: "none", padding: 0 }}>
                   {group.subjects.map(subject => (
                     <li key={subject.code ?? subject.name} style={{ padding: "0.4rem 0" }}>
-                      <Link href={`/tutors?subject=${encodeURIComponent(subject.name === "English" ? "English Language" : subject.name === "Urdu" ? "Urdu Language" : subject.name === "Mathematics (Extended)" || subject.name === "Mathematics A" ? "Mathematics" : subject.name === "Business" ? "Business Studies" : subject.name)}`} style={{ color: "#1d4ed8", textDecoration: "underline" }}>
+                      <Link href={subjectHref(subject.name)} style={{ color: "#1d4ed8", textDecoration: "underline" }}>
                         {subject.name}{subject.code ? ` (${subject.code})` : ""}
                       </Link>
                     </li>

@@ -3,13 +3,25 @@ import { fetchTutors } from "@/lib/tutor-directory";
 import type { FiltersState } from "@/types/tutor";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Find Tutors Online & In-Person",
-  description: "Search tutor profiles worldwide and locally by subject, curriculum, country, teaching mode, published reviews, availability, verification status, and hourly rates where provided.",
-  alternates: { canonical: "/tutors" },
-};
+const TUTORS_TITLE = "Find Tutors Online & In-Person";
+const TUTORS_DESCRIPTION = "Search tutor profiles worldwide and locally by subject, curriculum, country, teaching mode, published reviews, availability, verification status, and hourly rates where provided.";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+// Filtered/sorted variants (/tutors?subject=...) duplicate the clean directory
+// routes (/tutors/subject/[slug], /tutors/city/[slug]); keep them out of the index.
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const params = await searchParams;
+  const hasParams = Object.values(params).some((v) => v !== undefined && v !== "");
+  return {
+    title: TUTORS_TITLE,
+    description: TUTORS_DESCRIPTION,
+    alternates: { canonical: "/tutors" },
+    robots: hasParams ? { index: false, follow: true } : undefined,
+    openGraph: { title: `${TUTORS_TITLE} | TUTORERA`, description: TUTORS_DESCRIPTION, url: "/tutors" },
+    twitter: { title: `${TUTORS_TITLE} | TUTORERA`, description: TUTORS_DESCRIPTION },
+  };
+}
 const value = (input: string | string[] | undefined) => typeof input === "string" ? input : "";
 
 export default async function TutorsPage({ searchParams }: Props) {

@@ -17,7 +17,7 @@ import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Background Check Policy | In-Person & Home Tuition Screening | TUTORERA",
+  title: "Background Check Policy | In-Person & Home Tuition Screening",
   description:
     "TUTORERA's background check requirements for in-person and home tutors across Pakistan, the UK, UAE, US, and international jurisdictions.",
   alternates: {

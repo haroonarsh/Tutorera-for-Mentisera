@@ -17,7 +17,7 @@ import Link from "next/link";
 import s from "../compliance-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Global Terms of Service | TUTORERA",
+  title: "Global Terms of Service",
   description: "Master contractual terms and conditions governing the TUTORERA global tutoring marketplace for students, parents, and tutors.",
 };
 

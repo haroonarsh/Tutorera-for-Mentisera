@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const countryName = COUNTRY_NAMES[country.toLowerCase()] || country.toUpperCase();
 
   return {
-    title: `Student Tuition Requests in ${countryName} | TUTORERA Marketplace`,
+    title: `Student Tuition Requests in ${countryName}`,
     description: `Browse active tuition requests from students in ${countryName}. Post your requirement and receive offers from verified tutors. Online and home tuition available.`,
     alternates: {
       canonical: `/tuition-requests/${country}`,

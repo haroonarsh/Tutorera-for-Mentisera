@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tutor Request Feed | TUTORERA",
+  title: "Tutor Request Feed",
   description: "Browse student tuition opportunities and submit proposals.",
   robots: {
     index: false,
