@@ -8,15 +8,15 @@ const country = (slug: string) => /dubai|abu-dhabi|\buae\b/.test(slug) ? "AE" : 
 export function blogTutorMatch(slug: string, title: string): Match {
   const text = (slug + " " + title).toLowerCase();
   const subject = /math|algebra|calculus/.test(text) ? "Mathematics" : /chemistry/.test(text) ? "Chemistry" : /physics/.test(text) ? "Physics" : /biology/.test(text) ? "Biology" : undefined;
-  const level = /a.level/.test(text) ? "A-Level (Cambridge / Edexcel)" : /o.level|igcse|gcse/.test(text) ? "O-Level (Cambridge / Edexcel)" : undefined;
+  const level = /a-level/.test(slug) ? "A-Level (Cambridge / Edexcel)" : /o-level/.test(slug) ? "O-Level (Cambridge / Edexcel)" : undefined;
   const city = ["Dubai", "Abu Dhabi", "Riyadh", "Jeddah", "Lahore", "Karachi", "Islamabad"].find(c => text.includes(c.toLowerCase().replaceAll(" ", "-")) || text.includes(c.toLowerCase()));
   return { subject, level, city, countryCode: country(slug), curriculum: /igcse|o.level|a.level|gcse/.test(text) ? "Cambridge" : undefined };
 }
 function matches(tutor: TutorProfile, match: Match): boolean {
   if (match.subject && !tutor.subjects?.some(s => s.toLowerCase().includes(match.subject!.toLowerCase()))) return false;
-  if (match.level && !tutor.levels?.some(l => l.toLowerCase().includes(match.level!.split(" ")[0].toLowerCase()))) return false;
-  if (match.countryCode && (tutor.countryCode || tutor.user?.countryCode) !== match.countryCode) return false;
-  if (match.city && (tutor.city || tutor.user?.city || "").toLowerCase() !== match.city.toLowerCase()) return false;
+  if (match.level && !tutor.levels?.some(l => l.toLowerCase() === match.level!.toLowerCase())) return false;
+  if (match.countryCode && (tutor.countryCode || tutor.user?.countryCode) !== match.countryCode && tutor.teachingMode === "in-person") return false;
+  if (match.city && (tutor.city || tutor.user?.city || "").toLowerCase() !== match.city.toLowerCase() && tutor.teachingMode === "in-person") return false;
   return true;
 }
 export default async function BlogRelevantTutors({ slug, title }: { slug: string; title: string }) {
