@@ -8,6 +8,10 @@ import Blog from "../models/Blog.model";
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {
   const { title, slug, content, excerpt, coverImage, tags, isPublished } = req.body;
 
+  if (typeof title !== "string" || !title.trim() || typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || typeof content !== "string" || !content.trim() || typeof excerpt !== "string" || !excerpt.trim()) {
+    res.status(400).json({ success: false, message: "Valid title, slug, content and excerpt are required" });
+    return;
+  }
   const existing = await Blog.findOne({ slug });
   if (existing) {
     res.status(400).json({ success: false, message: "Slug already exists" });
@@ -31,8 +35,8 @@ export const getAllBlogs = async (req: Request, res: Response): Promise<void> =>
   const filter: Record<string, unknown> = { isPublished: true };
   if (tag) filter.tags = { $in: [tag] };
 
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
+  const pageNum = Math.max(1, Number.parseInt(String(page), 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number.parseInt(String(limit), 10) || 9));
   const skip = (pageNum - 1) * limitNum;
 
   const total = await Blog.countDocuments(filter);
@@ -69,6 +73,14 @@ export const updateBlog = async (req: AuthRequest, res: Response): Promise<void>
   const changes: Record<string, unknown> = {};
   for (const field of allowed) {
     if (Object.prototype.hasOwnProperty.call(req.body, field)) changes[field] = req.body[field];
+  }
+  if (changes.slug !== undefined && (typeof changes.slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(changes.slug))) {
+    res.status(400).json({ success: false, message: "Invalid article slug" });
+    return;
+  }
+  if (changes.isPublished !== undefined && typeof changes.isPublished !== "boolean") {
+    res.status(400).json({ success: false, message: "isPublished must be a boolean" });
+    return;
   }
   const blog = await Blog.findByIdAndUpdate(
     req.params.id,
