@@ -25,7 +25,7 @@ async function getSchoolOfferings(): Promise<{ offerings: SchoolOffering[]; live
 }
 
 export const metadata: Metadata = {
-  title: "Online Tutoring Subjects | Expert Tutors for Every Subject | TUTORERA",
+  title: "Online Tutoring Subjects | Expert Tutors for Every Subject",
   description: "Find expert tutors across 25+ subjects — Maths, Physics, Chemistry, English, O-Levels, A-Levels, Matric and more. Post your requirement, compare offers, and choose your tutor.",
   alternates: { canonical: "/subjects" },
   openGraph: {

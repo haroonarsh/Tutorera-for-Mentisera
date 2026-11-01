@@ -30,7 +30,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const params = await searchParams;
   const hasFilters = Object.values(params).some((rawValue) => value(rawValue).trim().length > 0);
   return {
-    title: "Find Online Tutors | Post a Requirement | TUTORERA",
+    title: "Find Online Tutors | Post a Requirement",
     description: "Post an online-tuition requirement with your subject, schedule, and preferred budget. Eligible tutors can submit offers for you to compare before choosing.",
     alternates: { canonical: "/online-tutors" },
     robots: hasFilters ? { index: false, follow: true } : undefined,

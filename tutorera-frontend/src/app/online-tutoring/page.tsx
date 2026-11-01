@@ -9,7 +9,7 @@ import { SITE_URL } from "@/lib/site";
 import styles from "./online-tutoring.module.css";
 
 export const metadata: Metadata = {
-  title: "Online Tutoring Pakistan | Expert Online Tutors | TUTORERA",
+  title: "Online Tutoring Pakistan | Expert Online Tutors",
   description:
     "Find expert online tutors across Pakistan, UAE, UK and worldwide. Post a free requirement, compare verified tutor offers and book online tutoring for any subject or curriculum.",
   alternates: { canonical: "/online-tutoring" },
