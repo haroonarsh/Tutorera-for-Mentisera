@@ -10,7 +10,7 @@ export function blogTutorMatch(slug: string, title: string): Match {
   const subject = /math|algebra|calculus/.test(text) ? "Mathematics" : /chemistry/.test(text) ? "Chemistry" : /physics/.test(text) ? "Physics" : /biology/.test(text) ? "Biology" : undefined;
   const level = /a-level/.test(slug) ? "A-Level (Cambridge / Edexcel)" : /o-level/.test(slug) ? "O-Level (Cambridge / Edexcel)" : undefined;
   const city = ["Dubai", "Abu Dhabi", "Riyadh", "Jeddah", "Lahore", "Karachi", "Islamabad"].find(c => text.includes(c.toLowerCase().replaceAll(" ", "-")) || text.includes(c.toLowerCase()));
-  return { subject, level, city, countryCode: country(slug), curriculum: /igcse|o.level|a.level|gcse/.test(text) ? "Cambridge" : undefined };
+  return { subject, level, city, countryCode: country(slug), curriculum: undefined };
 }
 function matches(tutor: TutorProfile, match: Match): boolean {
   if (match.subject && !tutor.subjects?.some(s => s.toLowerCase().includes(match.subject!.toLowerCase()))) return false;
