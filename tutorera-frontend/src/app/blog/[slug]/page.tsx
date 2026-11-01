@@ -1,4 +1,4 @@
-import { getEditorialArticle,STATIC_ARTICLES } from "@/lib/editorial-content";
+import { getEditorialArticle, STATIC_ARTICLES } from "@/lib/editorial-content";
 import BlogRelevantTutors from "@/components/Blog/BlogRelevantTutors";
 import BlogRelatedGuides from "@/components/Blog/BlogRelatedGuides";
 import { ArrowLeft,Calendar,ShieldCheck,User } from "lucide-react";
