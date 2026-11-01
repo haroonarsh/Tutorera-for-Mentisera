@@ -26,6 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: path },
     robots: { index: total > 0, follow: true },
     openGraph: { title: `${title} | TUTORERA`, description, url: path },
+    twitter: { title: `${title} | TUTORERA`, description },
   };
 }
 

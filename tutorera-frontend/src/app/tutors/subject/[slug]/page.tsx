@@ -30,6 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: path,
     },
+    twitter: { title: `${title} | TUTORERA`, description },
   };
 }
 
