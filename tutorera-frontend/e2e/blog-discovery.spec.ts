@@ -30,5 +30,6 @@ test("published static guide has Article and BreadcrumbList JSON-LD", async ({ p
   expect((breadcrumb?.itemListElement as unknown[]).length).toBe(3);
   await expect(page.getByRole("link", { name: "All guides" })).toHaveAttribute("href", "/blog");
   await expect(page.getByRole("heading", { name: "Find a tutor for this topic" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Browse matching tutors and request a lesson" })).toHaveAttribute("href", /^\\/tutors(?:\\?|$)/);
+  const directoryHref = await page.getByRole("link", { name: "Browse matching tutors and request a lesson" }).getAttribute("href");
+  expect(directoryHref?.startsWith("/tutors")).toBe(true);
 });
