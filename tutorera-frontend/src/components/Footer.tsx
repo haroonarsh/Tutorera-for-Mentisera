@@ -144,13 +144,13 @@ const subjectColumns = [
   {
     heading: "Mathematics",
     subjects: [
-      { label: "Mathematics",             href: "/tutors?subject=mathematics" },
-      { label: "Statistics",              href: "/tutors?subject=statistics" },
-      { label: "Further Mathematics",     href: "/tutors?subject=further-mathematics" },
-      { label: "Applied Mathematics",     href: "/tutors?subject=applied-mathematics" },
-      { label: "Pure Mathematics",        href: "/tutors?subject=pure-mathematics" },
-      { label: "MDCAT Mathematics",       href: "/tutors?subject=mdcat-mathematics" },
-      { label: "ECAT Mathematics",        href: "/tutors?subject=ecat-mathematics" },
+      { label: "Mathematics",             href: "/tutors/subject/mathematics" },
+      { label: "Statistics",              href: "/tutors/subject/statistics" },
+      { label: "Further Mathematics",     href: "/tutors/subject/further-mathematics" },
+      { label: "Applied Mathematics",     href: "/tutors/subject/applied-mathematics" },
+      { label: "Pure Mathematics",        href: "/tutors/subject/pure-mathematics" },
+      { label: "MDCAT Mathematics",       href: "/tutors/subject/mathematics" },
+      { label: "ECAT Mathematics",        href: "/tutors/subject/mathematics" },
     ],
   },
   {
