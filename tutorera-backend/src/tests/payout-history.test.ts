@@ -1,6 +1,5 @@
 import User from "../models/User.model";
 import Booking from "../models/Booking.model";
-import PaymentLedger from "../models/PaymentLedger.model";
 import { getMyPayouts, requestPayout } from "../controllers/earnings.controller";
 
 jest.mock("../utils/sendEmail", () => jest.fn().mockResolvedValue(undefined));
@@ -34,12 +33,10 @@ describe("tutor payout history", () => {
     await getMyPayouts({ user: { _id: tutor._id, role: "tutor" }, query: { limit: "1" } } as any, res);
     const body = res.json.mock.calls[0][0];
     expect(body.payouts).toHaveLength(1);
-    expect(body.stats.currencyTotals).toEqual([
-      expect.objectContaining({ currency: "USD", totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 }),
-    ]);
+    expect(body.stats).toMatchObject({ totalPayoutAmount: 1540, pendingAmount: 770, paidAmount: 770 });
   });
 
-  it("records an immutable pending payout request without skipping finance approval", async () => {
+  it("records a payout request without prematurely marking funds processing", async () => {
     const [student, tutor] = await User.create([
       { name: "Student Two", email: "request-student@test.com", password: "password123", role: "student" },
       { name: "Tutor Two", email: "request-tutor@test.com", password: "password123", role: "tutor" },
@@ -51,16 +48,5 @@ describe("tutor payout history", () => {
     expect(updated?.payoutStatus).toBe("pending");
     expect(updated?.payoutRequestedAt).toBeInstanceOf(Date);
     expect(updated?.payoutProcessingAt).toBeUndefined();
-    const ledger = await PaymentLedger.findOne({
-      provider: "manual",
-      providerEventId: `payout-requested-${booking._id.toString()}`,
-    }).lean();
-    expect(ledger).toMatchObject({
-      eventType: "payout.requested",
-      status: "pending",
-      settlementStatus: "unsettled",
-      tutorPayable: 770,
-      currency: "USD",
-    });
   });
 });

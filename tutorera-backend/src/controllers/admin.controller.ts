@@ -1,12 +1,15 @@
 import { Response } from "express";
 import { AuthRequest } from "../types";
 import TutorProfile from "../models/TutorProfile.model";
-import { prepareDegreeReplacement, degreeUploadIndex } from "../services/degreeReplacement.service";
-import { flagPendingQualificationBookings } from "../services/qualificationBookingReview.service";
 import StudentProfile from "../models/StudentProfile.model";
 import User from "../models/User.model";
-import mongoose, { Types } from "mongoose";
+import { Types } from "mongoose";
 import Booking from "../models/Booking.model";
+import { assertParentBookingPolicy } from "../services/parentBookingPolicy.service";
+import PaymentLedger from "../models/PaymentLedger.model";
+import mongoose from "mongoose";
+import BookedSlot from "../models/BookedSlot.model";
+import { syncStudentTutorRelationship } from "../services/relationship.service";
 import Contact from "../models/Contact.model";
 import { sendNotification } from "../utils/socket";
 import { GST_PERCENT, PLATFORM_FEE_PERCENT } from "../config/constants";
@@ -17,16 +20,11 @@ import Request from "../models/Request.model";
 import Review from "../models/Review.model";
 import { creditReferrerOnFirstBooking } from "../controllers/referral.controller";
 import { logAudit } from "../utils/logAudit";
-import logger from "../config/logger";
 import AuditLog from "../models/AuditLog.model";
 import EmailLog from "../models/EmailLog.model";
-import EmailOutbox from "../models/EmailOutbox.model";
-import { deliverOutboxEmail } from "../services/emailOutbox.service";
 import Broadcast from "../models/Broadcast.model";
 import Notification from "../models/Notification.model";
-import TutorAgreement from "../models/TutorAgreement.model";
-import MarketConfig from "../models/MarketConfig.model";
-import { NotificationService } from "../services/notification.service";
+import sendEmail from "../utils/sendEmail";
 import { EMAIL_EVENTS } from "../utils/emailEvents";
 import { tutorApprovedEmail, tutorRejectedEmail, paymentConfirmedEmail, reviewRequestEmail } from "../utils/emailTemplates";
 import { getSignedViewUrl } from "../utils/uploadToCloudinary";
@@ -35,8 +33,6 @@ import {
   isHomeTuitionEligible,
   recordStatusEvent,
 } from "../services/tracking.service";
-import { syncTutorActivation } from "../services/tutorActivation.service";
-import { getApplicableAgreement } from "../services/legalAgreement.service";
 import {
   marketplaceActivatedEmail,
   marketplaceDeactivatedEmail,
@@ -44,7 +40,6 @@ import {
   homeTuitionDeactivatedEmail,
 } from "../utils/trackingEmails";
 import { generateTutorPayoutReport, resolvePayoutReportPeriod } from "../services/payoutReport.service";
-import { recordPaymentLedger } from "../services/paymentProvider.service";
 
 
 // @desc    Get dashboard stats
@@ -161,13 +156,11 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   };
   const io = req.app.get("io");
   const now = new Date();
-  let agreementCreated = false;
 
-  const setField = (key: keyof typeof profile, value: unknown) => { (profile as unknown as Record<string, unknown>)[key as string] = value; };
   const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
-    setField(`${kind}VerificationStatus` as keyof typeof profile, status);
-    setField(`${kind}RejectionReason` as keyof typeof profile, status === "rejected" ? (reason || "") : "");
-    setField(`${kind}ReviewedAt` as keyof typeof profile, now);
+    (profile as any)[`${kind}VerificationStatus`] = status;
+    (profile as any)[`${kind}RejectionReason`] = status === "rejected" ? (reason || "") : "";
+    (profile as any)[`${kind}ReviewedAt`] = now;
   };
   component("cnic");
   component("degree");
@@ -175,108 +168,82 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
   if (profile.policeVerificationStatus !== "not_required") {
     component("police");
   }
+
   profile.verificationStatus = status;
   profile.isVerified = status === "approved";
   profile.rejectionReason = status === "rejected" ? (reason || "") : "";
   profile.lastStatusChangeAt = now;
+  // Some applications pre-date the expanded level enum (for example
+  // "Matric" and "O-Level"). A verification decision must not revalidate and
+  // reject unrelated legacy application data. The decision fields are
+  // explicitly validated above, so persist this administrative state change
+  // without running whole-document validation.
+  await profile.save({ validateBeforeSave: false });
 
-  // Check for an existing agreement before starting the transaction to avoid
-  // a read inside the write path. The agreement creation is idempotent so a
-  // race between concurrent verifications is handled by the unique index.
-  const activeAgreement = status === "approved"
-    ? await TutorAgreement.findOne({ tutor: tutorUser._id, tutorProfile: profile._id, status: { $in: ["pending_acceptance", "active"] } })
-    : null;
+  await recordStatusEvent({
+    tutorId: tutorUser._id.toString(),
+    tutorProfileId: profile._id.toString(),
+    actor,
+    event: status === "approved" ? "PROFILE_APPROVED" : "PROFILE_REJECTED",
+    message:
+      status === "approved"
+        ? "Tutor profile approved (bulk verify)"
+        : `Tutor profile rejected (bulk verify)${reason ? `: ${reason}` : ""}`,
+    statusAfter: status,
+  });
 
-  // Atomically commit: profile status + optional agreement + status history + audit log.
-  // Some applications pre-date the expanded level enum ("Matric", "O-Level"); a
-  // verification decision must not revalidate unrelated legacy data.
-  const session = await mongoose.startSession();
   try {
-    await session.withTransaction(async () => {
-      await profile.save({ validateBeforeSave: false, session });
-      if (status === "approved" && !activeAgreement) {
-        profile.agreementAcceptanceRequired = true;
-        profile.agreementAcceptedAt = undefined;
-        profile.agreementVersion = "TTA-2026.1";
-        await profile.save({ validateBeforeSave: false, session });
-        await TutorAgreement.create([{
-          tutor: tutorUser._id,
-          tutorProfile: profile._id,
-          approvedHourlyRate: profile.hourlyRate,
-          currency: profile.currency || "USD",
-          version: "TTA-2026.1",
-          approvedBy: req.user?._id,
-          approvedAt: now,
-        }], { session });
-        agreementCreated = true;
-      }
-      await recordStatusEvent({
-        tutorId: tutorUser._id.toString(),
-        tutorProfileId: profile._id.toString(),
-        actor,
-        event: status === "approved" ? "PROFILE_APPROVED" : "PROFILE_REJECTED",
-        message: status === "approved"
-          ? "Tutor profile approved (bulk verify)"
-          : `Tutor profile rejected (bulk verify)${reason ? `: ${reason}` : ""}`,
-        statusAfter: status,
-      }, session);
-      await logAudit({
-        action: status === "approved" ? "tutor_approved" : "tutor_rejected",
-        actor: actor.name,
-        actorId: actor.id,
-        entity: "TutorProfile",
-        targetId: profile._id.toString(),
-        targetName: tutorUser.name,
-        metadata: status === "rejected" ? { reason } : undefined,
-      }, session);
-    });
-  } finally {
-    await session.endSession();
-  }
-
-  // Notifications are best-effort and run after the transaction so their
-  // failure cannot roll back the committed verification decision.
-  try {
-    if (status === "approved" && agreementCreated) {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", hourlyRate: profile.hourlyRate, currency: profile.currency, ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
-    } else {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
-    }
+    const { subject, html } = status === "approved"
+      ? tutorApprovedEmail(tutorUser.name)
+      : tutorRejectedEmail(tutorUser.name, reason);
+    await sendEmail({ to: tutorUser.email, subject, html });
   } catch (err) {
-    logger.error({ err, tutorId: tutorUser._id }, "Failed to send tutor verification email");
+    console.error("Failed to send tutor verification email:", err);
   }
+
+  await logAudit({
+    action: status === "approved" ? "tutor_approved" : "tutor_rejected",
+    actor: actor.name,
+    actorId: actor.id,
+    entity: "TutorProfile",
+    targetId: profile._id.toString(),
+    targetName: tutorUser.name,
+    metadata: status === "rejected" ? { reason } : undefined,
+  });
 
   await sendNotification(io, tutorUser._id.toString(), {
-    title: status === "approved" ? "🎉 Application Approved — Agreement Pending" : "❌ Profile Rejected",
+    title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
     message: status === "approved"
-      ? "Congratulations! Your tutor application has been approved. Please review and accept the Tutor Marketplace Agreement to activate your marketplace profile."
+      ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
       : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
     type: "verification",
-    link: status === "approved" ? "/tutor/accept-agreement" : "/tutor/application-status",
+    link: "/tutor/application-status",
   });
 
   // Sync marketplace + home-tuition eligibility through the same path the
   // per-component endpoints use, so the tutor sees accurate status on their
   // application-tracking page.
+  const mpEligible = isMarketplaceEligible(profile);
   const htEligible = isHomeTuitionEligible(profile);
   const cta = { applicationId: tutorUser.applicationId || "TUT-PENDING" };
-  const activation = await syncTutorActivation(tutorUser._id);
-  if (activation.activated && !profile.marketplaceEligible) {
+  if (mpEligible && !profile.marketplaceEligible) {
     profile.marketplaceEligible = true;
     profile.marketplaceEligibleAt = now;
     await profile.save({ validateBeforeSave: false });
-    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after contract acceptance" });
+    await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
     try {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
+      const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
     } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
-    await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/dashboard" });
-  } else if (!activation.activated && profile.marketplaceEligible) {
+    await sendNotification(io, tutorUser._id.toString(), { title: "🎉 You're live on TUTORERA", message: "Your profile is now active on the marketplace.", type: "verification", link: "/tutor/application-status" });
+  } else if (!mpEligible && profile.marketplaceEligible) {
     profile.marketplaceEligible = false;
-    profile.marketplaceEligibleAt = undefined;
+    profile.marketplaceEligibleAt = undefined as any;
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
     try {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: cta });
+      const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
     } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
@@ -286,16 +253,18 @@ export const verifyTutor = async (req: AuthRequest, res: Response): Promise<void
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
     try {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "home_tuition_approved", { ctaArgs: cta });
+      const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
     } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
   } else if (!htEligible && profile.homeTuitionEligible) {
     profile.homeTuitionEligible = false;
-    profile.homeTuitionEligibleAt = undefined;
+    profile.homeTuitionEligibleAt = undefined as any;
     await profile.save({ validateBeforeSave: false });
     await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
     try {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "HomeTuition", reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: cta });
+      const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
+      await sendEmail({ to: tutorUser.email, subject, html });
     } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
     await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
   }
@@ -349,11 +318,10 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         continue;
       }
 
-      const setF = (key: string, value: unknown) => { (profile as unknown as Record<string, unknown>)[key] = value; };
       const component = (kind: "cnic" | "degree" | "demoVideo" | "police") => {
-        setF(`${kind}VerificationStatus`, status);
-        setF(`${kind}RejectionReason`, status === "rejected" ? (reason || "") : "");
-        setF(`${kind}ReviewedAt`, now);
+        (profile as any)[`${kind}VerificationStatus`] = status;
+        (profile as any)[`${kind}RejectionReason`] = status === "rejected" ? (reason || "") : "";
+        (profile as any)[`${kind}ReviewedAt`] = now;
       };
       component("cnic");
       component("degree");
@@ -383,11 +351,10 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       });
 
       try {
-        if (status === "approved") {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "All", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
-    } else {
-      await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { reason: reason || "", ctaArgs: { applicationId: tutorUser.applicationId || "TUT-PENDING" } });
-    }
+        const { subject, html } = status === "approved"
+          ? tutorApprovedEmail(tutorUser.name)
+          : tutorRejectedEmail(tutorUser.name, reason);
+        await sendEmail({ to: tutorUser.email, subject, html });
       } catch (err) {
         console.error(`Failed to send verification email to ${tutorUser.email}:`, err);
       }
@@ -403,34 +370,36 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       });
 
       await sendNotification(io, tutorUser._id.toString(), {
-        title: status === "approved" ? "🎉 Application Approved — Agreement Pending" : "❌ Profile Rejected",
+        title: status === "approved" ? "🎉 Profile Approved!" : "❌ Profile Rejected",
         message:
           status === "approved"
-            ? "Congratulations! Your tutor application has been approved. Please review and accept the Tutor Marketplace Agreement to activate your marketplace profile."
+            ? "Congratulations! Your tutor profile has been approved. You are now visible to students."
             : `Your profile was rejected. Reason: ${reason || "Please contact support."}`,
         type: "verification",
-        link: status === "approved" ? "/tutor/accept-agreement" : "/tutor/application-status",
+        link: "/tutor/application-status",
       });
 
-      const activation = await syncTutorActivation(tutorUser._id);
+      const mpEligible = isMarketplaceEligible(profile);
       const htEligible = isHomeTuitionEligible(profile);
       const cta = { applicationId: tutorUser.applicationId || "TUT-PENDING" };
-      if (activation.activated && !profile.marketplaceEligible) {
+      if (mpEligible && !profile.marketplaceEligible) {
         profile.marketplaceEligible = true;
         profile.marketplaceEligibleAt = now;
         await profile.save({ validateBeforeSave: false });
-        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after agreement acceptance" });
+        await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_ACTIVATED", message: "Marketplace profile activated after bulk approval" });
         try {
-          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.approved", { document: "Marketplace", ctaArgs: cta });
+          const { subject, html } = marketplaceActivatedEmail(tutorUser.name, cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
         } catch (err) { console.error("marketplaceActivatedEmail failed:", err); }
-        await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/dashboard" });
-      } else if (!activation.activated && profile.marketplaceEligible) {
+        await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace active 🚀", message: "You are now visible in the TUTORERA marketplace.", type: "verification", link: "/tutor/application-status" });
+      } else if (!mpEligible && profile.marketplaceEligible) {
         profile.marketplaceEligible = false;
-        profile.marketplaceEligibleAt = undefined;
+        profile.marketplaceEligibleAt = undefined as any;
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "MARKETPLACE_DEACTIVATED", message: "Marketplace profile deactivated after bulk rejection" });
         try {
-          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "Marketplace", reason: "Your marketplace access was paused because a verification requirement is no longer met.", ctaArgs: cta });
+          const { subject, html } = marketplaceDeactivatedEmail(tutorUser.name, "Your marketplace access was paused because a verification requirement is no longer met.", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
         } catch (err) { console.error("marketplaceDeactivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Marketplace visibility paused", message: "Your marketplace access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
       }
@@ -440,16 +409,18 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_ACTIVATED", message: "Home tuition eligibility activated after bulk approval" });
         try {
-          await NotificationService.publishEvent(tutorUser._id.toString(), "home_tuition_approved", { ctaArgs: cta });
+          const { subject, html } = homeTuitionActivatedEmail(tutorUser.name, cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
         } catch (err) { console.error("homeTuitionActivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition approved 🏠", message: "You are eligible to respond to Home and In-Person Tuition opportunities.", type: "verification", link: "/tutor/application-status" });
       } else if (!htEligible && profile.homeTuitionEligible) {
         profile.homeTuitionEligible = false;
-        profile.homeTuitionEligibleAt = undefined;
+        profile.homeTuitionEligibleAt = undefined as any;
         await profile.save({ validateBeforeSave: false });
         await recordStatusEvent({ tutorId: tutorUser._id.toString(), tutorProfileId: profile._id.toString(), actor, event: "HOME_TUITION_DEACTIVATED", message: "Home tuition eligibility deactivated after bulk rejection" });
         try {
-          await NotificationService.publishEvent(tutorUser._id.toString(), "verification.rejected", { document: "HomeTuition", reason: "Your home tuition access was paused because a verification requirement is no longer met.", ctaArgs: cta });
+          const { subject, html } = homeTuitionDeactivatedEmail(tutorUser.name, "Your home tuition access was paused because a verification requirement is no longer met.", cta);
+          await sendEmail({ to: tutorUser.email, subject, html });
         } catch (err) { console.error("homeTuitionDeactivatedEmail failed:", err); }
         await sendNotification(io, tutorUser._id.toString(), { title: "Home tuition paused", message: "Your home tuition access was paused because a verification requirement is no longer met.", type: "verification", link: "/tutor/application-status" });
       }
@@ -459,9 +430,9 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
       } else {
         results.rejected++;
       }
-    } catch (err) {
+    } catch (err: any) {
       results.failed++;
-      results.errors.push(`Failed to process ${tutorId}: ${err instanceof Error ? err.message : "unknown error"}`);
+      results.errors.push(`Failed to process ${tutorId}: ${err?.message || "unknown error"}`);
       console.error(`Bulk verify error for ${tutorId}:`, err);
     }
   }
@@ -473,200 +444,18 @@ export const bulkVerifyTutors = async (req: AuthRequest, res: Response): Promise
   });
 };
 
-// @desc    Admin forceful upload of tutor docs
-// @route   POST /api/admin/tutors/:id/upload-docs
-// @access  Private (admin)
-export const uploadTutorDocsAdmin = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    const tutorId = req.params.id; // This is the user _id, not profile _id
-
-    if (!files || Object.keys(files).length === 0) {
-      res.status(400).json({ success: false, message: "No files uploaded" });
-      return;
-    }
-
-    const existingProfile = await TutorProfile.findOne({ user: tutorId });
-    if (!existingProfile) {
-      res.status(404).json({ success: false, message: "Tutor profile not found." });
-      return;
-    }
-
-    const tutorUser = await User.findById(tutorId);
-    if (!tutorUser) {
-      res.status(404).json({ success: false, message: "User not found." });
-      return;
-    }
-
-  const { verifyFileSignature } = await import("../middlewares/upload.middleware");
-  const { uploadToCloudinary, deleteFromCloudinary } = await import("../utils/uploadToCloudinary");
-  
-  const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
-  const VIDEO_TYPES = ["video/mp4"];
-
-  const updateData: Record<string, unknown> = {};
-  const replacedAssets: { publicId: string; resourceType?: "video" }[] = [];
-
-  // CNIC Front
-  if (files.cnicFront?.[0]) {
-    const { valid } = await verifyFileSignature(files.cnicFront[0].buffer, DOCUMENT_TYPES);
-    if (!valid) {
-      res.status(400).json({ success: false, message: "Invalid CNIC front file format" });
-      return;
-    }
-    const result = await uploadToCloudinary(files.cnicFront[0].buffer, "tutorera/verification/cnic", "auto", true);
-    updateData.cnicFront = result.secure_url;
-    updateData.cnicFrontPublicId = result.public_id;
-    updateData.cnicVerificationStatus = "approved";
-    updateData.cnicRejectionReason = "";
-    if (existingProfile.cnicFrontPublicId) replacedAssets.push({ publicId: existingProfile.cnicFrontPublicId });
-  }
-
-  // CNIC Back
-  if (files.cnicBack?.[0]) {
-    const { valid } = await verifyFileSignature(files.cnicBack[0].buffer, DOCUMENT_TYPES);
-    if (!valid) {
-      res.status(400).json({ success: false, message: "Invalid CNIC back file format" });
-      return;
-    }
-    const result = await uploadToCloudinary(files.cnicBack[0].buffer, "tutorera/verification/cnic", "auto", true);
-    updateData.cnicBack = result.secure_url;
-    updateData.cnicBackPublicId = result.public_id;
-    updateData.cnicVerificationStatus = "approved";
-    updateData.cnicRejectionReason = "";
-    if (existingProfile.cnicBackPublicId) replacedAssets.push({ publicId: existingProfile.cnicBackPublicId });
-  }
-
-  // Degree
-  if (files.degree?.[0]) {
-    const qualificationIndex = degreeUploadIndex(existingProfile, req.body?.qualificationIndex);
-    if (qualificationIndex === null) {
-      res.status(422).json({ success: false, message: "Choose an existing qualification for this degree upload." });
-      return;
-    }
-    const { valid } = await verifyFileSignature(files.degree[0].buffer, DOCUMENT_TYPES);
-    if (!valid) {
-      res.status(400).json({ success: false, message: "Invalid degree file format" });
-      return;
-    }
-    const result = await uploadToCloudinary(files.degree[0].buffer, "tutorera/verification/degrees", "auto", true);
-    Object.assign(updateData, prepareDegreeReplacement(existingProfile, result.secure_url, result.public_id, qualificationIndex));
-  }
-
-  // Police Certificate
-  if (files.policeCertificate?.[0]) {
-    const { valid } = await verifyFileSignature(files.policeCertificate[0].buffer, DOCUMENT_TYPES);
-    if (!valid) {
-      res.status(400).json({ success: false, message: "Invalid police certificate file format" });
-      return;
-    }
-    const result = await uploadToCloudinary(files.policeCertificate[0].buffer, "tutorera/verification/police", "auto", true);
-    updateData.policeCertificate = result.secure_url;
-    updateData.policeCertificatePublicId = result.public_id;
-    updateData.policeVerificationStatus = "approved";
-    updateData.policeRejectionReason = "";
-    if (existingProfile.policeCertificatePublicId) replacedAssets.push({ publicId: existingProfile.policeCertificatePublicId });
-  }
-
-  // Video Intro
-  if (files.videoIntro?.[0]) {
-    const { valid } = await verifyFileSignature(files.videoIntro[0].buffer, VIDEO_TYPES);
-    if (!valid) {
-      res.status(400).json({ success: false, message: "Invalid video file format" });
-      return;
-    }
-    const result = await uploadToCloudinary(files.videoIntro[0].buffer, "tutorera/verification/videos", "video", false);
-    updateData.videoIntro = result.secure_url;
-    updateData.videoIntroPublicId = result.public_id;
-    updateData.demoVideoStatus = "approved";
-    updateData.demoVideoRejectionReason = "";
-    if (existingProfile.videoIntroPublicId) replacedAssets.push({ publicId: existingProfile.videoIntroPublicId, resourceType: "video" });
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    res.status(400).json({ success: false, message: "No valid files were uploaded." });
-    return;
-  }
-
-  // Uploading replacement evidence must not approve the overall application.
-  updateData.verificationStatus = "pending";
-  updateData.isVerified = false;
-  updateData.marketplaceEligible = false;
-  updateData.homeTuitionEligible = false;
-  updateData.marketplaceEligibleAt = null;
-  updateData.homeTuitionEligibleAt = null;
-  updateData.lastStatusChangeAt = new Date();
-
-  const updated = await TutorProfile.findByIdAndUpdate(existingProfile._id, updateData, { returnDocument: "after" });
-  if (!updated) throw new Error("Tutor profile no longer exists.");
-  await flagPendingQualificationBookings(updated);
-
-  await Promise.all(replacedAssets.map(({ publicId, resourceType }) =>
-    deleteFromCloudinary(publicId, resourceType).catch(() => undefined)
-  ));
-
-    await logAudit({
-      action: "admin_override_documents",
-      actor: req.user?.name || "Admin",
-      actorId: req.user?._id?.toString(),
-      entity: "TutorProfile",
-      targetId: existingProfile._id.toString(),
-      targetName: tutorUser.name,
-      metadata: { uploadedFields: Object.keys(updateData) },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Documents uploaded. Application review is required before activation.",
-      profile: updated,
-    });
-  } catch (error) {
-    console.error("Admin document upload error:", error);
-    const errMsg = error instanceof Error ? error.message : "Failed to upload documents. Please try again.";
-    res.status(500).json({
-      success: false,
-      message: errMsg,
-      error: process.env.NODE_ENV === "development" ? String(error) : undefined,
-    });
-  }
-};
-
 // @desc    Get all users
 // @route   GET /api/admin/users
 // @access  Private (admin)
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   const { role, search, page = "1", limit = "20" } = req.query;
-  const andClauses: Record<string, unknown>[] = [{ isDeleted: { $ne: true } }];
-
-  if (req.countryScopeCode) {
-    andClauses.push({ countryCode: req.countryScopeCode });
-  }
-
-  if (role && role !== "all") {
-    if (role === "admin") {
-      andClauses.push({
-        $or: [
-          { role: "admin" },
-          { role: "super_admin" },
-          { adminRole: { $exists: true, $ne: null } },
-        ],
-      });
-    } else {
-      andClauses.push({ role });
-    }
-  }
+  const filter: Record<string, unknown> = {};
+  if (role && role !== "all") filter.role = role;
 
   if (search && (search as string).trim()) {
     const searchRegex = new RegExp((search as string).trim(), "i");
-    andClauses.push({
-      $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }],
-    });
+    filter.$or = [{ name: searchRegex }, { email: searchRegex }];
   }
-
-  const filter = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
 
   const pageNum = Math.max(1, parseInt(page as string) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
@@ -682,7 +471,24 @@ export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void
 // @route   PATCH /api/admin/users/:id/status
 // @access  Private (admin)
 export const toggleUserStatus = async (req: AuthRequest, res: Response): Promise<void> => {
-  res.status(410).json({ success: false, code: "ACCOUNT_ENFORCEMENT_REQUIRED", message: "Use the account enforcement endpoint with an explicit action and reason." });
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404).json({ success: false, message: "User not found" });
+    return;
+  }
+  user.isActive = !user.isActive;
+  await user.save();
+
+  await logAudit({
+    action: user.isActive ? "user_activated" : "user_deactivated",
+    actor: req.user?.name || "Admin",
+    actorId: req.user?._id?.toString(),
+    entity: "User",
+    targetId: user._id.toString(),
+    targetName: user.name,
+  });
+
+  res.status(200).json({ success: true, message: `User ${user.isActive ? "activated" : "deactivated"}` });
 };
 
 // @desc    Get all bookings
@@ -715,9 +521,21 @@ export const updatePaymentStatus = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  const { paymentStatus, paymentNote, payoutStatus, payoutNote } = req.body;
+  const { paymentStatus, paymentNote, payoutStatus, payoutNote, payoutSettlementReference, payoutSettlementMethod, payoutEvidenceReference } = req.body;
 
-  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : "payout.process";
+  // A manual admin status change cannot substitute for money returned by a gateway.
+  if (["refunded", "partially_refunded"].includes(paymentStatus)) {
+    res.status(409).json({ success: false, code: "PROVIDER_REFUND_REQUIRED", message: "Refund settlement must be confirmed by the payment provider before changing booking payment status." });
+    return;
+  }
+
+  // A transfer cannot be declared paid by changing a booking enum. A separate
+  // second-finance-officer verification endpoint records the reviewed evidence.
+  if (payoutStatus === "paid") {
+    res.status(409).json({ success: false, code: "INDEPENDENT_PAYOUT_VERIFICATION_REQUIRED", message: "Only an independent finance reviewer can verify a documented external transfer." });
+    return;
+  }
+  const requiredPermission = paymentStatus !== undefined ? "payment.manage" : payoutStatus === "approved" ? "payout.approve" : "payout.process";
   if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, requiredPermission)) {
     res.status(403).json({ success: false, code: "PERMISSION_DENIED", message: `You do not have permission to ${paymentStatus !== undefined ? "change payment state" : "process payouts"}.` });
     return;
@@ -753,19 +571,36 @@ export const updatePaymentStatus = async (
     res.status(409).json({ success: false, message: `Payout cannot move from ${booking.payoutStatus} to ${payoutStatus}.` });
     return;
   }
-  if (payoutStatus !== undefined && booking.paymentStatus !== "confirmed") {
+  if (payoutStatus !== undefined && (booking.paymentStatus !== "confirmed" || booking.status !== "completed")) {
     res.status(409).json({ success: false, message: "A payout cannot change until student payment is confirmed." });
     return;
   }
 
+  if (paymentStatus === "confirmed" && booking.request && booking.bid) {
+    try {
+      await assertParentBookingPolicy({ student: (booking.student as any)._id || booking.student, request: booking.request,
+        bid: booking.bid, amount: booking.studentTotal, currency: booking.currency || "PKR" });
+    } catch (err: any) {
+      res.status(err.statusCode || 409).json({ success: false, code: err.code || "PARENT_POLICY_BLOCKED", message: err.message });
+      return;
+    }
+  }
+
   // Update only fields that are provided
   if (paymentStatus !== undefined) booking.paymentStatus = paymentStatus;
+  if (paymentStatus === "confirmed") booking.paymentConfirmedAt = new Date();
   if (paymentNote !== undefined) booking.paymentNote = paymentNote;
   if (payoutStatus !== undefined) {
     booking.payoutStatus = payoutStatus;
     const changedAt = new Date();
     if (payoutStatus === "approved") booking.payoutApprovedAt = changedAt;
-    if (payoutStatus === "processing") booking.payoutProcessingAt = changedAt;
+    if (payoutStatus === "processing") {
+      booking.payoutProcessingAt = changedAt;
+      booking.payoutSettlementMethod = payoutSettlementMethod;
+      booking.payoutSettlementReference = payoutSettlementReference;
+      booking.payoutEvidenceReference = payoutEvidenceReference;
+      booking.payoutInitiatedBy = req.user?._id;
+    }
     if (payoutStatus === "paid") booking.payoutPaidAt = changedAt;
     if (payoutStatus === "failed") booking.payoutFailedAt = changedAt;
   }
@@ -774,6 +609,7 @@ export const updatePaymentStatus = async (
   // Handle booking status change from admin
   // Booking lifecycle changes use the dedicated status endpoint.
 
+  // ← ADD: Auto-calculate fees with new 23% when payment confirmed
   await booking.save();
 
   if (paymentStatus === "confirmed") {
@@ -783,95 +619,33 @@ export const updatePaymentStatus = async (
       actorId: req.user?._id?.toString(),
       entity: "Booking",
       targetId: booking._id.toString(),
-      targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
+      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
       metadata: { amount: booking.amount },
     });
 
     try {
       const studentUser = await User.findById(booking.student).select("email");
       if (studentUser) {
-        await NotificationService.publishEvent(studentUser._id.toString(), "payment_receipt", {
-          tutorName: ((booking.tutor as unknown as { name?: string }))?.name || "Tutor",
-          amount: booking.amount,
-          bookingId: booking._id.toString()
-        });
+        const { subject, html } = paymentConfirmedEmail(
+          (booking.student as any)?.name || "Student",
+          (booking.tutor as any)?.name || "Tutor",
+          booking.amount
+        );
+        await sendEmail({ to: studentUser.email, subject, html });
       }
     } catch (err) {
       console.error("Failed to send payment confirmation email:", err);
     }
   }
-  if (payoutStatus !== undefined && payoutStatus !== "paid") {
-    await recordPaymentLedger({
-      provider: "manual",
-      providerTransactionId: `booking-${booking._id.toString()}`,
-      providerEventId: `payout-${payoutStatus}-${booking._id.toString()}`,
-      eventType: "manual.adjustment",
-      status: payoutStatus === "processing" ? "processing" : payoutStatus === "failed" ? "failed" : "pending",
-      amount: booking.subtotal || booking.amount,
-      currency: booking.currency || "USD",
-      bookingId: booking._id.toString(),
-      bidId: booking.bid?.toString(),
-      studentId: booking.student._id?.toString() || booking.student.toString(),
-      tutorId: booking.tutor._id?.toString() || booking.tutor.toString(),
-      feeSnapshot: {
-        subtotal: booking.subtotal,
-        studentFee: booking.studentFee,
-        tutorFee: booking.tutorFee,
-        tax: booking.tax,
-        studentTotal: booking.studentTotal,
-        tutorNet: booking.tutorNet,
-        platformFee: booking.platformFee,
-        feeConfig: booking.feeConfig,
-      },
-      settlementStatus: ["failed", "held"].includes(payoutStatus) ? "exception" : "expected",
-      metadata: { payoutStatus, payoutNote: booking.payoutNote || "" },
-    });
-  }
-
   if (payoutStatus === "paid") {
-    await recordPaymentLedger({
-      provider: "manual",
-      providerTransactionId: `booking-${booking._id.toString()}`,
-      providerEventId: `payout-completed-${booking._id.toString()}`,
-      eventType: "payout.completed",
-      status: "succeeded",
-      amount: booking.subtotal || booking.amount,
-      currency: booking.currency || "USD",
-      bookingId: booking._id.toString(),
-      bidId: booking.bid?.toString(),
-      studentId: booking.student._id?.toString() || booking.student.toString(),
-      tutorId: booking.tutor._id?.toString() || booking.tutor.toString(),
-      feeSnapshot: {
-        subtotal: booking.subtotal,
-        studentFee: booking.studentFee,
-        tutorFee: booking.tutorFee,
-        tax: booking.tax,
-        studentTotal: booking.studentTotal,
-        tutorNet: booking.tutorNet,
-        platformFee: booking.platformFee,
-        feeConfig: booking.feeConfig,
-      },
-      settlementStatus: "settled",
-      metadata: { payoutStatus: "paid", paidAt: booking.payoutPaidAt?.toISOString(), payoutNote: booking.payoutNote || "" },
-    });
     await logAudit({
       action: "payout_marked_paid",
       actor: req.user?.name || "Admin",
       actorId: req.user?._id?.toString(),
       entity: "Booking",
       targetId: booking._id.toString(),
-      targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
+      targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
       metadata: { tutorPayout: booking.tutorPayout },
-    });
-  } else if (payoutStatus !== undefined) {
-    await logAudit({
-      action: `payout_${payoutStatus}`,
-      actor: req.user?.name || "Admin",
-      actorId: req.user?._id?.toString(),
-      entity: "Booking",
-      targetId: booking._id.toString(),
-      targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
-      metadata: { tutorPayout: booking.tutorPayout, payoutNote: booking.payoutNote || "" },
     });
   }
 
@@ -935,13 +709,84 @@ export const updateContactStatus = async (req: AuthRequest, res: Response): Prom
   const contact = await Contact.findByIdAndUpdate(
     req.params.id,
     { status, isRead: true },
-    { returnDocument: "after" }
+    { new: true }
   );
   if (!contact) {
     res.status(404).json({ success: false, message: "Contact not found" });
     return;
   }
   res.status(200).json({ success: true, contact });
+};
+
+// Review of an EXTERNAL bank/wallet transfer. This does NOT move funds.
+// Two distinct finance actors must attest to transaction evidence and a
+// matching transfer reference before a booking can become 'paid'.
+export const verifyExternalPayout = async (req: AuthRequest, res: Response): Promise<void> => {
+  const actor = req.user?._id;
+  if (!hasPermission(req.user?.adminRole, req.user?.adminPermissions, "payout.process")) {
+    res.status(403).json({ success: false, code: "PERMISSION_DENIED" }); return;
+  }
+  const { settlementReference, verificationEvidence, note } = req.body || {};
+  if (typeof settlementReference !== "string" || settlementReference.trim().length < 8 ||
+      typeof verificationEvidence !== "string" || verificationEvidence.trim().length < 8 ||
+      typeof note !== "string" || note.trim().length < 12) {
+    res.status(400).json({ success: false, code: "PAYOUT_EVIDENCE_REQUIRED", message: "External transaction reference, independently checked statement reference and verification note are required." });
+    return;
+  }
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) { res.status(404).json({ success: false, code: "BOOKING_NOT_FOUND" }); return; }
+  if (booking.status !== "completed" || booking.paymentStatus !== "confirmed" || booking.payoutStatus !== "processing") {
+    res.status(409).json({ success: false, code: "PAYOUT_NOT_READY", message: "Only a completed, paid booking with a recorded external transfer can be verified." }); return;
+  }
+  if (!booking.payoutInitiatedBy || booking.payoutInitiatedBy.toString() === actor?.toString()) {
+    res.status(403).json({ success: false, code: "SECOND_REVIEWER_REQUIRED", message: "Verification must be performed by another authorized finance reviewer." }); return;
+  }
+  if (booking.payoutSettlementReference !== settlementReference.trim()) {
+    res.status(409).json({ success: false, code: "PAYOUT_REFERENCE_MISMATCH", message: "Evidence reference must match the initiated transfer." }); return;
+  }
+  // A partial database write must not label a transfer 'paid' without its
+  // corresponding immutable manual-settlement ledger event.
+  const session = await mongoose.startSession();
+  let claimedId: string | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const changed = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: "completed", paymentStatus: "confirmed", payoutStatus: "processing",
+          payoutSettlementReference: settlementReference.trim(), payoutInitiatedBy: { $ne: actor } },
+        { $set: { payoutStatus: "paid", payoutPaidAt: new Date(), payoutVerifiedBy: actor,
+          payoutNote: `Manually reconciled external transfer; ${note.trim().slice(0, 250)}`,
+          payoutEvidenceReference: verificationEvidence.trim().slice(0, 300) } },
+        { new: true, session }
+      );
+      if (!changed) throw Object.assign(new Error("Payout was already reconciled or changed."), { statusCode: 409 });
+      await PaymentLedger.findOneAndUpdate(
+        { provider: "external_transfer", providerEventId: `payout-${changed._id}` },
+        { $setOnInsert: {
+          provider: "external_transfer", providerEventId: `payout-${changed._id}`,
+          providerTransactionId: settlementReference.trim(), booking: changed._id,
+          student: changed.student, tutor: changed.tutor,
+          eventType: "payout.completed", status: "succeeded", currency: changed.currency || "PKR",
+          grossAmount: changed.tutorPayout, studentPayment: 0, studentFee: 0, tutorFee: 0,
+          tax: 0, gatewayFee: 0, refundAmount: 0, tutorPayable: changed.tutorPayout,
+          platformNet: 0, settlementStatus: "reconciled",
+          metadata: { settlementMethod: changed.payoutSettlementMethod, evidenceReference: verificationEvidence.trim(),
+            initiatedBy: changed.payoutInitiatedBy?.toString(), reviewedBy: actor?.toString(),
+            verificationMode: "two_person_external_statement_review", note: note.trim().slice(0, 250) },
+        } }, { upsert: true, new: true, session }
+      );
+      claimedId = changed._id.toString();
+    });
+  } catch (err: any) {
+    res.status(err?.statusCode || 500).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED", message: err?.message || "Unable to verify transfer." });
+    return;
+  } finally { await session.endSession(); }
+  if (!claimedId) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
+  const claimed = await Booking.findById(claimedId);
+  if (!claimed) { res.status(409).json({ success: false, code: "PAYOUT_RECONCILIATION_FAILED" }); return; }
+  await logAudit({ action: "external_payout_verified", actor: req.user?.name || "Finance", actorId: actor?.toString(),
+    entity: "Booking", targetId: claimed._id.toString(),
+    metadata: { reference: settlementReference.trim(), reviewer: actor?.toString(), evidence: verificationEvidence.trim() } });
+  res.status(200).json({ success: true, message: "External transfer independently reconciled; payout recorded as paid.", booking: claimed });
 };
 
 // @desc    Update booking status
@@ -968,8 +813,39 @@ export const updateBookingStatus = async (
   }
 
   const previousStatus = booking.status;
-  booking.status = status;
-  await booking.save();
+  const allowedTransitions: Record<string, string[]> = {
+    upcoming: ["ongoing", "cancelled"],
+    ongoing: ["completed", "cancelled"],
+    completed: [], cancelled: [],
+  };
+  if (!allowedTransitions[previousStatus]?.includes(status)) {
+    res.status(409).json({ success: false, code: "INVALID_BOOKING_TRANSITION", message: `Cannot transition booking from ${previousStatus} to ${status}.` });
+    return;
+  }
+  if (["ongoing", "completed"].includes(status) && booking.paymentStatus !== "confirmed") {
+    res.status(409).json({ success: false, code: "PAYMENT_REQUIRED", message: "The verified student payment is required before starting or completing tuition." });
+    return;
+  }
+  // Compare-and-set protects referral credits, emails and certificates from
+  // duplicated/admin-concurrent completion commands.
+  const updated = await Booking.findOneAndUpdate(
+    { _id: booking._id, status: previousStatus, ...(status === "completed" || status === "ongoing" ? { paymentStatus: "confirmed" } : {}) },
+    { $set: { status, ...(status === "completed" ? { completedAt: new Date() } : {}),
+      ...(status === "cancelled" ? { cancelReason: typeof req.body.cancelReason === "string" ? req.body.cancelReason.slice(0, 500) : "Cancelled by admin" } : {}) } },
+    { new: true }
+  ).populate("student", "name email").populate("tutor", "name email").populate("request", "subject");
+  if (!updated) {
+    res.status(409).json({ success: false, code: "BOOKING_CHANGED", message: "Booking or payment status changed; please refresh before retrying." });
+    return;
+  }
+  // Populate existing variable for the remainder of the notification/report path.
+  booking.status = updated.status;
+  booking.completedAt = updated.completedAt;
+  if (status === "cancelled") await BookedSlot.deleteMany({ booking: booking._id });
+  if (status === "completed") {
+    try { await syncStudentTutorRelationship(updated as any); }
+    catch (err) { console.error("[Booking] Could not update completed student-tutor relationship", err); }
+  }
 
   await logAudit({
     action: `booking_${status}`,   // booking_completed, booking_cancelled, etc.
@@ -977,7 +853,7 @@ export const updateBookingStatus = async (
     actorId: req.user?._id?.toString(),
     entity: "Booking",
     targetId: booking._id.toString(),
-    targetName: `${((booking.student as unknown as { name?: string }))?.name || "Student"} → ${((booking.tutor as unknown as { name?: string }))?.name || "Tutor"}`,
+    targetName: `${(booking.student as any)?.name || "Student"} → ${(booking.tutor as any)?.name || "Tutor"}`,
     metadata: { previousStatus },
   });
 
@@ -986,28 +862,9 @@ export const updateBookingStatus = async (
      await creditReferrerOnFirstBooking(booking.student.toString());
    }
 
-   // ── Send review request to student after session completion ──
-   if (status === "completed" && previousStatus !== "completed") {
-     try {
-       const studentUser = await User.findById(booking.student).select("name email");
-       const tutorUser = await User.findById(booking.tutor).select("name email");
-       const requestSubject = ((booking.request as unknown as { subject?: string }))?.subject || "your session";
-       if (studentUser && tutorUser) {
-         await NotificationService.publishEvent(studentUser._id.toString(), "review.requested", {
-           tutorName: tutorUser.name,
-           subject: requestSubject,
-           bookingId: booking._id.toString(),
-           title: "How was your session?",
-           message: `Your ${requestSubject} session with ${tutorUser.name} is complete. Leave a quick review to help other students.`,
-           type: "review",
-           link: "/dashboard",
-         });
-       }
-     } catch (err) {
-       console.error("Failed to send review request email:", err);
-     }
-   }
-  
+  // The lifecycle worker sends one delayed, idempotent review invitation
+  // using completedAt and reviewRequestSentAt; no immediate duplicate email.
+
   // Notify both parties
   const io = req.app.get("io");
   const statusMessages: Record<string, string> = {
@@ -1042,16 +899,16 @@ export const updateBookingStatus = async (
 // @route   GET /api/admin/payouts
 // @access  Private (admin)
 export const getPayouts = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { status } = req.query; // "pending" | "paid" | undefined (all)
+  const { status } = req.query; // "pending" (action queue) | "paid" | undefined (all)
 
   // Only show bookings where the student has already paid — those are the ones
   // that need a tutor payout. Unconfirmed payments haven't earned a payout yet.
   const filter: Record<string, unknown> = {
-    paymentStatus: "confirmed",
+    paymentStatus: "confirmed", status: "completed",
   };
 
   if (status && status !== "all") {
-    filter.payoutStatus = status;
+    filter.payoutStatus = status === "pending" ? { $in: ["pending", "approved", "processing", "held", "failed"] } : status;
   }
 
   const bookings = await Booking.find(filter)
@@ -1060,40 +917,23 @@ export const getPayouts = async (req: AuthRequest, res: Response): Promise<void>
     .sort("-createdAt");
 
   // ── Summary stats across ALL confirmed bookings (ignore status filter for stats) ──
-  const allConfirmed = await Booking.find({ paymentStatus: "confirmed" }).select("payoutStatus tutorPayout currency");
-  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus === "pending");
+  const allConfirmed = await Booking.find({ paymentStatus: "confirmed", status: "completed" });
+  const pendingOnes  = allConfirmed.filter(b => b.payoutStatus !== "paid");
   const paidOnes     = allConfirmed.filter(b => b.payoutStatus === "paid");
 
-  const currencyTotals = Object.values(allConfirmed.reduce((totals, booking) => {
-    const currency = booking.currency || "USD";
-    const current = totals[currency] || { currency, pendingAmount: 0, paidAmount: 0 };
-    if (["pending", "approved", "processing", "held"].includes(booking.payoutStatus)) current.pendingAmount += booking.tutorPayout || 0;
-    if (booking.payoutStatus === "paid") current.paidAmount += booking.tutorPayout || 0;
-    totals[currency] = current;
-    return totals;
-  }, {} as Record<string, { currency: string; pendingAmount: number; paidAmount: number }>));
+  const totalPendingAmount = pendingOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
+  const totalPaidAmount    = paidOnes.reduce((sum, b) => sum + (b.tutorPayout || 0), 0);
 
   res.status(200).json({
     success: true,
     stats: {
       pendingCount:        pendingOnes.length,
       paidCount:           paidOnes.length,
-      currencyTotals,
+      totalPendingAmount,
+      totalPaidAmount,
     },
     total: bookings.length,
-    bookings: await (async () => {
-      const tutorIds = bookings.map((b) => (b.tutor as any)?._id).filter(Boolean);
-      const tutorProfiles = await TutorProfile.find({ user: { $in: tutorIds } }).select("user payoutAccount").lean();
-      const profileMap = new Map(tutorProfiles.map((p) => [p.user.toString(), p.payoutAccount]));
-      return bookings.map((b) => {
-        const obj = b.toObject();
-        const tutorId = (b.tutor as any)?._id?.toString();
-        if (tutorId && profileMap.has(tutorId)) {
-          (obj as any).tutorPayoutAccount = profileMap.get(tutorId);
-        }
-        return obj;
-      });
-    })(),
+    bookings,
   });
 };
 
@@ -1268,15 +1108,13 @@ export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<voi
     ]),
     EmailLog.distinct("eventType"),
   ]);
-  const outboxByLog = new Map((await EmailOutbox.find({ emailLog: { $in: logs.map(log => log._id) } }).select("emailLog status attempts maxAttempts nextAttemptAt lastError").lean())
-    .map(job => [job.emailLog.toString(), job]));
 
   res.status(200).json({
     success: true,
     total,
     page: pageNum,
     pages: Math.ceil(total / limitNum),
-    logs: logs.map(log => ({ ...log, outbox: outboxByLog.get(log._id.toString()) || null })),
+    logs,
     filters: {
       eventTypes: eventTypes.sort(),
       plannedEvents: EMAIL_EVENTS,
@@ -1286,21 +1124,6 @@ export const getEmailLogs = async (req: AuthRequest, res: Response): Promise<voi
       }, {}),
     },
   });
-};
-
-// @desc Retry one persisted failed/queued transactional email. Never creates a new message.
-// @route POST /api/admin/email-logs/:id/retry
-export const retryEmailLog = async (req: AuthRequest, res: Response): Promise<void> => {
-  const log = await EmailLog.findById(req.params.id).lean();
-  if (!log) { res.status(404).json({ success: false, message: "Email log not found." }); return; }
-  if (!["failed", "queued"].includes(log.status)) { res.status(409).json({ success: false, message: "Only failed or queued deliveries can be retried." }); return; }
-  const job = await EmailOutbox.findOneAndUpdate({ emailLog: log._id, status: { $ne: "sent" } }, { $set: { status: "queued", attempts: 0, nextAttemptAt: new Date(), lastError: "" } }, { returnDocument: "after" });
-  if (!job) { res.status(409).json({ success: false, message: "The retained delivery payload has expired or was already sent." }); return; }
-  await logAudit({ action: "email_delivery_retried", actor: req.user?.name, actorId: req.user?._id?.toString(), entity: "EmailLog", targetId: log._id.toString(), targetName: log.recipientEmail, metadata: { eventType: log.eventType } });
-  try { await deliverOutboxEmail(job._id.toString()); }
-  catch { /* The job is retained for the scheduled worker; report accepted retry. */ }
-  const current = await EmailLog.findById(log._id).lean();
-  res.status(200).json({ success: true, message: current?.status === "sent" ? "Email resent." : "Retry queued for delivery.", log: current });
 };
 
 // @desc    Send a broadcast notification to a group of users
@@ -1430,36 +1253,14 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   ]);
 
   // ── Derived calculations ──────────────────────────────────────
-  // Audit P1-01 follow-up: the report runs across all markets but
-  // booking.amount values are stored in each booking's own currency
-  // (USD under the global settlement policy, PKR/AED/GBP for legacy
-  // or in-flight records). Summing them without conversion into a
-  // single scalar is wrong. We produce a per-currency rollup here and
-  // the Excel / PDF Summary blocks below emit one row per currency.
-  interface RevenueRow { currency: string; revenue: number; platformFee: number; gst: number; tutorPayout: number; bookingCount: number; }
-  const revenueByCurrencyMap: Record<string, RevenueRow> = {};
-  for (const b of bookings) {
-    const currency = (b.currency || "UNSPECIFIED").toUpperCase();
-    const row = revenueByCurrencyMap[currency] ||
-      (revenueByCurrencyMap[currency] = { currency, revenue: 0, platformFee: 0, gst: 0, tutorPayout: 0, bookingCount: 0 });
-    const amount = b.amount || 0;
-    row.revenue += amount;
-    row.bookingCount += 1;
-  }
-  for (const row of Object.values(revenueByCurrencyMap)) {
-    row.platformFee = Math.round(row.revenue * (PLATFORM_FEE_PERCENT / 100));
-    row.gst = Math.round(row.platformFee * (GST_PERCENT / 100));
-    row.tutorPayout = row.revenue - row.platformFee;
-  }
-  const revenueByCurrency: RevenueRow[] = Object.values(revenueByCurrencyMap)
-    .sort((a, b) => b.revenue - a.revenue);
-
-  // Pre-conversion aggregated totals kept for the single-column fields
-  // (e.g. "Total Bookings") that remain currency-agnostic.
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
-  const platformFeeTotal = Math.round(totalRevenue * (PLATFORM_FEE_PERCENT / 100));
-  const gstTotal = Math.round(platformFeeTotal * (GST_PERCENT / 100));
-  const tutorPayoutTotal = totalRevenue - platformFeeTotal;
+  // Financial figures must come from confirmed bookings and their immutable fee snapshots.
+  // Pending/failed/cancelled payment attempts are not revenue. Admin fee changes
+  // must not silently rewrite the amounts charged in historical bookings.
+  const paidBookings = bookings.filter(b => b.paymentStatus === "confirmed");
+  const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.subtotal || 0), 0);
+  const platformFeeTotal = paidBookings.reduce((sum, b) => sum + (b.studentFee || 0) + (b.tutorFee || 0), 0);
+  const gstTotal = paidBookings.reduce((sum, b) => sum + (b.tax || 0), 0);
+  const tutorPayoutTotal = paidBookings.reduce((sum, b) => sum + (b.tutorNet || 0), 0);
 
   const bookingsByStatus = {
     upcoming:  bookings.filter(b => b.status === "upcoming").length,
@@ -1485,7 +1286,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       tutorMap[tid] = { name: tutor.name, email: tutor.email, bookings: 0, earnings: 0, avgRating: 0, totalReviews: 0 };
     }
     tutorMap[tid].bookings++;
-    tutorMap[tid].earnings += b.amount || 0;
+    tutorMap[tid].earnings += b.paymentStatus === "confirmed" ? (b.tutorNet || 0) : 0;
   }
 
   // Add ratings from TutorProfile
@@ -1597,20 +1398,15 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
 
     ws1.addRow([]);
 
-    // Revenue summary — split by booking currency.
-    // Audit P1-01 follow-up: a single scalar sum across mixed-currency
-    // bookings is meaningless; one row per currency is emitted below so
-    // each row's figures are actually in that currency's units.
-    styleSection(ws1.addRow(["💰 REVENUE SUMMARY (per currency)", ""]));
-    if (revenueByCurrency.length === 0) {
-      styleHeader(ws1.addRow(["Metric", "Amount"]));
-      ws1.addRow(["No bookings in period", 0]);
-    } else {
-      styleHeader(ws1.addRow(["Currency", "Bookings", "Revenue", "Platform Fee (20%)", "GST on Fee (15%)", "Tutor Payouts"]));
-      for (const r of revenueByCurrency) {
-        ws1.addRow([r.currency, r.bookingCount, r.revenue, r.platformFee, r.gst, r.tutorPayout]);
-      }
-    }
+    // Revenue summary
+    styleSection(ws1.addRow(["💰 REVENUE SUMMARY", ""]));
+    styleHeader(ws1.addRow(["Metric", "Amount (PKR)"]));
+    [
+      ["Confirmed Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
+      ["Platform Fees (confirmed payments)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["Tax in Booking Snapshots", `Rs. ${gstTotal.toLocaleString()}`],
+      ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
+    ].forEach(([k, v]) => ws1.addRow([k, v]));
 
     ws1.addRow([]);
 
@@ -1631,9 +1427,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       { header: "Booking ID", key: "id", width: 28 },
       { header: "Student", key: "student", width: 22 },
       { header: "Tutor", key: "tutor", width: 22 },
-      // Audit P1-01: carry the per-row currency instead of asserting PKR.
-      { header: "Currency", key: "currency", width: 10 },
-      { header: "Amount", key: "amount", width: 16 },
+      { header: "Amount (PKR)", key: "amount", width: 16 },
       { header: "Platform Fee", key: "fee", width: 16 },
       { header: "Tutor Payout", key: "payout", width: 16 },
       { header: "Status", key: "status", width: 14 },
@@ -1648,16 +1442,15 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       const student = b.student as unknown as { name: string } | null;
       const tutor   = b.tutor   as unknown as { name: string } | null;
       ws2.addRow({
-        id:       b._id.toString(),
-        student:  student?.name || "—",
-        tutor:    tutor?.name   || "—",
-        currency: b.currency || "",
-        amount:   b.amount || 0,
+        id:      b._id.toString(),
+        student: student?.name || "—",
+        tutor:   tutor?.name   || "—",
+        amount:  b.amount || 0,
         fee,
         payout,
-        status:   b.status,
-        mode:     b.teachingMode,
-        date:     new Date(b.createdAt).toLocaleDateString("en-PK"),
+        status:  b.status,
+        mode:    b.teachingMode,
+        date:    new Date(b.createdAt).toLocaleDateString("en-PK"),
       });
     }
 
@@ -1669,10 +1462,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       { header: "Tutor Name", key: "name", width: 24 },
       { header: "Email", key: "email", width: 28 },
       { header: "Bookings", key: "bookings", width: 14 },
-      // Audit P1-01: tutor earnings sum across whatever currency each
-      // settled booking carried. The label is kept neutral; split
-      // per-currency downstream from the Bookings Detail sheet.
-      { header: "Earnings", key: "earnings", width: 18 },
+      { header: "Earnings (PKR)", key: "earnings", width: 18 },
       { header: "Avg. Rating", key: "rating", width: 14 },
       { header: "Total Reviews", key: "reviews", width: 16 },
     ];
@@ -1783,28 +1573,16 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       ["Total Requests Posted", requests.length],
     ].forEach(([k, v]) => drawTableRow([String(k), String(v)], bWidths));
 
-    // ── 2. Revenue (per currency) ──
-    // Audit P1-01 follow-up: Excel sibling emits one row per currency;
-    // mirror that here. Summing booking amounts across currencies into
-    // one scalar is meaningless.
-    drawSectionTitle("💰  REVENUE & FEES (per currency)");
-    if (revenueByCurrency.length === 0) {
-      drawTableRow(["Metric", "Amount"], [350, 145], true);
-      drawTableRow(["No bookings in period", "0"], [350, 145]);
-    } else {
-      const rWidths = [60, 60, 95, 95, 80, 95];
-      drawTableRow(["Ccy", "Bookings", "Revenue", "Platform Fee", "GST", "Payouts"], rWidths, true);
-      for (const r of revenueByCurrency) {
-        drawTableRow([
-          r.currency,
-          String(r.bookingCount),
-          r.revenue.toLocaleString(),
-          r.platformFee.toLocaleString(),
-          r.gst.toLocaleString(),
-          r.tutorPayout.toLocaleString(),
-        ], rWidths);
-      }
-    }
+    // ── 2. Revenue ──
+    drawSectionTitle("💰  REVENUE & FEES");
+    const rWidths = [350, 145];
+    drawTableRow(["Metric", "Amount (PKR)"], rWidths, true);
+    [
+      ["Confirmed Session Revenue", `Rs. ${totalRevenue.toLocaleString()}`],
+      ["Platform Fees (confirmed payments)", `Rs. ${platformFeeTotal.toLocaleString()}`],
+      ["Tax in Booking Snapshots", `Rs. ${gstTotal.toLocaleString()}`],
+      ["Total Tutor Payouts", `Rs. ${tutorPayoutTotal.toLocaleString()}`],
+    ].forEach(([k, v]) => drawTableRow([k, v], rWidths));
 
     // ── 3. User Summary ──
     drawSectionTitle("👥  USER SUMMARY");
@@ -1824,10 +1602,7 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       drawTableRow([
         t.name, t.email,
         String(t.bookings),
-        // Audit P1-01: no currency prefix — earnings aggregate across
-        // the tutor's settled bookings, which may be in multiple
-        // currencies under the global settlement policy.
-        t.earnings.toLocaleString(),
+        `Rs.${t.earnings.toLocaleString()}`,
         t.avgRating.toFixed(1),
       ], tWidths)
     );
@@ -1851,59 +1626,38 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
   res.status(400).json({ success: false, message: "Invalid format. Use pdf or excel." });
 };
 
-export const getGlobalAnalytics = async (_req: AuthRequest, res: Response): Promise<void> => {
-  const markets = await MarketConfig.find({ isActive: true }).select("countryCode countryName launchStatus").lean();
-  const countries = await Promise.all(markets.map(async (market) => {
-    const [totalTutors, verifiedTutors, totalStudents, totalRequests, activeRequests, totalBookings] = await Promise.all([
-      User.countDocuments({ role: "tutor", countryCode: market.countryCode }), TutorProfile.countDocuments({ countryCode: market.countryCode, verificationStatus: "approved" }), User.countDocuments({ role: "student", countryCode: market.countryCode }), Request.countDocuments({ countryCode: market.countryCode }), Request.countDocuments({ countryCode: market.countryCode, status: { $in: ["open", "published", "receiving_offers", "negotiating"] } }), Booking.countDocuments({ countryCode: market.countryCode }),
-    ]);
-    return { countryCode: market.countryCode, countryName: market.countryName, launchStatus: market.launchStatus, totalTutors, verifiedTutors, totalStudents, totalRequests, activeRequests, totalBookings, totalRevenueUSD: 0, avgRating: 0, matchRate: totalRequests ? Math.round((totalBookings / totalRequests) * 100) : 0, avgResponseMin: 0 };
-  }));
-  res.json({ totalCountries: countries.length, liveCountries: countries.filter((item) => item.launchStatus === "live").length, totalTutors: countries.reduce((sum, item) => sum + item.totalTutors, 0), totalStudents: countries.reduce((sum, item) => sum + item.totalStudents, 0), totalBookings: countries.reduce((sum, item) => sum + item.totalBookings, 0), totalRevenueUSD: 0, countries });
-};
-
 // @desc    Get a short-lived signed URL to view a tutor's private verification document
 // @route   GET /api/admin/tutors/:id/document/:field
 // @access  Private (admin)
 export const getTutorDocumentUrl = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id, field } = req.params as { id: string; field: string };
-    const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
+  const { id, field } = req.params as { id: string; field: string };
+  const allowedFields = ["cnicFront", "cnicBack", "policeCertificate", "degreeDoc"];
 
-    if (!allowedFields.includes(field)) {
-      res.status(400).json({ success: false, message: "Invalid document field" });
-      return;
-    }
-
-    const profile = await TutorProfile.findById(id);
-    if (!profile) {
-      res.status(404).json({ success: false, message: "Tutor profile not found" });
-      return;
-    }
-
-    let publicId: string | undefined;
-    if (field === "degreeDoc") {
-      const qualificationIndex = req.query.qualificationIndex === undefined ? 0 : Number(req.query.qualificationIndex);
-      if (!Number.isInteger(qualificationIndex) || qualificationIndex < 0 || !profile.education?.[qualificationIndex]) {
-        res.status(400).json({ success: false, message: "Choose an existing qualification document." });
-        return;
-      }
-      publicId = profile.education[qualificationIndex].degreeDocPublicId;
-    } else {
-      publicId = (profile as unknown as Record<string, unknown>)[`${field}PublicId`] as string | undefined;
-    }
-
-    if (!publicId) {
-      res.status(404).json({ success: false, message: "This document was uploaded before signed-URL tracking was added, or was never submitted, so it has no viewable copy on file." });
-      return;
-    }
-
-    const signedUrl = getSignedViewUrl(publicId, "image", 300);
-    res.status(200).json({ success: true, url: signedUrl });
-  } catch (error) {
-    console.error("Failed to generate tutor document view URL:", error);
-    res.status(500).json({ success: false, message: error instanceof Error ? error.message : "Failed to generate document URL." });
+  if (!allowedFields.includes(field)) {
+    res.status(400).json({ success: false, message: "Invalid document field" });
+    return;
   }
+
+  const profile = await TutorProfile.findById(id);
+  if (!profile) {
+    res.status(404).json({ success: false, message: "Tutor profile not found" });
+    return;
+  }
+
+  let publicId: string | undefined;
+  if (field === "degreeDoc") {
+    publicId = profile.education?.[0]?.degreeDocPublicId;
+  } else {
+    publicId = (profile as any)[`${field}PublicId`];
+  }
+
+  if (!publicId) {
+    res.status(404).json({ success: false, message: "Document not found" });
+    return;
+  }
+
+  const signedUrl = getSignedViewUrl(publicId, "image", 300);
+  res.status(200).json({ success: true, url: signedUrl });
 };
 
 // @desc    Download tutor payout report as PDF (admin)
@@ -1915,7 +1669,7 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
   try {
     const { periodStart, periodEnd } = resolvePayoutReportPeriod(req.query.from, req.query.to);
 
-    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" }, req.query.currency as string | undefined);
+    const { data, pdfBuffer } = await generateTutorPayoutReport(tutorId, periodStart, periodEnd, { userId: req.user?._id?.toString(), role: "admin" });
 
     const filename = `tutorera-payout-report-${data.reportReference}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
@@ -1924,9 +1678,8 @@ export const downloadTutorPayoutReport = async (req: AuthRequest, res: Response)
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Length", pdfBuffer.length.toString());
     res.send(pdfBuffer);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to generate tutor payout report:", error);
-    const statusCode = (error instanceof Error && "statusCode" in error) ? (error as Error & { statusCode: number }).statusCode : undefined;
-    res.status(statusCode || 500).json({ success: false, message: statusCode && error instanceof Error ? error.message : "Failed to generate payout report." });
+    res.status(error?.statusCode || 500).json({ success: false, message: error?.statusCode ? error.message : "Failed to generate payout report." });
   }
 };

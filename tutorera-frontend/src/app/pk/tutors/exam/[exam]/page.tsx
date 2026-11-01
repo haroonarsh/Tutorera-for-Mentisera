@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { total } = await fetchTutors({ countryCode: "PK", subject: exam }, 1);
   const canonical = `/pk/tutors/exam/${slug}`;
   return {
-    title: `${exam} Tutors in Pakistan | TUTORERA`,
+    title: `${exam} Tutors in Pakistan`,
     description: `Find ${exam} tutors in Pakistan. Compare approved profiles, experience, lesson mode and published rates, or post your requirement to receive tutor offers.`,
     alternates: { canonical },
     robots: { index: total > 0, follow: true },

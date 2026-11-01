@@ -1,88 +1,80 @@
 import type { TutorProfile } from "@/types/tutor";
 
 export const SUBJECTS = {
-  // Core sciences
   mathematics: "Mathematics", physics: "Physics", chemistry: "Chemistry", biology: "Biology",
-  "computer-science": "Computer Science", statistics: "Statistics",
-  "environmental-science": "Environmental Science", "combined-science": "Combined Science",
-  "human-biology": "Human Biology",
-  // Mathematics variants
-  "further-mathematics": "Further Mathematics", "applied-mathematics": "Applied Mathematics",
-  "pure-mathematics": "Pure Mathematics",
-  // Languages
   english: "English Language", urdu: "Urdu Language", arabic: "Arabic Language", persian: "Persian",
-  french: "French", german: "German",
-  // Humanities & Business
-  economics: "Economics", accounting: "Accounting", "business-studies": "Business Studies",
-  commerce: "Commerce", history: "History", geography: "Geography", sociology: "Sociology",
-  psychology: "Psychology", islamiyat: "Islamiyat", "pakistan-studies": "Pakistan Studies", civics: "Civics",
-  // Exam prep
-  mdcat: "MDCAT", ecat: "ECAT", sat: "SAT", ielts: "IELTS", toefl: "TOEFL",
-  "entry-tests": "Entry Tests", "o-level": "O Level / IGCSE", "a-level": "A Level",
-  // Tech
+  "computer-science": "Computer Science", statistics: "Statistics", economics: "Economics",
+  accounting: "Accounting", "business-studies": "Business Studies", commerce: "Commerce", history: "History",
+  geography: "Geography", islamiyat: "Islamiyat", "pakistan-studies": "Pakistan Studies", civics: "Civics",
+  mdcat: "MDCAT", ecat: "ECAT", sat: "SAT", ielts: "IELTS", "entry-tests": "Entry Tests",
   programming: "Programming", "web-development": "Web Development", "data-science": "Data Science",
   "graphic-design": "Graphic Design",
 } as const;
 
 export const CITIES = {
-  // Pakistan
   lahore: "Lahore", karachi: "Karachi", islamabad: "Islamabad", rawalpindi: "Rawalpindi",
   faisalabad: "Faisalabad", multan: "Multan", peshawar: "Peshawar", quetta: "Quetta",
-  sialkot: "Sialkot", gujranwala: "Gujranwala", hyderabad: "Hyderabad",
-  // UAE
+  sialkot: "Sialkot", gujranwala: "Gujranwala",
   dubai: "Dubai", "abu-dhabi": "Abu Dhabi", sharjah: "Sharjah",
-  ajman: "Ajman", "ras-al-khaimah": "Ras Al Khaimah", fujairah: "Fujairah",
-  // Saudi Arabia
   riyadh: "Riyadh", jeddah: "Jeddah", dammam: "Dammam",
-  mecca: "Mecca", medina: "Medina", khobar: "Khobar", tabuk: "Tabuk",
-  // United Kingdom
   london: "London", manchester: "Manchester", birmingham: "Birmingham",
-  leeds: "Leeds", glasgow: "Glasgow", edinburgh: "Edinburgh", bradford: "Bradford",
-  // United States
-  "new-york": "New York", "los-angeles": "Los Angeles", chicago: "Chicago",
-  houston: "Houston", dallas: "Dallas", "washington-dc": "Washington DC", atlanta: "Atlanta",
 } as const;
 
 export const LEVELS = {
   primary: "Primary (Grades 1-5)", middle: "Middle (Grades 6-8)", matric: "Matric (9th & 10th)", intermediate: "Intermediate / FSc",
-  "o-level": "O-Level (Cambridge / Edexcel)", igcse: "IGCSE (Cambridge / Edexcel)", "a-level": "A-Level (Cambridge / Edexcel)", university: "University / Degree",
+  "o-level": "O-Level (Cambridge / Edexcel)", "a-level": "A-Level (Cambridge / Edexcel)", university: "University / Degree",
 } as const;
 
 export const PRIMARY_CITY_SLUGS = ["lahore", "karachi", "islamabad", "rawalpindi", "faisalabad"] as const;
 export const LOCAL_SUBJECT_SLUGS = ["mathematics", "physics", "chemistry", "biology", "english", "computer-science", "mdcat", "ielts"] as const;
 
 export type DirectoryKind = "subject" | "city" | "level";
-export type TutorSearchFilters = Partial<Record<DirectoryKind | "search" | "teachingMode" | "minPrice" | "maxPrice" | "minRating" | "countryCode" | "country" | "schoolOfferingId", string>>;
+export type TutorSearchFilters = Partial<Record<DirectoryKind | "curriculum" | "search" | "teachingMode" | "minPrice" | "maxPrice" | "minRating" | "countryCode" | "country" | "currency", string>>;
+
+export interface TutorSeoFacets {
+  countries: Array<{ _id: string; count: number }>;
+  cities: Array<{ _id: { countryCode: string; city: string }; count: number }>;
+  subjects: Array<{ _id: { countryCode: string; subject: string }; count: number }>;
+  levels: Array<{ _id: { countryCode: string; level: string }; count: number }>;
+  citySubjects: Array<{ _id: { countryCode: string; city: string; subject: string }; count: number }>;
+  cityLevelSubjects: Array<{ _id: { countryCode: string; city: string; level: string; subject: string }; count: number }>;
+  cityCurriculumSubjects: Array<{ _id: { countryCode: string; city: string; curriculum: string; subject: string }; count: number }>;
+}
 
 export interface TutorDirectoryResponse {
   tutors: TutorProfile[];
   total: number;
   page: number;
   pages: number;
+  error?: boolean;
 }
-
-export interface SeoInventory { countries: { value: string; total: number }[]; cities: { value: string; total: number }[]; subjects: { value: string; total: number }[]; levels: { value: string; total: number }[]; citySubjects: { city: string; subject: string; total: number }[]; }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
 
-// Removed in response to the Oct 2026 indexation incident: a hardcoded
-// FALLBACK_TOP_TUTORS array ("Dr. Ayesha Malik", "Engr. Bilal Khan",
-// "Sarah Ahmed") with synthesized averageRating / totalReviews /
-// hourlyRate / isVerified: true used to be served whenever the backend
-// returned 429 or threw. That fed fabricated inventory into
-// Course / AggregateRating / ItemList JSON-LD and ranked under real
-// production content. Spec §42 ("never fabricate reviews, ratings,
-// prices, inventory") makes this unambiguously disallowed.
-//
-// New policy: on any backend failure, return an empty tutor list. Pages
-// degrade to their real zero-state (which already prompts "Post Your
-// Requirement" and links the broader directory) rather than displaying
-// imaginary tutors as real marketplace facts.
+export async function fetchTutorSeoFacets(): Promise<TutorSeoFacets | null> {
+  try {
+    const response = await fetch(`${API_URL}/tutors/seo-facets`, {
+      next: { revalidate: 900, tags: ["tutor-seo-facets"] },
+    });
+    if (!response.ok) throw new Error(`Tutor SEO facets returned ${response.status}`);
+    const data = await response.json();
+    return {
+      countries: data.countries ?? [],
+      cities: data.cities ?? [],
+      subjects: data.subjects ?? [],
+      levels: data.levels ?? [],
+      citySubjects: data.citySubjects ?? [],
+      cityLevelSubjects: data.cityLevelSubjects ?? [],
+      cityCurriculumSubjects: data.cityCurriculumSubjects ?? [],
+    };
+  } catch (error) {
+    console.error("Unable to load tutor SEO facets", error);
+    return null;
+  }
+}
 
-const EMPTY_RESULT: TutorDirectoryResponse = { tutors: [], total: 0, page: 1, pages: 1 };
-
-export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24, page = 1): Promise<TutorDirectoryResponse> {
-  const params = new URLSearchParams({ limit: String(limit), page: String(page) });
+export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24): Promise<TutorDirectoryResponse> {
+  const params = new URLSearchParams({ limit: String(limit), page: "1" });
   Object.entries(filters).forEach(([key, value]) => value && params.set(key, value));
 
   try {
@@ -91,19 +83,9 @@ export async function fetchTutors(filters: TutorSearchFilters = {}, limit = 24, 
     const data = await response.json();
     const tutors = data.tutors ?? [];
     return { tutors, total: data.total ?? tutors.length, page: data.page ?? 1, pages: data.pages ?? 1 };
-  } catch {
-    return EMPTY_RESULT;
-  }
-}
-
-export async function fetchSeoInventory(): Promise<SeoInventory> {
-  try {
-    const response = await fetch(`${API_URL}/public/seo-inventory`, { next: { revalidate: 900 } });
-    if (!response.ok) throw new Error("SEO inventory unavailable");
-    const data = await response.json();
-    return data;
-  } catch {
-    return { countries: [], cities: [], subjects: [], levels: [], citySubjects: [] };
+  } catch (error) {
+    console.error("Unable to load the public tutor directory", error);
+    return { tutors: [], total: 0, page: 1, pages: 1, error: true };
   }
 }
 
@@ -118,57 +100,19 @@ export async function fetchTutor(id: string): Promise<TutorProfile | null> {
   }
 }
 
-/** Canonical SEO-friendly lookup - no ObjectId involved. `country` is
- * accepted but not required by the backend route (the slug alone is
- * globally unique); it's taken so the URL's country segment can be
- * validated/redirected against the profile's actual countrySlug by the
- * caller if they ever drift apart. */
-export async function fetchTutorBySlug(country: string, slug: string): Promise<TutorProfile | null> {
-  try {
-    const response = await fetch(
-      `${API_URL}/tutors/slug/${encodeURIComponent(country)}/${encodeURIComponent(slug)}`,
-      { next: { revalidate: 900 } }
-    );
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.profile ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export function slugify(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-type TutorLike = Pick<TutorProfile, "_id" | "subjects"> & {
-  city?: string;
-  countryName?: string;
-  slug?: string;
-  countrySlug?: string;
-  user?: { name?: string; city?: string };
-};
-
-// Legacy fallback for a profile that hasn't been through the slug backfill
-// migration yet (backend-persisted `slug`/`countrySlug` are missing) -
-// embeds the ObjectId directly in the URL, same as before this migration.
-// Prefer tutorProfileHref() below for anything with a real slug.
-function legacyTutorProfileSlug(tutor: TutorLike) {
+export function tutorProfileSlug(tutor: Pick<TutorProfile, "_id" | "subjects"> & { city?: string; user?: { name?: string; city?: string } }) {
   const name = tutor.user?.name || "tutor";
   const subject = tutor.subjects?.[0] || "tutor";
   const city = tutor.city || tutor.user?.city || "pakistan";
   return `${tutor._id}-${slugify(`${name} ${subject} tutor ${city}`)}`;
 }
 
-/** The canonical, SEO-friendly public profile path: /tutors/{country}/{slug}
- * with no ObjectId in it. Falls back to the legacy ObjectId-embedded path
- * only for a profile that predates the backend slug migration. */
-export function tutorProfileHref(tutor: TutorLike) {
-  if (tutor.slug) {
-    const country = tutor.countrySlug || slugify(tutor.countryName || "pakistan");
-    return `/tutors/${country}/${tutor.slug}`;
-  }
-  return `/tutors/${legacyTutorProfileSlug(tutor)}`;
+export function tutorProfileHref(tutor: Pick<TutorProfile, "_id" | "subjects"> & { city?: string; user?: { name?: string; city?: string } }) {
+  return `/tutors/${tutorProfileSlug(tutor)}`;
 }
 
 export function extractTutorId(value: string) {

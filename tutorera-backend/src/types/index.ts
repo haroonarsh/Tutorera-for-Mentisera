@@ -68,6 +68,7 @@ export interface IUser extends Document {
   legalAcceptedAt?: Date;
   legalAcceptedIp?: string;
   parentConsentVerified?: boolean;
+  guardianConsentVerifiedAt?: Date;
   parentGuardianEmail?: string;
   parentGuardianName?: string;
   children?: Types.ObjectId[];

@@ -22,8 +22,8 @@ export default function PublicTrackPage({ params }: { params: Params }) {
     let cancelled = false;
     (async () => {
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/api/v1";
-        const res = await fetch(`${apiBase}/tracking/${token}`);
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://tutorera-backend.onrender.com/api/v1";
+        const res = await fetch(`${apiBase}/tracking/${encodeURIComponent(token)}`);
         if (!res.ok) {
           if (!cancelled) setError("Tracking link not found. Please check the URL and try again.");
           return;
@@ -147,7 +147,7 @@ export default function PublicTrackPage({ params }: { params: Params }) {
         </div>
 
         <p style={{ textAlign: "center", color: "#64748b", fontSize: 12, marginTop: 24 }}>
-          This is a public tracking page. Sensitive tutor information (identity documents, document URLs, contact details, admin notes) is never shown.
+          This is a public tracking page. Sensitive tutor information (CNIC, document URLs, contact details, admin notes) is never shown.
         </p>
       </div>
     </div>

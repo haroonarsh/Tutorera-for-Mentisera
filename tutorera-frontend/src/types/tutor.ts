@@ -12,6 +12,8 @@ export interface TutorUser {
 
 export interface TutorProfile {
   _id: string;
+  createdAt?: string;
+  updatedAt?: string;
   user: TutorUser;
   subjects: string[];
   city: string;
@@ -71,6 +73,7 @@ export interface PayoutAccount {
 
 export interface FiltersState {
   search: string;
+  subject?: string;
   country?: string;
   city: string;
   level: string;
@@ -124,6 +127,7 @@ export const SORT_OPTIONS = [
 
 export const INITIAL_FILTERS: FiltersState = {
   search: "",
+  subject: "",
   country: "",
   city: "",
   level: "",

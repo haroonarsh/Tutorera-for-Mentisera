@@ -47,6 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `Compare verified ${subject} tutors on TUTORERA. Post your requirement free — eligible tutors send offers you compare before choosing.`,
       url: path,
     },
+    twitter: { title: `${title} | TUTORERA`, description },
   };
 }
 

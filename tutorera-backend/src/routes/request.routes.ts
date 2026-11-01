@@ -3,7 +3,7 @@ import {
   createRequest, getAllRequests, getMyRequests, getRequestTimeline,
   cancelRequest, placeBid, getBidsForRequest,
   createDirectBookingRequest, getMyDirectRequests, rejectBid,
-  getPublicRequestsPreview,
+  getPublicRequestsPreview, getRequestSeoFacets,
   saveRequestDraftProgress,
   extendRequest,
   repostRequest,
@@ -16,6 +16,7 @@ import { validate, createRequestSchema, placeBidSchema, createDirectBookingReque
 
 const router = Router();
 
+router.get("/seo-facets", getRequestSeoFacets);
 router.get("/public/preview", getPublicRequestsPreview);
 // Full demand feed is for verified tutors only. Public discovery uses the
 // separately redacted `/public/preview` endpoint above.

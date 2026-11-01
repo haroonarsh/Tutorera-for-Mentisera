@@ -18,8 +18,8 @@ interface User {
   preferredLanguage?: string;
   adminRole?: string;
   adminPermissions?: string[];
-  address?: string;
-  countryName?: string;
+  isMinor?: boolean;
+  parentConsentVerified?: boolean;
 }
 
 interface GoogleAuthResult {
@@ -28,11 +28,17 @@ interface GoogleAuthResult {
 }
 
 interface RegisterData {
+  name: string;
   email: string;
   password: string;
   role: "student" | "tutor" | "parent";
   phone?: string;
   city?: string;
+  countryCode?: string;
+  preferredLanguage?: string;
+  dateOfBirth?: string;
+  guardianEmail?: string;
+  guardianName?: string;
 }
 
 interface AuthContextType {
@@ -40,8 +46,8 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
-  loginWithGoogle: (idToken: string, role?: "student" | "tutor" | "parent") => Promise<GoogleAuthResult>;
-  selectRole: (role: "student" | "tutor" | "parent") => Promise<User>;
+  loginWithGoogle: (idToken: string, role?: "student" | "tutor" | "parent", countryCode?: string, preferredLanguage?: string, studentDetails?: { dateOfBirth?: string; guardianEmail?: string; guardianName?: string }) => Promise<GoogleAuthResult>;
+  selectRole: (role: "student" | "tutor" | "parent", details?: { dateOfBirth?: string; guardianEmail?: string; guardianName?: string }) => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<string>;
   logout: () => Promise<void>;
@@ -59,12 +65,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       api
         .get("/auth/me")
         .then((res) => setUser(res.data.user))
-        .catch((err) => {
-          // Only clear session on explicit 401 (token expired/invalid), not on 429 rate limit or network glitch
-          if (err?.response?.status === 401) {
-            localStorage.removeItem("token");
-            setUser(null);
-          }
+        .catch(() => {
+          localStorage.removeItem("token");
+          setUser(null);
         })
         .finally(() => setLoading(false));
     } else {
@@ -88,16 +91,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginWithGoogle = async (
     idToken: string,
-    role?: "student" | "tutor" | "parent"
+    role?: "student" | "tutor" | "parent",
+    countryCode?: string,
+    preferredLanguage?: string,
+    studentDetails?: { dateOfBirth?: string; guardianEmail?: string; guardianName?: string }
   ): Promise<GoogleAuthResult> => {
-    const res = await api.post("/auth/google", { idToken, role });
+    const res = await api.post("/auth/google", { idToken, role, countryCode, preferredLanguage, ...studentDetails });
     localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
     return { user: res.data.user, needsRole: res.data.needsRole };
   };
 
-  const selectRole = async (role: "student" | "tutor" | "parent"): Promise<User> => {
-    const res = await api.patch("/auth/select-role", { role });
+  const selectRole = async (role: "student" | "tutor" | "parent", details?: { dateOfBirth?: string; guardianEmail?: string; guardianName?: string }): Promise<User> => {
+    const res = await api.patch("/auth/select-role", { role, ...details });
     localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
     return res.data.user;

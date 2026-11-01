@@ -2,14 +2,14 @@ import { Router } from "express";
 import {
   createOrUpdateProfile,
   getMyProfile,
-  getTutorById,
-  getAllTutors,
   saveOnboardingStep,
   getOnboardingStatus,
-  getOnboardingFinancialPreview,
-  uploadSubjectEligibilityEvidence,
-  getTutorBySlug,
 } from "../controllers/tutor.controller";
+import {
+  getPublicTutorById,
+  getPublicTutors,
+  getPublicTutorSeoFacets,
+} from "../controllers/publicTutor.controller";
 import {
   saveAvailability,
   getTutorAvailability,
@@ -18,26 +18,15 @@ import {
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validate, tutorProfileSchema } from "../validators/tutor.validator";
 import { validate as validateAvailability, saveAvailabilitySchema } from "../validators/availability.validator";
-import { uploadDocument, uploadVerification } from "../middlewares/upload.middleware";
-import { cachePublic } from "../middlewares/cacheControl.middleware";
-import { listActiveDisciplineSubjectMaps } from "../controllers/disciplineSubjectMap.controller";
-import { getMySchoolOfferings, updateMySchoolOfferings } from "../controllers/schoolOffering.controller";
+import { uploadVerification } from "../middlewares/upload.middleware";
 
 const router = Router();
 
-// Public - shorter TTL than blog content since tutor verification status,
-// ratings, and availability change more often; still meaningfully cuts
-// repeated-crawl/SSR-revalidation load versus no caching at all.
-router.get("/", cachePublic(60), getAllTutors);
-// Must come before the `/:id` wildcard below.
-router.get("/disciplines", protect, listActiveDisciplineSubjectMaps);
-router.get("/school-offerings/me", protect, authorize("tutor"), getMySchoolOfferings);
-router.put("/school-offerings/me", protect, authorize("tutor"), updateMySchoolOfferings);
-// Canonical SEO-friendly profile lookup - no ObjectId in the URL. Kept
-// distinct from `/:id` below (legacy lookups/backlinks/admin tooling).
-router.get("/slug/:country/:slug", cachePublic(60), getTutorBySlug);
+// Public — all tutor exposure is gated by the canonical marketplace eligibility rule.
+router.get("/seo-facets", getPublicTutorSeoFacets);
+router.get("/", getPublicTutors);
 router.get("/:tutorUserId/availability", getTutorAvailability);
-router.get("/:id", cachePublic(60), getTutorById);
+router.get("/:id", getPublicTutorById);
 
 // Availability (tutor)
 router.post("/availability", protect, authorize("tutor"), validateAvailability(saveAvailabilitySchema), saveAvailability);
@@ -45,10 +34,7 @@ router.get("/availability/me", protect, authorize("tutor"), getMyAvailability);
 
 // Onboarding
 router.get("/onboarding/status", protect, authorize("tutor"), getOnboardingStatus);
-router.get("/onboarding/financial-preview", protect, authorize("tutor"), getOnboardingFinancialPreview);
-router.post("/subject-eligibility/:subject/evidence", protect, authorize("tutor"), uploadDocument.single("evidence"), uploadSubjectEligibilityEvidence);
 router.post("/onboarding/step", protect, authorize("tutor"), uploadVerification.fields([
-  { name: "avatar", maxCount: 1 },
   { name: "degreeDoc", maxCount: 1 },
   { name: "cnicFront", maxCount: 1 },
   { name: "cnicBack", maxCount: 1 },

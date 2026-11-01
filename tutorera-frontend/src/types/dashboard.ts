@@ -12,20 +12,12 @@ export interface DashRequest {
   pricingUnit: "hour" | "session" | "month" | "course";
   allowCounterOffers: boolean;
   classGrade?: string; curriculum?: string; examType?: string; studentLevel?: string; learningObjectives?: string;
-  learnerType?: "self" | "child" | "other";
-  learnerId?: string;
-  learningNeed?: string;
-  urgency?: "immediately" | "within_3_days" | "within_week" | "flexible";
   area?: string; travelRadiusKm?: number; tutorGenderPreference?: "male" | "female" | "none";
   minimumQualification?: string; minimumExperience?: number; preferredLanguage?: string; preferredTutorRating?: number;
   preferredDays?: string[]; preferredStartTime?: string; sessionDurationMinutes?: number; sessionsPerWeek?: number; expectedStartDate?: string;
   teachingMode: string;
   countryCode?: string;
   countryName?: string;
-  country?: string;
-  region?: string;
-  cityRef?: string;
-  locality?: string;
   timezone?: string;
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];
@@ -45,7 +37,6 @@ export interface DashRequest {
   isExpired?: boolean;
   secondsRemaining?: number;
   offersCount?: number;
-  invitedTutorCount?: number;
   bid?: Pick<DashBid, "_id" | "amount" | "currency" | "status" | "expiresAt" | "pricingUnit" | "createdAt"> | null;
 }
 
@@ -116,39 +107,8 @@ export interface DashBooking {
   teachingMode?: string;
   isFirstSession?: boolean;
   paymentStatus?: "pending" | "received" | "confirmed" | "paid" | "refunded" | "partially_refunded" | "failed" | "chargeback" | "disputed";
-  status: "pending" | "confirmed" | "upcoming" | "in_progress" | "completed" | "cancelled" | "disputed";
+  status: "pending" | "confirmed" | "upcoming" | "ongoing" | "in_progress" | "completed" | "cancelled" | "disputed";
   scheduledAt?: string;
-  nextOccurrence?: {
-    startAt: string;
-    endAt: string;
-    dayLabel: string;
-    dateLabel: string;
-    timeLabel: string;
-  } | null;
-  createdAt: string;
-}
-
-export interface DashRefundRequest {
-  _id: string;
-  booking: {
-    _id: string;
-    schedule?: string;
-    teachingMode?: string;
-    amount?: number;
-    studentTotal?: number;
-    currency?: string;
-    createdAt?: string;
-  } | string;
-  tutor: {
-    _id?: string;
-    name?: string;
-  };
-  amount: number;
-  reason: "tutor_cancelled" | "session_not_delivered" | "quality_issue" | "scheduling_conflict" | "duplicate_charge" | "other" | string;
-  details?: string;
-  status: "pending" | "approved" | "rejected" | "processed";
-  adminNote?: string;
-  processedAt?: string;
   createdAt: string;
 }
 
@@ -180,7 +140,6 @@ export interface TutorProfile {
 export type TutorProfileData = TutorProfile;
 
 export interface PostRequestPayload {
-  schoolOfferingId?: string;
   subject: string;
   level: string;
   description: string;
@@ -188,10 +147,6 @@ export interface PostRequestPayload {
   currency?: string;
   countryCode?: string;
   countryName?: string;
-  country?: string;
-  region?: string;
-  cityRef?: string;
-  locality?: string;
   timezone?: string;
   isWorldwideEligible?: boolean;
   preferredTutorCountries?: string[];
@@ -200,7 +155,6 @@ export interface PostRequestPayload {
   schedule: string;
   maximumBudget: string; pricingUnit: "hour" | "session" | "month" | "course"; allowCounterOffers: boolean;
   classGrade: string; curriculum: string; examType: string; studentLevel: string; learningObjectives: string;
-  learnerType: "self" | "child" | "other"; learnerId?: string; learningNeed: string; urgency: "immediately" | "within_3_days" | "within_week" | "flexible";
   area: string; travelRadiusKm: string; tutorGenderPreference: "male" | "female" | "none";
   minimumQualification: string; minimumExperience: string; preferredLanguage: string; preferredTutorRating: string;
   preferredDays: string[]; preferredStartTime: string; sessionDurationMinutes: string; sessionsPerWeek: string; expectedStartDate: string;
@@ -223,5 +177,4 @@ export interface RankedRequestMatch {
   tier: "excellent" | "great" | "good" | "fair";
   scoreBreakdown: Record<string, number>;
   reasons: string[];
-  isInvited?: boolean;
 }

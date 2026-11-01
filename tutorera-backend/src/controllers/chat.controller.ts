@@ -3,8 +3,9 @@ import { AuthRequest } from "../types";
 import Conversation from "../models/Conversation.model";
 import Message from "../models/Message.model";
 import Booking from "../models/Booking.model";
-import { filterContactInfo, containsContactInfo } from "../utils/contentFilter";
+import { filterContactInfo } from "../utils/contentFilter";
 import { sendNotification } from "../utils/socket";
+import { isConversationStudentEligible } from "../services/chatAccess.service";
 import { Types } from "mongoose";
 
 // @desc    Get or create conversation
@@ -16,7 +17,6 @@ export const getOrCreateConversation = async (
 ): Promise<void> => {
   const { bookingId } = req.body;
   const userId = req.user?._id;
-  const userRole = req.user?.role;
 
   // Verify booking exists and user is part of it
   const booking = await Booking.findById(bookingId);
@@ -33,6 +33,11 @@ export const getOrCreateConversation = async (
     return;
   }
 
+  if (!(await isConversationStudentEligible(booking.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE" });
+    return;
+  }
+
   // Find existing conversation
   let conversation = await Conversation.findOne({ booking: bookingId })
     .populate("student", "name avatar")
@@ -40,13 +45,19 @@ export const getOrCreateConversation = async (
 
   // Create if not exists
   if (!conversation) {
-    conversation = await Conversation.create({
-      student: booking.student,
-      tutor: booking.tutor,
-      booking: bookingId,
-    });
-    await conversation.populate("student", "name avatar");
-    await conversation.populate("tutor", "name avatar");
+    // Unique booking index makes concurrent opens safe once initialized.
+    try {
+      conversation = await Conversation.create({
+        student: booking.student, tutor: booking.tutor, booking: bookingId,
+      });
+      await conversation.populate("student", "name avatar");
+      await conversation.populate("tutor", "name avatar");
+    } catch (err: unknown) {
+      if (!(typeof err === "object" && err !== null && "code" in err && err.code === 11000)) throw err;
+      conversation = await Conversation.findOne({ booking: bookingId })
+        .populate("student", "name avatar").populate("tutor", "name avatar");
+      if (!conversation) throw err;
+    }
   }
 
   // Reset unread count for current user
@@ -70,6 +81,10 @@ export const getMyConversations = async (
   const role = req.user?.role;
   const { page = "1", limit = "20" } = req.query;
 
+  if (role !== "student" && role !== "tutor") {
+    res.status(403).json({ success: false, code: "CHAT_ROLE_NOT_ALLOWED" });
+    return;
+  }
   const filter = role === "student"
     ? { student: userId }
     : { tutor: userId };
@@ -131,6 +146,11 @@ export const getMessages = async (
   const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 50));
   const skip = (pageNum - 1) * limitNum;
 
+  if (!(await isConversationStudentEligible(conversation.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE" });
+    return;
+  }
+
   const total = await Message.countDocuments({ conversation: conversationId });
 
   // Fetch newest messages first for pagination, then reverse so the client
@@ -148,6 +168,9 @@ export const getMessages = async (
     { conversation: conversationId, sender: { $ne: userId }, isRead: false },
     { isRead: true }
   );
+
+  await Conversation.findByIdAndUpdate(conversationId,
+    { $set: { [conversation.student.toString() === userId?.toString() ? "studentUnread" : "tutorUnread"]: 0 } });
 
   res.status(200).json({
     success: true,
@@ -191,6 +214,15 @@ export const sendMessage = async (
     return;
   }
 
+  // A tutor may still have an active chat after the parent revokes a minor's
+  // consent. Do not store, broadcast, or notify a suspended/unapproved learner.
+  // Checking only req.user would miss this because the sender is the tutor.
+  if (!(await isConversationStudentEligible(conversation.student))) {
+    res.status(403).json({ success: false, code: "STUDENT_CHAT_UNAVAILABLE",
+      message: "The student account is not authorized to receive tutoring messages." });
+    return;
+  }
+
   const filteredContent = filterContactInfo(content);
   const wasFiltered = filteredContent !== content;
 
@@ -205,21 +237,20 @@ export const sendMessage = async (
   const populatedMessage = await Message.findById(message._id)
     .populate("sender", "name avatar") as InstanceType<typeof Message>;
 
-  const updateData: Record<string, unknown> = {
-    lastMessage: filteredContent.substring(0, 100),
-    lastMessageAt: new Date(),
-  };
-
-  if (isStudent) {
-    updateData.tutorUnread = conversation.tutorUnread + 1;
-  } else {
-    updateData.studentUnread = conversation.studentUnread + 1;
-  }
-
-  await Conversation.findByIdAndUpdate(conversationId, updateData);
+  // Atomic increment avoids losing unread messages when multiple sends race.
+  // Use a server-generated message timestamp for the conversation preview.
+  await Conversation.findByIdAndUpdate(conversationId, {
+    $set: {
+      lastMessage: filteredContent.substring(0, 100),
+      lastMessageAt: message.createdAt,
+    },
+    $inc: isStudent ? { tutorUnread: 1 } : { studentUnread: 1 },
+  });
 
   const io = req.app.get("io");
-  io.to(conversationId).emit("new_message", {
+  // The HTTP API is also used by Supertest without a Socket.IO server.
+  // A missing realtime transport must not turn a saved message into HTTP 500.
+  if (io) io.to(conversationId).emit("new_message", {
     _id: populatedMessage._id,
     conversation: conversationId,
     sender: { _id: userId, name: req.user?.name, avatar: req.user?.avatar },

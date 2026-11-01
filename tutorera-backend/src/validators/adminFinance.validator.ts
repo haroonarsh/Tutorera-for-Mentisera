@@ -5,10 +5,14 @@ export const updateAdminPaymentSchema = z.object({
   paymentNote: z.string().trim().min(8).max(500).optional(),
   payoutStatus: z.enum(["pending", "approved", "processing", "paid", "failed", "held"]).optional(),
   payoutNote: z.string().trim().min(8).max(500).optional(),
+  payoutSettlementMethod: z.string().trim().min(3).max(80).optional(),
+  payoutSettlementReference: z.string().trim().min(8).max(150).optional(),
+  payoutEvidenceReference: z.string().trim().min(8).max(300).optional(),
 }).strict().superRefine((value, context) => {
   const paymentChange = value.paymentStatus !== undefined;
   const payoutChange = value.payoutStatus !== undefined;
   if (paymentChange === payoutChange) context.addIssue({ code: "custom", message: "Change exactly one of paymentStatus or payoutStatus." });
   if (paymentChange && !value.paymentNote) context.addIssue({ code: "custom", path: ["paymentNote"], message: "A payment change reason of at least 8 characters is required." });
   if (payoutChange && !value.payoutNote) context.addIssue({ code: "custom", path: ["payoutNote"], message: "A payout change reason of at least 8 characters is required." });
+  if (value.payoutStatus === "processing" && (!value.payoutSettlementMethod || !value.payoutSettlementReference || !value.payoutEvidenceReference)) context.addIssue({ code: "custom", path: ["payoutSettlementReference"], message: "External payout method, transaction reference and evidence reference are required when recording a processing transfer." });
 });

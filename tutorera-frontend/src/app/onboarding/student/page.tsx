@@ -3,6 +3,7 @@ import CountryCitySelector from "@/components/marketplace/CountryCitySelector";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 import { UI_COLORS } from "@/lib/brand";
+import { catalogueSubjectNames, subjectCatalogue } from "@/lib/subject-catalogue";
 import { useGeoData } from "@/lib/geoService";
 import { Country } from "@/lib/location";
 import { BookOpen,CheckCircle } from "lucide-react";
@@ -25,9 +26,15 @@ export default function StudentOnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const subjects = geo.subjects && geo.subjects.length > 0 ? geo.subjects : [
-    "Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Quran & Arabic", "Other"
-  ];
+  // Preserve existing backend-compatible subject labels while exposing additional catalogue options.
+  const subjects = Array.from(new Set([...(geo.subjects && geo.subjects.length > 0 ? geo.subjects : ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Urdu", "Computer Science", "Economics", "Statistics", "Islamiyat", "Pakistan Studies", "Other"]), ...catalogueSubjectNames]));
+  const [curriculumSelection, setCurriculumSelection] = useState("");
+  const curriculumOptions = Array.from(new Set(subjectCatalogue.map(group => group.curriculum)));
+  const [qualificationSelection, setQualificationSelection] = useState("");
+  const selectedCatalogueGroups = subjectCatalogue.filter(group => group.curriculum === curriculumSelection);
+  const qualificationSubjects = subjectCatalogue.find(group => group.curriculum === curriculumSelection && group.qualification === qualificationSelection)?.subjects.map(subject => subject.name) ?? [];
+
+  const levels = geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
   // Step 1 — Personal & Global Location
   const [step1, setStep1] = useState({
@@ -35,23 +42,12 @@ export default function StudentOnboardingPage() {
     phone: "",
     countryCode: "PK",
     countryName: "Pakistan",
-    country: undefined as string | undefined,
-    cityRef: undefined as string | undefined,
-    city: "",
+    city: "Lahore",
     timezone: "Asia/Karachi",
-    currency: "USD",
+    currency: "PKR",
     gender: "male",
     dateOfBirth: "",
   });
-
-  // Education levels are market-relevant (GCSE/A-Level for GB vs Matric/
-  // O-Level for PK, etc.) - GET /geo/countries now returns them per-country,
-  // so use the selected country's list before falling back to the global
-  // (Pakistan-flavored) one.
-  const selectedCountryLevels = geo.countries.find((c) => c.code === step1.countryCode)?.levels;
-  const levels = (selectedCountryLevels && selectedCountryLevels.length > 0)
-    ? selectedCountryLevels
-    : geo.levels && geo.levels.length > 0 ? geo.levels : ["Primary (Grades 1-5)", "Middle (Grades 6-8)", "Matric (9th & 10th)", "Intermediate / FSc", "O-Level (Cambridge / Edexcel)", "A-Level (Cambridge / Edexcel)", "IB (Middle Years / Diploma)", "University / Degree", "Test Preparation", "Other"];
 
   // Step 2 — Education
   const [step2, setStep2] = useState({
@@ -60,6 +56,11 @@ export default function StudentOnboardingPage() {
 
   // Step 3 — Preferences
   const [subjectsNeeded, setSubjectsNeeded] = useState<string[]>([]);
+  // Keep already selected subjects visible when switching curriculum filters.
+  const visibleSubjects = qualificationSelection
+    ? Array.from(new Set([...qualificationSubjects, ...subjectsNeeded]))
+    : subjects;
+
   const [budgetRange, setBudgetRange] = useState("");
   const [teachingModePreference, setTeachingModePreference] = useState<"online" | "in-person" | "both">("both");
 
@@ -96,7 +97,7 @@ export default function StudentOnboardingPage() {
 
   const validateStep = () => {
     if (currentStep === 1) {
-      if (!step1.fullName || !step1.phone || !step1.city || !step1.dateOfBirth) {
+      if (!step1.fullName || !step1.phone || !step1.city) {
         setError("Please fill all required fields."); return false;
       }
     }
@@ -132,6 +133,7 @@ export default function StudentOnboardingPage() {
         ...step1,
         ...step2,
         subjectsNeeded,
+        curriculum: curriculumSelection || undefined,
         budgetRange,
         teachingModePreference,
       });
@@ -219,14 +221,12 @@ export default function StudentOnboardingPage() {
                         ...prev,
                         countryCode: c.code,
                         countryName: c.name,
-                        country: c.id,
-                        cityRef: undefined,
                         currency: c.currency,
                         timezone: c.defaultTimezone,
                       }));
                     }}
-                    onCityChange={(cityName: string, cityRef?: string) => {
-                      setStep1(prev => ({ ...prev, city: cityName, cityRef }));
+                    onCityChange={(cityName: string) => {
+                      setStep1(prev => ({ ...prev, city: cityName }));
                     }}
                     showCurrency={true}
                     showTimezone={true}
@@ -238,7 +238,7 @@ export default function StudentOnboardingPage() {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Phone *</label>
                     <input value={step1.phone} onChange={e => setStep1({ ...step1, phone: e.target.value })}
-                      placeholder="e.g. +44 20 1234 5678"
+                      placeholder="e.g. +92 300 1234567"
                       style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
                       onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                       onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
@@ -253,17 +253,6 @@ export default function StudentOnboardingPage() {
                       <option value="female">Female</option>
                       <option value="other">Other</option>
                     </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.4rem' }}>Date of Birth *</label>
-                    <input
-                      type="date"
-                      value={step1.dateOfBirth}
-                      onChange={e => setStep1({ ...step1, dateOfBirth: e.target.value })}
-                      max={new Date().toISOString().split("T")[0]}
-                      style={{ width: '100%', padding: '0.75rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', color: C.primary }}
-                      onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
                   </div>
                 </div>
               </div>
@@ -309,9 +298,17 @@ export default function StudentOnboardingPage() {
 
                 {/* Subjects */}
                 <div>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label htmlFor="curriculum-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Explore subjects by curriculum (optional)</label>
+                    <select id="curriculum-filter" value={curriculumSelection} onChange={event => { setCurriculumSelection(event.target.value); setQualificationSelection(""); }} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, maxWidth: "100%", width: 320 }}>
+                      <option value="">All subjects</option>
+                      {curriculumOptions.map(curriculum => <option key={curriculum} value={curriculum}>{curriculum}</option>)}
+                    </select>
+                    {curriculumSelection && <div style={{ marginTop: "0.75rem" }}><label htmlFor="qualification-filter" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem" }}>Qualification (optional)</label><select id="qualification-filter" value={qualificationSelection} onChange={event => setQualificationSelection(event.target.value)} style={{ padding: "0.65rem", border: "1px solid #cbd5e1", borderRadius: 8, width: 320, maxWidth: "100%" }}><option value="">All qualifications</option>{selectedCatalogueGroups.map(group => <option key={group.qualification} value={group.qualification}>{group.qualification}</option>)}</select></div>}
+                  </div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: C.primary, marginBottom: '0.6rem' }}>Subjects You Need Help With *</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {subjects.map(subject => (
+                    {visibleSubjects.map(subject => (
                       <button key={subject} type="button" onClick={() => toggleSubject(subject)}
                         style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', border: `1.5px solid ${subjectsNeeded.includes(subject) ? C.accent : '#e5e7eb'}`, backgroundColor: subjectsNeeded.includes(subject) ? C.accentLight : 'white', color: subjectsNeeded.includes(subject) ? C.accent : C.gray500, fontWeight: '500', fontSize: '0.8rem', cursor: 'pointer' }}>
                         {subject}

@@ -19,6 +19,11 @@ export interface IRefundRequest extends Document {
   status: "pending" | "approved" | "rejected" | "processed";
   adminNote: string;
   processedAt?: Date;
+  settlementReference?: string;
+  settlementMethod?: string;
+  settlementEvidenceReference?: string;
+  settlementInitiatedBy?: Types.ObjectId;
+  settlementVerifiedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +44,11 @@ const refundRequestSchema = new Schema<IRefundRequest>(
     status: { type: String, enum: ["pending", "approved", "rejected", "processed"], default: "pending" },
     adminNote: { type: String, default: "" },
     processedAt: { type: Date },
+    settlementReference: { type: String, trim: true },
+    settlementMethod: { type: String, trim: true },
+    settlementEvidenceReference: { type: String, trim: true },
+    settlementInitiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    settlementVerifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );

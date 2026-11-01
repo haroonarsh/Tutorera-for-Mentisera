@@ -1,29 +1,25 @@
 "use client";
-import { UI_COLORS, STATUS_COLORS, TEXT_COLORS, SPACING } from "@/lib/brand";
+import Image from "next/image";
+import { UI_COLORS } from "@/lib/brand";
 // components/dashboard/StudentDashboard.tsx
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import axiosInstance from "@/lib/axios";
-import { DashRequest, DashBid, DashBooking, DashRefundRequest } from "@/types/dashboard";
-import PostRequestModal from "./PostRequestModal";
-import RefundRequestModal from "./RefundRequestModal";
-import CancelBookingModal from "./CancelBookingModal";
 import s from "@/app/dashboard/dashboard.module.css";
-import { useRouter } from "next/navigation";
-import { Trash2, Clock, Video, ShieldCheck, FileText, CheckCircle2, Award, RotateCcw } from "lucide-react";
-import { TutorProfile } from "@/types/tutor";
-import RatingModal from "./RatingModal";
-import CnicModal from "@/components/payments/CnicModal";
-import RapidPayCheckoutModal from "@/components/payments/RapidPayCheckoutModal";
-import { showSuccess, showError } from "@/lib/toast";
-import { SUPPORT_EMAIL, formatMoney } from "@/lib/site";
-import { tutorProfileHref } from "@/lib/tutor-directory";
+import BookingMeetingPanel from "./BookingMeetingPanel";
+import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import MatchScoreBadge from "@/components/marketplace/MatchScoreBadge";
 import MatchedTutorsModal from "@/components/marketplace/MatchedTutorsModal";
-import OfferComparisonModal from "@/components/Dashboard/OfferComparisonModal";
 import { useCurrentTime } from "@/hooks/useCurrentTime";
-import { DashCard, DashButton, StatusBadge, EmptyState, StatTile, statusTone } from "./ui";
-import ReferEarnBanner from "@/components/ReferEarnBanner";
+import axiosInstance from "@/lib/axios";
+import { SUPPORT_EMAIL,formatPKR } from "@/lib/site";
+import { showError,showSuccess } from "@/lib/toast";
+import { tutorProfileHref } from "@/lib/tutor-directory";
+import { DashBid,DashBooking,DashRequest } from "@/types/dashboard";
+import { TutorProfile } from "@/types/tutor";
+import { Clock,ShieldCheck,Trash2,Video } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback,useEffect,useState } from "react";
+import PostRequestModal from "./PostRequestModal";
+import RatingModal from "./RatingModal";
 
 const C = UI_COLORS;
 
@@ -50,21 +46,23 @@ function timeAgo(dateStr: string, nowMs: number = 0): string {
   return new Date(dateStr).toLocaleDateString("en-PK", { day: "numeric", month: "short" });
 }
 
-type ExpiryTone = "danger" | "success" | "warning";
-
-function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: string, nowMs: number = 0): { text: string; detail: string; tone: ExpiryTone } {
+function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: string, nowMs: number = 0) {
   if (isExpired || !expiresAt) {
     return {
       text: "⚠️ Expired",
       detail: expiredAt ? `Expired on ${new Date(expiredAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}` : "Expired",
-      tone: "danger",
+      color: "#dc2626",
+      bg: "#fef2f2",
+      border: "#fecaca",
     };
   }
   if (!nowMs) {
     return {
       text: "⏱️ Active",
       detail: `Expires: ${new Date(expiresAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}`,
-      tone: "success",
+      color: "#059669",
+      bg: "#ecfdf5",
+      border: "#a7f3d0",
     };
   }
   const diffMs = new Date(expiresAt).getTime() - nowMs;
@@ -72,7 +70,9 @@ function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: 
     return {
       text: "⚠️ Expired",
       detail: "No longer active",
-      tone: "danger",
+      color: "#dc2626",
+      bg: "#fef2f2",
+      border: "#fecaca",
     };
   }
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -88,13 +88,17 @@ function formatExpiryBadge(expiresAt?: string, isExpired?: boolean, expiredAt?: 
     return {
       text: `⚡ Closes in ${Math.max(1, diffHours)}h`,
       detail: `Expires: ${localizedTime}`,
-      tone: "warning",
+      color: "#d97706",
+      bg: "#fffbeb",
+      border: "#fde68a",
     };
   }
   return {
     text: `⏱️ ${diffDays} ${diffDays === 1 ? "day" : "days"} left`,
     detail: `Expires: ${localizedTime}`,
-    tone: "success",
+    color: "#059669",
+    bg: "#ecfdf5",
+    border: "#a7f3d0",
   };
 }
 
@@ -102,7 +106,7 @@ function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; si
   return (
     <div className={size === 40 ? s.personAvatar : s.bidAvatar}>
       {avatar
-        ? <img src={avatar} alt={name} />
+        ? <Image src={avatar} alt={name}  width={100} height={100} unoptimized/>
         : name.charAt(0).toUpperCase()}
     </div>
   );
@@ -110,18 +114,9 @@ function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; si
 
 // ─── Booking Card ─────────────────────────────────────────────────────────────
 
-function BookingCard({
-  booking,
-  refundRequest,
-  onClaimSubmitted,
-  onRequestRefund,
-  onCancelBooking,
-}: {
+function BookingCard({ booking, onClaimSubmitted }: {
   booking: DashBooking;
-  refundRequest?: DashRefundRequest;
   onClaimSubmitted?: () => void;
-  onRequestRefund?: () => void;
-  onCancelBooking?: () => void;
 }) {
   const [creatingChat, setCreatingChat] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
@@ -133,16 +128,14 @@ function BookingCard({
   const [alreadyRated, setAlreadyRated] = useState(false);
   const router = useRouter();
   const [paying, setPaying] = useState(false);
-  const [checkoutSession, setCheckoutSession] = useState<{ sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
   const [rebooking, setRebooking] = useState(false);
-  const money = (amount: number, unit?: string) => formatMoney(amount, booking.currency || booking.request?.currency || "USD", unit);
 
   const handlePay = async () => {
     setPaying(true);
     try {
       const res = await axiosInstance.post(`/payments/booking/${booking._id}/checkout`);
-      if (res.data?.sessionId) {
-        setCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
+      if (res.data?.checkoutUrl) {
+        window.location.assign(res.data.checkoutUrl);
       } else {
         showError("Unable to initiate checkout session. Please try again.");
       }
@@ -234,19 +227,22 @@ function BookingCard({
           <p className={s.personSub}>Your Tutor</p>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.3rem" }}>
-          <span className={statusBadgeClass(booking.status)}>{booking.status}</span>
+          <span className={statusBadgeClass(booking.status)}>{booking.status === "upcoming" && booking.paymentStatus !== "confirmed" ? "Payment required" : booking.status}</span>
           {/* First session badge */}
           {booking.isFirstSession && (
-            <StatusBadge tone="info">1st Session</StatusBadge>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#EEF5FF', color: '#0329B2', padding: '0.15rem 0.5rem', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
+              1st Session
+            </span>
           )}
         </div>
       </div>
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-        <DashButton type="button" variant="secondary" size="sm" onClick={handleChatClick} disabled={creatingChat}>
+        <button type="button" onClick={handleChatClick} disabled={creatingChat}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: creatingChat ? '#e5e7eb' : '#EEF5FF', color: creatingChat ? '#9ca3af' : '#0329B2', borderRadius: '0.5rem', border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '600', cursor: creatingChat ? 'not-allowed' : 'pointer' }}>
           {creatingChat ? "Opening..." : "💬 Chat"}
-        </DashButton>
+        </button>
 
         <button type="button" className={s.btnWarning} onClick={() => router.push(`/support?bookingId=${booking._id}`)}>
           🆘 Need Help?
@@ -260,161 +256,127 @@ function BookingCard({
         )}
 
         {booking.status === "completed" && (
-          <DashButton type="button" variant="secondary" size="sm" onClick={handleBookAgain} disabled={rebooking}>
-            {rebooking ? "Preparing..." : "↻ Book Again"}
-          </DashButton>
-        )}
-
-        {alreadyRated && <StatusBadge tone="success">✓ Rated</StatusBadge>}
-
-        {/* ── First Session Guarantee button ── */}
-        {showGuaranteeButton && (
-          <DashButton type="button" variant="danger" size="sm" onClick={() => setShowClaimForm(!showClaimForm)} style={{ color: C.magenta }}>
-            😕 Not Satisfied?
-          </DashButton>
-        )}
-
-        {/* ── Request Refund button — for confirmed/paid bookings where refund hasn't been requested ── */}
-        {(booking.paymentStatus === "confirmed" || booking.paymentStatus === "received") && !refundRequest && (
           <button
             type="button"
-            className={s.btnWarning}
-            onClick={onRequestRefund}
-            title="Request a refund review under the platform refund policy"
-          >
-            🔄 Request Refund
+            onClick={handleBookAgain}
+            disabled={rebooking}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.5rem 1rem', backgroundColor: rebooking ? '#dbeafe' : '#EEF5FF',
+              color: rebooking ? '#64748b' : '#0329B2', borderRadius: '0.5rem',
+              border: '1px solid #bfdbfe', fontSize: '0.8rem', fontWeight: '700',
+              cursor: rebooking ? 'wait' : 'pointer',
+            }}>
+            {rebooking ? "Preparing..." : "↻ Book Again"}
           </button>
         )}
 
-        {/* ── Cancel Booking button — for upcoming bookings ── */}
-        {booking.status === "upcoming" && (
-          <DashButton
-            type="button"
-            variant="danger"
-            size="sm"
-            onClick={onCancelBooking}
-            style={{ color: STATUS_COLORS.danger.color }}
-          >
-            ✕ Cancel Booking
-          </DashButton>
+        {alreadyRated && (
+          <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, padding: '0.5rem 0' }}>
+            ✓ Rated
+          </span>
+        )}
+
+        {/* ── First Session Guarantee button ── */}
+        {showGuaranteeButton && (
+          <button type="button" onClick={() => setShowClaimForm(!showClaimForm)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', backgroundColor: showClaimForm ? '#fef2f2' : '#fff1f2', color: '#C81B7F', borderRadius: '0.5rem', border: '1px solid #fecdd3', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>
+            😕 Not Satisfied?
+          </button>
         )}
       </div>
 
-      {/* ── Refund Request Status Banner ── */}
-      {refundRequest && (
-        <DashCard
-          padding="sm"
-          style={{
-            background:
-              refundRequest.status === "approved" || refundRequest.status === "processed"
-                ? STATUS_COLORS.success.bg
-                : refundRequest.status === "rejected"
-                ? STATUS_COLORS.danger.bg
-                : STATUS_COLORS.warning.bg,
-            borderColor:
-              refundRequest.status === "approved" || refundRequest.status === "processed"
-                ? STATUS_COLORS.success.border
-                : refundRequest.status === "rejected"
-                ? STATUS_COLORS.danger.border
-                : STATUS_COLORS.warning.border,
-            marginBottom: "0.75rem",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
-            <strong style={{ fontSize: "0.8rem", color: TEXT_COLORS.primary, display: "flex", alignItems: "center", gap: 6 }}>
-              <RotateCcw size={14} />
-              Refund Request:{" "}
-              <span style={{ textTransform: "capitalize" }}>
-                {refundRequest.status === "pending" ? "Under Review" : refundRequest.status}
-              </span>
-            </strong>
-            <span style={{ fontSize: "0.72rem", color: TEXT_COLORS.muted }}>
-              Submitted {timeAgo(refundRequest.createdAt)}
-            </span>
-          </div>
-          <p style={{ fontSize: "0.75rem", color: TEXT_COLORS.secondary, margin: "4px 0 0" }}>
-            Reason: <b>{refundRequest.reason.replace(/_/g, " ")}</b>
-            {refundRequest.adminNote && <span> · Admin note: <i>{refundRequest.adminNote}</i></span>}
-          </p>
-        </DashCard>
-      )}
-
       {booking.status === "completed" && (
-        <DashCard padding="sm" accent={C.accent} style={{ background: `linear-gradient(135deg, ${C.accentLight} 0%, ${C.card} 100%)`, borderColor: STATUS_COLORS.info.border, marginBottom: "0.75rem" }}>
-          <p style={{ margin: "0 0 0.5rem", color: TEXT_COLORS.primary, fontWeight: 800, fontSize: "0.85rem" }}>
+        <div style={{ background: "linear-gradient(135deg, #EEF5FF 0%, #F8FAFF 100%)", border: "1px solid #bfdbfe", borderRadius: "0.75rem", padding: "0.9rem", marginBottom: "0.75rem" }}>
+          <p style={{ margin: "0 0 0.5rem", color: "#021550", fontWeight: 800, fontSize: "0.85rem" }}>
             Continue Learning
           </p>
-          <p style={{ margin: "0 0 0.75rem", color: TEXT_COLORS.muted, fontSize: "0.75rem", lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 0.75rem", color: "#475569", fontSize: "0.75rem", lineHeight: 1.5 }}>
             Rebook this tutor by posting a new requirement using the previous subject, mode, and agreed rate as a starting point. Tutors can then respond with a fresh offer.
           </p>
           <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }} aria-label="Future learning options">
             {["Book Again"].map((option) => (
-              <span key={option} style={{ border: `1px solid ${STATUS_COLORS.info.border}`, background: C.accent, color: "white", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
+              <span key={option} style={{ border: "1px solid #dbeafe", background: "#0329B2", color: "white", borderRadius: 999, padding: "0.35rem 0.65rem", fontSize: "0.7rem", fontWeight: 800 }}>
                 {option}
               </span>
             ))}
           </div>
-        </DashCard>
+        </div>
       )}
 
       {/* ── Secure checkout instructions — only when payment is pending ── */}
-      {booking.paymentStatus === "pending" && booking.status !== "cancelled" && (
-        <DashCard padding="sm" accent={STATUS_COLORS.success.color} style={{ background: STATUS_COLORS.success.bg, borderColor: STATUS_COLORS.success.border, marginBottom: "0.75rem" }}>
-          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: TEXT_COLORS.success, marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      {booking.paymentStatus === "pending" && booking.status === "upcoming" && (
+        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534', marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             💳 Payment Required
           </p>
-          <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.success, marginBottom: '0.875rem', lineHeight: 1.5 }}>
-            Review the final amount below. Secure online payment will be processed through TUTORERA&apos;s authorized payment gateway upon merchant activation. TUTORERA verifies payment server-side before marking a booking paid.
+          <p style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.875rem', lineHeight: 1.5 }}>
+            Review the final PKR amount below. Secure online payment is processed through TUTORERA&apos;s authorized gateway when available. Your tutor is not booked until payment is verified, and a direct-booking reservation can expire.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {[
-              { label: "Tutor Session", value: money(booking.subtotal || booking.amount || booking.totalAmount || 0) },
-              { label: "Student Marketplace Fee", value: money(booking.studentFee || 0) },
-              { label: "Tax", value: money(booking.tax || 0) },
-              { label: "Total Payable", value: money(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
-              { label: "Currency", value: booking.currency || booking.request?.currency || "USD" },
+              { label: "Tutor Session", value: formatPKR(booking.subtotal || booking.amount || booking.totalAmount || 0) },
+              { label: "Student Marketplace Fee", value: formatPKR(booking.studentFee || 0) },
+              { label: "Tax charged separately to student", value: formatPKR(0) },
+              { label: "Total Payable", value: formatPKR(booking.studentTotal || booking.amount || booking.totalAmount || 0) },
+              { label: "Currency", value: booking.currency || "PKR" },
             ].map(item => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: C.surface, borderRadius: '0.375rem', border: `1px solid ${STATUS_COLORS.success.border}`, flexWrap: 'wrap', gap: '0.25rem' }}>
-                <span style={{ fontSize: '0.7rem', color: UI_COLORS.success, fontWeight: 600 }}>{item.label}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: TEXT_COLORS.success, fontFamily: 'monospace' }}>{item.value}</span>
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bbf7d0', flexWrap: 'wrap', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#14532d', fontFamily: 'monospace' }}>{item.value}</span>
               </div>
             ))}
           </div>
-          <p style={{ fontSize: '0.7rem', color: TEXT_COLORS.success, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <DashButton type="button" variant="success" onClick={handlePay} disabled={paying} style={{ borderRadius: 999 }}>
+          <p style={{ fontSize: '0.7rem', color: '#15803d', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handlePay}
+              disabled={paying}
+              style={{
+                border: 0,
+                borderRadius: 999,
+                padding: "0.55rem 1.25rem",
+                background: paying ? "#86efac" : "#16a34a",
+                color: "#ffffff",
+                fontWeight: 800,
+                cursor: paying ? "wait" : "pointer",
+                boxShadow: "0 2px 4px rgba(22, 101, 52, 0.2)",
+              }}
+            >
               {paying ? "Starting Checkout..." : "Pay Securely →"}
-            </DashButton>{" "}
+            </button>{" "}
             <span>I agree to TUTORERA&apos;s <Link href="/terms">Terms & Conditions</Link>, <Link href="/refund-policy">Refund Policy</Link> and <Link href="/cancellation-policy">Cancellation Policy</Link>. Payment support: <strong>{SUPPORT_EMAIL}</strong></span>
           </p>
-        </DashCard>
+        </div>
       )}
 
-      <details style={{marginBottom:"0.75rem",background:C.gray50,padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>{money(booking.finalAgreedRate || booking.amount || booking.totalAmount || 0, booking.pricingUnit||"hour")}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>{money(booking.subtotal || booking.amount || booking.totalAmount || 0)}</b></span><span>Student fee: <b>{money(booking.studentFee||0)}</b></span><span>Total: <b>{money(booking.studentTotal || booking.amount || booking.totalAmount || 0)}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:TEXT_COLORS.muted,marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
+      <BookingMeetingPanel bookingId={booking._id} role="student" teachingMode={booking.teachingMode} status={booking.status} paymentStatus={booking.paymentStatus} />
+      <details style={{marginBottom:"0.75rem",background:"#f8fafc",padding:"0.75rem",borderRadius:"0.5rem"}}><summary style={{fontWeight:700,cursor:"pointer"}}>Booking & fee summary</summary><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginTop:10,fontSize:12}}><span>Subject: <b>{typeof booking.request==="object"?booking.request.subject:"Tutoring session"}</b></span><span>Mode: <b>{booking.teachingMode || "online"}</b></span><span>Rate: <b>PKR {((booking.finalAgreedRate || booking.amount || booking.totalAmount || 0)).toLocaleString()}/{booking.pricingUnit||"hour"}</b></span><span>Sessions: <b>{booking.sessionCount||1}</b></span><span>Subtotal: <b>PKR {((booking.subtotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Student fee: <b>PKR {(booking.studentFee||0).toLocaleString()}</b></span><span>Total: <b>PKR {((booking.studentTotal || booking.amount || booking.totalAmount || 0)).toLocaleString()}</b></span><span>Payment: <b>{booking.paymentStatus || "pending"}</b></span></div><p style={{fontSize:11,color:"#64748b",marginTop:8}}>The cancellation and refund policy applies to this booking.</p></details>
 
       {/* Claim submitted confirmation */}
       {claimSubmitted && (
-        <DashCard padding="sm" style={{ background: STATUS_COLORS.success.bg, borderColor: STATUS_COLORS.success.border, marginBottom: '0.5rem', fontSize: '0.8rem', color: STATUS_COLORS.success.color, fontWeight: 600 }}>
+        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
           ✅ Guarantee claim submitted. We'll review it within 24–48 hours.
-        </DashCard>
+        </div>
       )}
 
       {/* Claim form — expands inline */}
       {showClaimForm && (
-        <DashCard padding="sm" style={{ background: STATUS_COLORS.danger.bg, borderColor: STATUS_COLORS.danger.border, marginBottom: "0.75rem" }}>
-          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: C.magenta, marginBottom: '0.75rem' }}>
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '1rem', marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C81B7F', marginBottom: '0.75rem' }}>
             First Session Guarantee Claim
           </p>
-          <p style={{ fontSize: '0.75rem', color: TEXT_COLORS.muted, marginBottom: '0.875rem', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.875rem', lineHeight: 1.5 }}>
             Not happy with your first session? Tell us why and we'll make it right — credit to try another tutor or a refund.
           </p>
 
           {/* Reason select */}
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: TEXT_COLORS.primary, marginBottom: '0.3rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#021550', marginBottom: '0.3rem' }}>
               What went wrong? *
             </label>
             <select title="Claim reasons" value={claimReason} onChange={e => setClaimReason(e.target.value)}
-              style={{ width: '100%', padding: '0.6rem 0.875rem', border: `1.5px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: TEXT_COLORS.primary, backgroundColor: C.surface, boxSizing: 'border-box' }}>
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', color: '#021550', backgroundColor: 'white', boxSizing: 'border-box' }}>
               <option value="">Select a reason</option>
               <option value="Tutor didn't show up">Tutor didn't show up</option>
               <option value="Tutor was unprepared">Tutor was unprepared</option>
@@ -428,32 +390,29 @@ function BookingCard({
 
           {/* Optional details */}
           <div style={{ marginBottom: '0.875rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: TEXT_COLORS.primary, marginBottom: '0.3rem' }}>
-              Additional details <span style={{ color: TEXT_COLORS.muted, fontWeight: 400 }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#021550', marginBottom: '0.3rem' }}>
+              Additional details <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
             </label>
             <textarea value={claimDetails} onChange={e => setClaimDetails(e.target.value)} rows={3}
               placeholder="Tell us more about what happened..."
-              style={{ width: '100%', padding: '0.6rem 0.875rem', border: `1.5px solid ${STATUS_COLORS.danger.border}`, borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: TEXT_COLORS.primary, boxSizing: 'border-box' }} />
+              style={{ width: '100%', padding: '0.6rem 0.875rem', border: '1.5px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', color: '#021550', boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <DashButton type="button" variant="danger" onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim} fullWidth style={{ color: C.magenta, borderColor: C.magenta }}>
+            <button type="button" onClick={handleClaimSubmit} disabled={!claimReason || submittingClaim}
+              style={{ flex: 1, padding: '0.6rem', backgroundColor: !claimReason || submittingClaim ? '#fca5a5' : '#C81B7F', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: !claimReason || submittingClaim ? 'not-allowed' : 'pointer' }}>
               {submittingClaim ? "Submitting..." : "Submit Claim"}
-            </DashButton>
+            </button>
             <button type="button" className={s.btnOutline} onClick={() => { setShowClaimForm(false); setClaimReason(""); setClaimDetails(""); }}>
               Cancel
             </button>
           </div>
-        </DashCard>
+        </div>
       )}
 
       <div className={s.infoRow}>
-        <span className={s.infoChip}>{money(booking.finalAgreedRate||booking.amount, booking.pricingUnit||"hour")}</span>
-        <span className={s.infoChip}>
-          {booking.nextOccurrence
-            ? `${booking.nextOccurrence.dayLabel}, ${booking.nextOccurrence.dateLabel} · ${booking.nextOccurrence.timeLabel}`
-            : booking.schedule}
-        </span>
+        <span className={s.infoChip}>PKR {(booking.finalAgreedRate||booking.amount).toLocaleString()}/{booking.pricingUnit||"hour"}</span>
+        <span className={s.infoChip}>{booking.schedule}</span>
         <span className={s.infoChip}>{booking.teachingMode}</span>
       </div>
       <p className={s.cardMeta} style={{ marginTop: 8 }}>Booked {timeAgo(booking.createdAt)}</p>
@@ -465,18 +424,6 @@ function BookingCard({
           subtitle="How was your session? Your review helps other students."
           onSubmit={handleRateSubmit}
           onClose={() => setShowRatingModal(false)}
-        />
-      )}
-
-      {checkoutSession && (
-        <RapidPayCheckoutModal
-          sessionId={checkoutSession.sessionId}
-          clientSecret={checkoutSession.clientSecret}
-          publishableKey={checkoutSession.publishableKey}
-          onSuccess={() => { setCheckoutSession(null); window.location.reload(); }}
-          onPending={() => { setCheckoutSession(null); showSuccess("Payment is being processed. You will be notified once confirmed."); }}
-          onError={() => { setCheckoutSession(null); showError("Payment could not be completed. Please try again."); }}
-          onClose={() => setCheckoutSession(null)}
         />
       )}
     </>
@@ -506,11 +453,11 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
           <Avatar name={tutor.user.name} avatar={tutor.user.avatar} />
           <div>
             <p className={s.personName}>{tutor.user.name}</p>
-            <p className={s.personSub}>{tutor.city} · {formatMoney(tutor.hourlyRate, tutor.currency || "USD", "hour")}</p>
+            <p className={s.personSub}>{tutor.city} · {formatPKR(tutor.hourlyRate, "hour")}</p>
           </div>
         </Link>
         <button type="button" className={s.btnIcon} onClick={handleRemove} disabled={removing}
-          style={{ color: C.magenta }}
+          style={{ color: '#C81B7F' }}
           aria-label="Remove from favourites">
           <Trash2 size={16} />
         </button>
@@ -528,7 +475,6 @@ function SavedTutorCard({ tutor, onRemove }: { tutor: TutorProfile; onRemove: (i
 
 function RequestCard({
   request,
-  onBidAccepted,
   onRefresh,
 }: {
   request: DashRequest;
@@ -540,9 +486,6 @@ function RequestCard({
   const [bids, setBids] = useState<DashBid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
-  const [promoInputFor, setPromoInputFor] = useState<string | null>(null);
-  const [promoCode, setPromoCode] = useState("");
-  const [promoError, setPromoError] = useState("");
   const [offerSort, setOfferSort] = useState("best_match");
   const [countering, setCountering] = useState<DashBid | null>(null);
   const [counterAmount, setCounterAmount] = useState("");
@@ -550,17 +493,9 @@ function RequestCard({
   const [extending, setExtending] = useState(false);
   const [reposting, setReposting] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [confirmClose, setConfirmClose] = useState(false);
   const [selectedBids, setSelectedBids] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [acceptingCompare, setAcceptingCompare] = useState<string | null>(null);
-  // RapidPay may require the payer's CNIC on checkout. We ask in a dialog,
-  // keep it in memory only, and send it with the accept/retry request.
-  const [cnicTarget, setCnicTarget] = useState<{ bidId: string; mode: "accept" | "retry" | "compare" } | null>(null);
-  const [offerCheckoutSession, setOfferCheckoutSession] = useState<{ sessionId: string; clientSecret: string; publishableKey: string } | null>(null);
-  const [timelineOpen, setTimelineOpen] = useState(false);
-  const [timelineLoading, setTimelineLoading] = useState(false);
-  const [timeline, setTimeline] = useState<{ id: string; action: string; actor: string; createdAt: string }[]>([]);
 
   async function handleExtend() {
     setExtending(true);
@@ -589,6 +524,7 @@ function RequestCard({
   }
 
   async function handleClose() {
+    if (!confirm("Are you sure you want to close this tuition request? Tutors will no longer be able to send offers.")) return;
     setClosing(true);
     try {
       await axiosInstance.patch(`/requests/${request._id}/close`);
@@ -598,21 +534,6 @@ function RequestCard({
       showError(err, "Failed to close request.");
     } finally {
       setClosing(false);
-      setConfirmClose(false);
-    }
-  }
-
-  async function toggleTimeline() {
-    if (timelineOpen) { setTimelineOpen(false); return; }
-    setTimelineLoading(true);
-    try {
-      const response = await axiosInstance.get(`/requests/${request._id}/timeline`);
-      setTimeline(response.data?.events || []);
-      setTimelineOpen(true);
-    } catch (error) {
-      showError(error, "Unable to load this requirement's activity.");
-    } finally {
-      setTimelineLoading(false);
     }
   }
 
@@ -634,87 +555,40 @@ function RequestCard({
     }
   }
 
-  async function acceptBid(bidId: string, promoCodeToApply?: string, cnic?: string) {
+  async function acceptBid(bidId: string) {
     setAccepting(bidId);
-    setPromoError("");
     try {
-      const res = await axiosInstance.post(`/offers/${bidId}/accept`, {
-        ...(promoCodeToApply && { promoCode: promoCodeToApply }),
-        ...(cnic && { cnic }),
-      });
-      if (res.data?.sessionId) {
-        setOfferCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
-        setAccepting(null);
+      const res = await axiosInstance.post(`/offers/${bidId}/accept`);
+      const checkoutUrl = res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        window.location.assign(checkoutUrl);
       } else {
-        showError("Unable to initiate checkout session. Please try again.");
+        console.error("Accept-offer response had no checkoutUrl:", res.data);
         setAccepting(null);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to accept bid:", err);
-      const errCode = err?.response?.data?.code;
-      if (errCode === "CNIC_REQUIRED" || errCode === "PHONE_REQUIRED") {
-        // Checked before the promo branch below, which would otherwise show
-        // these as a "promo code couldn't be applied" message.
-        showError(err, errCode === "PHONE_REQUIRED" ? "Please add a valid mobile number to your profile before paying." : "Please enter a valid 13-digit CNIC.");
-        if (errCode === "CNIC_REQUIRED") setCnicTarget({ bidId, mode: "accept" });
-      } else if (promoCodeToApply) {
-        setPromoError(err?.response?.data?.message || "That promo code couldn't be applied.");
-      } else if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
-        // Payments aren't live yet in this offer's market - the Accept
-        // button otherwise just silently resets with no feedback, which
-        // looks like a broken/fake Pay button.
-        showError(err, "Online payment isn't available in this market yet. This offer can't be accepted for checkout right now.");
-      } else {
-        showError(err, "Failed to accept this offer. Please try again.");
-      }
       setAccepting(null);
     }
   }
 
-  async function retryPayment(bidId: string, cnic?: string) {
+  async function retryPayment(bidId: string) {
     setAccepting(bidId);
     try {
-      const res = await axiosInstance.post(`/offers/${bidId}/retry-payment`, cnic ? { cnic } : undefined);
-      if (res.data?.sessionId) {
-        setOfferCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
-        setAccepting(null);
+      const res = await axiosInstance.post(`/offers/${bidId}/retry-payment`);
+      const checkoutUrl = res.data?.checkoutUrl;
+      if (checkoutUrl) {
+        window.location.assign(checkoutUrl); // reuses the same useEffect-based redirect from acceptBid
       } else {
-        showError("Unable to resume checkout. Please try again.");
+        console.error("Retry-payment response had no checkoutUrl:", res.data);
         setAccepting(null);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to retry payment:", err);
-      const retryCode = err?.response?.data?.code;
-      if (retryCode === "CNIC_REQUIRED" || retryCode === "PHONE_REQUIRED") {
-        showError(err, retryCode === "PHONE_REQUIRED" ? "Please add a valid mobile number to your profile before paying." : "Please enter a valid 13-digit CNIC.");
-        if (retryCode === "CNIC_REQUIRED") setCnicTarget({ bidId, mode: "retry" });
-      } else if (err?.response?.data?.code === "MARKET_DISCOVERY_ONLY") {
-        showError(err, "Online payment isn't available in this market yet.");
-      } else {
-        showError(err, "Failed to resume payment. Please try again.");
-      }
       setAccepting(null);
     }
   }
   
-  // Accept from the comparison modal. Previously this swallowed every error
-  // with only a console.error, so a failed checkout looked like a dead button.
-  async function acceptFromCompare(id: string, cnic: string) {
-    setAcceptingCompare(id);
-    try {
-      const res = await axiosInstance.post(`/offers/${id}/accept`, { cnic });
-      if (res.data?.sessionId) {
-        setOfferCheckoutSession({ sessionId: res.data.sessionId, clientSecret: res.data.clientSecret, publishableKey: res.data.publishableKey });
-      }
-    } catch (err: any) {
-      console.error("Failed to accept bid:", err);
-      showError(err, "Failed to accept this offer. Please try again.");
-      if (err?.response?.data?.code === "CNIC_REQUIRED") setCnicTarget({ bidId: id, mode: "compare" });
-    } finally {
-      setAcceptingCompare(null);
-    }
-  }
-
   async function counterOffer() {
     if (!countering || Number(counterAmount) <= 0) return;
     try { await axiosInstance.post(`/offers/${countering._id}/counter`, { amount: Number(counterAmount), message: counterMessage }); setCountering(null); setCounterAmount(""); setCounterMessage(""); await loadBids(true); }
@@ -748,17 +622,30 @@ function RequestCard({
 
       {/* Expiry countdown badge & localized status indicator */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "6px 0 10px" }}>
-        <span title={expiryBadge.detail}>
-          <StatusBadge tone={expiryBadge.tone}>{expiryBadge.text}</StatusBadge>
+        <span
+          style={{
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            padding: "3px 8px",
+            borderRadius: "0.375rem",
+            color: expiryBadge.color,
+            backgroundColor: expiryBadge.bg,
+            border: `1px solid ${expiryBadge.border}`,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+          title={expiryBadge.detail}
+        >
+          {expiryBadge.text}
         </span>
-        <span style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted }}>
+        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
           {expiryBadge.detail}
         </span>
         {(request.extensionCount || 0) > 0 && (
-          <StatusBadge tone="neutral">Extended {request.extensionCount}x</StatusBadge>
-        )}
-        {(request.invitedTutorCount || 0) > 0 && (
-          <StatusBadge tone="info">{request.invitedTutorCount} tutor{request.invitedTutorCount === 1 ? "" : "s"} invited</StatusBadge>
+          <span style={{ fontSize: "0.72rem", color: "#64748b", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>
+            Extended {request.extensionCount}x
+          </span>
         )}
       </div>
 
@@ -769,7 +656,7 @@ function RequestCard({
           <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
           </svg>
-          Budget: {formatMoney(request.budget, request.currency || "USD", request.pricingUnit || "hour")}
+          Budget: PKR {request.budget.toLocaleString()}/hr
         </span>
         <span className={s.infoChip}>{request.teachingMode}</span>
         <span className={s.infoChip}>{request.schedule}</span>
@@ -800,53 +687,113 @@ function RequestCard({
         )}
 
         {request.canExtend && (
-          <DashButton type="button" variant="primary" size="sm" onClick={handleExtend} disabled={extending}>
+          <button
+            type="button"
+            onClick={handleExtend}
+            disabled={extending}
+            style={{
+              padding: "0.5rem 0.85rem",
+              backgroundColor: "#0329b2",
+              color: "white",
+              border: "none",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: extending ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              boxShadow: "0 2px 6px rgba(3, 41, 178, 0.25)",
+            }}
+          >
             {extending ? "Extending..." : `+ Extend 7 Days (${request.extensionCount || 0}/${request.maxExtensions || 2})`}
-          </DashButton>
+          </button>
         )}
 
         {request.canRepost && (
-          <DashButton type="button" variant="success" size="sm" onClick={handleRepost} disabled={reposting}>
+          <button
+            type="button"
+            onClick={handleRepost}
+            disabled={reposting}
+            style={{
+              padding: "0.5rem 0.85rem",
+              backgroundColor: "#059669",
+              color: "white",
+              border: "none",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: reposting ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              boxShadow: "0 2px 6px rgba(5, 150, 105, 0.25)",
+            }}
+          >
             {reposting ? "Reposting..." : "🔄 Repost Request"}
-          </DashButton>
+          </button>
         )}
-
-        <DashButton type="button" variant="secondary" size="sm" onClick={toggleTimeline} disabled={timelineLoading}>
-          {timelineLoading ? "Loading activity..." : timelineOpen ? "Hide activity" : "View activity"}
-        </DashButton>
 
         {!request.isExpired && ["open", "published", "receiving_offers"].includes(request.status) && (
-          <DashButton type="button" variant="ghost" size="sm" onClick={() => setConfirmClose(true)} disabled={closing} style={{ color: TEXT_COLORS.muted, border: `1px solid ${C.border}` }}>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={closing}
+            style={{
+              padding: "0.5rem 0.75rem",
+              backgroundColor: "white",
+              color: "#6b7280",
+              border: "1px solid #e5e7eb",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              cursor: closing ? "not-allowed" : "pointer",
+            }}
+          >
             {closing ? "Closing..." : "Close Request"}
-          </DashButton>
+          </button>
         )}
-        {confirmClose && <div role="presentation" style={{position:"fixed",inset:0,zIndex:1000,display:"grid",placeItems:"center",padding:"1rem",background:"rgba(2,21,80,.62)"}}><section role="alertdialog" aria-modal="true" aria-labelledby="close-request-title" style={{maxWidth:440,background:C.surface,borderRadius:"1rem",padding:"1.5rem",color:TEXT_COLORS.primary}}><h2 id="close-request-title" style={{marginTop:0}}>Close tuition request?</h2><p style={{color:TEXT_COLORS.secondary,lineHeight:1.5}}>Tutors will no longer be able to send offers for this request.</p><div style={{display:"flex",justifyContent:"flex-end",gap:"0.6rem"}}><DashButton type="button" variant="secondary" size="sm" onClick={()=>setConfirmClose(false)}>Cancel</DashButton><DashButton type="button" variant="danger" size="sm" disabled={closing} onClick={handleClose}>Close request</DashButton></div></section></div>}
 
         {["open", "published", "receiving_offers", "negotiating"].includes(request.status) && (
-          <DashButton type="button" variant="secondary" size="sm" onClick={() => setShowMatchedTutors(true)}>
+          <button
+            type="button"
+            onClick={() => setShowMatchedTutors(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.5rem 0.85rem",
+              backgroundColor: "#eff6ff",
+              color: "#1d4ed8",
+              border: "1px solid #bfdbfe",
+              borderRadius: "0.5rem",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
             ⚡ View AI Matched Tutors
-          </DashButton>
+          </button>
         )}
       </div>
-
-      {timelineOpen && (
-        <section aria-label="Requirement activity" style={{ marginTop: "0.9rem", padding: "0.8rem", border: `1px solid ${C.border}`, borderRadius: "0.65rem", background: "#f8faff" }}>
-          <h4 style={{ margin: "0 0 0.55rem", color: TEXT_COLORS.primary, fontSize: "0.88rem" }}>Requirement activity</h4>
-          {timeline.length ? <ol style={{ margin: 0, paddingLeft: "1.15rem", color: TEXT_COLORS.secondary, fontSize: "0.8rem", display: "grid", gap: "0.4rem" }}>{timeline.map((event) => <li key={event.id}><strong>{event.action.replace(/^tuition_request_/, "").replaceAll("_", " ")}</strong> · {event.actor} · {new Date(event.createdAt).toLocaleString()}</li>)}</ol> : <p style={{ margin: 0, color: TEXT_COLORS.muted, fontSize: "0.8rem" }}>No additional activity has been recorded yet.</p>}
-        </section>
-      )}
 
           {expanded && (
             <div className={s.bidsSection}>
               <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><p className={s.bidsSectionTitle}>Tutor Offers ({bids.length})</p><label style={{fontSize:12}}>Sort by <select value={offerSort} onChange={e=>{setOfferSort(e.target.value);loadBids(true,e.target.value)}}><option value="best_match">Best Match</option><option value="lowest_rate">Lowest Rate</option><option value="highest_rated">Highest Rated</option><option value="most_experienced">Most Experienced</option><option value="fastest_response">Fastest Response</option><option value="most_sessions">Most Sessions Completed</option></select></label>{selectedBids.length >= 2 && (
-              <DashButton size="sm" variant="primary" onClick={() => setShowCompare(true)}>
+              <button
+                onClick={() => setShowCompare(true)}
+                style={{padding:"0.35rem 0.85rem",background:"#0329b2",color:"white",border:"none",borderRadius:"0.4rem",fontWeight:700,fontSize:"0.8rem",cursor:"pointer"}}
+              >
                 Compare ({selectedBids.length}) Offers
-              </DashButton>
+              </button>
             )}</div>
               {bidsLoading ? (
                 <div className={s.spinner} />
               ) : bids.length === 0 ? (
-                <EmptyState icon="📭" title="No offers yet" description="Matching verified tutors can respond soon." />
+                <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>
+                  No offers yet. Matching verified tutors can respond soon.
+                </p>
               ) : (
                 bids.map((bid) => (
                   <div key={bid._id} className={s.bidCard}>
@@ -862,19 +809,19 @@ function RequestCard({
                           );
                         }}
                         aria-label={`Select ${bid.tutor.name} for comparison`}
-                        style={{marginTop:4,cursor:"pointer",width:16,height:16,accentColor:C.accent}}
+                        style={{marginTop:4,cursor:"pointer",width:16,height:16,accentColor:"#0329b2"}}
                       />
                     )}
                     <div className={s.bidAvatar}>
                       {bid.tutor.avatar
-                        ? <img src={bid.tutor.avatar} alt={bid.tutor.name} />
+                        ? <Image src={bid.tutor.avatar} alt={bid.tutor.name}  width={100} height={100} unoptimized/>
                         : bid.tutor.name.charAt(0).toUpperCase()}
                     </div>
                     <div className={s.bidBody}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 6 }}>
                         <div>
                           <p className={s.bidTutorName}>{bid.tutor.name}</p>
-                          <p className={s.bidAmount}>{formatMoney(bid.amount, bid.currency || request.currency || "USD", bid.pricingUnit || "hour")}</p>
+                          <p className={s.bidAmount}>PKR {bid.amount.toLocaleString()}/{bid.pricingUnit || "hour"}</p>
                         </div>
                         {bid.matchScore ? (
                           <MatchScoreBadge
@@ -898,9 +845,12 @@ function RequestCard({
                       {bid.availability && <p className={s.bidMessage}>Availability: {bid.availability}</p>}
                       <p className={s.bidMessage}>{bid.message}</p>
                       <div className={s.bidActions}>
-                        <DashButton href={tutorProfileHref({ _id: bid.tutor._id, user: { name: bid.tutor.name }, subjects: [], city: "Pakistan" })} variant="secondary" size="sm">
+                        <Link href={tutorProfileHref({ _id: bid.tutor._id, user: { name: bid.tutor.name }, subjects: [], city: "Pakistan" })} className={s.btnOutline}
+                          style={{ fontSize: 12, padding: "6px 12px", textDecoration: "none",
+                            display: "inline-flex", border: "1.5px solid #e5e7eb",
+                            borderRadius: 8, color: "#374151", fontWeight: 500 }}>
                           View Profile
-                        </DashButton>
+                        </Link>
                         {bid.profile?.demoVideoStatus === "approved" && bid.profile.videoIntro && (
                           <a href={bid.profile.videoIntro} target="_blank" rel="noopener noreferrer" className={s.btnOutline}>
                             <Video size={14} aria-hidden="true" /> Watch Demo
@@ -908,37 +858,20 @@ function RequestCard({
                         )}
                         {["pending", "submitted", "viewed", "countered"].includes(bid.status) && (<>
                           <button
-                            onClick={() => setCnicTarget({ bidId: bid._id, mode: "accept" })}
+                            onClick={() => acceptBid(bid._id)}
                             disabled={accepting === bid._id}
                             className={s.btnSuccess}
                           >
                             {accepting === bid._id ? "Accepting…" : "Accept Offer"}
                           </button>
-                          {promoInputFor === bid._id ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                              <input
-                                type="text"
-                                value={promoCode}
-                                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(""); }}
-                                placeholder="PROMO CODE"
-                                style={{ padding: "0.4rem 0.6rem", border: `1px solid ${UI_COLORS.border}`, borderRadius: "0.4rem", fontSize: "0.8rem", width: "140px" }}
-                              />
-                              <button type="button" onClick={() => { setPromoInputFor(null); setPromoCode(""); setPromoError(""); }} className={s.btnOutline}>Cancel</button>
-                            </div>
-                          ) : (
-                            <button type="button" onClick={() => setPromoInputFor(bid._id)} className={s.btnOutline}>Have a promo code?</button>
-                          )}
                           {request.allowCounterOffers && bid.latestSenderRole !== "student" && (bid.counterCounts?.student ?? 0) < 3 && <button type="button" onClick={() => {setCountering(bid);setCounterAmount(String(bid.amount))}} className={s.btnOutline}>Counter Offer</button>}
                           <Link href="/chat" className={s.btnOutline}>Message</Link>
                           <button type="button" onClick={() => declineOffer(bid._id)} className={s.btnOutline}>Decline</button>
                           <Link href={`/support?topic=report-tutor&offer=${bid._id}`} className={s.btnOutline}>Report</Link>
-                          {promoInputFor === bid._id && promoError && (
-                            <p style={{ color: STATUS_COLORS.danger.color, fontSize: "0.75rem", width: "100%", margin: "0.25rem 0 0" }}>{promoError}</p>
-                          )}
                         </>)}
                         {(bid.status as string) === "payment_pending" && (
                           <button
-                            onClick={() => setCnicTarget({ bidId: bid._id, mode: "retry" })}
+                            onClick={() => retryPayment(bid._id)}
                             disabled={accepting === bid._id}
                             className={s.btnSuccess}
                           >
@@ -946,7 +879,9 @@ function RequestCard({
                           </button>
                         )}
                         {!(["pending", "submitted", "viewed", "countered", "payment_pending"].includes(bid.status)) && (
-                          <StatusBadge tone={statusTone(bid.status)}>{bid.status}</StatusBadge>
+                          <span className={`${s.badge} ${bid.status === "accepted" ? s.badgeAccepted : s.badgeCancelled}`}>
+                            {bid.status}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -955,17 +890,7 @@ function RequestCard({
               )}
             </div>
           )}
-      {countering && (
-        <DashCard padding="sm" accent={C.accent} style={{ marginTop: 12, background: C.accentLight, borderColor: STATUS_COLORS.info.border }} role="dialog" aria-modal="true" aria-label="Counter offer">
-          <strong>Counter tutor offer of {formatMoney(countering.amount, countering.currency || "USD")}</strong>
-          <p style={{fontSize:12,color:TEXT_COLORS.muted}}>Student proposed {formatMoney(countering.initialStudentRate, countering.currency || "USD", countering.pricingUnit)}. Current tutor offer is {formatMoney(countering.amount, countering.currency || "USD", countering.pricingUnit)}. {counterLimitText}</p>
-          <div style={{display:"grid",gap:8}}>
-            <input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder={`Amount in ${countering.currency || "USD"}`}/>
-            <textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/>
-            <div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div>
-          </div>
-        </DashCard>
-      )}
+      {countering && <div role="dialog" aria-modal="true" aria-label="Counter offer" style={{marginTop:12,padding:14,border:"1px solid #bfdbfe",borderRadius:10,background:"#EEF5FF"}}><strong>Counter tutor offer of PKR {countering.amount.toLocaleString()}</strong><p style={{fontSize:12,color:"#64748b"}}>Student proposed PKR {countering.initialStudentRate.toLocaleString()}/{countering.pricingUnit}. Current tutor offer is PKR {countering.amount.toLocaleString()}/{countering.pricingUnit}. {counterLimitText}</p><div style={{display:"grid",gap:8}}><input aria-label="Counter amount" type="number" min="1" value={counterAmount} onChange={e=>setCounterAmount(e.target.value)} placeholder="Amount in PKR"/><textarea aria-label="Counter message" maxLength={500} value={counterMessage} onChange={e=>setCounterMessage(e.target.value)} placeholder="Optional message"/><div><button type="button" onClick={counterOffer} className={s.btnSuccess}>Send Counter Offer</button> <button type="button" onClick={()=>setCountering(null)} className={s.btnOutline}>Cancel</button></div></div></div>}
 
       {/* AI Matched Tutors Drawer Modal */}
       {showMatchedTutors && (
@@ -985,36 +910,21 @@ function RequestCard({
           offers={bids}
           selected={selectedBids}
           onClose={() => setShowCompare(false)}
-          onAccept={(id) => setCnicTarget({ bidId: id, mode: "compare" })}
+          onAccept={async (id) => {
+            setAcceptingCompare(id);
+            try {
+              const res = await axiosInstance.post(`/offers/${id}/accept`);
+              const checkoutUrl = res.data?.checkoutUrl;
+              if (checkoutUrl) {
+                window.location.assign(checkoutUrl);
+              }
+            } catch (err) {
+              console.error("Failed to accept bid:", err);
+            } finally {
+              setAcceptingCompare(null);
+            }
+          }}
           acceptingId={acceptingCompare}
-        />
-      )}
-
-      <CnicModal
-        isOpen={!!cnicTarget}
-        busy={!!accepting || !!acceptingCompare}
-        subtitle={cnicTarget ? `${request.subject} (${request.level})${bids.find((b) => b._id === cnicTarget.bidId)?.tutor?.name ? ` with ${bids.find((b) => b._id === cnicTarget.bidId)?.tutor?.name}` : ""}` : undefined}
-        onSubmit={(cnic) => {
-          if (!cnicTarget) return;
-          const { bidId, mode } = cnicTarget;
-          setCnicTarget(null);
-          const promo = promoInputFor === bidId ? promoCode.trim() || undefined : undefined;
-          if (mode === "accept") void acceptBid(bidId, promo, cnic);
-          else if (mode === "retry") void retryPayment(bidId, cnic);
-          else void acceptFromCompare(bidId, cnic);
-        }}
-        onClose={() => setCnicTarget(null)}
-      />
-
-      {offerCheckoutSession && (
-        <RapidPayCheckoutModal
-          sessionId={offerCheckoutSession.sessionId}
-          clientSecret={offerCheckoutSession.clientSecret}
-          publishableKey={offerCheckoutSession.publishableKey}
-          onSuccess={() => { setOfferCheckoutSession(null); onBidAccepted(); }}
-          onPending={() => { setOfferCheckoutSession(null); showSuccess("Payment is being processed. You will be notified once confirmed."); }}
-          onError={() => { setOfferCheckoutSession(null); showError("Payment could not be completed. Please try again."); }}
-          onClose={() => setOfferCheckoutSession(null)}
         />
       )}
     </div>
@@ -1023,7 +933,7 @@ function RequestCard({
 
 // ─── Student Dashboard ────────────────────────────────────────────────────────
 
-type Tab = "requests" | "bookings" | "favourites" | "refunds";
+type Tab = "requests" | "bookings" | "favourites";
 
 interface Props {
   userName: string;
@@ -1043,15 +953,11 @@ export default function StudentDashboard({ userName, userAvatar }: Props) {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
   const [requestFilter, setRequestFilter] = useState<"active" | "expired" | "all">("active");
-  const [refundRequests, setRefundRequests] = useState<DashRefundRequest[]>([]);
-  const [loadingRefunds, setLoadingRefunds] = useState(false);
-  const [selectedBookingForRefund, setSelectedBookingForRefund] = useState<DashBooking | null>(null);
-  const [selectedBookingForCancel, setSelectedBookingForCancel] = useState<DashBooking | null>(null);
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
-    if (requestedTab === "requests" || requestedTab === "bookings" || requestedTab === "favourites" || requestedTab === "refunds") {
-      setTab(requestedTab as Tab);
+    if (requestedTab === "requests" || requestedTab === "bookings" || requestedTab === "favourites") {
+      setTab(requestedTab);
     }
   }, []);
 
@@ -1089,18 +995,6 @@ const fetchRequests = useCallback(async () => {
     finally { setLoadingB(false); }
   }, []);
 
-  const fetchRefundRequests = useCallback(async () => {
-    setLoadingRefunds(true);
-    try {
-      const res = await axiosInstance.get("/bookings/refund-requests");
-      setRefundRequests(res.data.refundRequests ?? []);
-    } catch {
-      setRefundRequests([]);
-    } finally {
-      setLoadingRefunds(false);
-    }
-  }, []);
-
   const loadMoreBookings = async () => {
     if (loadingMoreBookings) return;
     setLoadingMoreBookings(true);
@@ -1117,11 +1011,7 @@ const fetchRequests = useCallback(async () => {
     }
   };
 
-  useEffect(() => {
-    fetchRequests();
-    fetchBookings();
-    fetchRefundRequests();
-  }, [fetchRequests, fetchBookings, fetchRefundRequests]);
+  useEffect(() => { fetchRequests(); fetchBookings(); }, [fetchRequests, fetchBookings]);
 
   const now = useCurrentTime();
   const activeRequests = requests.filter(r => !r.isExpired && r.status !== "expired" && (!r.expiresAt || !now || new Date(r.expiresAt).getTime() > now));
@@ -1135,14 +1025,14 @@ const fetchRequests = useCallback(async () => {
   return (
     <>
       {/* Header */}
-      <div className={s.header} style={{ background: `linear-gradient(135deg, ${C.primary} 0%, ${C.accent} 100%)`, color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
+      <div className={s.header} style={{ background: "linear-gradient(135deg, #021550 0%, #0329b2 100%)", color: "white", padding: "2rem 1.5rem", borderRadius: "1rem", marginBottom: "1.5rem" }}>
         <div className={s.headerInner} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.25rem" }}>
           <div className={s.headerLeft} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div className={s.avatar} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, border: "2px solid rgba(255,255,255,0.4)" }}>
-              {userAvatar ? <img src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : userName.charAt(0).toUpperCase()}
+              {userAvatar ? <Image src={userAvatar} alt={userName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}  width={100} height={100} unoptimized/> : userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: C.cyan, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#08bffc", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Student Marketplace Dashboard
               </span>
               <h1 className={s.greeting} style={{ color: "white", fontSize: "1.5rem", fontWeight: 800, margin: "0.2rem 0" }}>
@@ -1165,46 +1055,103 @@ const fetchRequests = useCallback(async () => {
       </div>
 
       <div className={s.content}>
-        <ReferEarnBanner variant="strip" />
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: SPACING.space4, marginBottom: SPACING.space6 }}>
-          <StatTile icon={<FileText size={20} />} value={requests.length} label="Total Requests" tone="info" />
-          <StatTile icon={<CheckCircle2 size={20} />} value={openCount} label="Open Requests" tone="success" />
-          <StatTile icon={<Clock size={20} />} value={upcomingCount} label="Upcoming Sessions" tone="warning" />
-          <StatTile icon={<Award size={20} />} value={completedCount} label="Completed Sessions" tone="neutral" />
+        <div className={s.stats}>
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(37,99,235,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#0329B2" aria-hidden="true">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{requests.length}</div>
+              <div className={s.statLabel}>Total Requests</div>
+            </div>
+          </div>
+
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(16,185,129,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#10b981" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{openCount}</div>
+              <div className={s.statLabel}>Open Requests</div>
+            </div>
+          </div>
+
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(245,158,11,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#d97706" aria-hidden="true">
+                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{upcomingCount}</div>
+              <div className={s.statLabel}>Upcoming Sessions</div>
+            </div>
+          </div>
+
+          <div className={s.statCard}>
+            <div className={s.statIcon} style={{ background: "rgba(107,114,128,0.1)" }}>
+              <svg width={22} height={22} viewBox="0 0 20 20" fill="#6b7280" aria-hidden="true">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+            <div>
+              <div className={s.statValue}>{completedCount}</div>
+              <div className={s.statLabel}>Completed Sessions</div>
+            </div>
+          </div>
         </div>
 
         {/* Waiting Offers Urgency Banner */}
         {requests.some(r => Boolean(r.bid || r.status === "receiving_offers" || r.status === "negotiating" || (r as any).bids?.length)) && (
-          <DashCard
-            padding="md"
-            accent={STATUS_COLORS.success.color}
+          <div 
             style={{
-              background: STATUS_COLORS.success.bg,
-              borderColor: STATUS_COLORS.success.border,
+              background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+              border: "1.5px solid #6ee7b7",
+              borderRadius: "0.875rem",
+              padding: "1rem 1.25rem",
               marginBottom: "1.5rem",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
               gap: "0.75rem",
+              boxShadow: "0 4px 12px rgba(5, 150, 105, 0.08)"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <span style={{ fontSize: "1.5rem" }}>⚡</span>
               <div>
-                <strong style={{ color: STATUS_COLORS.success.color, fontSize: "0.98rem", display: "block" }}>
+                <strong style={{ color: "#065f46", fontSize: "0.98rem", display: "block" }}>
                   Verified Tutors Have Responded to Your Tuition Request!
                 </strong>
-                <span style={{ color: TEXT_COLORS.success, fontSize: "0.82rem" }}>
+                <span style={{ color: "#047857", fontSize: "0.82rem" }}>
                   You have active tutor offers awaiting your decision. Compare rates, qualifications, and background verification.
                 </span>
               </div>
             </div>
-            <DashButton variant="success" onClick={() => setTab("requests")}>
+            <button
+              onClick={() => setTab("requests")}
+              style={{
+                background: "#059669",
+                color: "white",
+                border: "none",
+                padding: "0.6rem 1.25rem",
+                borderRadius: "0.5rem",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3)"
+              }}
+            >
               Review Offers Now →
-            </DashButton>
-          </DashCard>
+            </button>
+          </div>
         )}
 
         {/* Tabs */}
@@ -1223,13 +1170,6 @@ const fetchRequests = useCallback(async () => {
           className={`${s.tab} ${tab === "bookings" ? s.tabActive : ""}`}
         >
           My Bookings
-        </button>
-        <button
-          onClick={() => setTab("refunds")}
-          aria-current={tab === "refunds" ? "true" : undefined}
-          className={`${s.tab} ${tab === "refunds" ? s.tabActive : ""}`}
-        >
-          🔄 Refund Requests {refundRequests.length > 0 && `(${refundRequests.length})`}
         </button>
         <button
           onClick={() => setTab("favourites")}
@@ -1262,8 +1202,8 @@ const fetchRequests = useCallback(async () => {
                       fontWeight: 700,
                       border: "none",
                       cursor: "pointer",
-                      backgroundColor: requestFilter === "active" ? C.accent : C.border,
-                      color: requestFilter === "active" ? "white" : TEXT_COLORS.muted,
+                      backgroundColor: requestFilter === "active" ? "#0329b2" : "#e2e8f0",
+                      color: requestFilter === "active" ? "white" : "#475569",
                       transition: "all 0.2s",
                     }}
                   >
@@ -1279,8 +1219,8 @@ const fetchRequests = useCallback(async () => {
                       fontWeight: 700,
                       border: "none",
                       cursor: "pointer",
-                      backgroundColor: requestFilter === "expired" ? STATUS_COLORS.danger.color : C.border,
-                      color: requestFilter === "expired" ? "white" : TEXT_COLORS.muted,
+                      backgroundColor: requestFilter === "expired" ? "#dc2626" : "#e2e8f0",
+                      color: requestFilter === "expired" ? "white" : "#475569",
                       transition: "all 0.2s",
                     }}
                   >
@@ -1296,8 +1236,8 @@ const fetchRequests = useCallback(async () => {
                       fontWeight: 700,
                       border: "none",
                       cursor: "pointer",
-                      backgroundColor: requestFilter === "all" ? C.primary : C.border,
-                      color: requestFilter === "all" ? "white" : TEXT_COLORS.muted,
+                      backgroundColor: requestFilter === "all" ? "#0f172a" : "#e2e8f0",
+                      color: requestFilter === "all" ? "white" : "#475569",
                       transition: "all 0.2s",
                     }}
                   >
@@ -1313,14 +1253,20 @@ const fetchRequests = useCallback(async () => {
             {loadingR ? (
               <div className={s.spinner} />
             ) : displayedRequests.length === 0 ? (
-              <EmptyState
-                icon="📋"
-                title={requestFilter === "expired" ? "No expired requests" : requestFilter === "active" ? "No active requests seeking tutors" : "No requests yet"}
-                description={requestFilter === "expired"
-                  ? "Requests stay active for 7 days. When expired, you can review past offers and easily repost anytime."
-                  : "Post your tuition requirement with budget and schedule. Matched verified tutors will send proposals to you."}
-                action={{ label: "Post a Request", onClick: () => setShowModal(true) }}
-              />
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>📋</div>
+                <p className={s.emptyTitle}>
+                  {requestFilter === "expired" ? "No expired requests" : requestFilter === "active" ? "No active requests seeking tutors" : "No requests yet"}
+                </p>
+                <p className={s.emptyDesc}>
+                  {requestFilter === "expired"
+                    ? "Requests stay active for 7 days. When expired, you can review past offers and easily repost anytime."
+                    : "Post your tuition requirement with budget and schedule. Matched verified tutors will send proposals to you."}
+                </p>
+                <button type="button" onClick={() => setShowModal(true)} className={s.btnPrimary}>
+                  Post a Request
+                </button>
+              </div>
             ) : (
               displayedRequests.map((r) => (
                 <RequestCard
@@ -1347,107 +1293,23 @@ const fetchRequests = useCallback(async () => {
             {loadingB ? (
               <div className={s.spinner} />
             ) : bookings.length === 0 ? (
-              <EmptyState icon="📅" title="No bookings yet" description="Accept a tutor offer from your requests to create a booking." />
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>📅</div>
+                <p className={s.emptyTitle}>No bookings yet</p>
+                <p className={s.emptyDesc}>Accept a tutor offer from your requests to create a booking.</p>
+              </div>
             ) : (
               <>
-                {bookings.map((b) => {
-                  const req = refundRequests.find((r) =>
-                    typeof r.booking === "object" ? r.booking?._id === b._id : r.booking === b._id
-                  );
-                  return (
-                    <BookingCard
-                      key={b._id}
-                      booking={b}
-                      refundRequest={req}
-                      onClaimSubmitted={fetchBookings}
-                      onRequestRefund={() => setSelectedBookingForRefund(b)}
-                      onCancelBooking={() => setSelectedBookingForCancel(b)}
-                    />
-                  );
-                })}
+                {bookings.map((b) => <BookingCard key={b._id} booking={b} onClaimSubmitted={fetchBookings} />)}
                 {bookingsHasMore && (
                   <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                    <DashButton type="button" variant="secondary" onClick={loadMoreBookings} disabled={loadingMoreBookings}>
+                    <button type="button" onClick={loadMoreBookings} disabled={loadingMoreBookings}
+                      style={{ padding: '0.65rem 1.5rem', backgroundColor: 'white', color: C.accent, border: `1.5px solid ${C.accent}`, borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: loadingMoreBookings ? 'not-allowed' : 'pointer' }}>
                       {loadingMoreBookings ? "Loading..." : "Load More Bookings"}
-                    </DashButton>
+                    </button>
                   </div>
                 )}
               </>
-            )}
-          </section>
-        )}
-
-        {/* Tab: Refund Requests */}
-        {tab === "refunds" && (
-          <section aria-label="My refund requests">
-            <div className={s.sectionHeader}>
-              <h2 className={s.sectionTitle}>Refund Requests</h2>
-            </div>
-
-            {loadingRefunds ? (
-              <div className={s.spinner} />
-            ) : refundRequests.length === 0 ? (
-              <EmptyState
-                icon="🔄"
-                title="No refund requests"
-                description="Eligible confirmed or paid bookings can be submitted for refund review directly from the My Bookings tab."
-                action={{ label: "View Bookings", onClick: () => setTab("bookings") }}
-              />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                {refundRequests.map((rf) => {
-                  const bkg = typeof rf.booking === "object" ? rf.booking : null;
-                  const bkgId = bkg?._id || (typeof rf.booking === "string" ? rf.booking : "—");
-                  const currency = bkg?.currency || "USD";
-                  const statusTone =
-                    rf.status === "approved" || rf.status === "processed"
-                      ? "success"
-                      : rf.status === "rejected"
-                      ? "danger"
-                      : "warning";
-                  return (
-                    <DashCard key={rf._id} padding="md">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <strong style={{ fontSize: "1rem", color: TEXT_COLORS.primary }}>
-                              {formatMoney(rf.amount, currency)}
-                            </strong>
-                            <StatusBadge tone={statusTone}>
-                              {rf.status === "pending" ? "Under Review" : rf.status}
-                            </StatusBadge>
-                          </div>
-                          <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: TEXT_COLORS.muted }}>
-                            Booking reference: <b>{bkgId}</b> · Tutor: {rf.tutor?.name || "Tutor"}
-                          </p>
-                        </div>
-                        <span style={{ fontSize: "0.75rem", color: TEXT_COLORS.muted }}>
-                          Requested {timeAgo(rf.createdAt)}
-                        </span>
-                      </div>
-
-                      <div style={{ background: UI_COLORS.gray50, padding: "0.75rem 1rem", borderRadius: "0.5rem", fontSize: "0.8rem", marginBottom: "0.5rem" }}>
-                        <p style={{ margin: 0, color: TEXT_COLORS.primary }}>
-                          <span style={{ fontWeight: 700 }}>Reason: </span>
-                          {rf.reason.replace(/_/g, " ")}
-                        </p>
-                        {rf.details && (
-                          <p style={{ margin: "4px 0 0", color: TEXT_COLORS.secondary, fontStyle: "italic" }}>
-                            &ldquo;{rf.details}&rdquo;
-                          </p>
-                        )}
-                      </div>
-
-                      {rf.adminNote && (
-                        <div style={{ background: STATUS_COLORS.info.bg, border: `1px solid ${STATUS_COLORS.info.border}`, padding: "0.6rem 0.85rem", borderRadius: "0.5rem", fontSize: "0.78rem" }}>
-                          <strong style={{ color: STATUS_COLORS.info.color }}>Admin resolution note: </strong>
-                          <span style={{ color: TEXT_COLORS.secondary }}>{rf.adminNote}</span>
-                        </div>
-                      )}
-                    </DashCard>
-                  );
-                })}
-              </div>
             )}
           </section>
         )}
@@ -1462,12 +1324,14 @@ const fetchRequests = useCallback(async () => {
             {loadingF ? (
               <div className={s.spinner} />
             ) : favourites.length === 0 ? (
-              <EmptyState
-                icon="❤️"
-                title="No saved tutors yet"
-                description="Browse tutors and tap the heart icon to save your favourites here."
-                action={{ label: "Browse Tutors", href: "/tutors" }}
-              />
+              <div className={s.empty}>
+                <div className={s.emptyIcon}>❤️</div>
+                <p className={s.emptyTitle}>No saved tutors yet</p>
+                <p className={s.emptyDesc}>Browse tutors and tap the heart icon to save your favourites here.</p>
+                <Link href="/tutors" className={s.btnPrimary} style={{ textDecoration: 'none' }}>
+                  Browse Tutors
+                </Link>
+              </div>
             ) : (
               favourites.map((t) => (
                 <SavedTutorCard
@@ -1485,31 +1349,6 @@ const fetchRequests = useCallback(async () => {
         <PostRequestModal
           onClose={() => setShowModal(false)}
           onSuccess={fetchRequests}
-        />
-      )}
-
-      {selectedBookingForRefund && (
-        <RefundRequestModal
-          booking={selectedBookingForRefund}
-          onClose={() => setSelectedBookingForRefund(null)}
-          onSuccess={() => {
-            fetchRefundRequests();
-            fetchBookings();
-          }}
-        />
-      )}
-
-      {selectedBookingForCancel && (
-        <CancelBookingModal
-          bookingId={selectedBookingForCancel._id}
-          bookingTitle={typeof selectedBookingForCancel.request === "object" ? selectedBookingForCancel.request.subject : "Tutoring Session"}
-          userRole="student"
-          isPaid={selectedBookingForCancel.paymentStatus === "confirmed" || selectedBookingForCancel.paymentStatus === "received"}
-          onClose={() => setSelectedBookingForCancel(null)}
-          onSuccess={() => {
-            fetchBookings();
-            fetchRefundRequests();
-          }}
         />
       )}
     </>

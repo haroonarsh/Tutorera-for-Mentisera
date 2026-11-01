@@ -1,160 +1,111 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import Link from "next/link";
+import { MARKETS,getMarketByRoute } from "@/lib/markets";
 import { SITE_URL } from "@/lib/site";
-import { resolveCountry, liveCountryCodeParams } from "@/lib/geo-server";
-import HeroMarketplace from "@/components/marketplace/HeroMarketplace";
-import HomeOnlineTuitionCards from "@/components/marketplace/HomeOnlineTuitionCards";
-import TopRequestsSection from "@/components/TopRequestsSection";
-import { fetchTutors } from "@/lib/tutor-directory";
+import { CITIES,LOCAL_SUBJECT_SLUGS,PRIMARY_CITY_SLUGS,SUBJECTS,fetchTutors } from "@/lib/tutor-directory";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound,permanentRedirect } from "next/navigation";
 
-interface Props {
-  params: Promise<{ countryCode: string }>;
-}
+interface Props { params: Promise<{ countryCode: string }> }
 
-export async function generateStaticParams() {
-  return liveCountryCodeParams();
+export function generateStaticParams() {
+  return Object.values(MARKETS).map((market) => ({ countryCode: market.route }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countryCode } = await params;
-  const country = await resolveCountry(countryCode);
-  if (!country) return { title: "Country Not Found" };
+  if (countryCode.toLowerCase() === "gb") return {};
+  const market = getMarketByRoute(countryCode);
+  if (!market) return { robots: { index: false, follow: true } };
 
-  const title = `Find Tutors & Teaching Opportunities in ${country.name} | TUTORERA`;
-  const description = `Connect with verified tutors and students in ${country.name}. Post your requirements or find teaching jobs in ${country.currency}.`;
-  const canonical = `/${countryCode.toLowerCase()}`;
+  const canonical = `/${market.route}`;
+  const canonicalUrl = `${SITE_URL}${canonical}`;
+  const title = `Find Tutors & Tutoring Opportunities in ${market.countryName}`;
+  const description = `TUTORERA is a student-led tutoring marketplace in ${market.countryName}. Post your requirement and preferred budget in ${market.currency}, compare tutor offers, and choose your tutor.`;
+  const isLive = market.status === "LIVE";
 
   return {
-    // The root layout's title template ("%s | TUTORERA") already appends the
-    // suffix - a plain `title` string here that also ends in "| TUTORERA"
-    // renders as "...| TUTORERA | TUTORERA". `absolute` opts out of the
-    // template so this page controls its own exact <title> text.
-    title: { absolute: title },
+    title,
     description,
-    alternates: { canonical },
-    openGraph: {
-      title,
-      description,
-      url: `${SITE_URL}${canonical}`,
-    },
+    robots: { index: isLive, follow: true },
+    alternates: isLive
+      ? { canonical, languages: { [market.locale]: canonicalUrl, "x-default": SITE_URL } }
+      : { canonical },
+    openGraph: { title, description, url: canonicalUrl, locale: market.locale.replace("-", "_") },
   };
 }
 
-export default async function CountryLandingPage({ params }: Props) {
+export default async function MarketPage({ params }: Props) {
   const { countryCode } = await params;
-  const country = await resolveCountry(countryCode);
-  if (!country) notFound();
+  if (countryCode.toLowerCase() === "gb") permanentRedirect("/uk");
+  const market = getMarketByRoute(countryCode);
+  if (!market) notFound();
 
-  // Only surface cities where TUTORERA actually has tutor supply - the geo
-  // dataset lists every city in the country regardless of whether anyone
-  // teaches there yet, and linking to an empty filtered search is a thin,
-  // untrustworthy page for both users and crawlers.
-  const candidateCities = (country.cities || []).slice(0, 15);
-  const cityCounts = await Promise.all(
-    candidateCities.map((city) => fetchTutors({ city: city.name, countryCode: country.code }, 1).then((r) => r.total))
-  );
-  const citiesWithSupply = candidateCities
-    .map((city, i) => ({ city, total: cityCounts[i] }))
-    .filter((c) => c.total > 0)
-    .sort((a, b) => b.total - a.total);
+  const isPakistan = market.route === "pk";
+  const pakistanInventory = isPakistan
+    ? await Promise.all(PRIMARY_CITY_SLUGS.map(async (citySlug) => {
+        const city = CITIES[citySlug];
+        const { total } = await fetchTutors({ countryCode: "PK", city }, 1);
+        return { citySlug, city, total };
+      }))
+    : [];
 
-  // This landing page previously had no structured data of its own -
-  // only the global Organization schema from the root layout applied to
-  // it, same as every other page - despite being the main entry point
-  // for each market. Matches the WebPage/BreadcrumbList pattern already
-  // used on this country's /tutors sub-page.
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: `TUTORERA - ${country.name}`,
-    description: `Find verified tutors and teaching opportunities in ${country.name}, priced in ${country.currency}.`,
-    url: `${SITE_URL}/${countryCode.toLowerCase()}`,
-    // WebPage.isPartOf semantically references the WebSite, not the
-    // Organization (WebSite is what Google's guidance and schema.org's own
-    // examples use). The Organization is reachable via WebSite.publisher.
-    isPartOf: { "@id": `${SITE_URL}/#website` },
-    breadcrumb: {
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-        { "@type": "ListItem", position: 2, name: country.name, item: `${SITE_URL}/${countryCode.toLowerCase()}` },
-      ],
+    name: `TUTORERA ${market.countryName}`,
+    url: `${SITE_URL}/${market.route}`,
+    inLanguage: market.locale,
+    about: {
+      "@type": "Service",
+      name: `TUTORERA tutoring marketplace in ${market.countryName}`,
+      areaServed: { "@type": "Country", name: market.countryName },
+      provider: { "@id": `${SITE_URL}/#organization` },
     },
   };
 
   return (
-    <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-      />
-      {/* Market status banner — explicit discovery/transactional label per
-          P2 readiness requirement. Never let a non-live market page imply
-          that booking or payment is available when it isn't. */}
-      {country.launchStatus === "coming_soon" ? (
-        <div role="status" style={{
-          background: "#f59e0b", color: "#1c1917",
-          textAlign: "center", padding: "0.75rem",
-          fontSize: "0.85rem", fontWeight: 700
-        }}>
-          TUTORERA is coming to {country.name} — browse profiles and register your interest. Booking is not yet available.
-        </div>
-      ) : country.launchStatus === "beta" ? (
-        <div role="status" style={{
-          background: "#0284c7", color: "white",
-          textAlign: "center", padding: "0.75rem",
-          fontSize: "0.85rem", fontWeight: 700
-        }}>
-          TUTORERA {country.name} is in beta · {country.currency} ({country.currencySymbol})
-          {country.paymentsEnabled === false && " · Online payment is not yet enabled in this market"}
-        </div>
-      ) : (
-        <div style={{
-          background: "#021550", color: "white",
-          textAlign: "center", padding: "0.75rem",
-          fontSize: "0.85rem", fontWeight: 700
-        }}>
-          You are viewing TUTORERA for {country.name} · {country.currency} ({country.currencySymbol})
-          {country.paymentsEnabled === false && " · Online payment isn't live in this market yet"}
-        </div>
+    <main style={{ maxWidth: 1120, margin: "0 auto", padding: "3rem 1.5rem 5rem" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <p style={{ fontWeight: 700, color: "#0329b2" }}>{market.status === "LIVE" ? "Live market" : "Discovery beta"} · {market.currency} ({market.currencySymbol})</p>
+      <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)", lineHeight: 1.05, color: "#021550", maxWidth: 900 }}>Find Tutors & Tutoring Opportunities in {market.countryName}</h1>
+      <p style={{ fontSize: "1.1rem", lineHeight: 1.7, maxWidth: 820 }}>Students post what they need and their preferred budget in {market.currency}. Eligible tutors can respond with offers or counter-offers. Students compare tutor profiles and choose who they want to learn with.</p>
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", margin: "1.5rem 0 2.5rem" }}>
+        <Link href={`/post-tuition-request?market=${market.route}`} style={{ padding: "0.8rem 1.2rem", borderRadius: 10, background: "#0329b2", color: "white", textDecoration: "none", fontWeight: 700 }}>Post a Tuition Request</Link>
+        <Link href={`/${market.route}/tutors`} style={{ padding: "0.8rem 1.2rem", borderRadius: 10, border: "1px solid #0329b2", color: "#0329b2", textDecoration: "none", fontWeight: 700 }}>Browse Tutors</Link>
+      </div>
+
+      {isPakistan && (
+        <section style={{ margin: "2.5rem 0", padding: "1.5rem", border: "1px solid #dbeafe", borderRadius: 16, background: "#f8fbff" }}>
+          <h2 style={{ color: "#021550", marginTop: 0 }}>Find tutors across Pakistan</h2>
+          <p>Explore live tutor inventory by city, subject, academic level and exam. Thin combinations are kept out of the search index until matching tutor supply exists.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", margin: "1rem 0 1.5rem" }}>
+            {pakistanInventory.map(({ citySlug, city, total }) => (
+              <Link key={citySlug} href={`/tutors/city/${citySlug}`} style={{ padding: "0.9rem", background: "white", border: "1px solid #e2e8f0", borderRadius: 10, color: "#0329b2", textDecoration: "none", fontWeight: 700 }}>
+                {city} tutors{total > 0 ? ` (${total})` : ""}
+              </Link>
+            ))}
+          </div>
+          <h3 style={{ color: "#021550" }}>Popular subjects</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
+            {LOCAL_SUBJECT_SLUGS.map((subjectSlug) => (
+              <Link key={subjectSlug} href={`/tutors/subject/${subjectSlug}`} style={{ padding: "0.55rem 0.8rem", borderRadius: 999, border: "1px solid #bfdbfe", color: "#0329b2", textDecoration: "none", fontWeight: 600 }}>{SUBJECTS[subjectSlug]}</Link>
+            ))}
+          </div>
+          <h3 style={{ color: "#021550", marginTop: "1.5rem" }}>Academic levels & exams</h3>
+          <p><Link href="/pk/tutors/level/matric">Matric tutors</Link> · <Link href="/pk/tutors/level/intermediate">Intermediate / FSc tutors</Link> · <Link href="/pk/tutors/level/o-level">O-Level tutors</Link> · <Link href="/pk/tutors/level/a-level">A-Level tutors</Link> · <Link href="/pk/tutors/exam/mdcat">MDCAT tutors</Link> · <Link href="/pk/tutors/exam/ecat">ECAT tutors</Link> · <Link href="/pk/tutors/exam/ielts">IELTS tutors</Link></p>
+          <p style={{ marginBottom: 0, marginTop: "1.5rem" }}><Link href="/tuition-requests/pk">Browse tuition requests in Pakistan</Link> · <Link href="/pk/home-tutors/lahore">Home tutors in Lahore</Link> · <Link href="/pk/home-tutors/islamabad">Home tutors in Islamabad</Link> · <Link href="/pk/home-tutors/karachi">Home tutors in Karachi</Link></p>
+        </section>
       )}
 
-      <HeroMarketplace countryCode={country.code} />
-      
-      <HomeOnlineTuitionCards countryCode={country.code} />
-
-      <section style={{ maxWidth: 1120, margin: "4rem auto", padding: "0 1.5rem" }}>
-        <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#021550", marginBottom: "1rem" }}>
-          Explore Popular Areas in {country.name}
-        </h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-          {citiesWithSupply.length > 0 ? (
-            citiesWithSupply.map(({ city, total }) => (
-              <Link
-                key={city.id || city.name}
-                href={`/${country.code.toLowerCase()}/tutors?city=${encodeURIComponent(city.name)}`}
-                style={{
-                  background: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "999px",
-                  padding: "0.5rem 1.25rem",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  color: "#0329b2",
-                  textDecoration: "none",
-                }}
-              >
-                Tutors in {city.name} ({total})
-              </Link>
-            ))
-          ) : (
-            <p style={{ color: "#64748b" }}>Available nationwide online. Local in-person tutors are onboarding in {country.name} - check back soon.</p>
-          )}
-        </div>
+      <section>
+        <h2>How this market works</h2>
+        <p><strong>Currency:</strong> Student budgets and market offers use {market.currency} ({market.currencySymbol}). Existing bookings retain their original transaction currency even if the user later changes market.</p>
+        <p><strong>Online Tuition:</strong> {market.onlineTuitionEnabled ? "Available worldwide; online tutors are not restricted to the student's country." : "Not currently enabled."}</p>
+        <p><strong>Home Tuition:</strong> {market.homeTuitionEnabled ? `Available locally in ${market.countryName}, subject to location and verification requirements.` : "Not yet enabled for this market."}</p>
+        <p><strong>Checkout:</strong> {market.checkoutEnabled ? `Enabled for the ${market.countryName} market using supported payment methods.` : "Not yet live. TUTORERA will not present a payment method as available until market checkout is activated."}</p>
+        <p><Link href={market.legalSchedule}>Read the {market.countryName} legal schedule</Link></p>
       </section>
-
-      <TopRequestsSection />
-    </div>
+      
+    </main>
   );
 }
