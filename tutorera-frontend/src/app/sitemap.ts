@@ -16,7 +16,7 @@ import { assessTutorSeoQuality } from "@/lib/tutor-seo";
 import type { MetadataRoute } from "next";
 
 const routes = [
-  "", "online-tutors", "about", "become-a-tutor", "blog", "business-model", "contact", "coverage", "first-session-guarantee", "team",
+  "", "online-tutors", "about", "become-a-tutor", "blog", "blog/topics", "business-model", "contact", "coverage", "first-session-guarantee", "team",
   "help", "help/for-parents", "help/for-tutors", "how-it-works", "how-tutor-offers-work", "levels", "locations", "pricing",
   "payment-process", "refund-policy", "safety-policy", "services", "student-journey", "subjects", "tutors", "terms", "privacy", "complaint-process", "cancellation-policy",
   "tutor-verification-standards", "in-person-home-tuition-terms", "review-policy", "editorial-policy", "academic-standards",
