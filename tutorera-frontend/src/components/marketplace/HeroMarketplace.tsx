@@ -297,7 +297,7 @@ export default function HeroMarketplace({ countryCode }: { countryCode?: string 
         </div>
 
         {/* 2. Embedded Quick Request Composer (Form-based alternative) */}
-        <QuickRequestComposer />
+        <QuickRequestComposer initialCountryCode={countryCode} />
       </div>
     </section>
   );

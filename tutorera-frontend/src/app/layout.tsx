@@ -138,11 +138,15 @@ export default function RootLayout({
           { "@type": "Country", name: "United Kingdom" },
         ],
         sameAs: [
-          "https://mentisera.com",
           "https://www.facebook.com/tutorerapk",
           "https://www.instagram.com/tutorera.pk",
           "https://www.linkedin.com/company/tutorera",
         ],
+        parentOrganization: {
+          "@type": "Organization",
+          name: LEGAL_OPERATOR,
+          url: "https://mentisera.com",
+        },
       },
       {
         "@type": "WebSite",

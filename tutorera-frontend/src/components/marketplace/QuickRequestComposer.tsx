@@ -18,15 +18,22 @@ import { COUNTRIES, getCountryByCode, Country } from "@/lib/location";
 import { useGeoData } from "@/lib/geoService";
 import CountryCityPickerModal from "./CountryCityPickerModal";
 
-export default function QuickRequestComposer() {
+function defaultBudget(code: string): string {
+  if (code === "PK") return "2000";
+  if (["US", "GB", "CA", "AU"].includes(code)) return "25";
+  if (["AE", "SA", "QA"].includes(code)) return "80";
+  return "30";
+}
+
+export default function QuickRequestComposer({ initialCountryCode }: { initialCountryCode?: string }) {
   const router = useRouter();
   const geo = useGeoData();
   const [mode, setMode] = useState<"in-person" | "online" | "both">("online");
   const [subject, setSubject] = useState("");
   const [level, setLevel] = useState("O-Level");
-  const [countryCode, setCountryCode] = useState("PK");
+  const [countryCode, setCountryCode] = useState(initialCountryCode ?? "PK");
   const [city, setCity] = useState("");
-  const [budget, setBudget] = useState("2000");
+  const [budget, setBudget] = useState(() => defaultBudget(initialCountryCode ?? "PK"));
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
 
@@ -41,15 +48,7 @@ export default function QuickRequestComposer() {
   const handleLocationSelect = (country: Country, pickedCity: string) => {
     setCountryCode(country.code);
     setCity(pickedCity || "");
-    if (country.code === "PK") {
-      setBudget("2000");
-    } else if (["US", "GB", "CA", "AU"].includes(country.code)) {
-      setBudget("25");
-    } else if (["AE", "SA", "QA"].includes(country.code)) {
-      setBudget("80");
-    } else {
-      setBudget("30");
-    }
+    setBudget(defaultBudget(country.code));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
