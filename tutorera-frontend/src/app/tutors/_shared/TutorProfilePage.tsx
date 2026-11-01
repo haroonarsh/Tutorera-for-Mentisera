@@ -259,7 +259,7 @@ export async function TutorProfilePageBody({ tutor }: { tutor: TutorProfile | nu
           ? {
               review: reviews.slice(0, 10).map((r) => ({
                 "@type": "Review",
-                author: { "@type": "Person", name: r.student?.name || "TutorEra student" },
+                author: { "@type": "Person", name: r.student?.name || "TUTORERA student" },
                 datePublished: r.createdAt,
                 reviewBody: r.comment,
                 reviewRating: {

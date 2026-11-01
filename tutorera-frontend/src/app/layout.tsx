@@ -18,23 +18,6 @@ export const metadata: Metadata = {
     template: "%s | TUTORERA",
   },
   description: "TUTORERA is a Student-First Tutoring Marketplace. Students and parents post a learning requirement and preferred budget, receive eligible tutor offers, compare options, and choose a tutor for online or home tuition where available.",
-  keywords: [
-    "online tutors worldwide",
-    "find verified tutors",
-    "student demand tutoring marketplace",
-    "home tuition",
-    "O Level tutor",
-    "A Level tutor",
-    "GCSE IGCSE tutors",
-    "IB tutors",
-    "Matric FSc tutor",
-    "private tutors",
-    "tutors in UAE",
-    "tutors in UK",
-    "tutors in USA",
-    "tutors in Pakistan",
-    "TUTORERA",
-  ],
   authors: [{ name: "MENTISERA (SMC-Private) Limited" }],
   creator: "MENTISERA",
   verification: {
@@ -84,7 +67,7 @@ export const metadata: Metadata = {
     description: "Post your tuition requirement and preferred budget, receive offers from eligible tutors, compare options, and choose the right tutor.",
     images: [
       {
-        url: "/tutorera-logo-transparent.png",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "TUTORERA by MENTISERA",
@@ -95,7 +78,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "TUTORERA | Student-First Tutoring Marketplace",
     description: "Post a requirement, receive tutor offers, compare options, and choose your tutor.",
-    images: ["/tutorera-logo-transparent.png"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,

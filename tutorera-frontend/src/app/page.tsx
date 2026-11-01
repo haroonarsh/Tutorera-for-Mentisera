@@ -7,7 +7,6 @@ import MarketplaceFlow from "@/components/marketplace/MarketplaceFlow";
 import TopRequestsSection from "@/components/TopRequestsSection";
 import OfferComparisonDemo from "@/components/marketplace/OfferComparisonDemo";
 import PaymentTrustSteps from "@/components/marketplace/PaymentTrustSteps";
-import AdBanner from "@/components/AdBanner";
 import GlobalTutoringIndex from "@/components/SEO/GlobalTutoringIndex";
 import TopTutorsSection from "@/components/TopTutorsSection";
 import { fetchTutors } from "@/lib/tutor-directory";
@@ -38,8 +37,7 @@ const popularSubjects = [
 const popularCities = [
   { name: "Pakistan", areas: "Online nationwide and local home tuition where available", href: "/pk/home-tutors/lahore" },
   { name: "United States", areas: "Local and online tutor matching nationwide", href: "/us/tutors" },
-  { name: "India", areas: "Local and online tutor matching nationwide", href: "/in/tutors" },
-  { name: "Saudi Arabia", areas: "Local and online tutor matching nationwide", href: "/sa/tutors" },
+{ name: "Saudi Arabia", areas: "Local and online tutor matching nationwide", href: "/sa/tutors" },
   { name: "United Arab Emirates", areas: "Local and online tutor matching nationwide", href: "/ae/tutors" },
   { name: "United Kingdom", areas: "Discovery beta for local and online tutor matching", href: "/gb/tutors" },
   { name: "Online Worldwide", areas: "Learn across borders in a timezone and language that work for you", href: "/online-tutors" },
@@ -86,11 +84,6 @@ export default async function Home() {
 
       {/* 5. How TUTORERA Works (5-Step Visual Marketplace Loop) */}
       <MarketplaceFlow />
-
-      {/* Ad: Responsive leaderboard between flow and comparison */}
-      <section style={{ padding: "3rem 1.5rem", background: "white", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
-        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
-      </section>
 
       {/* 6. Side-by-Side Offer Comparison Showcase */}
       <OfferComparisonDemo />
@@ -261,11 +254,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Ad: Responsive ad between local coverage and expert guides */}
-      <section style={{ padding: "3rem 1.5rem", background: "white", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
-        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
-      </section>
-
       {/* 8. Educational Guidance & Reading */}
       <section style={{ padding: "4rem 1.5rem", background: "white" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto" }}>
@@ -323,11 +311,6 @@ export default async function Home() {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* Ad: Responsive ad before final CTA */}
-      <section style={{ padding: "3rem 1.5rem", background: "#f8faff", borderBottom: "1px solid #e2e8f0", justifyContent: "center" }}>
-        <AdBanner slot="7346189519" format="auto" label="Advertisement" />
       </section>
 
       {/* 10.5 Global Tutoring Index (SEO First-Party Data) */}

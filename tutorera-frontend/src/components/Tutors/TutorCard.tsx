@@ -45,7 +45,8 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
   const countryName = tutor.countryName || tutor.user?.countryName || "";
   const locationLabel = city && countryName ? `${city}, ${countryName}` : city || countryName || "Online availability varies";
   const hasVideo = Boolean(tutor.videoIntro);
-  const hasReviews = Number(tutor.totalReviews) > 0 && Number(tutor.averageRating) > 0;
+  const avgRating = Number(tutor.averageRating) || 0;
+  const hasReviews = Number(tutor.totalReviews) > 0 && avgRating > 0;
   const hasRate = Number.isFinite(Number(tutor.hourlyRate)) && Number(tutor.hourlyRate) > 0;
   const currency = tutor.currency?.trim() || "";
   const rateLabel = hasRate
@@ -147,8 +148,8 @@ export default function TutorCard({ tutor, matchScore }: TutorCardProps) {
         <div className={styles.ratingLeft}>
           {hasReviews ? (
             <>
-              <StarRating rating={tutor.averageRating} />
-              <span className={styles.ratingValue}>{tutor.averageRating.toFixed(1)}</span>
+              <StarRating rating={avgRating} />
+              <span className={styles.ratingValue}>{avgRating.toFixed(1)}</span>
               <span className={styles.ratingCount}>({tutor.totalReviews})</span>
             </>
           ) : (

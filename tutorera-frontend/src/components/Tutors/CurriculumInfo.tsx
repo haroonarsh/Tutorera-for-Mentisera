@@ -4,19 +4,8 @@ import { UI_COLORS, TEXT_COLORS } from "@/lib/brand";
 const C = UI_COLORS;
 
 export default function CurriculumInfo({ content }: { content: CurriculumTopic }) {
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: content.faq.map((item) => ({
-      "@type": "Question",
-      name: item.q,
-      acceptedAnswer: { "@type": "Answer", text: item.a },
-    })),
-  };
-
   return (
     <section style={{ maxWidth: 1100, margin: "0 auto", padding: "3rem 1.5rem 1rem" }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <p style={{ fontSize: "1.02rem", lineHeight: 1.7, color: TEXT_COLORS.body, maxWidth: 820, marginBottom: "2rem" }}>
         {content.intro}
       </p>

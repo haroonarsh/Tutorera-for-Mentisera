@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject } = await findSubject(slug);
   if (!subject) return {};
   return {
-    title: `${subject.name} Tutoring`,
-    description: `Post a ${subject.name} tuition requirement and compare tutor offers on TUTORERA.`,
+    title: `${subject.name} Tutor — ${subject.name} Tutoring Guide | TUTORERA`,
+    description: `Find a ${subject.name} tutor on TUTORERA. Post a free requirement, compare verified tutor offers, and get personalised ${subject.name} lessons online or in person.`,
     alternates: { canonical: `/subjects/${subject.slug}` },
   };
 }

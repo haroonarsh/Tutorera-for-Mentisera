@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import AdBanner from "@/components/AdBanner";
+
 
 export const metadata: Metadata = {
-  title: "How Tutor Offers Work | Student-First Marketplace | TUTORERA",
+  title: "How Tutor Offers Work | Student-First Marketplace",
   description: "Post a tuition requirement with a preferred budget, compare eligible tutor offers, negotiate where permitted, and choose a tutor on TUTORERA.",
   alternates: { canonical: "/how-tutor-offers-work" },
 };
@@ -122,11 +122,6 @@ export default function HowTutorOffersWorkPage() {
               <strong>Review booking and payment:</strong> Review the final rate and booking terms. Where market checkout is enabled, payment options and applicable cancellation terms are shown before payment.
             </li>
           </ol>
-        </section>
-
-        {/* Ad placement */}
-        <section style={{ padding: "2rem 0", textAlign: "center" }}>
-          <AdBanner slot="7346189519" format="auto" label="Advertisement" />
         </section>
 
         <section

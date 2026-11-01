@@ -17,10 +17,14 @@ const HOME_TUTOR_CITY_SLUGS = ["lahore", "islamabad", "karachi"] as const;
 const PK_STUDENT_INTENT_SLUGS = ["home-tuition", "online-tuition", "mathematics-tuition", "physics-tuition", "chemistry-tuition", "biology-tuition", "english-tuition", "o-level-tuition", "a-level-tuition", "mdcat-tutoring"] as const;
 const PK_CITY_TUITION_INTENTS = ["islamabad", "rawalpindi", "lahore", "karachi"] as const;
 const AE_CITY_TUITION_INTENTS = ["dubai", "abu-dhabi", "sharjah"] as const;
+const AE_CITY_HUBS = ["dubai", "abu-dhabi", "sharjah", "ajman", "ras-al-khaimah", "fujairah"] as const;
 const GB_CITY_TUITION_INTENTS = ["london", "manchester", "birmingham", "leeds", "edinburgh"] as const;
+const GB_CITY_HUBS = ["london", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bradford"] as const;
 const IN_CITY_TUITION_INTENTS = ["delhi", "mumbai", "bangalore", "chennai", "hyderabad", "kolkata"] as const;
 const US_CITY_TUITION_INTENTS = ["new-york", "los-angeles", "chicago", "houston", "miami"] as const;
+const US_CITY_HUBS = ["new-york", "los-angeles", "chicago", "houston", "dallas", "washington-dc", "atlanta"] as const;
 const SA_CITY_TUITION_INTENTS = ["riyadh", "jeddah", "dammam"] as const;
+const SA_CITY_HUBS = ["riyadh", "jeddah", "dammam", "mecca", "medina", "khobar", "tabuk"] as const;
 
 // A single sitemap file supports up to 50,000 URLs (the sitemaps.org / Google limit).
 // Splitting the tutors sitemap into multiple generateSitemaps() ids beyond the original
@@ -120,6 +124,12 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       })));
     // UAE city intent tree (Dubai, Abu Dhabi, Sharjah × tuition /
     // home-tuition / online-tuition) — spec §47 second-country parity.
+    const aeCityHubs: MetadataRoute.Sitemap = AE_CITY_HUBS.map((city) => ({
+      url: `${SITE_URL}/ae/${city}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    }));
     const aeCityStudentIntent: MetadataRoute.Sitemap = AE_CITY_TUITION_INTENTS
       .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
       url: `${SITE_URL}/ae/${city}/${intent}`,
@@ -127,6 +137,12 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       changeFrequency: "monthly" as const,
       priority: 0.8,
       })));
+    const gbCityHubs: MetadataRoute.Sitemap = GB_CITY_HUBS.map((city) => ({
+      url: `${SITE_URL}/gb/${city}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    }));
     const gbCityStudentIntent: MetadataRoute.Sitemap = GB_CITY_TUITION_INTENTS
       .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
       url: `${SITE_URL}/gb/${city}/${intent}`,
@@ -141,6 +157,12 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       changeFrequency: "monthly" as const,
       priority: 0.8,
       })));
+    const usCityHubs: MetadataRoute.Sitemap = US_CITY_HUBS.map((city) => ({
+      url: `${SITE_URL}/us/${city}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    }));
     const usCityStudentIntent: MetadataRoute.Sitemap = US_CITY_TUITION_INTENTS
       .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
       url: `${SITE_URL}/us/${city}/${intent}`,
@@ -148,6 +170,12 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       changeFrequency: "monthly" as const,
       priority: 0.8,
       })));
+    const saCityHubs: MetadataRoute.Sitemap = SA_CITY_HUBS.map((city) => ({
+      url: `${SITE_URL}/sa/${city}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    }));
     const saCityStudentIntent: MetadataRoute.Sitemap = SA_CITY_TUITION_INTENTS
       .flatMap((city) => ["tuition", "home-tuition", "online-tuition"].map((intent) => ({
       url: `${SITE_URL}/sa/${city}/${intent}`,
@@ -183,10 +211,14 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       ...research,
       ...studentIntent,
       ...cityStudentIntent,
+      ...aeCityHubs,
       ...aeCityStudentIntent,
+      ...gbCityHubs,
       ...gbCityStudentIntent,
       ...inCityStudentIntent,
+      ...usCityHubs,
       ...usCityStudentIntent,
+      ...saCityHubs,
       ...saCityStudentIntent,
       ...blog,
     ];
