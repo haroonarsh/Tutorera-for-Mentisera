@@ -25,6 +25,8 @@ export default async function BlogRelevantTutors({ slug, title }: { slug: string
   if (match.subject) filters.subject = match.subject;
   if (match.level) filters.level = match.level;
   if (match.countryCode) filters.countryCode = match.countryCode;
+  // Do not exclude online tutors based on physical location. Geography is a
+  // browsing preference; it is not proof that remote lessons are unavailable.
   if (match.city) filters.city = match.city;
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
