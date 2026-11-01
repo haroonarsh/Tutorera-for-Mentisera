@@ -59,7 +59,17 @@ export default async function Page({ params }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <SeoTutorDirectory kind="city" value={city} title={`Online & Home Tutors in ${city}`} description={`Find verified tutors serving ${city}, available online, in person, or both.`} canonicalPath={`/tutors/city/${slug}`} />
+      <SeoTutorDirectory
+        kind="city"
+        value={city}
+        title={`Online & Home Tutors in ${city}`}
+        description={`Find verified tutors serving ${city}, available online, in person, or both.`}
+        canonicalPath={`/tutors/city/${slug}`}
+        relatedLinks={LOCAL_SUBJECT_SLUGS.map((subjectSlug) => ({
+          label: `${SUBJECTS[subjectSlug]} Tutors in ${city}`,
+          href: `/tutors/city/${slug}/${subjectSlug}`,
+        }))}
+      />
       <nav aria-label={`Popular subjects in ${city}`} style={{ maxWidth: 1100, margin: "0 auto", padding: "0 1.5rem 4rem" }}>
         <h2 style={{ marginBottom: "1rem" }}>Popular subjects in {city}</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: ".75rem" }}>

@@ -6,6 +6,15 @@ import CurriculumInfo from "@/components/Tutors/CurriculumInfo";
 import { CITIES, LOCAL_SUBJECT_SLUGS, PRIMARY_CITY_SLUGS, SUBJECTS } from "@/lib/tutor-directory";
 import { CURRICULUM_CONTENT } from "@/lib/curriculum-content";
 
+// Cities that have dedicated city-hub pages and can receive cross-links
+const CROSS_LINK_CITY_SLUGS = [
+  "lahore", "karachi", "islamabad", "rawalpindi", "faisalabad",
+  "dubai", "abu-dhabi", "sharjah",
+  "riyadh", "jeddah", "dammam",
+  "london", "manchester", "birmingham",
+  "new-york", "los-angeles", "chicago",
+] as const;
+
 type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
@@ -86,6 +95,21 @@ export default async function Page({ params }: Props) {
     ],
   };
 
+  // Related subjects for cross-linking — subjects in same category
+  const relatedSubjectSlugs = Object.keys(SUBJECTS).filter(
+    (s) => s !== slug && CURRICULUM_CONTENT[s]
+  ).slice(0, 8);
+  const relatedLinks = [
+    ...relatedSubjectSlugs.map((s) => ({
+      label: `${SUBJECTS[s as keyof typeof SUBJECTS]} Tutors`,
+      href: `/tutors/subject/${s}`,
+    })),
+    ...CROSS_LINK_CITY_SLUGS.slice(0, 6).map((citySlug) => ({
+      label: `${subject} Tutors in ${CITIES[citySlug]}`,
+      href: `/tutors/city/${citySlug}/${slug}`,
+    })),
+  ];
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -95,24 +119,23 @@ export default async function Page({ params }: Props) {
         title={`${subject} Tutor — Find Verified ${subject} Tutors`}
         description={`Compare verified ${subject} tutors for online worldwide learning and local in-person lessons where available.`}
         canonicalPath={`/tutors/subject/${slug}`}
+        relatedLinks={relatedLinks}
       />
       {curriculum && <CurriculumInfo content={curriculum} />}
-      {LOCAL_SUBJECT_SLUGS.includes(slug as (typeof LOCAL_SUBJECT_SLUGS)[number]) && (
-        <nav aria-label={`${subject} tutors by city`} style={{ maxWidth: 1100, margin: "0 auto", padding: "0 1.5rem 4rem" }}>
-          <h2 style={{ marginBottom: "1rem" }}>{subject} tutors by city</h2>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: ".75rem" }}>
-            {PRIMARY_CITY_SLUGS.map((citySlug) => (
-              <Link
-                key={citySlug}
-                href={`/tutors/city/${citySlug}/${slug}`}
-                style={{ color: "#0329B2", background: "#EEF5FF", padding: ".6rem 1rem", borderRadius: 999, textDecoration: "none", fontWeight: 600 }}
-              >
-                {CITIES[citySlug]}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      )}
+      <nav aria-label={`${subject} tutors by city`} style={{ maxWidth: 1100, margin: "0 auto", padding: "0 1.5rem 4rem" }}>
+        <h2 style={{ marginBottom: "1rem" }}>{subject} tutors by city</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: ".75rem" }}>
+          {CROSS_LINK_CITY_SLUGS.map((citySlug) => (
+            <Link
+              key={citySlug}
+              href={`/tutors/city/${citySlug}/${slug}`}
+              style={{ color: "#0329B2", background: "#EEF5FF", padding: ".6rem 1rem", borderRadius: 999, textDecoration: "none", fontWeight: 600 }}
+            >
+              {CITIES[citySlug]}
+            </Link>
+          ))}
+        </div>
+      </nav>
     </>
   );
 }
