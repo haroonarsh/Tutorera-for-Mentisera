@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { planAdminSupervisor, listAdminAgents, readAdminAgent } from "../controllers/adminAgentSupervisor.controller";
 import { listPendingAgeReviews, closeAgeReview, claimAgeReview, reassignAgeReview, proposeVerifiedDob, approveVerifiedDob } from "../controllers/ageReview.controller";
 import {
   getDashboardStats,
@@ -78,6 +79,11 @@ const router = Router();
 
 router.use(protect, authorize("admin"));
 router.use(enforceCountryScope);
+
+// Supervisor foundation: authorized planning only, no autonomous actions.
+router.get("/agents", listAdminAgents);
+router.post("/agents/supervisor/plan", planAdminSupervisor);
+router.get("/agents/:agentId/summary", readAdminAgent);
 
 // Control Tower & Liquidity
 router.get("/control-tower/pulse", requirePermission("system.monitor"), getControlTowerPulse);
