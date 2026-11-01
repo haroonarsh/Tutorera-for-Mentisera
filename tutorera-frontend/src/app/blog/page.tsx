@@ -15,6 +15,7 @@ export default async function BlogPage() {
       <h1 style={{ fontSize: "2.5rem", fontWeight: 800, color: "white", marginBottom: ".75rem" }}>Tutoring Insights & Guides</h1>
       <p style={{ color: "#cbd5e1", maxWidth: 650, margin: "auto" }}>Practical tutoring, curriculum and exam-preparation guides for students, parents and tutors across our supported markets.</p>
     </header>
+    <div style={{ maxWidth: 1100, margin: "1.5rem auto 0", padding: "0 1.5rem" }}><Link href="/blog/topics" style={{ color: "#0329B2", fontWeight: 700 }}>Explore guides by subject, curriculum and country</Link></div>
     <section style={{ maxWidth: 1100, margin: "auto", padding: "3rem 1.5rem" }} aria-label="Published guides">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: "1.75rem" }}>
         {blogs.map(blog => <article key={blog._id} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, padding: "1.5rem", display: "flex", flexDirection: "column" }}>
