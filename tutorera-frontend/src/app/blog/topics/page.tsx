@@ -16,7 +16,7 @@ const groups = [
 const aliases: Record<string, string[]> = {
   Mathematics: ["math", "algebra", "calculus"], "O Level": ["o level", "o-level"], "A Level": ["a level", "a-level"],
   UAE: ["uae", "dubai", "abu dhabi"], "Saudi Arabia": ["saudi", "riyadh", "jeddah"],
-  UK: ["uk", "gcse"], USA: ["usa", "american", "ap calculus"],
+  UK: ["uk", "united kingdom", "london", "manchester"], USA: ["usa", "united states", "american", "ap calculus"],
   "Tutor selection": ["choose", "hiring", "trusted", "find a tutor"],
   "Online tutoring": ["online", "remote"], "Tutoring costs": ["cost", "price", "pricing", "rate"],
 };
@@ -32,7 +32,11 @@ export default async function BlogTopicsPage() {
           const needles = aliases[topic] || [topic.toLowerCase()];
           const matches = articles.filter(article => {
             const haystack = [article.title, article.slug, ...article.tags].join(" ").toLowerCase().replaceAll("-", " ");
-            return needles.some(needle => haystack.includes(needle.replaceAll("-", " ")));
+            return needles.some(needle => {
+              const normalized = needle.toLowerCase().replaceAll("-", " ");
+              const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\            return needles.some(needle => haystack.includes(needle.replaceAll("-", " ")));");
+              return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, "i").test(haystack);
+            });
           });
           return { topic, matches };
         }).filter(item => item.matches.length);
