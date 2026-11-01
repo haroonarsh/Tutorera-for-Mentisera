@@ -29,7 +29,8 @@ export default async function BlogRelevantTutors({ slug, title }: { slug: string
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
   const browseHref = `/tutors${params.size ? "?" + params.toString() : ""}`;
-  const result = await fetchTutors(filters, 24);
+  const hasSpecificMatch = Boolean(match.subject || match.level || match.city || match.countryCode);
+  const result = hasSpecificMatch ? await fetchTutors(filters, 24) : { tutors: [], total: 0, error: false };
   const tutors = result.tutors.filter(t => t._id && matches(t, match)).slice(0, 3);
   return <section aria-labelledby="blog-relevant-tutors" style={{ marginTop: 28, background: "white", border: "1px solid #dbe3ef", borderRadius: 16, padding: "1.5rem" }}>
     <h2 id="blog-relevant-tutors" style={{ color: "#021550", fontSize: "1.5rem", marginBottom: 8 }}>Find a tutor for this topic</h2>
@@ -42,7 +43,7 @@ export default async function BlogRelevantTutors({ slug, title }: { slug: string
         {t.hourlyRate > 0 && t.currency ? <p style={{ fontSize: 14, marginTop: 8 }}>{t.currency} {t.hourlyRate.toLocaleString("en-US")}/hour</p> : null}
         <Link href={tutorProfileHref(t)} style={{ display: "inline-block", marginTop: 12, color: "#0329B2", fontWeight: 700 }}>View profile and booking options</Link>
       </div>)}
-    </div> : <p style={{ color: "#475569", marginBottom: 14 }}>{result.error ? "Tutor listings are temporarily unavailable." : "No matching tutor profiles are currently shown for these filters."} You can explore the directory and adjust your search.</p>}
+    </div> : <p style={{ color: "#475569", marginBottom: 14 }}>{result.error ? "Tutor listings are temporarily unavailable." : hasSpecificMatch ? "No matching tutor profiles are currently shown for these filters." : "Explore tutor profiles and choose filters that match your learning goals."} You can explore the directory and adjust your search.</p>}
     <p style={{ marginTop: 18 }}><Link href={browseHref} style={{ color: "#0329B2", fontWeight: 700 }}>Browse matching tutors and request a lesson</Link></p>
     <p style={{ color: "#64748b", fontSize: 12, marginTop: 10 }}>Profiles are shown from live directory data; inclusion is not an endorsement or a guarantee of availability.</p>
   </section>;
