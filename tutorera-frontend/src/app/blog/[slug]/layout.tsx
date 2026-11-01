@@ -19,5 +19,10 @@ export default async function Layout({ children, params }: Props) {
   const { slug } = await params; const article = await getEditorialArticle(slug); const title = article?.title || titleFor(slug); const url = `${SITE_URL}/blog/${slug}`;
   if (!article) return <>{children}</>;
   const schema = { "@context": "https://schema.org", "@type": "Article", headline: title, description: article?.excerpt, url, mainEntityOfPage: url, datePublished: article?.createdAt, dateModified: article?.updatedAt, author: { "@type": "Organization", name: article?.author.name || "TUTORERA Editorial Team", url: `${SITE_URL}${article?.author.url || "/editorial-policy"}` }, ...(article.reviewer ? { reviewedBy: { "@type": "Organization", name: article.reviewer.name, url: `${SITE_URL}${article.reviewer.url}` } } : {}), publisher: { "@id": `${SITE_URL}/#organization` }, image: `${SITE_URL}/og-image.png` };
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />{children}</>;
+  const breadcrumbs = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+    { "@type": "ListItem", position: 2, name: "Tutoring Guides", item: `${SITE_URL}/blog` },
+    { "@type": "ListItem", position: 3, name: title, item: url },
+  ] };
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs).replace(/</g, "\\u003c") }} />{children}</>;
 }
