@@ -6,7 +6,7 @@ import Blog from "../models/Blog.model";
 // @route   POST /api/blogs
 // @access  Private (admin)
 export const createBlog = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { title, slug, content, excerpt, coverImage, tags } = req.body;
+  const { title, slug, content, excerpt, coverImage, tags, isPublished } = req.body;
 
   const existing = await Blog.findOne({ slug });
   if (existing) {
@@ -16,7 +16,7 @@ export const createBlog = async (req: AuthRequest, res: Response): Promise<void>
 
   const blog = await Blog.create({
     title, slug, content, excerpt,
-    coverImage, tags,
+    coverImage, tags, isPublished: isPublished === true,
     author: req.user?._id,
   });
 
@@ -65,9 +65,14 @@ export const getBlogBySlug = async (req: Request, res: Response): Promise<void> 
 // @route   PUT /api/blogs/:id
 // @access  Private (admin)
 export const updateBlog = async (req: AuthRequest, res: Response): Promise<void> => {
+  const allowed = ["title", "slug", "content", "excerpt", "coverImage", "tags", "isPublished"] as const;
+  const changes: Record<string, unknown> = {};
+  for (const field of allowed) {
+    if (Object.prototype.hasOwnProperty.call(req.body, field)) changes[field] = req.body[field];
+  }
   const blog = await Blog.findByIdAndUpdate(
     req.params.id,
-    { ...req.body },
+    { $set: changes },
     { new: true, runValidators: true }
   );
 
