@@ -1,5 +1,6 @@
 import { getEditorialArticle,STATIC_ARTICLES } from "@/lib/editorial-content";
 import BlogRelevantTutors from "@/components/Blog/BlogRelevantTutors";
+import BlogRelatedGuides from "@/components/Blog/BlogRelatedGuides";
 import { ArrowLeft,Calendar,ShieldCheck,User } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -18,6 +19,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <aside style={{ background: "#EEF5FF", border: "1px solid #bfdbfe", padding: "1rem", borderRadius: 10, color: "#1e3a8a", marginBottom: 24 }}><p style={{ display: "flex", gap: 7, alignItems: "center", fontWeight: 700 }}><ShieldCheck size={17}/>Editorial accountability</p><p style={{ marginTop: 5, lineHeight: 1.6 }}>Written by <Link href={blog.author.url}>{blog.author.name}</Link>. {blog.reviewer ? <> Reviewed for platform-process accuracy by <Link href={blog.reviewer.url}>{blog.reviewer.name}</Link>.</> : null} General educational guidance; academic outcomes are not guaranteed.</p></aside>
       <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, padding: "clamp(1.25rem,4vw,2.5rem)" }}>{blog.content.split("\n\n").map((p, i) => p.startsWith("**") && p.endsWith("**") ? <h2 key={i} style={{ color: "#021550", fontSize: "1.25rem", margin: "2rem 0 .7rem" }}>{p.replaceAll("**", "")}</h2> : <p key={i} style={{ color: "#475569", fontSize: "1.02rem", lineHeight: 1.85, marginBottom: "1rem" }}>{p}</p>)}</div>
       <BlogRelevantTutors slug={blog.slug} title={blog.title} />
+      <BlogRelatedGuides slug={blog.slug} title={blog.title} tags={blog.tags} />
     </article>
   </main>;
 }
