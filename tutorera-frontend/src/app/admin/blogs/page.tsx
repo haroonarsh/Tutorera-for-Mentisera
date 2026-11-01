@@ -24,10 +24,11 @@ export default function AdminBlogsPage() {
   const [editBlog, setEditBlog] = useState<Blog | null>(null);
   const [form, setForm] = useState({ title: '', slug: '', excerpt: '', content: '', tags: '' });
   const [saving, setSaving] = useState(false);
+  const [publishOnSave, setPublishOnSave] = useState(false);
 
   const fetchBlogs = async () => {
     try {
-      const res = await api.get('/blogs?limit=50');
+      const res = await api.get('/blogs/admin?limit=50');
       setBlogs(res.data.blogs);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -51,7 +52,7 @@ export default function AdminBlogsPage() {
         excerpt: form.excerpt,
         content: form.content,
         tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-        isPublished: true,
+        isPublished: publishOnSave,
       };
       if (editBlog) {
         await api.put(`/blogs/${editBlog._id}`, data);
@@ -78,16 +79,21 @@ export default function AdminBlogsPage() {
     } catch { showError('Failed to delete blog post.'); }
   };
 
-  const handleEdit = (blog: Blog) => {
-    setEditBlog(blog);
-    setForm({
+  const handleEdit = async (blog: Blog) => {
+    try {
+      const response = await api.get(`/blogs/admin/${blog._id}`);
+      const full = response.data.blog;
+      setEditBlog(blog);
+      setPublishOnSave(Boolean(full.isPublished));
+      setForm({
       title: blog.title,
       slug: blog.slug,
       excerpt: blog.excerpt,
-      content: '',
-      tags: '',
+      content: full.content || '',
+      tags: (full.tags || []).join(', '),
     });
     setShowForm(true);
+    } catch { showError('Unable to load complete article for editing.'); }
   };
 
   return (
@@ -97,7 +103,7 @@ export default function AdminBlogsPage() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: C.primary }}>Blog Posts</h1>
           <p style={{ color: C.gray500, fontSize: '0.875rem' }}>Manage blog content for TUTORERA®</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditBlog(null); setForm({ title: '', slug: '', excerpt: '', content: '', tags: '' }); }}
+        <button onClick={() => { setShowForm(true); setEditBlog(null); setPublishOnSave(false); setForm({ title: '', slug: '', excerpt: '', content: '', tags: '' }); }}
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', backgroundColor: C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
           <Plus size={16} /> New Post
         </button>
@@ -157,10 +163,11 @@ export default function AdminBlogsPage() {
                 onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                 onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={publishOnSave} onChange={e => setPublishOnSave(e.target.checked)} /> Publish immediately (only after editorial approval)</label>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button onClick={handleSubmit} disabled={saving}
                 style={{ padding: '0.75rem 1.5rem', backgroundColor: saving ? '#93c5fd' : C.accent, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
-                {saving ? 'Saving...' : editBlog ? 'Update Post' : 'Publish Post'}
+                {saving ? 'Saving...' : editBlog ? 'Update Post' : publishOnSave ? 'Publish Post' : 'Save Draft'}
               </button>
               <button onClick={() => { setShowForm(false); setEditBlog(null); }}
                 style={{ padding: '0.75rem 1.5rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: 'white', color: C.primary }}>
