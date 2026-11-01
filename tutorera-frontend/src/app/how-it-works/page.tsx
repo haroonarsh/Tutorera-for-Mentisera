@@ -2,7 +2,7 @@ import { GST_EFFECTIVE_PERCENT,PLATFORM_FEE_PERCENT,SUPPORT_EMAIL } from "@/lib/
 import type { Metadata } from "next";
 import Link from "next/link";
 import s from "../compliance-pages.module.css";
-import AdBanner from "@/components/AdBanner";
+
 
 export const metadata: Metadata = {
   title: "How It Works",
@@ -41,10 +41,6 @@ export default function HowItWorksPage() {
       <section className={s.container}>
         <h2 className={s.sectionTitle}>Customer journey diagram</h2>
         <div className={s.flow}>{customerJourney.map((step) => <span key={step}>{step}</span>)}</div>
-  </section>
-
-  <section className={s.container} style={{ padding: "2rem 0", textAlign: "center" }}>
-    <AdBanner slot="7346189519" format="auto" label="Advertisement" />
   </section>
 
   <section className={s.soft}>

@@ -50,6 +50,7 @@ export const metadata: Metadata = {
   title: { absolute: "Tuition in India — Home & Online Tutors | TUTORERA" },
   description:
     "Post a tuition requirement in India for home or online tuition, set your preferred budget in INR, and compare offers from eligible tutors. Delhi, Mumbai, Bangalore and nationwide.",
+  robots: { index: false, follow: true },
   alternates: { canonical: "/in" },
   openGraph: {
     title: "Tuition in India — Home & Online Tutors | TUTORERA",
