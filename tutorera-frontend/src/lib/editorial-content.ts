@@ -96,7 +96,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tutorera.ac.pk/a
 const normalize = (a: Partial<EditorialArticle>): EditorialArticle => ({ _id: a._id || a.slug || "article", title: a.title || "TUTORERA Guide", slug: a.slug || "", excerpt: a.excerpt || "Practical guidance from TUTORERA.", content: a.content || "", coverImage: a.coverImage || "", author: a.author?.name ? { name: a.author.name, url: a.author.url || "/editorial-policy" } : identity.author, reviewer: a.reviewer?.name ? { name: a.reviewer.name, url: a.reviewer.url || "/content-review-policy" } : undefined, tags: a.tags || [], createdAt: a.createdAt || identity.createdAt, updatedAt: a.updatedAt || a.createdAt || identity.updatedAt });
 
 export async function getEditorialArticles(): Promise<EditorialArticle[]> {
-  try { const r = await fetch(`${API_URL}/blogs`, { next: { revalidate: 900 } }); if (!r.ok) return STATIC_ARTICLES; const d = await r.json(); const useful = (Array.isArray(d.blogs) ? d.blogs : []).filter((a: Partial<EditorialArticle>) => a.slug && a.title); return useful.length ? useful.map(normalize) : STATIC_ARTICLES; } catch { return STATIC_ARTICLES; }
+  try { const r = await fetch(`${API_URL}/blogs?limit=100`, { next: { revalidate: 900 } }); if (!r.ok) return STATIC_ARTICLES; const d = await r.json(); const useful = (Array.isArray(d.blogs) ? d.blogs : []).filter((a: Partial<EditorialArticle>) => a.slug && a.title); return useful.length ? useful.map(normalize) : STATIC_ARTICLES; } catch { return STATIC_ARTICLES; }
 }
 export async function getEditorialArticle(slug: string): Promise<EditorialArticle | null> {
   const fallback = STATIC_ARTICLES.find(a => a.slug === slug) || null;
